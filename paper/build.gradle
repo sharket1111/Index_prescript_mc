@@ -1,0 +1,70 @@
+plugins {
+	id 'java'
+}
+
+group = 'io.github.sharket1111'
+version = project.plugin_version
+
+repositories {
+	mavenCentral()
+	maven {
+		name = 'PaperMC'
+		url = 'https://repo.papermc.io/repository/maven-public/'
+	}
+}
+
+dependencies {
+	compileOnly "io.papermc.paper:paper-api:${project.paper_api_version}"
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+	it.options.encoding = 'UTF-8'
+}
+
+// The Java resource pack reuses the Fabric mod's models and textures.
+def assetsDir = rootProject.file('../src/main/resources/assets')
+def packMeta = layout.buildDirectory.file('pack/pack.mcmeta')
+
+def writePackMeta = tasks.register('writePackMeta') {
+	def major = project.pack_major as int
+	def minor = project.pack_minor as int
+	inputs.property('major', major)
+	inputs.property('minor', minor)
+	outputs.file(packMeta)
+	doLast {
+		def file = packMeta.get().asFile
+		file.parentFile.mkdirs()
+		file.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([
+			pack: [
+				description: 'Index Prescript',
+				pack_format: major,
+				min_format : [major, minor],
+				max_format : [major, minor]
+			]
+		]))
+	}
+}
+
+def resourcePack = tasks.register('resourcePack', Zip) {
+	dependsOn writePackMeta
+	archiveFileName = 'index_prescript_pack.zip'
+	destinationDirectory = layout.buildDirectory.dir('pack')
+	preserveFileTimestamps = false
+	reproducibleFileOrder = true
+	from(packMeta)
+	from(assetsDir) {
+		into 'assets'
+		exclude '**/lang/**', '**/icon.png'
+	}
+}
+
+processResources {
+	def apiVersion = (project.paper_api_version =~ /^(\d+\.\d+)/)[0][1]
+	inputs.property 'version', project.version
+	inputs.property 'apiVersion', apiVersion
+	filesMatching('plugin.yml') {
+		expand 'version': project.version, 'apiVersion': apiVersion
+	}
+	from(resourcePack)
+}

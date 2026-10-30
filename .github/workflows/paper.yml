@@ -1,0 +1,73 @@
+name: paper
+
+on:
+  push:
+    paths:
+      - paper/**
+      - src/main/resources/assets/**
+      - .github/workflows/paper.yml
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: paper
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      # Newest paper-api build for minecraft_version, and the resource pack
+      # format read from the vanilla server jar's version.json.
+      - name: Resolve versions
+        id: v
+        run: |
+          mc=$(grep '^minecraft_version=' gradle.properties | cut -d= -f2)
+          api=$(curl -fsS https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/maven-metadata.xml \
+            | grep -o '<version>[^<]*</version>' | sed 's/<[^>]*>//g' | grep -E "^${mc//./\\.}([.-]|$)" | tail -1 || true)
+          echo "paper-api candidates:"
+          curl -fsS https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/maven-metadata.xml \
+            | grep -o '<version>[^<]*</version>' | sed 's/<[^>]*>//g' | tail -5
+          if [ -z "$api" ]; then
+            echo "::error::No paper-api build for Minecraft $mc"
+            exit 1
+          fi
+
+          manifest=$(curl -fsS https://piston-meta.mojang.com/mc/game/version_manifest_v2.json | jq -r --arg v "$mc" '.versions[] | select(.id==$v) | .url')
+          curl -fsS -o "$RUNNER_TEMP/server.jar" "$(curl -fsS "$manifest" | jq -r .downloads.server.url)"
+          mkdir -p "$RUNNER_TEMP/srv" && unzip -q -o "$RUNNER_TEMP/server.jar" -d "$RUNNER_TEMP/srv"
+          inner=$(find "$RUNNER_TEMP/srv/META-INF/versions" -name '*.jar' | head -1)
+          unzip -p "$inner" version.json > "$RUNNER_TEMP/version.json"
+          jq '.pack_version' "$RUNNER_TEMP/version.json"
+          major=$(jq -r '.pack_version | if type == "object" then (.resource_major // .resource) else . end' "$RUNNER_TEMP/version.json")
+          minor=$(jq -r '.pack_version | if type == "object" then (.resource_minor // 0) else 0 end' "$RUNNER_TEMP/version.json")
+          echo "paper-api=$api pack=$major.$minor"
+          {
+            echo "api=$api"
+            echo "major=$major"
+            echo "minor=$minor"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.8.2"
+
+      - name: Build
+        run: >
+          gradle build --stacktrace
+          -Ppaper_api_version=${{ steps.v.outputs.api }}
+          -Ppack_major=${{ steps.v.outputs.major }}
+          -Ppack_minor=${{ steps.v.outputs.minor }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: index-prescript-paper
+          path: |
+            paper/build/libs/*.jar
+            paper/build/pack/index_prescript_pack.zip

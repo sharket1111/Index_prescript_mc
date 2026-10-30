@@ -1,0 +1,16 @@
+name: IndexPrescript
+version: '${version}'
+main: io.github.sharket1111.indexprescript.paper.IndexPrescriptPlugin
+api-version: '${apiVersion}'
+description: Rien's Caduceus and prescript terminal, inspired by Limbus Company.
+authors: [sharket1111]
+commands:
+  indexprescript:
+    description: Give Index Prescript items or resend the resource pack.
+    usage: /indexprescript <give|pack> ...
+    aliases: [ip]
+    permission: indexprescript.command
+permissions:
+  indexprescript.command:
+    description: Use /indexprescript give.
+    default: op

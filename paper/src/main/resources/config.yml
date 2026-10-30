@@ -1,0 +1,19 @@
+# Index Prescript
+
+resource-pack:
+  # Send the Java resource pack (textures and 3D models) to Java players.
+  # Bedrock players (Geyser/Floodgate) are skipped.
+  enabled: true
+  # External download URL of index_prescript_pack.zip. Leave empty to host the
+  # bundled pack from this server with the built-in web server below.
+  url: ""
+  # SHA-1 of the pack at "url" (optional, lets clients cache it).
+  sha1: ""
+  # Built-in web server, used when "url" is empty. The port must be reachable
+  # by players (open it in your host's firewall/panel).
+  host-port: 8164
+  # Address players use to reach this server, e.g. "play.example.com" or an IP.
+  # Required for the built-in web server.
+  host-address: ""
+  # Kick players who decline the pack.
+  required: false
