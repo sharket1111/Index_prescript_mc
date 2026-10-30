@@ -22,6 +22,8 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -34,15 +36,19 @@ import net.kyori.adventure.text.format.NamedTextColor;
  * [Hermes], which also restores it after a restart.
  *
  * A new prescript is revealed like the original: random letters and symbols
- * appear one at a time, then resolve into the text from left to right.
+ * appear one at a time, then resolve into the text from left to right. The
+ * prescript is the only text this plugin puts on screen. Sneak + right-click
+ * with the terminal rerolls it at the cost of Weakness III for 10 seconds.
  */
 final class PrescriptTracker implements Listener {
 	private static final int COMBAT_TICKS = 200;
 	private static final int OVERLAY_INTERVAL = 10;
-	private static final int OVERLAY_HOLD_TICKS = 30;
+	private static final int NEXT_PRESCRIPT_DELAY = 10;
 	private static final int AURA_INTERVAL = 2;
 	private static final int REVEAL_HOLD_TICKS = 8;
-	private static final int USE_COOLDOWN_TICKS = 20;
+	private static final int REROLL_COOLDOWN_TICKS = 20;
+	private static final int REROLL_WEAKNESS_TICKS = 200;
+	private static final int REROLL_WEAKNESS_AMPLIFIER = 2;
 	private static final String GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&*@?!/<>+=";
 
 	private static final Map<UUID, PrescriptTracker> TRACKERS = new ConcurrentHashMap<>();
@@ -52,8 +58,7 @@ final class PrescriptTracker implements Listener {
 	private int hermes;
 	private long lastCombat = Long.MIN_VALUE / 2;
 	private long hermesBlockedUntil;
-	private long overlayBlockedUntil;
-	private long usableAt;
+	private long rerollableAt;
 	private boolean restored;
 	private String revealText;
 	private long revealStart;
@@ -70,10 +75,6 @@ final class PrescriptTracker implements Listener {
 	static boolean ready(Player player) {
 		return holdsTerminal(player) && Items.isCaduceus(player.getInventory().getItemInMainHand())
 				&& of(player).hermes >= Items.MAX_HERMES;
-	}
-
-	static void holdOverlay(Player player) {
-		of(player).overlayBlockedUntil = CaduceusListener.now() + OVERLAY_HOLD_TICKS;
 	}
 
 	static void markCombat(Player player) {
@@ -116,11 +117,9 @@ final class PrescriptTracker implements Listener {
 			if (tracker.prescript == null) {
 				tracker.issue(player, now);
 			}
-			if (tracker.revealing(now) && Furioso.active(player)) {
-				tracker.revealStart++; // pause the reveal so it doesn't cover the Furioso TOTAL
-			} else if (tracker.revealing(now)) {
+			if (tracker.revealing(now)) {
 				player.sendActionBar(tracker.revealFrame(now));
-			} else if (now % OVERLAY_INTERVAL == 0 && now >= tracker.overlayBlockedUntil) {
+			} else if (now % OVERLAY_INTERVAL == 0) {
 				player.sendActionBar(tracker.line(player));
 			}
 			if (now % AURA_INTERVAL == 0 && ready(player) && !Furioso.active(player)) {
@@ -153,11 +152,6 @@ final class PrescriptTracker implements Listener {
 	Component line(Player player) {
 		return Component.text(Messages.get(player, "message.prescript_line", Messages.get(player, prescript.key(), prescript.amount),
 				progress, prescript.amount), NamedTextColor.AQUA);
-	}
-
-	Component hermesText(Player player) {
-		return Component.text(Messages.get(player, "message.hermes", hermes, Items.MAX_HERMES),
-				hermes >= Items.MAX_HERMES ? NamedTextColor.DARK_RED : NamedTextColor.GRAY);
 	}
 
 	private void issue(Player player, long startAt) {
@@ -204,7 +198,7 @@ final class PrescriptTracker implements Listener {
 			case SNEAK_HIT -> player.isSneaking();
 			case AIR_HIT -> !player.isOnGround();
 			case FORM_HIT -> form == p.form;
-			case KILLS, LOW_HEALTH_KILL -> false;
+			case KILLS -> false;
 		};
 		if (advanced) {
 			tracker.advance(player);
@@ -221,12 +215,7 @@ final class PrescriptTracker implements Listener {
 		if (tracker.prescript == null) {
 			return;
 		}
-		boolean advanced = switch (tracker.prescript.goal) {
-			case KILLS -> true;
-			case LOW_HEALTH_KILL -> killer.getHealth() <= killer.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue() * 0.5;
-			default -> false;
-		};
-		if (advanced) {
+		if (tracker.prescript.goal == Prescript.Goal.KILLS) {
 			tracker.advance(killer);
 		}
 	}
@@ -252,7 +241,7 @@ final class PrescriptTracker implements Listener {
 		return damager instanceof LivingEntity living ? living : null;
 	}
 
-	/** Right-click with the terminal prints the current prescript and [Hermes] to chat. */
+	/** Sneak + right-click with the terminal rerolls the prescript, inflicting Weakness III for 10 seconds. */
 	@EventHandler
 	public void onUse(PlayerInteractEvent event) {
 		if ((event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK)
@@ -263,18 +252,14 @@ final class PrescriptTracker implements Listener {
 		Player player = event.getPlayer();
 		PrescriptTracker tracker = of(player);
 		long now = CaduceusListener.now();
-		if (now < tracker.usableAt) {
+		if (!player.isSneaking() || tracker.prescript == null || now < tracker.rerollableAt) {
 			return;
 		}
-		tracker.usableAt = now + USE_COOLDOWN_TICKS;
-		player.sendMessage(Component.text(Messages.get(player, "message.prescript_header"), NamedTextColor.AQUA));
-		if (tracker.prescript == null) {
-			player.sendMessage(Component.text(Messages.get(player, "message.prescript_none"), NamedTextColor.GRAY));
-		} else {
-			player.sendMessage(tracker.line(player));
-			player.sendMessage(tracker.hermesText(player));
-		}
-		player.playSound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.PLAYERS, 1.0F, 1.4F);
+		tracker.rerollableAt = now + REROLL_COOLDOWN_TICKS;
+		tracker.issue(player, now);
+		player.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, REROLL_WEAKNESS_TICKS, REROLL_WEAKNESS_AMPLIFIER));
+		player.playSound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.PLAYERS, 1.0F, 0.6F);
+		player.playSound(player.getLocation(), Sound.ITEM_BUCKET_FILL_LAVA, SoundCategory.PLAYERS, 0.5F, 0.8F);
 	}
 
 	private void advance(Player player) {
@@ -287,17 +272,10 @@ final class PrescriptTracker implements Listener {
 		if (granted) {
 			hermes++;
 		}
-		player.sendActionBar(Component.text()
-				.append(Component.text(Messages.get(player, granted ? "message.prescript_complete" : "message.prescript_complete_no_hermes"),
-						NamedTextColor.GOLD))
-				.append(Component.text(" · ", NamedTextColor.DARK_GRAY))
-				.append(hermesText(player))
-				.build());
-		overlayBlockedUntil = now + OVERLAY_HOLD_TICKS;
 		player.playSound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.PLAYERS, 1.0F, granted ? 1.2F : 0.8F);
 		if (granted && hermes == Items.MAX_HERMES) {
 			player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_LAND, SoundCategory.PLAYERS, 0.5F, 0.6F);
 		}
-		issue(player, now + OVERLAY_HOLD_TICKS);
+		issue(player, now + NEXT_PRESCRIPT_DELAY);
 	}
 }

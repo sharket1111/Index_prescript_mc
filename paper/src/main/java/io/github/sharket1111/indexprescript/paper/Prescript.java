@@ -15,7 +15,6 @@ enum Prescript {
 	LASH(Goal.FORM_HIT, 1, CaduceusForm.WHIP),
 	PIERCE(Goal.FORM_HIT, 1, CaduceusForm.LANCE),
 	SINK_TWICE(Goal.FORM_HIT, 2, CaduceusForm.STILETTO),
-	DESPERATE_KILL(Goal.LOW_HEALTH_KILL, 1, null),
 	UNTOUCHED(Goal.CLEAN_HITS, 3, null);
 
 	enum Goal {
@@ -26,7 +25,6 @@ enum Prescript {
 		SNEAK_HIT,
 		AIR_HIT,
 		FORM_HIT,
-		LOW_HEALTH_KILL,
 		CLEAN_HITS
 	}
 

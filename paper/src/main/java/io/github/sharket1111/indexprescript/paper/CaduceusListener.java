@@ -16,9 +16,6 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
 
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
  * Caduceus combat: a charged swing forms a random weapon before the hit, the
@@ -29,7 +26,6 @@ import net.kyori.adventure.text.format.NamedTextColor;
 final class CaduceusListener implements Listener {
 	private static final int FORM_TICKS = 40;
 	private static final float CHARGED_THRESHOLD = 0.9F;
-	private static final Component SEPARATOR = Component.text(" · ", NamedTextColor.DARK_GRAY);
 
 	// Per-player bookkeeping, keyed by player UUID.
 	private static final Map<UUID, Long> REVERT_AT = new ConcurrentHashMap<>();
@@ -57,7 +53,7 @@ final class CaduceusListener implements Listener {
 		ItemStack[] contents = player.getInventory().getContents();
 		for (ItemStack stack : contents) {
 			if (Items.isCaduceus(stack) && CaduceusForm.of(stack) != null) {
-				Items.setForm(stack, null, player);
+				Items.setForm(stack, null);
 				Effects.melt(player);
 			}
 		}
@@ -87,7 +83,7 @@ final class CaduceusListener implements Listener {
 		CaduceusForm current = CaduceusForm.of(stack);
 		if (charged || current == null) {
 			current = CaduceusForm.random(current);
-			Items.setForm(stack, current, player);
+			Items.setForm(stack, current);
 			Effects.form(player);
 		}
 		REVERT_AT.put(player.getUniqueId(), now() + FORM_TICKS);
@@ -128,27 +124,8 @@ final class CaduceusListener implements Listener {
 		}
 		boolean charged = !Boolean.FALSE.equals(CHARGED.get(player.getUniqueId()));
 		boolean staggered = charged && pending.form().onHit(player, target, now);
-		player.sendActionBar(status(player, pending.form(), now, pending.crit(), staggered));
-		PrescriptTracker.holdOverlay(player);
 		if (charged) {
 			PrescriptTracker.onHit(player, pending.form(), pending.crit(), staggered);
 		}
-	}
-
-	private static Component status(Player player, CaduceusForm form, long now, boolean crit, boolean staggered) {
-		TextComponent.Builder line = Component.text()
-				.append(Component.text(Messages.get(player, "message.caduceus_formed", Messages.get(player, "form." + form.id())), NamedTextColor.GOLD));
-		if (crit) {
-			line.append(SEPARATOR).append(Component.text(Messages.get(player, "message.crit"), NamedTextColor.YELLOW));
-		}
-		if (staggered) {
-			line.append(SEPARATOR).append(Component.text(Messages.get(player, "message.staggered"), NamedTextColor.RED));
-		}
-		CombatState self = CombatState.of(player);
-		int poise = self.poisePotency(now);
-		if (poise > 0) {
-			line.append(SEPARATOR).append(Component.text(Messages.get(player, "message.poise", poise, self.poiseCount(now)), NamedTextColor.AQUA));
-		}
-		return line.build();
 	}
 }

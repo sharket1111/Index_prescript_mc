@@ -89,16 +89,15 @@ final class Items {
 		return strings.isEmpty() ? null : strings.getFirst();
 	}
 
-	/** Sets the form shown by the model and the item name; null restores the bare rod. */
-	static void setForm(ItemStack stack, CaduceusForm form, CommandSender viewer) {
+	/**
+	 * Sets the form shown by the model; null restores the bare rod. The name is
+	 * left alone so no text pops up over the hotbar.
+	 */
+	static void setForm(ItemStack stack, CaduceusForm form) {
 		stack.editMeta(meta -> {
 			CustomModelDataComponent data = meta.getCustomModelDataComponent();
 			data.setStrings(form == null ? List.of() : List.of(form.id()));
 			meta.setCustomModelDataComponent(data);
-			String name = form == null
-					? Messages.get(viewer, "item.caduceus")
-					: Messages.get(viewer, "item.caduceus.formed", Messages.get(viewer, "form." + form.id()));
-			meta.itemName(Component.text(name));
 		});
 	}
 }

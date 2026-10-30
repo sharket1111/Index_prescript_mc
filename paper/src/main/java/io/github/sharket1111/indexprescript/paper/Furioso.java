@@ -1,6 +1,5 @@
 package io.github.sharket1111.indexprescript.paper;
 
-import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,10 +17,6 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
-import net.kyori.adventure.title.Title;
 
 /**
  * Furioso-Replica: a nine-coin flurry in which Caduceus reforms into a new
@@ -29,8 +24,7 @@ import net.kyori.adventure.title.Title;
  * in-game animation: for coins 1-8 the wielder dashes back and forth through
  * the target, each strike leaving a blue sweeping arc and a white star flash;
  * blue rings then swirl around the target, and the ninth coin, a guaranteed
- * scythe, cuts one great diagonal line before the screen darkens. A running
- * TOTAL of the damage dealt shows on the action bar.
+ * scythe, cuts one great diagonal line before the screen darkens.
  *
  * Skill text mapped to Minecraft:
  * - prescript mark: damage +10% (it is only ever cast through prescripts)
@@ -66,7 +60,6 @@ final class Furioso {
 	private final double baseAngle;
 	private final boolean hadAi;
 	private CaduceusForm lastForm;
-	private double total;
 	private int tick;
 
 	private Furioso(Player player, LivingEntity target) {
@@ -102,11 +95,6 @@ final class Furioso {
 		CombatState.of(player).addPoise(3, 3, now);
 		PrescriptTracker.blockHermes(player, now + END_TICK + CombatState.TURN_TICKS);
 
-		player.showTitle(Title.title(
-				Component.text("Furioso-Replica", NamedTextColor.DARK_AQUA, TextDecoration.ITALIC),
-				Component.text(Messages.get(player, "message.furioso_subtitle"), NamedTextColor.GRAY),
-				Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1500), Duration.ofMillis(500))));
-
 		Effects.auraBurst(player);
 		sound(player.getLocation(), Sound.ITEM_BUCKET_FILL_LAVA, 1.0F, 0.6F);
 		sound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.0F, 0.5F);
@@ -121,7 +109,6 @@ final class Furioso {
 		holdTarget();
 		player.setFallDistance(0.0F);
 		CaduceusListener.keepFormed(player, 30);
-		PrescriptTracker.holdOverlay(player);
 
 		if (tick == WINDUP_TICK) {
 			windup();
@@ -199,7 +186,7 @@ final class Furioso {
 		}
 		ItemStack stack = player.getInventory().getItemInMainHand();
 		if (Items.isCaduceus(stack)) {
-			Items.setForm(stack, form, player);
+			Items.setForm(stack, form);
 		}
 		player.swingMainHand();
 
@@ -213,9 +200,6 @@ final class Furioso {
 		}
 		// Coins land faster than the hurt cooldown, so it is reset for each one.
 		Damage.deal(target, damage, player, true);
-		total += damage;
-		player.sendActionBar(Component.text(Messages.get(player, "message.furioso_total", Math.round(total)),
-				hit.crit() ? NamedTextColor.YELLOW : NamedTextColor.WHITE));
 
 		if (coin % 2 == 0) {
 			other.addSinking(1, 1, now);
