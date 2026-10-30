@@ -7,7 +7,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
@@ -17,6 +16,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -25,13 +26,18 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.SwingAnimationType;
+import net.minecraft.world.item.component.SwingAnimation;
 import net.minecraft.world.phys.Vec3;
 
 /**
  * Furioso-Replica: a nine-coin flurry in which Caduceus reforms into a new
- * weapon for every strike while the target is held in place. Coins 1-8 draw
- * crossing white slashes; the screen cuts to black before the ninth coin, a
- * guaranteed scythe, reaps in a crescent.
+ * weapon for every strike while the target is held in place. Following the
+ * in-game animation: for coins 1-8 the wielder dashes back and forth through
+ * the target, each strike leaving a blue sweeping arc and a white star flash;
+ * blue rings then swirl around the target, and the ninth coin, a guaranteed
+ * scythe, cuts one great diagonal line before the screen darkens. A running
+ * TOTAL of the damage dealt shows on the action bar.
  *
  * Skill text mapped to Minecraft:
  * - prescript mark: damage +10% (it is only ever cast through prescripts)
@@ -42,12 +48,14 @@ import net.minecraft.world.phys.Vec3;
  * - attack end: Burn 5, Bind 3, Fragile 3 next turn; consume every [Hermes]
  */
 final class Furioso {
-	private static final int[] COIN_TICKS = {8, 14, 20, 26, 32, 38, 44, 50, 66};
-	private static final int WINDUP_TICK = 54;
-	private static final int END_TICK = 76;
+	private static final int[] COIN_TICKS = {10, 17, 24, 31, 38, 45, 52, 59, 80};
+	private static final int WINDUP_TICK = 62;
+	private static final int END_TICK = 100;
 	private static final int LAST_COIN = COIN_TICKS.length - 1;
-	// Slash angles (degrees from horizontal) chosen so consecutive slashes cross.
-	private static final double[] SLASH_ANGLES = {35, -35, 75, -60, 10, -15, 55, -80};
+	private static final double DASH_RADIUS = 2.2;
+	// Odd coins add a white line through the target; consecutive lines cross.
+	private static final double[] LINE_ANGLES = {35, -35, 70, -60, 15, -20, 55, -75};
+	private static final SwingAnimation STAB = new SwingAnimation(SwingAnimationType.STAB, 6);
 
 	private static final float COIN_RATIO = 0.6F;
 	private static final float PRESCRIPT_MARK_BONUS = 1.10F;
@@ -65,8 +73,11 @@ final class Furioso {
 	private final ServerLevel level;
 	private final LivingEntity target;
 	private final Vec3 anchor;
+	private final Vec3 origin;
+	private final double baseAngle;
 	private final boolean hadNoAi;
 	private CaduceusForm lastForm;
+	private float total;
 	private int tick;
 
 	private Furioso(ServerPlayer player, ServerLevel level, LivingEntity target) {
@@ -74,6 +85,8 @@ final class Furioso {
 		this.level = level;
 		this.target = target;
 		this.anchor = target.position();
+		this.origin = player.position();
+		this.baseAngle = Math.atan2(origin.z - anchor.z, origin.x - anchor.x);
 		this.hadNoAi = target instanceof Mob mob && mob.isNoAi();
 	}
 
@@ -116,10 +129,16 @@ final class Furioso {
 			return false;
 		}
 		holdTarget();
-		CaduceusItem.keepFormed(player, level.getGameTime(), 30);
+		player.resetFallDistance();
+		long now = level.getGameTime();
+		CaduceusItem.keepFormed(player, now, 30);
+		PrescriptTracker.holdOverlay(player, now);
 
 		if (tick == WINDUP_TICK) {
 			windup();
+		}
+		if (tick >= WINDUP_TICK && tick < COIN_TICKS[LAST_COIN]) {
+			CaduceusEffects.vortex(level, target, tick - WINDUP_TICK);
 		}
 		for (int coin = 0; coin < COIN_TICKS.length; coin++) {
 			if (COIN_TICKS[coin] == tick) {
@@ -142,11 +161,36 @@ final class Furioso {
 		}
 	}
 
-	/** The screen cuts to black while liquid metal gathers for the final coin. */
+	/** The wielder steps back to where it began while liquid metal gathers for the final coin. */
 	private void windup() {
-		player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, COIN_TICKS[LAST_COIN] - WINDUP_TICK + 2));
+		dashTo(origin);
 		CaduceusEffects.gather(level, target);
 		level.playSound(null, player.blockPosition(), SoundEvents.BUCKET_FILL_LAVA, SoundSource.PLAYERS, 1.0F, 0.5F);
+	}
+
+	/**
+	 * Dashes through the target to the far side on even coins and back on odd
+	 * ones, with some jitter, so the strikes criss-cross like the animation.
+	 */
+	private void dashFor(int coin) {
+		double side = coin % 2 == 0 ? Math.PI : 0.0;
+		double jitter = (player.getRandom().nextDouble() - 0.5) * 1.4;
+		double angle = baseAngle + side + jitter;
+		Vec3 spot = new Vec3(anchor.x + Math.cos(angle) * DASH_RADIUS, anchor.y, anchor.z + Math.sin(angle) * DASH_RADIUS);
+		dashTo(spot);
+	}
+
+	/** Teleports the wielder to {@code spot} facing the target, if there is room there. */
+	private void dashTo(Vec3 spot) {
+		Vec3 from = player.position();
+		if (!level.noCollision(player, player.getBoundingBox().move(spot.subtract(from)))) {
+			return;
+		}
+		Vec3 look = target.position().add(0.0, target.getBbHeight() * 0.5, 0.0).subtract(spot.add(0.0, player.getEyeHeight(), 0.0));
+		float yaw = (float) (Math.toDegrees(Math.atan2(look.z, look.x)) - 90.0);
+		float pitch = (float) -Math.toDegrees(Math.atan2(look.y, Math.sqrt(look.x * look.x + look.z * look.z)));
+		player.connection.teleport(spot.x, spot.y, spot.z, yaw, pitch);
+		CaduceusEffects.dashTrail(level, from, spot);
 	}
 
 	private void strike(int coin) {
@@ -155,11 +199,14 @@ final class Furioso {
 		CaduceusForm form = last ? CaduceusForm.SCYTHE : CaduceusForm.random(player.getRandom(), lastForm);
 		lastForm = form;
 
+		if (!last) {
+			dashFor(coin);
+		}
 		ItemStack stack = player.getMainHandItem();
 		if (stack.getItem() instanceof CaduceusItem) {
 			form.applyTo(stack);
 		}
-		level.getChunkSource().broadcastAndSend(player, new ClientboundAnimatePacket(player, ClientboundAnimatePacket.SWING_MAIN_HAND));
+		player.swing(InteractionHand.MAIN_HAND, form.piercing() ? STAB : SwingAnimation.DEFAULT, true);
 
 		CombatState self = CombatState.of(player);
 		CombatState other = CombatState.of(target);
@@ -173,6 +220,9 @@ final class Furioso {
 		// Coins land faster than the hurt cooldown; this damage type bypasses it (see data/minecraft/tags).
 		DamageSource source = new DamageSource(level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(DAMAGE_TYPE), player);
 		target.hurtServer(level, source, damage);
+		total += damage;
+		player.sendOverlayMessage(Component.translatable("message.index_prescript.furioso_total", Math.round(total))
+				.withStyle(hit.crit() ? ChatFormatting.YELLOW : ChatFormatting.WHITE));
 
 		if (coin % 2 == 0) {
 			other.addSinking(1, 1, now);
@@ -183,9 +233,15 @@ final class Furioso {
 		CaduceusEffects.form(level, player);
 		if (last) {
 			other.addSinking(0, 3, now);
-			CaduceusEffects.reap(level, player, target);
+			CaduceusEffects.finalCut(level, player, target);
+			player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, END_TICK - COIN_TICKS[LAST_COIN] + 20));
 		} else {
-			CaduceusEffects.slash(level, player, target, SLASH_ANGLES[coin], 1.0F);
+			RandomSource random = player.getRandom();
+			CaduceusEffects.arc(level, player, target, random.nextInt(360), 160 + random.nextInt(60), random.nextInt(60) - 30);
+			CaduceusEffects.star(level, target, 1.0);
+			if (coin % 2 == 1) {
+				CaduceusEffects.slash(level, player, target, LINE_ANGLES[coin], 5.0);
+			}
 		}
 		if (hit.crit()) {
 			CaduceusEffects.crit(level, target);

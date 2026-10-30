@@ -20,9 +20,11 @@ final class CaduceusEffects {
 	private static final DustParticleOptions WHITE_STREAK = new DustParticleOptions(0xF4FAFF, 1.0F);
 	private static final DustParticleOptions AURA = new DustParticleOptions(0x0B0B10, 1.4F);
 	private static final double BLADE_REACH = 2.4;
-	private static final double SLASH_LENGTH = 5.0;
+	private static final DustParticleOptions BLUE_ARC = new DustParticleOptions(0x5AB4FF, 1.2F);
+	private static final DustParticleOptions BLUE_ARC_DIM = new DustParticleOptions(0x2F5F9F, 0.9F);
 	private static final double SLASH_STEP = 0.18;
-	private static final double CRESCENT_RADIUS = 2.6;
+	private static final double ARC_RADIUS = 2.2;
+	private static final double FINAL_CUT_LENGTH = 14.0;
 	private static final int BLADE_STEPS = 8;
 
 	private CaduceusEffects() {
@@ -93,42 +95,110 @@ final class CaduceusEffects {
 	}
 
 	/**
-	 * A long white slash through the target, tilted {@code angleDeg} from the
+	 * A long white line through the target, tilted {@code angleDeg} from the
 	 * horizontal in the plane facing the attacker.
 	 */
-	static void slash(ServerLevel level, LivingEntity attacker, Entity target, double angleDeg, float scale) {
-		Vec3 center = target.position().add(0.0, target.getBbHeight() * 0.5, 0.0);
+	static void slash(ServerLevel level, LivingEntity attacker, Entity target, double angleDeg, double length) {
+		Vec3 center = center(target);
 		Vec3 right = facingRight(attacker, target);
 		double a = Math.toRadians(angleDeg);
 		Vec3 dir = right.scale(Math.cos(a)).add(0.0, Math.sin(a), 0.0);
-		double half = SLASH_LENGTH * 0.5 * scale;
-		for (double t = -half; t <= half; t += SLASH_STEP) {
+		for (double t = -length * 0.5; t <= length * 0.5; t += SLASH_STEP) {
 			Vec3 p = center.add(dir.scale(t));
 			level.sendParticles(ParticleTypes.END_ROD, p.x, p.y, p.z, 1, 0.0, 0.0, 0.0, 0.0);
 			level.sendParticles(WHITE_STREAK, p.x, p.y, p.z, 1, 0.02, 0.02, 0.02, 0.0);
 		}
-		level.sendParticles(BLUE_DROPLET, center.x, center.y, center.z, 8, 0.6, 0.6, 0.6, 0.0);
-		level.sendParticles(ParticleTypes.SQUID_INK, center.x, center.y, center.z, 4, 0.3, 0.3, 0.3, 0.08);
 	}
 
-	/** Final coin: a scythe crescent around the target and a great diagonal cut. */
-	static void reap(ServerLevel level, LivingEntity attacker, Entity target) {
-		Vec3 center = target.position().add(0.0, target.getBbHeight() * 0.5, 0.0);
+	/**
+	 * Sweeping blue arc around the target, the trail of a swing: an ellipse
+	 * segment of {@code sweepDeg} starting at {@code startDeg}, tilted by {@code tiltDeg}.
+	 */
+	static void arc(ServerLevel level, LivingEntity attacker, Entity target, double startDeg, double sweepDeg, double tiltDeg) {
+		Vec3 center = center(target);
 		Vec3 right = facingRight(attacker, target);
-		Vec3 toward = attacker.position().subtract(target.position()).multiply(1.0, 0.0, 1.0).normalize();
-		for (double a = -100; a <= 100; a += 4) {
-			double r = Math.toRadians(a);
-			double radius = CRESCENT_RADIUS * (1.0 - Math.abs(a) / 400.0);
-			Vec3 p = center.add(right.scale(Math.sin(r) * radius)).add(toward.scale(-Math.cos(r) * radius * 0.6)).add(0.0, Math.sin(r) * 0.6, 0.0);
-			level.sendParticles(ParticleTypes.END_ROD, p.x, p.y, p.z, 2, 0.03, 0.03, 0.03, 0.0);
-			level.sendParticles(WHITE_STREAK, p.x, p.y, p.z, 1, 0.05, 0.05, 0.05, 0.0);
+		Vec3 forward = new Vec3(right.z, 0.0, -right.x);
+		double tilt = Math.toRadians(tiltDeg);
+		for (double d = 0; d <= sweepDeg; d += 5) {
+			double r = Math.toRadians(startDeg + d);
+			double fade = d / sweepDeg;
+			Vec3 p = center.add(right.scale(Math.cos(r) * ARC_RADIUS))
+					.add(forward.scale(Math.sin(r) * ARC_RADIUS * 0.55))
+					.add(0.0, Math.cos(r) * Math.sin(tilt) * ARC_RADIUS * 0.6, 0.0);
+			level.sendParticles(fade > 0.5 ? BLUE_ARC : BLUE_ARC_DIM, p.x, p.y, p.z, 1, 0.03, 0.03, 0.03, 0.0);
+			if (fade > 0.75) {
+				level.sendParticles(ParticleTypes.END_ROD, p.x, p.y, p.z, 1, 0.0, 0.0, 0.0, 0.0);
+			}
 		}
-		slash(level, attacker, target, 50, 1.8F);
-		slash(level, attacker, target, -40, 1.4F);
-		level.sendParticles(ParticleTypes.GLOW_SQUID_INK, center.x, center.y, center.z, 16, 1.0, 0.8, 1.0, 0.15);
-		level.sendParticles(BLUE_DROPLET, center.x, center.y, center.z, 30, 1.4, 1.0, 1.4, 0.0);
+	}
+
+	/** White star-shaped flash at the point of impact, with blue shards flying off. */
+	static void star(ServerLevel level, Entity target, double size) {
+		Vec3 c = center(target);
+		RandomSource random = target.getRandom();
+		double spin = random.nextDouble() * Math.PI;
+		for (int spoke = 0; spoke < 8; spoke++) {
+			double a = spin + spoke * Math.PI / 4;
+			double len = (spoke % 2 == 0 ? 1.0 : 0.5) * size;
+			Vec3 dir = new Vec3(Math.cos(a), Math.sin(a), Math.sin(a + spin) * 0.5).normalize();
+			for (double t = 0.1; t <= len; t += 0.15) {
+				Vec3 p = c.add(dir.scale(t));
+				level.sendParticles(WHITE_STREAK, p.x, p.y, p.z, 1, 0.0, 0.0, 0.0, 0.0);
+			}
+		}
+		level.sendParticles(ParticleTypes.END_ROD, c.x, c.y, c.z, (int) (6 * size), 0.1, 0.1, 0.1, 0.12);
+		level.sendParticles(BLUE_DROPLET, c.x, c.y, c.z, (int) (10 * size), 0.5 * size, 0.5 * size, 0.5 * size, 0.0);
+		level.sendParticles(ParticleTypes.GLOW_SQUID_INK, c.x, c.y, c.z, 3, 0.3, 0.3, 0.3, 0.12);
+	}
+
+	/** Streak of black metal and blue light along a dash. */
+	static void dashTrail(ServerLevel level, Vec3 from, Vec3 to) {
+		Vec3 step = to.subtract(from);
+		double length = step.length();
+		if (length < 0.1) {
+			return;
+		}
+		Vec3 dir = step.scale(1.0 / length);
+		for (double t = 0; t <= length; t += 0.3) {
+			Vec3 p = from.add(dir.scale(t)).add(0.0, 1.0, 0.0);
+			level.sendParticles(ParticleTypes.SQUID_INK, p.x, p.y, p.z, 1, 0.08, 0.25, 0.08, 0.0);
+			level.sendParticles(BLUE_ARC_DIM, p.x, p.y, p.z, 1, 0.1, 0.3, 0.1, 0.0);
+		}
+	}
+
+	/** Blue rings swirling around the target as the final coin gathers; call every tick. */
+	static void vortex(ServerLevel level, Entity target, int tick) {
+		Vec3 c = target.position();
+		double[] heights = {0.2, target.getBbHeight() * 0.55, target.getBbHeight() + 0.2};
+		for (int ring = 0; ring < heights.length; ring++) {
+			double radius = 2.4 - ring * 0.35 - tick * 0.04;
+			double phase = tick * 0.35 * (ring % 2 == 0 ? 1 : -1);
+			for (int i = 0; i < 6; i++) {
+				double a = phase + i * Math.PI / 3;
+				double x = c.x + Math.cos(a) * radius;
+				double z = c.z + Math.sin(a) * radius;
+				level.sendParticles(BLUE_ARC, x, c.y + heights[ring], z, 1, 0.0, 0.0, 0.0, 0.0);
+			}
+		}
+		if (tick % 3 == 0) {
+			level.sendParticles(ParticleTypes.SQUID_INK, c.x, c.y + 1.0, c.z, 3, 1.2, 0.6, 1.2, 0.0);
+		}
+	}
+
+	/** Final coin: blinding star, a scythe crescent, and one great diagonal line across the field. */
+	static void finalCut(ServerLevel level, LivingEntity attacker, Entity target) {
+		star(level, target, 2.5);
+		arc(level, attacker, target, -110, 220, 25);
+		slash(level, attacker, target, -32, FINAL_CUT_LENGTH);
+		Vec3 c = center(target);
+		level.sendParticles(ParticleTypes.GLOW_SQUID_INK, c.x, c.y, c.z, 20, 1.2, 0.9, 1.2, 0.2);
+		level.sendParticles(BLUE_DROPLET, c.x, c.y, c.z, 40, 1.6, 1.1, 1.6, 0.0);
 		level.playSound(null, target.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.8F, 0.7F);
 		level.playSound(null, target.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 0.7F);
+	}
+
+	private static Vec3 center(Entity entity) {
+		return entity.position().add(0.0, entity.getBbHeight() * 0.5, 0.0);
 	}
 
 	private static Vec3 facingRight(Entity attacker, Entity target) {

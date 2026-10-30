@@ -76,6 +76,11 @@ public enum CaduceusForm {
 		this.coinBonus = coinBonus;
 	}
 
+	/** Thrusting weapons, animated with a stab instead of a swing. */
+	public boolean piercing() {
+		return kind == DamageKind.PIERCE;
+	}
+
 	public Component displayName() {
 		return Component.translatable("form.index_prescript." + id);
 	}
