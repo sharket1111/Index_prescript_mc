@@ -1,0 +1,6 @@
+{
+	"parent": "minecraft:item/handheld",
+	"textures": {
+		"layer0": "index_prescript:item/caduceus_hatchet"
+	}
+}

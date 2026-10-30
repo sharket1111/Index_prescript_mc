@@ -94,7 +94,6 @@ jobs:
           javap -cp . net.minecraft.sounds.SoundEvents | grep -Ei 'CHAIN|ANVIL_LAND|TRIDENT_HIT |PLAYER_ATTACK_SWEEP|PLAYER_ATTACK_STRONG|MACE_SMASH_GROUND |BUCKET_FILL_LAVA'
           echo "=================== ServerLevel"
           javap -cp . net.minecraft.server.level.ServerLevel | grep -Ei 'sendParticles|getEntitiesOfClass|getGameTime'
-          javap -cp . net.minecraft.world.level.Level | grep -Ei 'getEntitiesOfClass|getGameTime'
           javap -cp . net.minecraft.world.level.EntityGetter | grep -Ei 'getEntitiesOfClass'
 
       - name: Fabric API attack callback

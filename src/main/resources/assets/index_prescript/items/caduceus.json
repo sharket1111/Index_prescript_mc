@@ -1,0 +1,163 @@
+{
+	"model": {
+		"type": "minecraft:select",
+		"property": "minecraft:display_context",
+		"cases": [
+			{
+				"when": [
+					"gui",
+					"ground",
+					"fixed"
+				],
+				"model": {
+					"type": "minecraft:select",
+					"property": "minecraft:custom_model_data",
+					"index": 0,
+					"cases": [
+						{
+							"when": "hatchet",
+							"model": {
+								"type": "minecraft:model",
+								"model": "index_prescript:item/caduceus_hatchet"
+							}
+						},
+						{
+							"when": "stiletto",
+							"model": {
+								"type": "minecraft:model",
+								"model": "index_prescript:item/caduceus_stiletto"
+							}
+						},
+						{
+							"when": "bastard_sword",
+							"model": {
+								"type": "minecraft:model",
+								"model": "index_prescript:item/caduceus_bastard_sword"
+							}
+						},
+						{
+							"when": "rapier",
+							"model": {
+								"type": "minecraft:model",
+								"model": "index_prescript:item/caduceus_rapier"
+							}
+						},
+						{
+							"when": "hammer",
+							"model": {
+								"type": "minecraft:model",
+								"model": "index_prescript:item/caduceus_hammer"
+							}
+						},
+						{
+							"when": "greatsword",
+							"model": {
+								"type": "minecraft:model",
+								"model": "index_prescript:item/caduceus_greatsword"
+							}
+						},
+						{
+							"when": "lance",
+							"model": {
+								"type": "minecraft:model",
+								"model": "index_prescript:item/caduceus_lance"
+							}
+						},
+						{
+							"when": "whip",
+							"model": {
+								"type": "minecraft:model",
+								"model": "index_prescript:item/caduceus_whip"
+							}
+						},
+						{
+							"when": "scythe",
+							"model": {
+								"type": "minecraft:model",
+								"model": "index_prescript:item/caduceus_scythe"
+							}
+						}
+					],
+					"fallback": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/caduceus"
+					}
+				}
+			}
+		],
+		"fallback": {
+			"type": "minecraft:select",
+			"property": "minecraft:custom_model_data",
+			"index": 0,
+			"cases": [
+				{
+					"when": "hatchet",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/caduceus_hatchet_3d"
+					}
+				},
+				{
+					"when": "stiletto",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/caduceus_stiletto_3d"
+					}
+				},
+				{
+					"when": "bastard_sword",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/caduceus_bastard_sword_3d"
+					}
+				},
+				{
+					"when": "rapier",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/caduceus_rapier_3d"
+					}
+				},
+				{
+					"when": "hammer",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/caduceus_hammer_3d"
+					}
+				},
+				{
+					"when": "greatsword",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/caduceus_greatsword_3d"
+					}
+				},
+				{
+					"when": "lance",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/caduceus_lance_3d"
+					}
+				},
+				{
+					"when": "whip",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/caduceus_whip_3d"
+					}
+				},
+				{
+					"when": "scythe",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/caduceus_scythe_3d"
+					}
+				}
+			],
+			"fallback": {
+				"type": "minecraft:model",
+				"model": "index_prescript:item/caduceus_3d"
+			}
+		}
+	}
+}
