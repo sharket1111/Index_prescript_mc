@@ -96,6 +96,26 @@ jobs:
           javap -cp . net.minecraft.server.level.ServerLevel | grep -Ei 'sendParticles|getEntitiesOfClass|getGameTime'
           javap -cp . net.minecraft.world.level.EntityGetter | grep -Ei 'getEntitiesOfClass'
 
+      - name: Furioso APIs
+        run: |
+          set +e
+          url=$(curl -fsS https://piston-meta.mojang.com/mc/game/version_manifest_v2.json | jq -r --arg v "$MC_VERSION" '.versions[] | select(.id==$v) | .url')
+          curl -fsS -o server.jar "$(curl -fsS "$url" | jq -r .downloads.server.url)"
+          mkdir fsrv && cd fsrv && unzip -q ../server.jar
+          inner=$(find META-INF/versions -name '*.jar' | head -1)
+          mkdir ../fgame && cd ../fgame && unzip -q "../fsrv/$inner"
+          echo "=== swing"; javap -cp . net.minecraft.world.entity.LivingEntity | grep -i swing
+          find . -name 'SwingAnimation*.class'
+          for c in $(find . -name 'SwingAnimation*.class' | sed 's#^\./##; s#\.class$##; s#/#.#g'); do javap -cp . "$c"; done
+          echo "=== animate packet"; javap -cp . net.minecraft.network.protocol.game.ClientboundAnimatePacket
+          echo "=== chunk cache"; javap -cp . net.minecraft.server.level.ServerChunkCache | grep -i 'broadcast\|send'
+          echo "=== ServerLevel send"; javap -cp . net.minecraft.server.level.ServerLevel | grep -i 'broadcast'
+          echo "=== teleport"; javap -cp . net.minecraft.server.network.ServerGamePacketListenerImpl | grep -i teleport
+          javap -cp . net.minecraft.server.level.ServerPlayer | grep -i 'teleport'
+          javap -cp . net.minecraft.world.entity.Entity | grep -i 'teleportTo\|fallDistance\|setYRot\|setYHeadRot\|lookAt'
+          echo "=== collision"; javap -cp . net.minecraft.world.level.CollisionGetter | grep -i 'noCollision'
+          echo "=== particles"; javap -cp . net.minecraft.core.particles.ParticleTypes | grep -Ei 'FIREWORK|ELECTRIC|FLASH|END_ROD|ENCHANTED_HIT'
+
       - name: Fabric API attack callback
         run: |
           v=$(curl -fsS https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml \
