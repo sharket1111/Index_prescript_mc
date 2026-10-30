@@ -88,6 +88,14 @@ jobs:
           curl -fsS -o api.jar "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/$v/fabric-api-$v.jar"
           unzip -l api.jar | grep -Ei 'item|creative' || true
           mkdir api && cd api && unzip -q ../api.jar
-          j=$(find . -name '*item-group*.jar' -o -name '*creative*.jar' | head -1)
-          echo "module: $j"
-          [ -n "$j" ] && unzip -l "$j" | grep '\.class' | head -40
+          echo "--- nested modules"
+          ls META-INF/jars/
+          for j in $(ls META-INF/jars/*.jar | grep -Ei 'item-group|creative|tab'); do
+            echo "=================== $j"
+            unzip -l "$j" | grep '\.class' | awk '{print $4}'
+            mkdir -p "x/$j" && (cd "x/$j" && unzip -q -o "$OLDPWD/$j")
+            for c in $(cd "x/$j" && find . -name '*.class' -path '*api*' | grep -v '\$' | sed 's#^\./##; s#\.class$##; s#/#.#g'); do
+              echo "----- $c"
+              javap -cp "x/$j" "$c" 2>&1 | head -40
+            done
+          done

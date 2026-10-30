@@ -2,6 +2,7 @@ package io.github.sharket1111.indexprescript;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -24,12 +25,12 @@ public class TerminalItem extends Item {
 
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
-		if (!level.isClientSide()) {
+		if (player instanceof ServerPlayer serverPlayer) {
 			int index = level.getRandom().nextInt(PRESCRIPT_COUNT);
-			player.displayClientMessage(Component.translatable("message.index_prescript.prescript_header")
-					.withStyle(ChatFormatting.AQUA), false);
-			player.displayClientMessage(Component.translatable("message.index_prescript.prescript." + index)
-					.withStyle(ChatFormatting.WHITE), false);
+			serverPlayer.sendSystemMessage(Component.translatable("message.index_prescript.prescript_header")
+					.withStyle(ChatFormatting.AQUA));
+			serverPlayer.sendSystemMessage(Component.translatable("message.index_prescript.prescript." + index)
+					.withStyle(ChatFormatting.WHITE));
 			level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 1.4F);
 			player.getCooldowns().addCooldown(player.getItemInHand(hand), COOLDOWN_TICKS);
 		}
