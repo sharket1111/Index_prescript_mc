@@ -1,0 +1,93 @@
+# Prints toolchain versions and Minecraft class signatures for the target
+# game version. Used to pin versions in gradle.properties; run manually.
+name: discover
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/discover.yml
+
+env:
+  MC_VERSION: "26.3"
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Fabric game versions
+        run: curl -fsS https://meta.fabricmc.net/v2/versions/game | jq -r '.[0:20][] | "\(.version) stable=\(.stable)"'
+
+      - name: Fabric loader versions
+        run: curl -fsS https://meta.fabricmc.net/v2/versions/loader | jq -r '.[0:5][] | "\(.version) stable=\(.stable)"'
+
+      - name: Fabric API versions
+        run: |
+          curl -fsS https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml \
+            | grep -o '<version>[^<]*</version>' | sed 's/<[^>]*>//g' | grep "+$MC_VERSION" | tail -5 || echo "none for $MC_VERSION"
+          echo "--- latest overall"
+          curl -fsS https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml \
+            | grep -o '<version>[^<]*</version>' | sed 's/<[^>]*>//g' | tail -5
+
+      - name: Loom plugin versions
+        run: |
+          for id in net.fabricmc.fabric-loom net.fabricmc.fabric-loom-remap fabric-loom; do
+            echo "== $id"
+            curl -fsS "https://maven.fabricmc.net/${id//.//}/$id.gradle.plugin/maven-metadata.xml" \
+              | grep -o '<version>[^<]*</version>' | sed 's/<[^>]*>//g' | tail -4 || echo "(not found)"
+          done
+
+      - name: Fabric example mod
+        run: |
+          git ls-remote --heads https://github.com/FabricMC/fabric-example-mod | awk '{print $2}'
+          git clone --depth 1 https://github.com/FabricMC/fabric-example-mod ex
+          cd ex
+          git log -1 --format='%H %cd'
+          for f in settings.gradle* build.gradle* gradle.properties gradle/wrapper/gradle-wrapper.properties src/main/resources/fabric.mod.json; do
+            [ -f "$f" ] && { echo "=================== $f"; cat "$f"; }
+          done
+          find src -name '*.java' | while read f; do echo "=================== $f"; cat "$f"; done
+
+      - name: Minecraft class signatures
+        run: |
+          url=$(curl -fsS https://piston-meta.mojang.com/mc/game/version_manifest_v2.json | jq -r --arg v "$MC_VERSION" '.versions[] | select(.id==$v) | .url')
+          echo "version json: $url"
+          [ -n "$url" ] || { echo "Minecraft $MC_VERSION not in manifest"; exit 0; }
+          curl -fsS "$url" | jq '{javaVersion, mainClass}'
+          curl -fsS -o server.jar "$(curl -fsS "$url" | jq -r .downloads.server.url)"
+          mkdir srv && cd srv && unzip -q ../server.jar
+          inner=$(find META-INF/versions -name '*.jar' | head -1)
+          [ -n "$inner" ] && { mkdir ../game && cd ../game && unzip -q "../srv/$inner"; } || cd .
+          echo "--- resource/identifier classes"
+          ls net/minecraft/resources/ | head -40
+          for c in net.minecraft.resources.Identifier net.minecraft.resources.ResourceLocation net.minecraft.resources.ResourceKey \
+                   'net.minecraft.world.item.Item$Properties' net.minecraft.world.item.ToolMaterial net.minecraft.world.InteractionResult \
+                   net.minecraft.world.item.CreativeModeTabs net.minecraft.world.item.ItemCooldowns; do
+            echo "=================== $c"
+            javap -cp . "$c" 2>&1 | head -80
+          done
+          echo "=================== Item (use/hurt)"
+          javap -cp . net.minecraft.world.item.Item | grep -Ei 'use|hurt|appendHover|tooltip|<init>' | head -30
+          echo "=================== Player messaging"
+          javap -cp . net.minecraft.world.entity.player.Player | grep -Ei 'message|cooldown|overlay' | head -20
+          javap -cp . net.minecraft.server.level.ServerPlayer | grep -Ei 'message|overlay' | head -20
+          echo "=================== Level"
+          javap -cp . net.minecraft.world.level.Level | grep -Ei 'isClientSide|playSound' | head -20
+          javap -cp . net.minecraft.sounds.SoundEvents | grep -Ei 'chime|beacon|note_block_bell|AMETHYST' | head -20
+
+      - name: Fabric API item group module
+        run: |
+          v=$(curl -fsS https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml \
+            | grep -o '<version>[^<]*</version>' | sed 's/<[^>]*>//g' | grep "+$MC_VERSION" | tail -1)
+          [ -n "$v" ] || { echo "no fabric-api for $MC_VERSION"; exit 0; }
+          curl -fsS -o api.jar "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/$v/fabric-api-$v.jar"
+          unzip -l api.jar | grep -Ei 'item|creative' || true
+          mkdir api && cd api && unzip -q ../api.jar
+          j=$(find . -name '*item-group*.jar' -o -name '*creative*.jar' | head -1)
+          echo "module: $j"
+          [ -n "$j" ] && unzip -l "$j" | grep '\.class' | head -40
