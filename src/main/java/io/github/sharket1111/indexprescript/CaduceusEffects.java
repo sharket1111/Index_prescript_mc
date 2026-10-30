@@ -52,6 +52,13 @@ final class CaduceusEffects {
 		level.sendParticles(BLUE_DROPLET, target.getX(), y, target.getZ(), 6, 0.35, 0.35, 0.35, 0.0);
 	}
 
+	/** Critical hit: sparks and a heavy strike sound. */
+	static void crit(ServerLevel level, Entity target) {
+		level.sendParticles(ParticleTypes.CRIT, target.getX(), target.getY(0.6), target.getZ(), 14, 0.35, 0.35, 0.35, 0.25);
+		level.sendParticles(ParticleTypes.GLOW_SQUID_INK, target.getX(), target.getY(0.6), target.getZ(), 3, 0.3, 0.3, 0.3, 0.05);
+		level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 0.8F, 1.3F);
+	}
+
 	/** Weapon melting back into the rod: black metal dripping off the hand. */
 	static void melt(ServerLevel level, Entity holder) {
 		double y = holder.getY(0.55);

@@ -1,12 +1,14 @@
 package io.github.sharket1111.indexprescript;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -28,52 +30,103 @@ import net.minecraft.world.phys.EntityHitResult;
  * weapon on every attack, then melts back into the rod shortly after.
  */
 public class CaduceusItem extends Item {
+	private static final Component SEPARATOR = Component.literal(" · ").withStyle(ChatFormatting.DARK_GRAY);
 	private static final int FORM_TICKS = 40;
-	// Game time at which each player's formed weapon melts back. Server-side only.
+	private static final float CHARGED_THRESHOLD = 0.9F;
+	private static final int PRUNE_INTERVAL = 1200;
+	// Server-side per-player attack bookkeeping, keyed by player UUID.
 	private static final Map<UUID, Long> REVERT_AT = new ConcurrentHashMap<>();
+	private static final Map<UUID, Boolean> CHARGED = new ConcurrentHashMap<>();
+	private static final Map<UUID, Boolean> LAST_CRIT = new ConcurrentHashMap<>();
 
 	public CaduceusItem(Properties properties) {
 		super(properties);
 	}
 
-	/** AttackEntityCallback: forms a new weapon before the hit is resolved. */
+	/**
+	 * AttackEntityCallback: forms a new weapon before the hit is resolved. Only a
+	 * charged swing forms a new weapon and triggers its on-hit effect, so spam
+	 * clicking cannot stack statuses.
+	 */
 	public static InteractionResult onAttack(Player player, Level level, InteractionHand hand, Entity target, EntityHitResult hitResult) {
 		ItemStack stack = player.getItemInHand(hand);
 		if (!(level instanceof ServerLevel serverLevel) || !(stack.getItem() instanceof CaduceusItem) || player.isSpectator()) {
 			return InteractionResult.PASS;
 		}
 
-		CaduceusForm form = CaduceusForm.random(level.getRandom(), CaduceusForm.of(stack).orElse(null));
-		form.applyTo(stack);
-		REVERT_AT.put(player.getUUID(), level.getGameTime() + FORM_TICKS);
-
-		CaduceusEffects.form(serverLevel, player);
-		CaduceusEffects.impact(serverLevel, target);
-		if (player instanceof ServerPlayer serverPlayer) {
-			serverPlayer.sendOverlayMessage(Component.translatable("message.index_prescript.caduceus_formed", form.displayName())
-					.withStyle(ChatFormatting.GOLD));
+		boolean charged = player.getAttackStrengthScale(0.5F) >= CHARGED_THRESHOLD;
+		CHARGED.put(player.getUUID(), charged);
+		CaduceusForm current = CaduceusForm.of(stack).orElse(null);
+		if (charged || current == null) {
+			current = CaduceusForm.random(level.getRandom(), current);
+			current.applyTo(stack);
+			CaduceusEffects.form(serverLevel, player);
 		}
+		REVERT_AT.put(player.getUUID(), level.getGameTime() + FORM_TICKS);
+		CaduceusEffects.impact(serverLevel, target);
 		return InteractionResult.PASS;
 	}
 
+	/**
+	 * Scales the incoming damage (which already includes attack cooldown,
+	 * vanilla crits and enchantments) by the form's damage relative to the bare rod.
+	 */
 	@Override
 	public float getAttackDamageBonus(Entity target, float damage, DamageSource source) {
-		if (source.getEntity() instanceof LivingEntity attacker) {
-			return CaduceusForm.of(attacker.getMainHandItem()).map(CaduceusForm::bonusDamage).orElse(0.0F);
+		if (!(source.getEntity() instanceof LivingEntity attacker) || !(attacker.level() instanceof ServerLevel level)) {
+			return 0.0F;
 		}
-		return 0.0F;
+		Optional<CaduceusForm> form = CaduceusForm.of(attacker.getMainHandItem());
+		if (form.isEmpty()) {
+			return 0.0F;
+		}
+		CaduceusForm.Hit hit = form.get().resolve(level, attacker, target);
+		LAST_CRIT.put(attacker.getUUID(), hit.crit());
+		return damage * (hit.damage() / CaduceusForm.ROD_DAMAGE - 1.0F);
 	}
 
 	@Override
 	public void postHurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
 		super.postHurtEnemy(stack, target, attacker);
-		if (target.level() instanceof ServerLevel level) {
-			CaduceusForm.of(stack).ifPresent(form -> form.onHit(level, attacker, target));
+		if (!(target.level() instanceof ServerLevel level)) {
+			return;
 		}
+		Optional<CaduceusForm> form = CaduceusForm.of(stack);
+		if (form.isEmpty()) {
+			return;
+		}
+		boolean crit = Boolean.TRUE.equals(LAST_CRIT.remove(attacker.getUUID()));
+		if (crit) {
+			CaduceusEffects.crit(level, target);
+		}
+		boolean staggered = !Boolean.FALSE.equals(CHARGED.get(attacker.getUUID())) && form.get().onHit(level, attacker, target);
+		if (attacker instanceof ServerPlayer player) {
+			player.sendOverlayMessage(status(form.get(), CombatState.of(player), level.getGameTime(), crit, staggered));
+		}
+	}
+
+	private static Component status(CaduceusForm form, CombatState self, long now, boolean crit, boolean staggered) {
+		MutableComponent line = Component.translatable("message.index_prescript.caduceus_formed", form.displayName())
+				.withStyle(ChatFormatting.GOLD);
+		if (crit) {
+			line.append(SEPARATOR).append(Component.translatable("message.index_prescript.crit").withStyle(ChatFormatting.YELLOW));
+		}
+		if (staggered) {
+			line.append(SEPARATOR).append(Component.translatable("message.index_prescript.staggered").withStyle(ChatFormatting.RED));
+		}
+		int poise = self.poisePotency(now);
+		if (poise > 0) {
+			line.append(SEPARATOR).append(Component.translatable("message.index_prescript.poise", poise, self.poiseCount(now))
+					.withStyle(ChatFormatting.AQUA));
+		}
+		return line;
 	}
 
 	@Override
 	public void inventoryTick(ItemStack stack, ServerLevel level, Entity entity, EquipmentSlot slot) {
+		if (level.getGameTime() % PRUNE_INTERVAL == 0) {
+			CombatState.prune(level.getGameTime());
+		}
 		if (CaduceusForm.of(stack).isEmpty()) {
 			return;
 		}
