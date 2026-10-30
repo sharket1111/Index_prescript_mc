@@ -29,11 +29,13 @@ jobs:
         id: v
         run: |
           mc=$(grep '^minecraft_version=' gradle.properties | cut -d= -f2)
-          api=$(curl -fsS https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/maven-metadata.xml \
-            | grep -o '<version>[^<]*</version>' | sed 's/<[^>]*>//g' | grep -E "^${mc//./\\.}([.-]|$)" | tail -1 || true)
-          echo "paper-api candidates:"
-          curl -fsS https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/maven-metadata.xml \
-            | grep -o '<version>[^<]*</version>' | sed 's/<[^>]*>//g' | tail -5
+          versions=$(curl -fsS https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/maven-metadata.xml \
+            | grep -o '<version>[^<]*</version>' | sed 's/<[^>]*>//g')
+          # Newest stable build (e.g. 26.3.build.231-stable); pre-releases sort last in the metadata.
+          api=$(echo "$versions" | grep -E "^${mc//./\\.}\.build\.[0-9]+-stable$" | sort -V | tail -1 || true)
+          if [ -z "$api" ]; then
+            api=$(echo "$versions" | grep -E "^${mc//./\\.}[.-]" | sort -V | tail -1 || true)
+          fi
           if [ -z "$api" ]; then
             echo "::error::No paper-api build for Minecraft $mc"
             exit 1
