@@ -109,6 +109,10 @@ final class CombatState {
 		return potency;
 	}
 
+	int sinkingPotency(long now) {
+		return sinkingCount > 0 && now < sinkingUntil ? sinkingPotency : 0;
+	}
+
 	// --- Stagger: accumulated stagger damage; reaching the threshold staggers for one turn.
 
 	/** Adds stagger damage; returns true if this pushed the entity into the staggered state. */
@@ -152,6 +156,13 @@ final class CombatState {
 		fragile[kind.ordinal()].add(now);
 	}
 
+	/** Fragile of every type, raised to at least {@code stacks} (beyond the per-turn cap) for {@code ticks}. */
+	void setFragileAll(int stacks, long now, int ticks) {
+		for (TurnStacks f : fragile) {
+			f.raise(stacks, now, ticks);
+		}
+	}
+
 	int fragile(DamageKind kind, long now) {
 		return fragile[kind.ordinal()].get(now);
 	}
@@ -176,6 +187,11 @@ final class CombatState {
 		void add(long now) {
 			stacks = Math.min(MAX_TURN_STACKS, get(now) + 1);
 			until = now + TURN_TICKS;
+		}
+
+		void raise(int value, long now, int ticks) {
+			stacks = Math.max(get(now), value);
+			until = Math.max(until, now + ticks);
 		}
 
 		int get(long now) {

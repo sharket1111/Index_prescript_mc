@@ -54,6 +54,15 @@ public class CaduceusItem extends Item {
 			return InteractionResult.PASS;
 		}
 
+		if (Furioso.active(player)) {
+			return InteractionResult.FAIL;
+		}
+		if (player instanceof ServerPlayer serverPlayer && target instanceof LivingEntity living && living.isAlive()
+				&& PrescriptTracker.ready(serverPlayer)) {
+			Furioso.start(serverPlayer, serverLevel, living);
+			return InteractionResult.FAIL;
+		}
+
 		boolean charged = player.getAttackStrengthScale(0.5F) >= CHARGED_THRESHOLD;
 		CHARGED.put(player.getUUID(), charged);
 		CaduceusForm current = CaduceusForm.of(stack).orElse(null);
@@ -65,6 +74,11 @@ public class CaduceusItem extends Item {
 		REVERT_AT.put(player.getUUID(), level.getGameTime() + FORM_TICKS);
 		CaduceusEffects.impact(serverLevel, target);
 		return InteractionResult.PASS;
+	}
+
+	/** Keeps the current form from melting back for at least {@code ticks}. */
+	static void keepFormed(Player player, long now, int ticks) {
+		REVERT_AT.merge(player.getUUID(), now + ticks, Math::max);
 	}
 
 	/**
@@ -99,9 +113,15 @@ public class CaduceusItem extends Item {
 		if (crit) {
 			CaduceusEffects.crit(level, target);
 		}
-		boolean staggered = !Boolean.FALSE.equals(CHARGED.get(attacker.getUUID())) && form.get().onHit(level, attacker, target);
+		boolean charged = !Boolean.FALSE.equals(CHARGED.get(attacker.getUUID()));
+		boolean staggered = charged && form.get().onHit(level, attacker, target);
 		if (attacker instanceof ServerPlayer player) {
-			player.sendOverlayMessage(status(form.get(), CombatState.of(player), level.getGameTime(), crit, staggered));
+			long now = level.getGameTime();
+			player.sendOverlayMessage(status(form.get(), CombatState.of(player), now, crit, staggered));
+			PrescriptTracker.holdOverlay(player, now);
+			if (charged) {
+				PrescriptTracker.onHit(player, level, form.get(), crit, staggered);
+			}
 		}
 	}
 

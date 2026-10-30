@@ -11,6 +11,7 @@ public class IndexPrescript implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		ModItems.init();
+		PrescriptTracker.register();
 		LOGGER.info("Index Prescript loaded");
 	}
 }

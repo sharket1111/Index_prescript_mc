@@ -12,12 +12,12 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 
 /**
- * Right-click to receive a random prescript. Prescripts are translation keys
- * {@code message.index_prescript.prescript.<n>} for n in [0, PRESCRIPT_COUNT).
+ * Rien's terminal. Held in the off hand, it receives prescripts on the action
+ * bar (see {@link PrescriptTracker}); right-click prints the current prescript
+ * and [Hermes] count to chat.
  */
 public class TerminalItem extends Item {
-	private static final int PRESCRIPT_COUNT = 10;
-	private static final int COOLDOWN_TICKS = 100;
+	private static final int COOLDOWN_TICKS = 20;
 
 	public TerminalItem(Properties properties) {
 		super(properties);
@@ -26,11 +26,15 @@ public class TerminalItem extends Item {
 	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand hand) {
 		if (player instanceof ServerPlayer serverPlayer) {
-			int index = level.getRandom().nextInt(PRESCRIPT_COUNT);
+			PrescriptTracker tracker = PrescriptTracker.of(player);
 			serverPlayer.sendSystemMessage(Component.translatable("message.index_prescript.prescript_header")
 					.withStyle(ChatFormatting.AQUA));
-			serverPlayer.sendSystemMessage(Component.translatable("message.index_prescript.prescript." + index)
-					.withStyle(ChatFormatting.WHITE));
+			if (tracker.prescript() == null) {
+				serverPlayer.sendSystemMessage(Component.translatable("message.index_prescript.prescript_none")
+						.withStyle(ChatFormatting.GRAY));
+			} else {
+				serverPlayer.sendSystemMessage(tracker.line());
+			}
 			level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 1.4F);
 			player.getCooldowns().addCooldown(player.getItemInHand(hand), COOLDOWN_TICKS);
 		}
