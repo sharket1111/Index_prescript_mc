@@ -14,7 +14,7 @@ import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.ToolMaterial;
 
 public final class ModItems {
-	// Ruen's blade: netherite-tier sword, slightly faster than vanilla.
+	// Ruen's chained baton: netherite-tier melee stats, slightly faster than a vanilla sword.
 	public static final Item RUEN_WEAPON = register("ruen_weapon", Item::new,
 			new Item.Properties().sword(ToolMaterial.NETHERITE, 4.0F, -2.2F).rarity(Rarity.EPIC));
 
