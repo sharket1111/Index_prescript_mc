@@ -1,0 +1,22 @@
+{
+	"schemaVersion": 1,
+	"id": "index_prescript",
+	"version": "${version}",
+	"name": "Index Prescript",
+	"description": "Ruen's weapon and prescript terminal, inspired by Limbus Company.",
+	"authors": ["sharket1111"],
+	"contact": {
+		"sources": "https://github.com/sharket1111/Index_prescript_mc"
+	},
+	"icon": "assets/index_prescript/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": ["io.github.sharket1111.indexprescript.IndexPrescript"]
+	},
+	"depends": {
+		"fabricloader": ">=0.16.0",
+		"minecraft": "~${minecraft_version}",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

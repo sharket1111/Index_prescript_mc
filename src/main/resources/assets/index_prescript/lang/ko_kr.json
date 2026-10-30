@@ -1,0 +1,15 @@
+{
+	"item.index_prescript.ruen_weapon": "뤼엔의 무기",
+	"item.index_prescript.ruen_terminal": "뤼엔의 단말기",
+	"message.index_prescript.prescript_header": "[지령 수신]",
+	"message.index_prescript.prescript.0": "다음 해가 질 때까지 빵 세 개를 먹어라.",
+	"message.index_prescript.prescript.1": "처음 마주친 좀비를 맨손으로 쓰러뜨려라.",
+	"message.index_prescript.prescript.2": "오늘 밤에는 침대에서 자지 마라.",
+	"message.index_prescript.prescript.3": "가장 가까이 있는 사람에게 꽃 한 송이를 건네라.",
+	"message.index_prescript.prescript.4": "다음 동굴에 횃불을 정확히 일곱 개 설치하라.",
+	"message.index_prescript.prescript.5": "북쪽으로 100블록 걸어간 뒤 하늘을 올려다보아라.",
+	"message.index_prescript.prescript.6": "다음에 발견하는 철광석은 캐지 말고 그대로 두어라.",
+	"message.index_prescript.prescript.7": "해가 뜰 때까지 채팅을 하지 마라.",
+	"message.index_prescript.prescript.8": "닭 한 마리에게 이름을 지어 주어라.",
+	"message.index_prescript.prescript.9": "지금 들고 있는 물건을 상자에 넣고 잊어라."
+}

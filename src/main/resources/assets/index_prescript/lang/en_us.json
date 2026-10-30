@@ -1,0 +1,15 @@
+{
+	"item.index_prescript.ruen_weapon": "Ruen's Weapon",
+	"item.index_prescript.ruen_terminal": "Ruen's Terminal",
+	"message.index_prescript.prescript_header": "[Prescript Received]",
+	"message.index_prescript.prescript.0": "Eat three loaves of bread before the sun sets.",
+	"message.index_prescript.prescript.1": "Defeat the first zombie you meet with your bare hands.",
+	"message.index_prescript.prescript.2": "Do not sleep in a bed tonight.",
+	"message.index_prescript.prescript.3": "Hand a single flower to the person nearest to you.",
+	"message.index_prescript.prescript.4": "Place exactly seven torches in the next cave.",
+	"message.index_prescript.prescript.5": "Walk 100 blocks north, then look up at the sky.",
+	"message.index_prescript.prescript.6": "Leave the next iron ore you find untouched.",
+	"message.index_prescript.prescript.7": "Do not chat until the sun rises.",
+	"message.index_prescript.prescript.8": "Give a chicken a name.",
+	"message.index_prescript.prescript.9": "Put the item in your hand into a chest and forget it."
+}

@@ -1,0 +1,59 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      # Loader/Fabric API come from Fabric's metadata for minecraft_version;
+      # Loom and Gradle follow Fabric's official example mod.
+      - name: Resolve Fabric versions
+        id: v
+        run: |
+          mc=$(grep '^minecraft_version=' gradle.properties | cut -d= -f2)
+          loader=$(curl -fsS https://meta.fabricmc.net/v2/versions/loader | jq -r '[.[] | select(.stable)][0].version')
+          api=$(curl -fsS https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml \
+            | grep -o '<version>[^<]*</version>' | sed 's/<[^>]*>//g' | grep -E "\+$mc$" | tail -1 || true)
+          git clone -q --depth 1 https://github.com/FabricMC/fabric-example-mod "$RUNNER_TEMP/example"
+          loom=$(grep '^loom_version=' "$RUNNER_TEMP/example/gradle.properties" | cut -d= -f2)
+          gradle=$(sed -n 's#.*gradle-\(.*\)-bin\.zip#\1#p' "$RUNNER_TEMP/example/gradle/wrapper/gradle-wrapper.properties")
+          echo "minecraft=$mc loader=$loader fabric-api=$api loom=$loom gradle=$gradle"
+          if [ -z "$api" ]; then
+            echo "::error::No Fabric API release for Minecraft $mc yet"
+            exit 1
+          fi
+          {
+            echo "loader=$loader"
+            echo "api=$api"
+            echo "loom=$loom"
+            echo "gradle=$gradle"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: ${{ steps.v.outputs.gradle }}
+
+      - name: Build
+        run: >
+          gradle build --stacktrace
+          -Ploader_version=${{ steps.v.outputs.loader }}
+          -Pfabric_api_version=${{ steps.v.outputs.api }}
+          -Ploom_version=${{ steps.v.outputs.loom }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: index-prescript
+          path: |
+            build/libs/*.jar
+            !build/libs/*-sources.jar
