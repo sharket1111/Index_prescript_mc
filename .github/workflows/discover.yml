@@ -79,6 +79,33 @@ jobs:
           echo "=================== Level"
           javap -cp . net.minecraft.world.level.Level | grep -Ei 'isClientSide|playSound' | head -20
           javap -cp . net.minecraft.sounds.SoundEvents | grep -Ei 'chime|beacon|note_block_bell|AMETHYST' | head -20
+          echo "=================== Item (full)"
+          javap -cp . net.minecraft.world.item.Item | grep -v 'static final'
+          for c in net.minecraft.world.item.component.CustomModelData net.minecraft.world.entity.LivingEntity net.minecraft.world.damagesource.DamageSources; do
+            echo "=================== $c"
+            javap -cp . "$c" | grep -Ei 'CustomModelData|knockback|hurtServer|addEffect|playerAttack|mobAttack|getMainHandItem|getBoundingBox|static' | head -40
+          done
+          echo "=================== Entity"
+          javap -cp . net.minecraft.world.entity.Entity | grep -Ei ' push\(|setDeltaMovement|getDeltaMovement|hurtMarked|position\(\)|getX\(|getY\(|getEyeY|getBbHeight|getUUID' | head -20
+          echo "=================== DataComponents / MobEffects / ParticleTypes / SoundEvents"
+          javap -cp . net.minecraft.core.component.DataComponents | grep -Ei 'CUSTOM_MODEL_DATA|CUSTOM_NAME'
+          javap -cp . net.minecraft.world.effect.MobEffects | grep -Ei 'SLOW|SPEED|WITHER|WEAK|POISON|DARK|BLIND'
+          javap -cp . net.minecraft.core.particles.ParticleTypes | grep -Ei 'INK|SWEEP|CRIT|SMOKE '
+          javap -cp . net.minecraft.sounds.SoundEvents | grep -Ei 'CHAIN|ANVIL_LAND|TRIDENT_HIT |PLAYER_ATTACK_SWEEP|PLAYER_ATTACK_STRONG|MACE_SMASH_GROUND |BUCKET_FILL_LAVA'
+          echo "=================== ServerLevel"
+          javap -cp . net.minecraft.server.level.ServerLevel | grep -Ei 'sendParticles|getEntitiesOfClass|getGameTime'
+          javap -cp . net.minecraft.world.level.Level | grep -Ei 'getEntitiesOfClass|getGameTime'
+          javap -cp . net.minecraft.world.level.EntityGetter | grep -Ei 'getEntitiesOfClass'
+
+      - name: Fabric API attack callback
+        run: |
+          v=$(curl -fsS https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml \
+            | grep -o '<version>[^<]*</version>' | sed 's/<[^>]*>//g' | grep "+$MC_VERSION" | tail -1)
+          curl -fsS -o api.jar "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/$v/fabric-api-$v.jar"
+          mkdir ev && cd ev && unzip -q ../api.jar
+          j=$(ls META-INF/jars/*events-interaction*.jar)
+          unzip -l "$j" | grep 'api/.*\.class' | awk '{print $4}'
+          javap -cp "$j" net.fabricmc.fabric.api.event.player.AttackEntityCallback || true
 
       - name: Fabric API item group module
         run: |
