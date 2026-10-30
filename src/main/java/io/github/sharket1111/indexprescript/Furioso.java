@@ -6,15 +6,19 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
@@ -51,6 +55,9 @@ final class Furioso {
 	private static final int POWER_STEP = 6;
 	private static final int MAX_POWER = 2;
 	private static final float FINAL_CRIT_MULTIPLIER = (1.2F + 0.9F) / 1.2F;
+
+	private static final ResourceKey<DamageType> DAMAGE_TYPE = ResourceKey.create(Registries.DAMAGE_TYPE,
+			Identifier.fromNamespaceAndPath(IndexPrescript.MOD_ID, "furioso"));
 
 	private static final Map<UUID, Furioso> ACTIVE = new ConcurrentHashMap<>();
 
@@ -152,7 +159,7 @@ final class Furioso {
 		if (stack.getItem() instanceof CaduceusItem) {
 			form.applyTo(stack);
 		}
-		player.swing(InteractionHand.MAIN_HAND, true);
+		level.getChunkSource().broadcastAndSend(player, new ClientboundAnimatePacket(player, ClientboundAnimatePacket.SWING_MAIN_HAND));
 
 		CombatState self = CombatState.of(player);
 		CombatState other = CombatState.of(target);
@@ -163,8 +170,8 @@ final class Furioso {
 			damage *= FINAL_CRIT_MULTIPLIER;
 		}
 
-		DamageSource source = level.damageSources().playerAttack(player);
-		target.invulnerableTime = 0;
+		// Coins land faster than the hurt cooldown; this damage type bypasses it (see data/minecraft/tags).
+		DamageSource source = new DamageSource(level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(DAMAGE_TYPE), player);
 		target.hurtServer(level, source, damage);
 
 		if (coin % 2 == 0) {
