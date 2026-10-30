@@ -2,7 +2,7 @@ package io.github.sharket1111.indexprescript;
 
 import java.util.function.Function;
 
-import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
+import net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -31,9 +31,9 @@ public final class ModItems {
 	}
 
 	static void init() {
-		ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.COMBAT).register(entries -> {
-			entries.accept(RUEN_WEAPON);
-			entries.accept(RUEN_TERMINAL);
+		CreativeModeTabEvents.modifyOutputEvent(CreativeModeTabs.COMBAT).register(output -> {
+			output.accept(RUEN_WEAPON);
+			output.accept(RUEN_TERMINAL);
 		});
 	}
 }
