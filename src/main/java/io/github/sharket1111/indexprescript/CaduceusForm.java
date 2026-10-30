@@ -93,16 +93,16 @@ public enum CaduceusForm {
 			case RAPIER -> attacker.addEffect(new MobEffectInstance(MobEffects.SPEED, 40, 1));
 			case HAMMER -> target.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 40, 2), attacker);
 			case GREATSWORD -> level.sendParticles(ParticleTypes.SWEEP_ATTACK, target.getX(), target.getY(0.5), target.getZ(), 1, 0.0, 0.0, 0.0, 0.0);
-			case LANCE -> target.knockback(1.5, attacker.getX() - target.getX(), attacker.getZ() - target.getZ());
-			case WHIP -> pull(attacker, target);
+			case LANCE -> impulse(attacker, target, -1.4, 0.35);
+			case WHIP -> impulse(attacker, target, 0.8, 0.25);
 			case SCYTHE -> reap(level, attacker, target);
 		}
 	}
 
-	private static void pull(LivingEntity attacker, LivingEntity target) {
-		Vec3 toAttacker = attacker.position().subtract(target.position()).normalize().scale(0.8);
-		target.push(toAttacker.x, 0.25, toAttacker.z);
-		target.hurtMarked = true;
+	/** Pushes the target towards the attacker (positive strength) or away from it (negative). */
+	private static void impulse(LivingEntity attacker, LivingEntity target, double strength, double lift) {
+		Vec3 toAttacker = attacker.position().subtract(target.position()).normalize().scale(strength);
+		target.push(toAttacker.x, lift, toAttacker.z);
 	}
 
 	private static void reap(ServerLevel level, LivingEntity attacker, LivingEntity target) {
