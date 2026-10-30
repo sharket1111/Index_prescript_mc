@@ -6,12 +6,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
@@ -50,8 +47,8 @@ public class CaduceusItem extends Item {
 		form.applyTo(stack);
 		REVERT_AT.put(player.getUUID(), level.getGameTime() + FORM_TICKS);
 
-		level.playSound(null, player.blockPosition(), SoundEvents.BUCKET_FILL_LAVA, SoundSource.PLAYERS, 0.6F, 1.6F);
-		serverLevel.sendParticles(ParticleTypes.SQUID_INK, target.getX(), target.getY(0.5), target.getZ(), 8, 0.3, 0.3, 0.3, 0.02);
+		CaduceusEffects.form(serverLevel, player);
+		CaduceusEffects.impact(serverLevel, target);
 		if (player instanceof ServerPlayer serverPlayer) {
 			serverPlayer.sendOverlayMessage(Component.translatable("message.index_prescript.caduceus_formed", form.displayName())
 					.withStyle(ChatFormatting.GOLD));
@@ -84,7 +81,7 @@ public class CaduceusItem extends Item {
 		if (revertAt == null || level.getGameTime() >= revertAt) {
 			CaduceusForm.clear(stack);
 			REVERT_AT.remove(entity.getUUID());
-			level.sendParticles(ParticleTypes.SQUID_INK, entity.getX(), entity.getY(0.6), entity.getZ(), 4, 0.2, 0.2, 0.2, 0.01);
+			CaduceusEffects.melt(level, entity);
 		}
 	}
 
