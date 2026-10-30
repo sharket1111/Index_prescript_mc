@@ -18,7 +18,7 @@
 	"form.index_prescript.scythe": "대낫",
 	"message.index_prescript.prescript_header": "[지령 수신]",
 	"message.index_prescript.prescript_none": "단말기를 왼손에 들면 지령이 들어온다.",
-	"message.index_prescript.prescript_line": "[지령] %s (%s/%s)",
+	"message.index_prescript.prescript_line": "%s (%s/%s)",
 	"message.index_prescript.hermes": "대행 헤르메스 %s/%s",
 	"message.index_prescript.prescript_complete": "[지령 완료]",
 	"message.index_prescript.prescript_complete_no_hermes": "[지령 완료] 대행 헤르메스를 얻지 못했다",
@@ -36,5 +36,5 @@
 	"prescript.index_prescript.desperate_kill": "체력이 절반 이하일 때 적을 처치하라",
 	"prescript.index_prescript.untouched": "피해를 입지 않고 적을 %s번 공격하라",
 	"message.index_prescript.furioso_total": "TOTAL %s",
-	"message.index_prescript.prescript_reveal": "[지령] %s"
+	"message.index_prescript.prescript_reveal": "%s"
 }

@@ -18,7 +18,7 @@
 	"form.index_prescript.scythe": "Scythe",
 	"message.index_prescript.prescript_header": "[Prescript Received]",
 	"message.index_prescript.prescript_none": "Hold the terminal in your off hand to receive prescripts.",
-	"message.index_prescript.prescript_line": "[Prescript] %s (%s/%s)",
+	"message.index_prescript.prescript_line": "%s (%s/%s)",
 	"message.index_prescript.hermes": "Proxy [Hermes] %s/%s",
 	"message.index_prescript.prescript_complete": "[Prescript Complete]",
 	"message.index_prescript.prescript_complete_no_hermes": "[Prescript Complete] No [Hermes] gained",
@@ -36,5 +36,5 @@
 	"prescript.index_prescript.desperate_kill": "Slay an enemy at half health or less",
 	"prescript.index_prescript.untouched": "Strike an enemy %s times without taking damage",
 	"message.index_prescript.furioso_total": "TOTAL %s",
-	"message.index_prescript.prescript_reveal": "[Prescript] %s"
+	"message.index_prescript.prescript_reveal": "%s"
 }
