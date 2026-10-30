@@ -14,6 +14,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -22,7 +23,12 @@ import net.minecraft.world.entity.player.Player;
  * Per-player prescript progress and [Hermes] stacks. Prescripts are only
  * shown and tracked while the terminal is held in the off hand. Completing one
  * while in combat grants a [Hermes] stack; at {@link #MAX_HERMES} the next
- * Caduceus attack unleashes Furioso-Replica. State lives in memory only.
+ * Caduceus attack unleashes Furioso-Replica. The off-hand terminal's stack
+ * size mirrors the [Hermes] count, which also restores it after a restart;
+ * prescript progress lives in memory only.
+ *
+ * A new prescript is revealed like the original: random letters and symbols
+ * appear one at a time, then resolve into the text from left to right.
  */
 final class PrescriptTracker {
 	static final int MAX_HERMES = 9;
@@ -30,6 +36,8 @@ final class PrescriptTracker {
 	private static final int OVERLAY_INTERVAL = 10;
 	private static final int OVERLAY_HOLD_TICKS = 30;
 	private static final int AURA_INTERVAL = 2;
+	private static final int REVEAL_HOLD_TICKS = 8;
+	private static final String GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&*@?!/<>+=";
 
 	private static final Map<UUID, PrescriptTracker> TRACKERS = new ConcurrentHashMap<>();
 
@@ -39,6 +47,9 @@ final class PrescriptTracker {
 	private long lastCombat = Long.MIN_VALUE / 2;
 	private long hermesBlockedUntil;
 	private long overlayBlockedUntil;
+	private boolean restored;
+	private String revealText;
+	private long revealStart;
 
 	static void register() {
 		ServerTickEvents.END_SERVER_TICK.register(PrescriptTracker::tick);
@@ -108,10 +119,20 @@ final class PrescriptTracker {
 			}
 			long now = level.getGameTime();
 			PrescriptTracker tracker = of(player);
-			if (tracker.prescript == null) {
-				tracker.prescript = Prescript.random(level.getRandom(), null);
+			if (!tracker.restored) {
+				// A terminal stack of n means n [Hermes]; a single terminal reads as 0.
+				int count = player.getOffhandItem().getCount();
+				tracker.hermes = Math.max(tracker.hermes, count > 1 ? Math.min(count, MAX_HERMES) : 0);
+				tracker.restored = true;
 			}
-			if (now % OVERLAY_INTERVAL == 0 && now >= tracker.overlayBlockedUntil) {
+			if (tracker.prescript == null) {
+				tracker.issue(player, level, now);
+			}
+			if (tracker.revealing(now) && Furioso.active(player)) {
+				tracker.revealStart++; // pause the reveal so it doesn't cover the Furioso TOTAL
+			} else if (tracker.revealing(now)) {
+				player.sendOverlayMessage(tracker.revealFrame(now, level.getRandom()));
+			} else if (now % OVERLAY_INTERVAL == 0 && now >= tracker.overlayBlockedUntil) {
 				player.sendOverlayMessage(tracker.line());
 			}
 			if (now % AURA_INTERVAL == 0 && ready(player) && !Furioso.active(player)) {
@@ -121,9 +142,42 @@ final class PrescriptTracker {
 	}
 
 	MutableComponent line() {
-		MutableComponent line = Component.translatable("message.index_prescript.prescript_line", prescript.text(), progress, prescript.amount)
+		return Component.translatable("message.index_prescript.prescript_line", prescript.text(), progress, prescript.amount)
 				.withStyle(ChatFormatting.AQUA);
-		return line.append(Component.literal(" · ").withStyle(ChatFormatting.DARK_GRAY)).append(hermesText());
+	}
+
+	/** Issues a new prescript whose reveal starts at {@code startAt}. */
+	private void issue(ServerPlayer player, ServerLevel level, long startAt) {
+		prescript = Prescript.random(level.getRandom(), prescript);
+		progress = 0;
+		revealText = ModLang.format(player.clientInformation().language(), prescript.key(), prescript.amount);
+		revealStart = startAt;
+	}
+
+	private int revealLength() {
+		return revealText == null ? 0 : revealText.length() * 2 + REVEAL_HOLD_TICKS;
+	}
+
+	private boolean revealing(long now) {
+		return revealText != null && now >= revealStart && now < revealStart + revealLength();
+	}
+
+	/**
+	 * Letters appear one per tick as random glyphs, hold briefly while still
+	 * scrambling, then resolve into the real text one letter per tick.
+	 */
+	private Component revealFrame(long now, RandomSource random) {
+		int length = revealText.length();
+		int elapsed = (int) (now - revealStart);
+		int shown = Math.min(length, elapsed + 1);
+		int resolved = Math.max(0, elapsed - length - REVEAL_HOLD_TICKS + 1);
+		StringBuilder frame = new StringBuilder(length);
+		for (int i = 0; i < shown; i++) {
+			char c = revealText.charAt(i);
+			frame.append(i < resolved || Character.isWhitespace(c) ? c : GLYPHS.charAt(random.nextInt(GLYPHS.length())));
+		}
+		return Component.translatable("message.index_prescript.prescript_reveal", Component.literal(frame.toString()))
+				.withStyle(resolved > 0 ? ChatFormatting.AQUA : ChatFormatting.DARK_AQUA);
 	}
 
 	Component hermesText() {
@@ -209,7 +263,6 @@ final class PrescriptTracker {
 			level.playSound(null, player.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.5F, 0.6F);
 		}
 
-		prescript = Prescript.random(level.getRandom(), prescript);
-		progress = 0;
+		issue(player, level, now + OVERLAY_HOLD_TICKS);
 	}
 }

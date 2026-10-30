@@ -44,8 +44,12 @@ public enum Prescript {
 		this.form = form;
 	}
 
+	String key() {
+		return "prescript.index_prescript." + name().toLowerCase(Locale.ROOT);
+	}
+
 	Component text() {
-		return Component.translatable("prescript.index_prescript." + name().toLowerCase(Locale.ROOT), amount);
+		return Component.translatable(key(), amount);
 	}
 
 	/** Picks a random prescript, never repeating the previous one. */

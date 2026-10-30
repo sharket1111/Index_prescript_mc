@@ -35,5 +35,6 @@
 	"prescript.index_prescript.sink_twice": "Stab an enemy %s times with the stiletto",
 	"prescript.index_prescript.desperate_kill": "Slay an enemy at half health or less",
 	"prescript.index_prescript.untouched": "Strike an enemy %s times without taking damage",
-	"message.index_prescript.furioso_total": "TOTAL %s"
+	"message.index_prescript.furioso_total": "TOTAL %s",
+	"message.index_prescript.prescript_reveal": "[Prescript] %s"
 }

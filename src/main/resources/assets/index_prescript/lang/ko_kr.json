@@ -35,5 +35,6 @@
 	"prescript.index_prescript.sink_twice": "스틸레토로 적을 %s번 찔러라",
 	"prescript.index_prescript.desperate_kill": "체력이 절반 이하일 때 적을 처치하라",
 	"prescript.index_prescript.untouched": "피해를 입지 않고 적을 %s번 공격하라",
-	"message.index_prescript.furioso_total": "TOTAL %s"
+	"message.index_prescript.furioso_total": "TOTAL %s",
+	"message.index_prescript.prescript_reveal": "[지령] %s"
 }

@@ -21,7 +21,7 @@ public final class ModItems {
 
 	// Terminal that receives prescripts from the Index.
 	public static final Item RIEN_TERMINAL = register("rien_terminal", TerminalItem::new,
-			new Item.Properties().stacksTo(1).rarity(Rarity.RARE));
+			new Item.Properties().stacksTo(PrescriptTracker.MAX_HERMES).rarity(Rarity.RARE));
 
 	private ModItems() {
 	}
