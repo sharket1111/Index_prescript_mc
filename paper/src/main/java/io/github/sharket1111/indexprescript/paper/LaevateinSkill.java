@@ -50,6 +50,7 @@ final class LaevateinSkill {
 	private final boolean hadAi;
 	private final boolean repeat;
 	private Cinematic camera;
+	private int selfBurn;
 	private int tick;
 
 	private LaevateinSkill(Player player, LivingEntity target, Kind kind, boolean repeat) {
@@ -92,18 +93,20 @@ final class LaevateinSkill {
 		if (!(target instanceof Player)) {
 			target.setAI(false);
 		}
+		if (kind == Kind.STAB || kind == Kind.EXECUTION) {
+			camera = Cinematic.start(player, player.getLocation().add(0, 2, 0));
+		}
 		// From release 2 on, the blade's heat burns the wielder too: 1 s, then 2 s at full release.
-		if (stage >= 2) {
-			player.setFireTicks(Math.max(player.getFireTicks(), stage >= 3 ? 40 : 20));
+		// A filmed wielder is a spectator, which cannot burn, so the burn waits until the camera ends.
+		selfBurn = stage >= 2 ? (stage >= 3 ? 40 : 20) : 0;
+		if (camera == null) {
+			burnSelf();
 		}
 		if (kind == Kind.HEATED || kind == Kind.MELT || kind == Kind.RULE_VIOLATION) {
 			Matthias.addTattoo(player);
 		}
-		if (kind == Kind.STAB || kind == Kind.EXECUTION) {
-			camera = Cinematic.start(player, player.getLocation().add(0, 2, 0));
-		}
-		LaevateinEffects.aura(player, kind == Kind.EXECUTION ? 8 : 4);
-		LaevateinEffects.auraSound(player);
+		LaevateinEffects.aura(actor(), kind == Kind.EXECUTION ? 8 : 4);
+		LaevateinEffects.auraSound(actor());
 	}
 
 	private int endTick() {
@@ -126,7 +129,7 @@ final class LaevateinSkill {
 		hold();
 		shoot();
 		if (tick % 4 == 0) {
-			LaevateinEffects.aura(player, 1);
+			LaevateinEffects.aura(actor(), 1);
 		}
 		switch (kind) {
 			case STOMP -> stomp();
@@ -167,14 +170,14 @@ final class LaevateinSkill {
 	/** "Not Getting Heated Up?!": a burning sweep, a golden thrust, then a great flame crescent. */
 	private void heated() {
 		switch (tick) {
-			case 2 -> LaevateinEffects.lightningStrike(player);
-			case 6 -> coin(4.5, 1.0, () -> LaevateinEffects.flameArc(player, target, -90, 20), () -> {
+			case 2 -> LaevateinEffects.lightningStrike(actor());
+			case 6 -> coin(4.5, 1.0, () -> LaevateinEffects.flameArc(actor(), target, -90, 20), () -> {
 				burn(2);
 				bind(2);
 			});
-			case 12 -> coin(4.5 + 1.5, 1.0, () -> LaevateinEffects.thrust(player, target), () -> burn(2));
+			case 12 -> coin(4.5 + 1.5, 1.0, () -> LaevateinEffects.thrust(actor(), target), () -> burn(2));
 			case 18 -> coin(4.5, 1.0, () -> {
-				LaevateinEffects.flameArc(player, target, 70, -35);
+				LaevateinEffects.flameArc(actor(), target, 70, -35);
 				LaevateinEffects.explosion(target, 1.0);
 			}, () -> {
 				burn(2);
@@ -188,17 +191,17 @@ final class LaevateinSkill {
 	/** "Time to Melt and Die": a pink streak, a burning sweep with a thrust, then a huge flame crescent. */
 	private void melt() {
 		switch (tick) {
-			case 2 -> LaevateinEffects.aura(player, 8);
-			case 6 -> coin(5.5, 1.0, () -> LaevateinEffects.pinkArc(player, target, -100, 15), () -> {
+			case 2 -> LaevateinEffects.aura(actor(), 8);
+			case 6 -> coin(5.5, 1.0, () -> LaevateinEffects.pinkArc(actor(), target, -100, 15), () -> {
 				burn(2);
 				bind(2);
 			});
 			case 12 -> coin(5.5 + 1.5, 1.0, () -> {
-				LaevateinEffects.flameArc(player, target, 80, -20);
-				LaevateinEffects.thrust(player, target);
+				LaevateinEffects.flameArc(actor(), target, 80, -20);
+				LaevateinEffects.thrust(actor(), target);
 			}, () -> burn(2));
 			case 20 -> coin(5.5, 1.0, () -> {
-				LaevateinEffects.flameArc(player, target, -110, 40);
+				LaevateinEffects.flameArc(actor(), target, -110, 40);
 				LaevateinEffects.explosion(target, 1.6);
 			}, () -> {
 				burn(2);
@@ -212,13 +215,13 @@ final class LaevateinSkill {
 	/** Stab [Laevatein]: five burning strikes ending in a wide crescent. */
 	private void stab() {
 		switch (tick) {
-			case 6 -> coin(5.0 + 1.0, 0, () -> LaevateinEffects.pinkArc(player, target, -90, 20), null);
-			case 10 -> coin(5.0 + 1.0, 0, () -> LaevateinEffects.flameArc(player, target, 80, -25), null);
+			case 6 -> coin(5.0 + 1.0, 0, () -> LaevateinEffects.pinkArc(actor(), target, -90, 20), null);
+			case 10 -> coin(5.0 + 1.0, 0, () -> LaevateinEffects.flameArc(actor(), target, 80, -25), null);
 			case 14 -> coin(5.0, 0, () -> LaevateinEffects.shatter(target), () -> burn(10));
 			case 18 -> coin(5.0, 0, () -> LaevateinEffects.explosion(target, 1.4), () -> burnCount(4));
 			case 26 -> coin(5.0, 0, () -> {
-				LaevateinEffects.flameArc(player, target, -120, 45);
-				LaevateinEffects.pinkArc(player, target, 60, -30);
+				LaevateinEffects.flameArc(actor(), target, -120, 45);
+				LaevateinEffects.pinkArc(actor(), target, 60, -30);
 				LaevateinEffects.explosion(target, 2.0);
 			}, () -> burn(10));
 			default -> {
@@ -230,8 +233,8 @@ final class LaevateinSkill {
 	private void ruleViolation(int phase) {
 		switch (phase) {
 			case 3 -> coin(4.0, 0, () -> {
-				LaevateinEffects.greyArc(player, target, -100, 20);
-				LaevateinEffects.pinkArc(player, target, 60, -15);
+				LaevateinEffects.greyArc(actor(), target, -100, 20);
+				LaevateinEffects.pinkArc(actor(), target, 60, -15);
 			}, () -> {
 				bleed(4);
 				if (Matthias.hasTattoo(player)) {
@@ -239,7 +242,7 @@ final class LaevateinSkill {
 				}
 			});
 			case 8 -> coin(4.0, 0, () -> {
-				LaevateinEffects.greyArc(player, target, 80, -25);
+				LaevateinEffects.greyArc(actor(), target, 80, -25);
 				LaevateinEffects.smoke(target);
 			}, () -> {
 				heal(2.0);
@@ -256,17 +259,17 @@ final class LaevateinSkill {
 	private void execution() {
 		switch (tick) {
 			case 4 -> LaevateinEffects.lightningStrike(target);
-			case 8 -> coin(6.0, 0, () -> LaevateinEffects.flameArc(player, target, -90, 20), () -> burn(5));
-			case 14 -> coin(6.0 + 1.0, 0, () -> LaevateinEffects.flameArc(player, target, 70, -30), () -> burnCount(3));
+			case 8 -> coin(6.0, 0, () -> LaevateinEffects.flameArc(actor(), target, -90, 20), () -> burn(5));
+			case 14 -> coin(6.0 + 1.0, 0, () -> LaevateinEffects.flameArc(actor(), target, 70, -30), () -> burnCount(3));
 			case 20 -> coin(6.0 + 1.0, 0, () -> {
-				LaevateinEffects.pinkArc(player, target, -120, 40);
+				LaevateinEffects.pinkArc(actor(), target, -120, 40);
 				LaevateinEffects.explosion(target, 2.0);
 			}, () -> burn(10));
-			case 28 -> LaevateinEffects.wings(player);
+			case 28 -> LaevateinEffects.wings(actor());
 			case 30 -> coin(6.0, 0, () -> LaevateinEffects.inferno(target), () -> burn(10));
 			case 40 -> coin(6.0 + 2.0, 0, () -> {
-				LaevateinEffects.thrust(player, target);
-				LaevateinEffects.greyArc(player, target, -110, 35);
+				LaevateinEffects.thrust(actor(), target);
+				LaevateinEffects.greyArc(actor(), target, -110, 35);
 				LaevateinEffects.shatter(target);
 			}, () -> {
 				if (Matthias.hasTattoo(player)) {
@@ -283,7 +286,7 @@ final class LaevateinSkill {
 	 * damage when given), then apply the on-hit keywords.
 	 */
 	private void coin(double damage, double bigBrotherExtra, Runnable effect, Runnable onHit) {
-		player.swingMainHand();
+		actor().swingMainHand();
 		effect.run();
 		double total = damage + (Matthias.hasTattoo(player) ? bigBrotherExtra : 0.0);
 		if (health(player) <= maxHealth(player) * 0.5) {
@@ -338,7 +341,8 @@ final class LaevateinSkill {
 
 	/** Stomp closes in: step to just in front of the target if there is room. */
 	private void dashToTarget() {
-		Vector from = player.getLocation().toVector();
+		LivingEntity actor = actor();
+		Vector from = actor.getLocation().toVector();
 		Vector to = target.getLocation().toVector();
 		Vector dir = from.clone().subtract(to).setY(0);
 		if (dir.lengthSquared() < 1.0E-4) {
@@ -351,8 +355,8 @@ final class LaevateinSkill {
 		}
 		Location destination = new Location(player.getWorld(), spot.getX(), anchor.getY(), spot.getZ());
 		destination.setDirection(to.clone().subtract(spot));
-		player.teleport(destination);
-		LaevateinEffects.aura(player, 3);
+		actor.teleport(destination);
+		LaevateinEffects.aura(actor(), 3);
 	}
 
 	/** Stab and Summary Execution are filmed from a separate camera orbiting the clash. */
@@ -360,7 +364,7 @@ final class LaevateinSkill {
 		if (camera == null) {
 			return;
 		}
-		Vector from = player.getLocation().toVector();
+		Vector from = actor().getLocation().toVector();
 		Vector to = target.getLocation().toVector();
 		Vector focus = from.clone().midpoint(to).add(new Vector(0, 1.0, 0));
 		double side = Math.atan2(from.getZ() - to.getZ(), from.getX() - to.getX()) + Math.PI / 2;
@@ -379,10 +383,22 @@ final class LaevateinSkill {
 		target.setVelocity(new Vector());
 	}
 
+	private void burnSelf() {
+		if (selfBurn > 0 && player.isOnline()) {
+			player.setFireTicks(Math.max(player.getFireTicks(), selfBurn));
+		}
+	}
+
+	/** The body that dashes and swings: the camera's stand-in while one runs, else the player. */
+	private LivingEntity actor() {
+		return camera != null ? camera.actor() : player;
+	}
+
 	private void finish() {
 		if (camera != null) {
 			camera.end();
 			camera = null;
+			burnSelf();
 		}
 		if (!(target instanceof Player)) {
 			target.setAI(hadAi);

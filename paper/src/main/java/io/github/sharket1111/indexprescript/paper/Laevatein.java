@@ -127,7 +127,7 @@ final class Laevatein implements Listener {
 			}
 			showIcon(player, inventory, held);
 			if (!RELEASING.containsKey(player.getUniqueId()) && ready(held) && now % READY_EFFECT_INTERVAL == 0) {
-				LaevateinEffects.ready(player);
+				LaevateinEffects.ready(Cinematic.body(player));
 			}
 		} else if (Items.isLaevateinIcon(inventory.getItemInOffHand())) {
 			inventory.setItemInOffHand(null);
@@ -302,7 +302,7 @@ final class Laevatein implements Listener {
 		int hits = hits(held) + 1;
 		setHits(held, hits);
 		if (stage < MAX_STAGE && hits == cap) {
-			LaevateinEffects.readySound(player);
+			LaevateinEffects.readySound(Cinematic.body(player));
 		}
 	}
 
@@ -439,8 +439,8 @@ final class Laevatein implements Listener {
 				target.setAI(false);
 			}
 			camera = Cinematic.start(player, player.getLocation().add(0, 2, 0));
-			LaevateinEffects.aura(player, 6);
-			LaevateinEffects.auraSound(player);
+			LaevateinEffects.aura(actor(), 6);
+			LaevateinEffects.auraSound(actor());
 		}
 
 		private int releaseTick() {
@@ -456,7 +456,7 @@ final class Laevatein implements Listener {
 			if (camera == null) {
 				return;
 			}
-			Vector from = player.getLocation().toVector();
+			Vector from = actor().getLocation().toVector();
 			Vector to = target.getLocation().toVector();
 			Vector focus = from.clone().midpoint(to).add(new Vector(0, 1.0, 0));
 			double side = Math.atan2(from.getZ() - to.getZ(), from.getX() - to.getX()) + Math.PI / 2;
@@ -482,7 +482,7 @@ final class Laevatein implements Listener {
 			hold();
 			shoot();
 			if (tick % 3 == 0) {
-				LaevateinEffects.aura(player, stage);
+				LaevateinEffects.aura(actor(), stage);
 			}
 			switch (stage) {
 				case 1 -> stageOne();
@@ -500,13 +500,13 @@ final class Laevatein implements Listener {
 		/** "Unwrapping one package": grey sweeps, the casing shatters, then a burning slash. */
 		private void stageOne() {
 			switch (tick) {
-				case 6 -> strike(4.0, 0, () -> LaevateinEffects.greyArc(player, target, -100, 15));
-				case 12 -> strike(4.0, 0, () -> LaevateinEffects.greyArc(player, target, 80, -20));
+				case 6 -> strike(4.0, 0, () -> LaevateinEffects.greyArc(actor(), target, -100, 15));
+				case 12 -> strike(4.0, 0, () -> LaevateinEffects.greyArc(actor(), target, 80, -20));
 				case 20 -> {
 					release();
 					strike(6.0, 0, () -> LaevateinEffects.shatter(target));
 				}
-				case 28 -> strike(5.0, 60, () -> LaevateinEffects.flameArc(player, target, -90, 25));
+				case 28 -> strike(5.0, 60, () -> LaevateinEffects.flameArc(actor(), target, -90, 25));
 				default -> {
 				}
 			}
@@ -515,12 +515,12 @@ final class Laevatein implements Listener {
 		/** "The second wrapping": three burning crescents, then a great explosion. */
 		private void stageTwo() {
 			switch (tick) {
-				case 8 -> strike(5.0, 60, () -> LaevateinEffects.flameArc(player, target, -100, 20));
+				case 8 -> strike(5.0, 60, () -> LaevateinEffects.flameArc(actor(), target, -100, 20));
 				case 16 -> strike(5.0, 60, () -> {
-					LaevateinEffects.flameArc(player, target, 70, -25);
+					LaevateinEffects.flameArc(actor(), target, 70, -25);
 					LaevateinEffects.explosion(target, 1.0);
 				});
-				case 24 -> strike(5.0, 60, () -> LaevateinEffects.flameArc(player, target, -60, 40));
+				case 24 -> strike(5.0, 60, () -> LaevateinEffects.flameArc(actor(), target, -60, 40));
 				case 32 -> {
 					release();
 					strike(9.0, 100, () -> LaevateinEffects.explosion(target, 2.5));
@@ -534,8 +534,8 @@ final class Laevatein implements Listener {
 		private void stageThree() {
 			switch (tick) {
 				case 6, 14 -> strike(4.0, 0, () -> LaevateinEffects.lightningStrike(target));
-				case 22 -> strike(6.0, 80, () -> LaevateinEffects.flameArc(player, target, -100, 20));
-				case 30 -> strike(6.0, 80, () -> LaevateinEffects.flameArc(player, target, 80, -30));
+				case 22 -> strike(6.0, 80, () -> LaevateinEffects.flameArc(actor(), target, -100, 20));
+				case 30 -> strike(6.0, 80, () -> LaevateinEffects.flameArc(actor(), target, 80, -30));
 				case 38 -> {
 					release();
 					strike(14.0, 160, () -> LaevateinEffects.inferno(target));
@@ -546,7 +546,7 @@ final class Laevatein implements Listener {
 		}
 
 		private void strike(double damage, int fireTicks, Runnable effect) {
-			player.swingMainHand();
+			actor().swingMainHand();
 			effect.run();
 			Matthias.addTattoo(player);
 			Damage.deal(target, Matthias.scale(player, damage), player, true);
@@ -562,6 +562,9 @@ final class Laevatein implements Listener {
 				Items.setLaevateinStage(held, stage);
 				setHits(held, 0);
 			}
+			if (camera != null) {
+				camera.syncHeld();
+			}
 			Matthias.grantGrit(player, stage);
 		}
 
@@ -576,9 +579,15 @@ final class Laevatein implements Listener {
 			target.setVelocity(new Vector());
 		}
 
+		/** The body that swings: the camera's stand-in while one runs, else the player. */
+		private LivingEntity actor() {
+			return camera != null ? camera.actor() : player;
+		}
+
 		private void finish() {
 			if (camera != null) {
 				camera.end();
+				camera = null;
 			}
 			if (!(target instanceof Player)) {
 				target.setAI(hadAi);

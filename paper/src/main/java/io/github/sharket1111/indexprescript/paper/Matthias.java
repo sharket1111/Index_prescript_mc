@@ -134,10 +134,10 @@ final class Matthias implements Listener {
 				continue;
 			}
 			if (s.grudge >= MAX_GRUDGE) {
-				LaevateinEffects.grudgeAura(player);
+				LaevateinEffects.grudgeAura(Cinematic.body(player));
 			}
 			if (now < s.gritUntil) {
-				LaevateinEffects.grit(player);
+				LaevateinEffects.grit(Cinematic.body(player));
 			}
 		}
 		LEDGER.values().removeIf(until -> now >= until);
@@ -225,7 +225,7 @@ final class Matthias implements Listener {
 		boolean wasFull = s.grudge >= MAX_GRUDGE;
 		s.grudge = Math.min(MAX_GRUDGE, grudge);
 		if (!wasFull && s.grudge >= MAX_GRUDGE) {
-			LaevateinEffects.grudgeFull(player);
+			LaevateinEffects.grudgeFull(Cinematic.body(player));
 		}
 	}
 

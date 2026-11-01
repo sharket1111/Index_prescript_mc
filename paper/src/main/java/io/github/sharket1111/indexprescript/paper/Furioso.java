@@ -97,9 +97,9 @@ final class Furioso {
 		PrescriptTracker.blockHermes(player, now + END_TICK + CombatState.TURN_TICKS);
 
 		camera = Cinematic.start(player, anchor.clone().add(0, 2, 0));
-		Effects.auraBurst(player);
-		sound(player.getLocation(), Sound.ITEM_BUCKET_FILL_LAVA, 1.0F, 0.6F);
-		sound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.0F, 0.5F);
+		Effects.auraBurst(actor());
+		sound(actor().getLocation(), Sound.ITEM_BUCKET_FILL_LAVA, 1.0F, 0.6F);
+		sound(actor().getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.0F, 0.5F);
 	}
 
 	/** Advances one server tick; returns false once the sequence has ended. */
@@ -150,7 +150,7 @@ final class Furioso {
 	private void windup() {
 		dashTo(origin.toVector());
 		Effects.gather(target);
-		sound(player.getLocation(), Sound.ITEM_BUCKET_FILL_LAVA, 1.0F, 0.5F);
+		sound(actor().getLocation(), Sound.ITEM_BUCKET_FILL_LAVA, 1.0F, 0.5F);
 	}
 
 	/**
@@ -169,12 +169,13 @@ final class Furioso {
 		if (!feet.isPassable() || !feet.getRelative(0, 1, 0).isPassable()) {
 			return;
 		}
-		Vector from = player.getLocation().toVector();
+		LivingEntity actor = actor();
+		Vector from = actor.getLocation().toVector();
 		Location destination = new Location(world, spot.getX(), spot.getY(), spot.getZ());
 		Vector look = target.getLocation().toVector().add(new Vector(0, target.getHeight() * 0.5, 0))
-				.subtract(spot.clone().add(new Vector(0, player.getEyeHeight(), 0)));
+				.subtract(spot.clone().add(new Vector(0, actor.getEyeHeight(), 0)));
 		destination.setDirection(look);
-		player.teleport(destination);
+		actor.teleport(destination);
 		Effects.dashTrail(world, from, spot);
 	}
 
@@ -191,7 +192,10 @@ final class Furioso {
 		if (Items.isCaduceus(stack)) {
 			Items.setForm(stack, form);
 		}
-		player.swingMainHand();
+		if (camera != null) {
+			camera.syncHeld();
+		}
+		actor().swingMainHand();
 
 		CombatState self = CombatState.of(player);
 		CombatState other = CombatState.of(target);
@@ -210,17 +214,17 @@ final class Furioso {
 			self.addPoise(1, 1, now);
 		}
 
-		Effects.form(player);
+		Effects.form(actor());
 		if (last) {
 			other.addSinking(0, 3, now);
-			Effects.finalCut(player, target);
+			Effects.finalCut(actor(), target);
 			player.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, END_TICK - COIN_TICKS[LAST_COIN] + 20, 0));
 		} else {
 			ThreadLocalRandom random = ThreadLocalRandom.current();
-			Effects.arc(player, target, random.nextInt(360), 160 + random.nextInt(60), random.nextInt(60) - 30);
+			Effects.arc(actor(), target, random.nextInt(360), 160 + random.nextInt(60), random.nextInt(60) - 30);
 			Effects.star(target, 1.0);
 			if (coin % 2 == 1) {
-				Effects.slash(player, target, LINE_ANGLES[coin], 5.0);
+				Effects.slash(actor(), target, LINE_ANGLES[coin], 5.0);
 			}
 		}
 		if (hit.crit()) {
@@ -264,9 +268,15 @@ final class Furioso {
 		camera.frame(position, focus, shake);
 	}
 
+	/** The body that dashes and swings: the camera's stand-in while one runs, else the player. */
+	private LivingEntity actor() {
+		return camera != null ? camera.actor() : player;
+	}
+
 	private void finish() {
 		if (camera != null) {
 			camera.end();
+			camera = null;
 		}
 		long now = CaduceusListener.now();
 		if (!(target instanceof Player)) {

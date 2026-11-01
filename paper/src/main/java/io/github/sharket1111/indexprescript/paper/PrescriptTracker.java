@@ -123,7 +123,7 @@ final class PrescriptTracker implements Listener {
 				player.sendActionBar(tracker.line(player));
 			}
 			if (now % AURA_INTERVAL == 0 && ready(player) && !Furioso.active(player)) {
-				Effects.aura(player);
+				Effects.aura(Cinematic.body(player));
 			}
 		}
 	}

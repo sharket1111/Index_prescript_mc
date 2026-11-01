@@ -53,7 +53,7 @@ final class CaduceusListener implements Listener {
 		for (ItemStack stack : contents) {
 			if (Items.isCaduceus(stack) && CaduceusForm.of(stack) != null) {
 				Items.setForm(stack, null);
-				Effects.melt(player);
+				Effects.melt(Cinematic.body(player));
 			}
 		}
 		REVERT_AT.remove(player.getUniqueId());
@@ -83,7 +83,7 @@ final class CaduceusListener implements Listener {
 		if (charged || current == null) {
 			current = CaduceusForm.random(current);
 			Items.setForm(stack, current);
-			Effects.form(player);
+			Effects.form(Cinematic.body(player));
 		}
 		REVERT_AT.put(player.getUniqueId(), now() + FORM_TICKS);
 		Effects.impact(target);
