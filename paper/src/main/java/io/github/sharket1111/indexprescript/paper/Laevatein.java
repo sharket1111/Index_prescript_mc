@@ -43,6 +43,8 @@ import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
  */
 final class Laevatein implements Listener {
 	private static final int[] HITS_TO_RELEASE = {5, 7, 9};
+	/** Burn on every hit once released: 1, 4, then 9 seconds by stage. */
+	private static final int[] BURN_TICKS = {0, 20, 80, 180};
 	private static final int MAX_STAGE = Items.LAEVATEIN_STAGES.size() - 1;
 	private static final int TARGET_RANGE = 6;
 	private static final int READY_EFFECT_INTERVAL = 4;
@@ -117,11 +119,18 @@ final class Laevatein implements Listener {
 
 	/**
 	 * Keeps the [Seal Release] icon in the off hand while Laevatein is held; its
-	 * stack size is the hit count and it glints once a release is ready. Whatever
-	 * was in the off hand moves to a free inventory slot (no icon if there is none).
+	 * stack size is the hit count and it glints once a release is ready. There is
+	 * no icon before the first hit or once fully released. Whatever was in the off
+	 * hand moves to a free inventory slot (no icon if there is none).
 	 */
 	private static void showIcon(Player player, PlayerInventory inventory, ItemStack held) {
 		ItemStack off = inventory.getItemInOffHand();
+		if (hits(held) <= 0 || Items.laevateinStage(held) >= MAX_STAGE) {
+			if (Items.isLaevateinIcon(off)) {
+				inventory.setItemInOffHand(null);
+			}
+			return;
+		}
 		if (!Items.isLaevateinIcon(off)) {
 			if (!off.isEmpty()) {
 				int free = inventory.firstEmpty();
@@ -183,6 +192,12 @@ final class Laevatein implements Listener {
 		if (Damage.dealing() || event.getCause() != EntityDamageEvent.DamageCause.ENTITY_ATTACK
 				|| !(event.getDamager() instanceof Player player) || !(event.getEntity() instanceof LivingEntity)) {
 			return;
+		}
+		ItemStack held = player.getInventory().getItemInMainHand();
+		int stage = Items.isLaevatein(held) ? Items.laevateinStage(held) : 0;
+		if (stage > 0) {
+			LivingEntity target = (LivingEntity) event.getEntity();
+			target.setFireTicks(Math.max(target.getFireTicks(), BURN_TICKS[stage]));
 		}
 		if (Boolean.TRUE.equals(CHARGED.remove(player.getUniqueId()))) {
 			addHit(player);
@@ -320,6 +335,7 @@ final class Laevatein implements Listener {
 		private final Location anchor;
 		private final boolean hadAi;
 		private int tick;
+		private Cinematic camera;
 
 		Release(Player player, LivingEntity target, int stage) {
 			this.player = player;
@@ -333,8 +349,31 @@ final class Laevatein implements Listener {
 			if (!(target instanceof Player)) {
 				target.setAI(false);
 			}
+			camera = Cinematic.start(player, player.getLocation().add(0, 2, 0));
 			LaevateinEffects.aura(player, 6);
 			LaevateinEffects.auraSound(player);
+		}
+
+		private int releaseTick() {
+			return switch (stage) {
+				case 1 -> 20;
+				case 2 -> 32;
+				default -> 38;
+			};
+		}
+
+		/** Camera path: a slow orbit around the clash, shaking as the casing breaks or the fire bursts. */
+		private void shoot() {
+			if (camera == null) {
+				return;
+			}
+			Vector from = player.getLocation().toVector();
+			Vector to = target.getLocation().toVector();
+			Vector focus = from.clone().midpoint(to).add(new Vector(0, 1.0, 0));
+			double side = Math.atan2(from.getZ() - to.getZ(), from.getX() - to.getX()) + Math.PI / 2;
+			int sinceRelease = tick - releaseTick();
+			double shake = sinceRelease >= 0 && sinceRelease < 5 ? 0.4 + 0.2 * stage : 0.0;
+			camera.frame(Cinematic.orbit(focus, side + tick * 0.035, 4.5 + 0.5 * stage, 1.8), focus, shake);
 		}
 
 		private int endTick() {
@@ -352,6 +391,7 @@ final class Laevatein implements Listener {
 				return false;
 			}
 			hold();
+			shoot();
 			if (tick % 3 == 0) {
 				LaevateinEffects.aura(player, stage);
 			}
@@ -448,6 +488,9 @@ final class Laevatein implements Listener {
 		}
 
 		private void finish() {
+			if (camera != null) {
+				camera.end();
+			}
 			if (!(target instanceof Player)) {
 				target.setAI(hadAi);
 			}

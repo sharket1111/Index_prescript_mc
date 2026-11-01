@@ -52,6 +52,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 
 	@Override
 	public void onDisable() {
+		Cinematic.endAll();
 		if (resourcePack != null) {
 			resourcePack.stop();
 		}

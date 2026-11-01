@@ -61,6 +61,7 @@ final class Furioso {
 	private final boolean hadAi;
 	private CaduceusForm lastForm;
 	private int tick;
+	private Cinematic camera;
 
 	private Furioso(Player player, LivingEntity target) {
 		this.player = player;
@@ -95,6 +96,7 @@ final class Furioso {
 		CombatState.of(player).addPoise(3, 3, now);
 		PrescriptTracker.blockHermes(player, now + END_TICK + CombatState.TURN_TICKS);
 
+		camera = Cinematic.start(player, anchor.clone().add(0, 2, 0));
 		Effects.auraBurst(player);
 		sound(player.getLocation(), Sound.ITEM_BUCKET_FILL_LAVA, 1.0F, 0.6F);
 		sound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.0F, 0.5F);
@@ -107,6 +109,7 @@ final class Furioso {
 			return false;
 		}
 		holdTarget();
+		shoot();
 		player.setFallDistance(0.0F);
 		CaduceusListener.keepFormed(player, 30);
 
@@ -226,7 +229,45 @@ final class Furioso {
 		sound(target.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 0.9F, 0.8F + coin * 0.08F);
 	}
 
+	/**
+	 * Camera path: circles the target while the wielder dashes through it,
+	 * pulls back and rises as the rings gather, then rushes in for the final
+	 * cut with a shake. Every coin gives a small jolt.
+	 */
+	private void shoot() {
+		if (camera == null) {
+			return;
+		}
+		Vector focus = anchor.toVector().add(new Vector(0, 1.0, 0));
+		double start = baseAngle + Math.PI / 2;
+		double windupAngle = start + WINDUP_TICK * 0.05;
+		int finalTick = COIN_TICKS[LAST_COIN];
+		Vector position;
+		double shake = 0;
+		if (tick < WINDUP_TICK) {
+			position = Cinematic.orbit(focus, start + tick * 0.05, 5.5, 1.6);
+		} else if (tick < finalTick) {
+			double t = (tick - WINDUP_TICK) / (double) (finalTick - WINDUP_TICK);
+			position = Cinematic.orbit(focus, windupAngle + t * 0.6, 5.5 + 2.5 * t, 1.6 + 2.4 * t);
+		} else {
+			double t = Math.min(1.0, (tick - finalTick) / 6.0);
+			position = Cinematic.orbit(focus, windupAngle + 0.6, 8.0 - 4.0 * t, 4.0 - 2.8 * t);
+			if (tick - finalTick < 6) {
+				shake = 0.6;
+			}
+		}
+		for (int coinTick : COIN_TICKS) {
+			if (coinTick == tick && shake == 0) {
+				shake = 0.25;
+			}
+		}
+		camera.frame(position, focus, shake);
+	}
+
 	private void finish() {
+		if (camera != null) {
+			camera.end();
+		}
 		long now = CaduceusListener.now();
 		if (!(target instanceof Player)) {
 			target.setAI(hadAi);
