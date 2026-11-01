@@ -1,9 +1,10 @@
 """Generates Laevatein's four release stages: 16x16 sprites, in-hand 3D models,
 the palette texture for the models, and the item model definition.
 
-Stages, after the reference art: sealed (a slender glowing red blade),
-release 1 (wide blade, glowing panel beside black armour), release 2 (glowing
-serrated edge, angled tip) and release 3 (black blade bound in brass chains).
+Each release unwraps another casing: sealed (black blade bound in brass
+chains), release 1 (glowing serrated edge, angled tip), release 2 (wide blade,
+glowing panel beside black armour) and release 3 (the bare, slender glowing
+red blade).
 All share the same black, ridged grip.
 
 Usage: python3 tools/laevatein.py src/main/resources/assets/index_prescript [preview.png]
@@ -46,7 +47,7 @@ def blade(u, v, u0, u1, lo, hi):
     return u0 <= u <= u1 and lo <= v <= hi
 
 
-def sealed(u, v, x, y):
+def bare(u, v, x, y):
     if (c := grip(u, v)):
         return c
     if blade(u, v, 4.4, 5.0, -1.2, 1.2):
@@ -63,7 +64,7 @@ def sealed(u, v, x, y):
     return None
 
 
-def release_1(u, v, x, y):
+def paneled(u, v, x, y):
     if (c := grip(u, v)):
         return c
     if blade(u, v, 4.4, 5.0, -1.6, 1.6):
@@ -77,7 +78,7 @@ def release_1(u, v, x, y):
     return None
 
 
-def release_2(u, v, x, y):
+def serrated(u, v, x, y):
     if (c := grip(u, v)):
         return c
     if blade(u, v, 4.4, 5.0, -1.5, 1.5):
@@ -95,7 +96,7 @@ def release_2(u, v, x, y):
     return None
 
 
-def release_3(u, v, x, y):
+def chained(u, v, x, y):
     if (c := grip(u, v)):
         return c
     if blade(u, v, 4.4, forms.L - 0.5, -1.8, 1.8):
@@ -106,7 +107,8 @@ def release_3(u, v, x, y):
     return None
 
 
-SPRITES = {"sealed": sealed, "release_1": release_1, "release_2": release_2, "release_3": release_3}
+# Each release unwraps another casing: chained when sealed, the bare glowing blade at release 3.
+SPRITES = {"sealed": chained, "release_1": serrated, "release_2": paneled, "release_3": bare}
 
 
 def outline(img):
@@ -156,7 +158,7 @@ def grip3d(m):
     return m
 
 
-def sealed3d():
+def bare3d():
     m = grip3d(Model())
     gen3d.taper(m, 5.6, 18.0, 2.0, 1.8, 0.5, 0.5, "glow", 3)
     m.flat(6.85, 5.6, 7.15, 18.0, 0.55, "glow_dark")
@@ -166,7 +168,7 @@ def sealed3d():
     return m
 
 
-def release_1_3d():
+def paneled3d():
     m = grip3d(Model())
     m.flat(6.2, 5.6, 8.0, 20.0, 0.9, "glow")
     m.flat(6.2, 5.6, 6.6, 20.0, 1.0, "glow_light")
@@ -178,7 +180,7 @@ def release_1_3d():
     return m
 
 
-def release_2_3d():
+def serrated3d():
     m = grip3d(Model())
     m.flat(8.0, 5.6, 9.8, 19.0, 1.1, "metal_dark")
     m.flat(8.3, 9.0, 9.5, 9.3, 1.2, "metal_light")
@@ -192,7 +194,7 @@ def release_2_3d():
     return m
 
 
-def release_3_3d():
+def chained3d():
     m = grip3d(Model())
     m.flat(6.2, 5.6, 9.8, 20.0, 1.2, "metal_dark")
     m.flat(6.4, 5.6, 7.0, 20.0, 1.3, "metal")
@@ -207,7 +209,7 @@ def release_3_3d():
     return m
 
 
-MODELS = {"sealed": sealed3d, "release_1": release_1_3d, "release_2": release_2_3d, "release_3": release_3_3d}
+MODELS = {"sealed": chained3d, "release_1": serrated3d, "release_2": paneled3d, "release_3": bare3d}
 
 
 def item_definition():

@@ -15,8 +15,12 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
 
@@ -25,16 +29,23 @@ import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 /**
  * Matthias's Laevatein. The original releases it by spending stacks with
  * certain skills; here each stage unlocks after a number of charged hits
- * (5, 7, then 9), and pressing swap-hands with a target in sight releases
- * one stage in a strike sequence modelled on the in-game animation.
+ * (5, 7, then 9), shown as the held stack's size. Putting a ready Laevatein
+ * in the off hand (swap-hands on Java, the off-hand slot on Bedrock) with an
+ * enemy nearby returns it to the main hand and releases one stage in a strike
+ * sequence modelled on the in-game animation.
+ *
+ * The stack size is display only: each Laevatein carries a unique id so two
+ * never stack, and splitting or dropping a displayed stack yields one item.
  */
 final class Laevatein implements Listener {
 	private static final int[] HITS_TO_RELEASE = {5, 7, 9};
 	private static final int MAX_STAGE = Items.LAEVATEIN_STAGES.size() - 1;
-	private static final float CHARGED_THRESHOLD = 0.9F;
+	private static final float CHARGED_THRESHOLD = 0.7F;
 	private static final int TARGET_RANGE = 6;
 	private static final int READY_EFFECT_INTERVAL = 4;
+	private static final int CLAMP_INTERVAL = 5;
 	private static final NamespacedKey HITS = new NamespacedKey(Items.NAMESPACE, "laevatein_hits");
+	private static final NamespacedKey UNIQUE = new NamespacedKey(Items.NAMESPACE, "laevatein_id");
 
 	private static final Map<UUID, Boolean> CHARGED = new ConcurrentHashMap<>();
 	private static final Map<UUID, Release> RELEASING = new ConcurrentHashMap<>();
@@ -58,19 +69,76 @@ final class Laevatein implements Listener {
 		return stage < MAX_STAGE && hits(stack) >= HITS_TO_RELEASE[stage];
 	}
 
-	/** Called every tick. */
+	/** Called every tick: off-hand releases, the hit count display and the ready embers. */
 	static void tick() {
 		RELEASING.values().removeIf(release -> !release.tick());
 		long now = CaduceusListener.now();
-		if (now % READY_EFFECT_INTERVAL != 0) {
-			return;
-		}
 		for (Player player : Bukkit.getOnlinePlayers()) {
-			ItemStack held = player.getInventory().getItemInMainHand();
-			if (Items.isLaevatein(held) && ready(held) && !RELEASING.containsKey(player.getUniqueId())) {
-				LaevateinEffects.ready(player);
+			PlayerInventory inventory = player.getInventory();
+			boolean releasing = RELEASING.containsKey(player.getUniqueId());
+			ItemStack off = inventory.getItemInOffHand();
+			if (!releasing && Items.isLaevatein(off) && ready(off)) {
+				LivingEntity target = findTarget(player);
+				if (target != null) {
+					inventory.setItemInOffHand(inventory.getItemInMainHand());
+					inventory.setItemInMainHand(off);
+					startRelease(player, target);
+					releasing = true;
+				}
+			}
+			ItemStack held = inventory.getItemInMainHand();
+			if (Items.isLaevatein(held)) {
+				showHits(held);
+				if (!releasing && ready(held) && now % READY_EFFECT_INTERVAL == 0) {
+					LaevateinEffects.ready(player);
+				}
+			}
+			if (now % CLAMP_INTERVAL == 0) {
+				keepOthersSingle(inventory);
 			}
 		}
+	}
+
+	/** The held Laevatein's stack size shows the hits toward the next release. */
+	private static void showHits(ItemStack held) {
+		if (!held.getItemMeta().getPersistentDataContainer().has(UNIQUE) || held.getItemMeta().getMaxStackSize() < HITS_TO_RELEASE[MAX_STAGE - 1]) {
+			held.editMeta(meta -> {
+				meta.getPersistentDataContainer().set(UNIQUE, PersistentDataType.STRING, UUID.randomUUID().toString());
+				meta.setMaxStackSize(HITS_TO_RELEASE[MAX_STAGE - 1]);
+			});
+		}
+		int stage = Items.laevateinStage(held);
+		int count = stage < MAX_STAGE ? Math.max(1, hits(held)) : 1;
+		if (held.getAmount() != count) {
+			held.setAmount(count);
+		}
+	}
+
+	/** Every Laevatein not in the main hand is a single item. */
+	private static void keepOthersSingle(PlayerInventory inventory) {
+		int heldSlot = inventory.getHeldItemSlot();
+		ItemStack[] storage = inventory.getStorageContents();
+		for (int slot = 0; slot < storage.length; slot++) {
+			if (slot != heldSlot && Items.isLaevatein(storage[slot]) && storage[slot].getAmount() > 1) {
+				storage[slot].setAmount(1);
+			}
+		}
+		ItemStack off = inventory.getItemInOffHand();
+		if (Items.isLaevatein(off) && off.getAmount() > 1) {
+			off.setAmount(1);
+		}
+	}
+
+	private static boolean sameBlade(ItemStack a, ItemStack b) {
+		String idA = a.getItemMeta().getPersistentDataContainer().get(UNIQUE, PersistentDataType.STRING);
+		String idB = b.getItemMeta().getPersistentDataContainer().get(UNIQUE, PersistentDataType.STRING);
+		return idA != null && idA.equals(idB);
+	}
+
+	private static void startRelease(Player player, LivingEntity target) {
+		Release release = new Release(player, target, Items.laevateinStage(player.getInventory().getItemInMainHand()) + 1);
+		RELEASING.put(player.getUniqueId(), release);
+		release.start();
 	}
 
 	@EventHandler(ignoreCancelled = true)
@@ -108,7 +176,7 @@ final class Laevatein implements Listener {
 		}
 	}
 
-	/** Swap-hands with a ready Laevatein and a target in sight releases the next stage instead of swapping. */
+	/** Swap-hands with a ready Laevatein and an enemy nearby releases the next stage instead of swapping. */
 	@EventHandler(ignoreCancelled = true)
 	public void onSwap(PlayerSwapHandItemsEvent event) {
 		Player player = event.getPlayer();
@@ -128,9 +196,50 @@ final class Laevatein implements Listener {
 			return;
 		}
 		event.setCancelled(true);
-		Release release = new Release(player, target, Items.laevateinStage(held) + 1);
-		RELEASING.put(player.getUniqueId(), release);
-		release.start();
+		startRelease(player, target);
+	}
+
+	/** Dropping a displayed stack drops the one Laevatein it stands for. */
+	@EventHandler(ignoreCancelled = true)
+	public void onDrop(PlayerDropItemEvent event) {
+		ItemStack dropped = event.getItemDrop().getItemStack();
+		if (!Items.isLaevatein(dropped)) {
+			return;
+		}
+		if (dropped.getAmount() > 1) {
+			dropped.setAmount(1);
+			event.getItemDrop().setItemStack(dropped);
+		}
+		// The rest of the displayed stack is the same Laevatein; remove it from the hand.
+		PlayerInventory inventory = event.getPlayer().getInventory();
+		ItemStack held = inventory.getItemInMainHand();
+		if (Items.isLaevatein(held) && sameBlade(held, dropped)) {
+			inventory.setItemInMainHand(null);
+		}
+	}
+
+	/** Picking up a displayed stack takes the one Laevatein, so it cannot be split. */
+	@EventHandler(ignoreCancelled = true)
+	public void onClick(InventoryClickEvent event) {
+		ItemStack current = event.getCurrentItem();
+		if (Items.isLaevatein(current) && current.getAmount() > 1) {
+			ItemStack single = current.clone();
+			single.setAmount(1);
+			event.setCurrentItem(single);
+		}
+		ItemStack cursor = event.getCursor();
+		if (Items.isLaevatein(cursor) && cursor.getAmount() > 1) {
+			ItemStack single = cursor.clone();
+			single.setAmount(1);
+			event.getWhoClicked().setItemOnCursor(single);
+		}
+	}
+
+	@EventHandler(ignoreCancelled = true)
+	public void onDrag(InventoryDragEvent event) {
+		if (Items.isLaevatein(event.getOldCursor())) {
+			event.setCancelled(true);
+		}
 	}
 
 	private static LivingEntity findTarget(Player player) {
@@ -146,9 +255,14 @@ final class Laevatein implements Listener {
 			}
 			Vector to = living.getLocation().toVector().subtract(player.getLocation().toVector());
 			double distance = to.length();
-			if (distance <= TARGET_RANGE && to.normalize().dot(look) > 0.6 && distance < bestDistance) {
+			if (distance > TARGET_RANGE) {
+				continue;
+			}
+			// Enemies in front count as half as far, so they win over ones behind.
+			double score = to.normalize().dot(look) > 0.6 ? distance * 0.5 : distance;
+			if (score < bestDistance) {
 				best = living;
-				bestDistance = distance;
+				bestDistance = score;
 			}
 		}
 		return best;
