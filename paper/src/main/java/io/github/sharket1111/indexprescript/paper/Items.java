@@ -91,8 +91,9 @@ final class Items {
 
 	/** Release stage 0 (sealed) to 3, read from the first custom model data string. */
 	static int laevateinStage(ItemStack stack) {
-		int stage = LAEVATEIN_STAGES.indexOf(modelString(stack));
-		return Math.max(stage, 0);
+		String model = modelString(stack);
+		// A sealed blade has no model string; List.of(...).indexOf(null) would throw.
+		return model == null ? 0 : Math.max(LAEVATEIN_STAGES.indexOf(model), 0);
 	}
 
 	static void setLaevateinStage(ItemStack stack, int stage) {
