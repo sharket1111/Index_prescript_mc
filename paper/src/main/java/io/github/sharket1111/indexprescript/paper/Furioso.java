@@ -1,6 +1,7 @@
 package io.github.sharket1111.indexprescript.paper;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +31,8 @@ import org.bukkit.util.Vector;
  * Furioso-Replica: a nine-coin flurry in which Caduceus reforms into a new
  * weapon for every strike while the target is held in place. Coins 1-8 hit
  * random foes within 6 blocks of the target; the ninth, a scythe, hits the
- * target itself. Following Furioso [Lacrimosa-Crescendo]: before each of
+ * target itself. If the main target dies, a random foe within 6 blocks of it
+ * becomes the new main target and the flurry carries on. Following Furioso [Lacrimosa-Crescendo]: before each of
  * coins 1-8 the wielder appears beside its victim in a dark streak and strikes
  * with that coin's own look; blue rings then orbit the wielder beside the
  * target while star bursts flicker, a white flash goes off, and the ninth
@@ -69,12 +71,13 @@ final class Furioso {
 	private static final Map<UUID, Furioso> ACTIVE = new ConcurrentHashMap<>();
 
 	private final Player player;
-	private final LivingEntity target;
 	private final World world;
-	private final Location anchor;
 	private final Location origin;
-	private final double baseAngle;
-	private final boolean hadAi;
+	/** Mobs frozen in place as main target, with whether they had AI before. */
+	private final Map<LivingEntity, Boolean> frozen = new LinkedHashMap<>();
+	private LivingEntity target;
+	private Location anchor;
+	private double baseAngle;
 	private final Set<LivingEntity> struck = new LinkedHashSet<>();
 	private CaduceusForm lastForm;
 	private LivingEntity nextVictim;
@@ -89,7 +92,6 @@ final class Furioso {
 		this.anchor = target.getLocation();
 		this.origin = player.getLocation();
 		this.baseAngle = Math.atan2(origin.getZ() - anchor.getZ(), origin.getX() - anchor.getX());
-		this.hadAi = target.hasAI();
 	}
 
 	static boolean active(Player player) {
@@ -109,9 +111,7 @@ final class Furioso {
 
 	private void open() {
 		long now = CaduceusListener.now();
-		if (!(target instanceof Player)) {
-			target.setAI(false);
-		}
+		freeze(target);
 		CombatState.of(player).addPoise(3, 3, now);
 		PrescriptTracker.blockHermes(player, now + END_TICK + CombatState.TURN_TICKS);
 
@@ -123,7 +123,8 @@ final class Furioso {
 
 	/** Advances one server tick; returns false once the sequence has ended. */
 	private boolean tick() {
-		if (!player.isOnline() || player.isDead() || player.getWorld() != world || !target.isValid() || target.isDead()) {
+		if (!player.isOnline() || player.isDead() || player.getWorld() != world
+				|| (!target.isValid() || target.isDead()) && !retarget()) {
 			finish();
 			return false;
 		}
@@ -228,11 +229,43 @@ final class Furioso {
 	 * cannot be hurt are left out.
 	 */
 	private LivingEntity pickVictim() {
-		List<LivingEntity> pool = new ArrayList<>();
+		List<LivingEntity> pool = foes();
 		pool.add(target);
+		return pool.get(ThreadLocalRandom.current().nextInt(pool.size()));
+	}
+
+	/**
+	 * When the main target dies the flurry goes on: a random foe within
+	 * {@link #SPREAD_RADIUS} blocks of where it stood becomes the new main
+	 * target, held in place like the first. Returns false if there is none.
+	 */
+	private boolean retarget() {
+		List<LivingEntity> foes = foes();
+		if (foes.isEmpty()) {
+			return false;
+		}
+		target = foes.get(ThreadLocalRandom.current().nextInt(foes.size()));
+		anchor = target.getLocation();
+		Location here = actor().getLocation();
+		baseAngle = Math.atan2(here.getZ() - anchor.getZ(), here.getX() - anchor.getX());
+		freeze(target);
+		Effects.star(target, 0.8);
+		return true;
+	}
+
+	private void freeze(LivingEntity mob) {
+		if (!(mob instanceof Player) && !frozen.containsKey(mob)) {
+			frozen.put(mob, mob.hasAI());
+			mob.setAI(false);
+		}
+	}
+
+	/** Living foes within {@link #SPREAD_RADIUS} blocks of the main target's spot, other than the main target. */
+	private List<LivingEntity> foes() {
+		List<LivingEntity> pool = new ArrayList<>();
 		LivingEntity actor = actor();
-		for (Entity entity : target.getNearbyEntities(SPREAD_RADIUS, SPREAD_RADIUS, SPREAD_RADIUS)) {
-			if (!(entity instanceof LivingEntity living) || entity == player || entity == actor
+		for (Entity entity : world.getNearbyEntities(anchor, SPREAD_RADIUS, SPREAD_RADIUS, SPREAD_RADIUS)) {
+			if (!(entity instanceof LivingEntity living) || entity == target || entity == player || entity == actor
 					|| entity instanceof ArmorStand || entity instanceof Mannequin
 					|| !living.isValid() || living.isDead() || living.isInvulnerable()
 					|| living.getLocation().distanceSquared(anchor) > SPREAD_RADIUS * SPREAD_RADIUS) {
@@ -243,7 +276,7 @@ final class Furioso {
 			}
 			pool.add(living);
 		}
-		return pool.get(ThreadLocalRandom.current().nextInt(pool.size()));
+		return pool;
 	}
 
 	/** Teleports the wielder to {@code spot} facing {@code facing}, if there is room there. */
@@ -415,9 +448,11 @@ final class Furioso {
 			camera = null;
 		}
 		long now = CaduceusListener.now();
-		if (!(target instanceof Player)) {
-			target.setAI(hadAi);
-		}
+		frozen.forEach((mob, hadAi) -> {
+			if (mob.isValid()) {
+				mob.setAI(hadAi);
+			}
+		});
 		// Attack end: everything struck burns and is bound and made fragile.
 		for (LivingEntity victim : struck) {
 			if (victim.isValid() && !victim.isDead()) {
