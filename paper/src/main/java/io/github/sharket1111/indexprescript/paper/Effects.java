@@ -204,24 +204,6 @@ final class Effects {
 		}
 	}
 
-	/** Blue rings swirling around the target as the final coin gathers; call every tick. */
-	static void vortex(Entity target, int tick) {
-		World world = target.getWorld();
-		Location c = target.getLocation();
-		double[] heights = {0.2, target.getHeight() * 0.55, target.getHeight() + 0.2};
-		for (int ring = 0; ring < heights.length; ring++) {
-			double radius = 2.4 - ring * 0.35 - tick * 0.04;
-			double phase = tick * 0.35 * (ring % 2 == 0 ? 1 : -1);
-			for (int i = 0; i < 6; i++) {
-				double a = phase + i * Math.PI / 3;
-				dustAt(world, BLUE_ARC, new Vector(c.getX() + Math.cos(a) * radius, c.getY() + heights[ring], c.getZ() + Math.sin(a) * radius), 1, 0.0);
-			}
-		}
-		if (tick % 3 == 0) {
-			spawn(world, Particle.SQUID_INK, center(target), 3, 1.0, 0.0);
-		}
-	}
-
 	/** Final coin: blinding star, a scythe crescent, and one great diagonal line across the field. */
 	static void finalCut(Entity attacker, Entity target) {
 		star(target, 2.5);
@@ -232,5 +214,79 @@ final class Effects {
 		dustAt(target.getWorld(), BLUE_DROPLET, c, 40, 1.4);
 		sound(target.getLocation(), Sound.BLOCK_ANVIL_LAND, 0.8F, 0.7F);
 		sound(target.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.0F, 0.7F);
+	}
+
+	/** A bursting blow: an orange and blue explosion at the victim. */
+	static void burst(Entity target) {
+		World world = target.getWorld();
+		Vector c = center(target);
+		spawn(world, Particle.EXPLOSION, c, 2, 0.3, 0.0);
+		spawn(world, Particle.FLAME, c, 25, 0.5, 0.12);
+		dustAt(world, BLUE_DROPLET, c, 25, 0.9);
+		dustAt(world, BLUE_ARC, c, 15, 0.6);
+		sound(target.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.6F, 1.4F);
+	}
+
+	/** A flat blue ring around the victim with an orange blast at its middle. */
+	static void ring(Entity target) {
+		World world = target.getWorld();
+		Location base = target.getLocation();
+		double y = base.getY() + target.getHeight() * 0.5;
+		for (int i = 0; i < 48; i++) {
+			double a = i * Math.PI / 24;
+			for (double radius = 1.8; radius <= 2.4; radius += 0.3) {
+				dustAt(world, i % 6 == 0 ? WHITE_STREAK : BLUE_ARC,
+						new Vector(base.getX() + Math.cos(a) * radius, y, base.getZ() + Math.sin(a) * radius), 1, 0.0);
+			}
+		}
+		Vector c = center(target);
+		spawn(world, Particle.EXPLOSION, c, 1, 0.0, 0.0);
+		spawn(world, Particle.FLAME, c, 20, 0.4, 0.1);
+		sound(base, Sound.ENTITY_GENERIC_EXPLODE, 0.5F, 1.2F);
+	}
+
+	/** Tilted blue rings orbiting the wielder during the final gathering; call every tick. */
+	static void orbitRings(Entity holder, int tick) {
+		World world = holder.getWorld();
+		Vector c = center(holder);
+		double[] tilts = {0.0, 0.6, -0.6};
+		for (int ring = 0; ring < tilts.length; ring++) {
+			double radius = 1.5 + ring * 0.35;
+			double phase = tick * 0.4 * (ring % 2 == 0 ? 1 : -1);
+			for (int i = 0; i < 4; i++) {
+				double a = phase + i * Math.PI / 2;
+				double x = Math.cos(a) * radius;
+				double z = Math.sin(a) * radius;
+				Vector p = c.clone().add(new Vector(x, z * Math.sin(tilts[ring]), z * Math.cos(tilts[ring])));
+				dustAt(world, i == 0 ? WHITE_STREAK : BLUE_ARC, p, 1, 0.0);
+			}
+		}
+	}
+
+	/** A small star burst at a random point near the target. */
+	static void flicker(Entity target, double spread) {
+		ThreadLocalRandom random = ThreadLocalRandom.current();
+		World world = target.getWorld();
+		Vector p = center(target).add(new Vector((random.nextDouble() - 0.5) * 2 * spread, (random.nextDouble() - 0.3) * spread,
+				(random.nextDouble() - 0.5) * 2 * spread));
+		for (int spoke = 0; spoke < 4; spoke++) {
+			double a = spoke * Math.PI / 4 + random.nextDouble();
+			Vector dir = new Vector(Math.cos(a), Math.sin(a), 0);
+			for (double t = -0.6; t <= 0.6; t += 0.15) {
+				dustAt(world, WHITE_STREAK, p.clone().add(dir.clone().multiply(t)), 1, 0.0);
+			}
+		}
+		spawn(world, Particle.END_ROD, p, 2, 0.05, 0.05);
+	}
+
+	/** The blinding white flash before the last coin. */
+	static void flash(Entity target) {
+		World world = target.getWorld();
+		Vector c = center(target);
+		spawn(world, Particle.END_ROD, c, 80, 0.4, 0.45);
+		dustAt(world, WHITE_STREAK, c, 80, 2.0);
+		dustAt(world, PALE_DROPLET, c, 60, 2.8);
+		sound(target.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_BLAST, 1.0F, 0.6F);
+		sound(target.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1.0F, 1.6F);
 	}
 }

@@ -30,11 +30,12 @@ import org.bukkit.util.Vector;
  * Furioso-Replica: a nine-coin flurry in which Caduceus reforms into a new
  * weapon for every strike while the target is held in place. Coins 1-8 hit
  * random foes within 6 blocks of the target; the ninth, a scythe, hits the
- * target itself. Following the
- * in-game animation: for coins 1-8 the wielder dashes back and forth through
- * the target, each strike leaving a blue sweeping arc and a white star flash;
- * blue rings then swirl around the target, and the ninth coin, a guaranteed
- * scythe, cuts one great diagonal line before the screen darkens.
+ * target itself. Following Furioso [Lacrimosa-Crescendo]: before each of
+ * coins 1-8 the wielder appears beside its victim in a dark streak and strikes
+ * with that coin's own look; blue rings then orbit the wielder beside the
+ * target while star bursts flicker, a white flash goes off, and the ninth
+ * coin, a guaranteed scythe, cuts one great diagonal line before the screen
+ * darkens.
  *
  * Skill text mapped to Minecraft:
  * - prescript mark: damage +10% (it is only ever cast through prescripts)
@@ -45,14 +46,18 @@ import org.bukkit.util.Vector;
  * - attack end: Burn 5, Bind 3, Fragile 3 next turn; consume every [Hermes]
  */
 final class Furioso {
-	private static final int[] COIN_TICKS = {10, 17, 24, 31, 38, 45, 52, 59, 80};
-	private static final int WINDUP_TICK = 62;
-	private static final int END_TICK = 100;
+	// Timed after Furioso [Lacrimosa-Crescendo] at about 0.7x speed: eight strikes
+	// spaced like the original, a long gathering flurry, a flash, then the last line.
+	private static final int[] COIN_TICKS = {11, 21, 29, 42, 53, 67, 91, 99, 158};
+	/** Ticks before a strike at which the wielder appears beside its victim. */
+	private static final int APPEAR_LEAD = 3;
+	private static final int FOLLOW_UP_TICK = 78;
+	private static final int WINDUP_TICK = 104;
+	private static final int FLASH_TICK = 154;
+	private static final int END_TICK = 172;
 	private static final int LAST_COIN = COIN_TICKS.length - 1;
 	private static final double DASH_RADIUS = 2.2;
 	private static final double SPREAD_RADIUS = 6.0;
-	// Odd coins add a white line through the target; consecutive lines cross.
-	private static final double[] LINE_ANGLES = {35, -35, 70, -60, 15, -20, 55, -75};
 
 	private static final double COIN_RATIO = 0.6;
 	private static final double PRESCRIPT_MARK_BONUS = 1.10;
@@ -72,6 +77,8 @@ final class Furioso {
 	private final boolean hadAi;
 	private final Set<LivingEntity> struck = new LinkedHashSet<>();
 	private CaduceusForm lastForm;
+	private LivingEntity nextVictim;
+	private LivingEntity lastVictim;
 	private int tick;
 	private Cinematic camera;
 
@@ -128,8 +135,22 @@ final class Furioso {
 		if (tick == WINDUP_TICK) {
 			windup();
 		}
-		if (tick >= WINDUP_TICK && tick < COIN_TICKS[LAST_COIN]) {
-			Effects.vortex(target, tick - WINDUP_TICK);
+		if (tick > WINDUP_TICK && tick < COIN_TICKS[LAST_COIN]) {
+			flurry(tick - WINDUP_TICK);
+		}
+		if (tick == FLASH_TICK) {
+			Effects.flash(target);
+		}
+		if (tick == FOLLOW_UP_TICK && lastVictim != null && lastVictim.isValid()) {
+			// After the ring coin a second great arc sweeps past, as in the original.
+			Effects.arc(actor(), lastVictim, 200, 250, -15);
+			Effects.star(lastVictim, 1.4);
+			sound(lastVictim.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 0.8F, 1.3F);
+		}
+		for (int coin = 0; coin < LAST_COIN; coin++) {
+			if (COIN_TICKS[coin] - APPEAR_LEAD == tick) {
+				appear();
+			}
 		}
 		for (int coin = 0; coin < COIN_TICKS.length; coin++) {
 			if (COIN_TICKS[coin] == tick) {
@@ -158,11 +179,31 @@ final class Furioso {
 		}
 	}
 
-	/** The wielder steps back to where it began while liquid metal gathers for the final coin. */
+	/** The wielder settles beside the main target while liquid metal gathers for the final coin. */
 	private void windup() {
-		dashTo(origin.toVector(), target);
+		Vector side = new Vector(Math.cos(baseAngle), 0, Math.sin(baseAngle)).multiply(1.8);
+		dashTo(anchor.toVector().add(side), target);
 		Effects.gather(target);
 		sound(actor().getLocation(), Sound.ITEM_BUCKET_FILL_LAVA, 1.0F, 0.5F);
+	}
+
+	/**
+	 * The gathering before the last coin: blue rings orbit the wielder while
+	 * star bursts flicker around the main target, quickening toward the end.
+	 */
+	private void flurry(int step) {
+		Effects.orbitRings(actor(), step);
+		int every = step < 25 ? 5 : 3;
+		if (step % every == 0) {
+			Effects.flicker(target, 1.8);
+			sound(target.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.6F, 0.6F + step * 0.02F);
+		}
+	}
+
+	/** Picks the next coin's victim and appears beside it in a dark streak. */
+	private void appear() {
+		nextVictim = pickVictim();
+		dashThrough(nextVictim);
 	}
 
 	/**
@@ -227,12 +268,11 @@ final class Furioso {
 		CaduceusForm form = last ? CaduceusForm.SCYTHE : CaduceusForm.random(lastForm);
 		lastForm = form;
 		// Coins 1-8 are sprayed around the area; the ninth always cuts the main target.
-		LivingEntity victim = last ? target : pickVictim();
+		LivingEntity victim = last || nextVictim == null || !nextVictim.isValid() || nextVictim.isDead() ? target : nextVictim;
+		nextVictim = null;
+		lastVictim = victim;
 		struck.add(victim);
-
-		if (!last) {
-			dashThrough(victim);
-		}
+		faceVictim(victim);
 		ItemStack stack = player.getInventory().getItemInMainHand();
 		if (Items.isCaduceus(stack)) {
 			Items.setForm(stack, form);
@@ -265,17 +305,68 @@ final class Furioso {
 			Effects.finalCut(actor(), victim);
 			player.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, END_TICK - COIN_TICKS[LAST_COIN] + 20, 0));
 		} else {
-			ThreadLocalRandom random = ThreadLocalRandom.current();
-			Effects.arc(actor(), victim, random.nextInt(360), 160 + random.nextInt(60), random.nextInt(60) - 30);
-			Effects.star(victim, 1.0);
-			if (coin % 2 == 1) {
-				Effects.slash(actor(), victim, LINE_ANGLES[coin], 5.0);
-			}
+			coinLook(coin, victim);
 		}
 		if (hit.crit()) {
 			Effects.crit(victim);
 		}
 		sound(victim.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 0.9F, 0.8F + coin * 0.08F);
+	}
+
+	/**
+	 * Each of coins 1-8 has its own look, after the original: a crescent, a
+	 * vertical cut, a horizontal dash line, a bursting blow, a wide sweep, a
+	 * ring with an explosion, a crossing dash and cut, and a last crescent.
+	 */
+	private void coinLook(int coin, LivingEntity victim) {
+		LivingEntity actor = actor();
+		switch (coin) {
+			case 0 -> {
+				Effects.arc(actor, victim, -40, 200, 20);
+				Effects.star(victim, 1.3);
+			}
+			case 1 -> {
+				Effects.slash(actor, victim, 88, 4.5);
+				Effects.star(victim, 1.0);
+			}
+			case 2 -> {
+				Effects.slash(actor, victim, 4, 6.0);
+				Effects.star(victim, 0.8);
+			}
+			case 3 -> {
+				Effects.burst(victim);
+				Effects.star(victim, 1.6);
+			}
+			case 4 -> {
+				Effects.arc(actor, victim, -150, 270, -10);
+				Effects.star(victim, 1.1);
+			}
+			case 5 -> {
+				Effects.ring(victim);
+				Effects.star(victim, 1.2);
+			}
+			case 6 -> {
+				Effects.slash(actor, victim, -3, 6.0);
+				Effects.slash(actor, victim, 84, 4.5);
+				Effects.star(victim, 1.0);
+			}
+			default -> {
+				Effects.arc(actor, victim, 140, 220, 30);
+				Effects.star(victim, 1.5);
+			}
+		}
+	}
+
+	/** Turns the wielder toward the victim for the swing. */
+	private void faceVictim(LivingEntity victim) {
+		LivingEntity actor = actor();
+		Location here = actor.getLocation();
+		Vector look = victim.getLocation().toVector().add(new Vector(0, victim.getHeight() * 0.5, 0))
+				.subtract(here.toVector().add(new Vector(0, actor.getEyeHeight(), 0)));
+		if (look.lengthSquared() > 1.0E-4) {
+			here.setDirection(look);
+			actor.teleport(here);
+		}
 	}
 
 	/**
