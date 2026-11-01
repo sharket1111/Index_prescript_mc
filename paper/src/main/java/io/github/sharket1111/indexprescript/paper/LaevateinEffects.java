@@ -24,6 +24,7 @@ final class LaevateinEffects {
 	private static final Particle.DustOptions WHITE = dust(0xFFFFFF, 1.3F);
 	private static final Particle.DustOptions ORANGE = dust(0xFF8A1E, 1.4F);
 	private static final Particle.DustOptions RED = dust(0xE0301E, 1.5F);
+	private static final Particle.DustOptions GOLD = dust(0xFFD24A, 0.8F);
 	private static final double ARC_RADIUS = 2.3;
 
 	private LaevateinEffects() {
@@ -176,5 +177,36 @@ final class LaevateinEffects {
 		dustAt(world, PURPLE_DIM, c, 30, 2.2);
 		sound(target.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1.0F, 0.7F);
 		sound(target.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.8F, 0.8F);
+	}
+
+	/** Full [Middle - Grudge]: dark red and purple embers swirling around the wielder. */
+	static void grudgeAura(LivingEntity holder) {
+		World world = holder.getWorld();
+		ThreadLocalRandom random = ThreadLocalRandom.current();
+		Location base = holder.getLocation();
+		for (int i = 0; i < 3; i++) {
+			double angle = random.nextDouble() * Math.PI * 2;
+			Vector p = new Vector(base.getX() + Math.cos(angle) * 0.7, base.getY() + random.nextDouble() * holder.getHeight(),
+					base.getZ() + Math.sin(angle) * 0.7);
+			dustAt(world, i == 0 ? PURPLE : RED, p, 1, 0.03);
+		}
+	}
+
+	static void grudgeFull(LivingEntity holder) {
+		dustAt(holder.getWorld(), RED, center(holder), 25, 0.6);
+		dustAt(holder.getWorld(), PURPLE, center(holder), 15, 0.7);
+		sound(holder.getLocation(), Sound.ITEM_FIRECHARGE_USE, 0.9F, 0.5F);
+		sound(holder.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.3F, 0.6F);
+	}
+
+	/** [Super Grit]: golden glints around the wielder. */
+	static void grit(LivingEntity holder) {
+		dustAt(holder.getWorld(), GOLD, center(holder), 3, 0.5);
+	}
+
+	/** Powerful attack at full Grudge. */
+	static void powerful(LivingEntity attacker, Entity target) {
+		flameArc(attacker, target, -100, 30);
+		explosion(target, 1.6);
 	}
 }

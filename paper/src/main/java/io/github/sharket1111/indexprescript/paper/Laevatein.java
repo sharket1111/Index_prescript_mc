@@ -47,6 +47,11 @@ final class Laevatein implements Listener {
 		stack.editMeta(meta -> meta.getPersistentDataContainer().set(HITS, PersistentDataType.INTEGER, hits));
 	}
 
+	/** Whether the player's current swing started at (near) full attack charge. */
+	static boolean charged(Player player) {
+		return Boolean.TRUE.equals(CHARGED.get(player.getUniqueId()));
+	}
+
 	/** Enough hits for the next stage. */
 	static boolean ready(ItemStack stack) {
 		int stage = Items.laevateinStage(stack);
@@ -259,7 +264,8 @@ final class Laevatein implements Listener {
 		private void strike(double damage, int fireTicks, Runnable effect) {
 			player.swingMainHand();
 			effect.run();
-			Damage.deal(target, damage, player, true);
+			Matthias.addTattoo(player);
+			Damage.deal(target, Matthias.scale(player, damage), player, true);
 			if (fireTicks > 0 && target.isValid()) {
 				target.setFireTicks(Math.max(target.getFireTicks(), fireTicks));
 			}
@@ -272,6 +278,7 @@ final class Laevatein implements Listener {
 				Items.setLaevateinStage(held, stage);
 				setHits(held, 0);
 			}
+			Matthias.grantGrit(player, stage);
 		}
 
 		private void hold() {
