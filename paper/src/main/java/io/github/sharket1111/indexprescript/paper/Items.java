@@ -11,6 +11,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.components.CustomModelDataComponent;
 import org.bukkit.persistence.PersistentDataType;
 
+import io.papermc.paper.datacomponent.DataComponentTypes;
+
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -29,6 +31,7 @@ final class Items {
 	/** Laevatein release stages after the sealed state; the index is the stage number. */
 	static final List<String> LAEVATEIN_STAGES = List.of("sealed", "release_1", "release_2", "release_3");
 	static final int MAX_HERMES = 9;
+	static final int LAEVATEIN_MAX_STACK = 9;
 
 	private static final NamespacedKey ID = new NamespacedKey(NAMESPACE, "item");
 
@@ -65,9 +68,24 @@ final class Items {
 			tag(meta, LAEVATEIN);
 			meta.itemName(Component.text(Messages.get(viewer, "item.laevatein")));
 			meta.setRarity(ItemRarity.EPIC);
-			meta.setUnbreakable(true);
 		});
+		makeStackable(stack);
 		return stack;
+	}
+
+	/**
+	 * Laevatein shows its hit count as its stack size, but Minecraft refuses
+	 * items that are both damageable and stackable, so the sword's durability
+	 * is removed (it could not break anyway) before allowing stacks of 9.
+	 */
+	static void makeStackable(ItemStack stack) {
+		Integer max = stack.getData(DataComponentTypes.MAX_STACK_SIZE);
+		if (max != null && max >= LAEVATEIN_MAX_STACK && !stack.hasData(DataComponentTypes.MAX_DAMAGE)) {
+			return;
+		}
+		stack.unsetData(DataComponentTypes.DAMAGE);
+		stack.unsetData(DataComponentTypes.MAX_DAMAGE);
+		stack.setData(DataComponentTypes.MAX_STACK_SIZE, LAEVATEIN_MAX_STACK);
 	}
 
 	static boolean isLaevatein(ItemStack stack) {

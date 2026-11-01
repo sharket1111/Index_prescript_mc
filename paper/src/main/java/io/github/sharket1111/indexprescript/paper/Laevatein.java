@@ -3,6 +3,7 @@ package io.github.sharket1111.indexprescript.paper;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -44,11 +45,13 @@ final class Laevatein implements Listener {
 	private static final int TARGET_RANGE = 6;
 	private static final int READY_EFFECT_INTERVAL = 4;
 	private static final int CLAMP_INTERVAL = 5;
+	private static final int ERROR_LOG_INTERVAL = 200;
 	private static final NamespacedKey HITS = new NamespacedKey(Items.NAMESPACE, "laevatein_hits");
 	private static final NamespacedKey UNIQUE = new NamespacedKey(Items.NAMESPACE, "laevatein_id");
 
 	private static final Map<UUID, Boolean> CHARGED = new ConcurrentHashMap<>();
 	private static final Map<UUID, Release> RELEASING = new ConcurrentHashMap<>();
+	private static long lastError = Long.MIN_VALUE / 2;
 
 	static int hits(ItemStack stack) {
 		return stack.getItemMeta().getPersistentDataContainer().getOrDefault(HITS, PersistentDataType.INTEGER, 0);
@@ -71,47 +74,66 @@ final class Laevatein implements Listener {
 
 	/** Called every tick: off-hand releases, the hit count display and the ready embers. */
 	static void tick() {
-		RELEASING.values().removeIf(release -> !release.tick());
+		RELEASING.values().removeIf(release -> {
+			try {
+				return !release.tick();
+			} catch (RuntimeException e) {
+				IndexPrescriptPlugin.instance().getLogger().log(Level.WARNING, "Laevatein release failed", e);
+				return true;
+			}
+		});
 		long now = CaduceusListener.now();
 		for (Player player : Bukkit.getOnlinePlayers()) {
-			PlayerInventory inventory = player.getInventory();
-			boolean releasing = RELEASING.containsKey(player.getUniqueId());
-			ItemStack off = inventory.getItemInOffHand();
-			if (!releasing && Items.isLaevatein(off) && ready(off)) {
-				LivingEntity target = findTarget(player);
-				if (target != null) {
-					inventory.setItemInOffHand(inventory.getItemInMainHand());
-					inventory.setItemInMainHand(off);
-					startRelease(player, target);
-					releasing = true;
+			try {
+				tick(player, now);
+			} catch (RuntimeException e) {
+				if (now - lastError > ERROR_LOG_INTERVAL) {
+					lastError = now;
+					IndexPrescriptPlugin.instance().getLogger().log(Level.WARNING, "Laevatein tick failed for " + player.getName(), e);
 				}
 			}
-			ItemStack held = inventory.getItemInMainHand();
-			if (Items.isLaevatein(held)) {
-				showHits(held);
-				if (!releasing && ready(held) && now % READY_EFFECT_INTERVAL == 0) {
-					LaevateinEffects.ready(player);
-				}
+		}
+	}
+
+	private static void tick(Player player, long now) {
+		PlayerInventory inventory = player.getInventory();
+		boolean releasing = RELEASING.containsKey(player.getUniqueId());
+		ItemStack off = inventory.getItemInOffHand();
+		if (!releasing && Items.isLaevatein(off) && ready(off)) {
+			LivingEntity target = findTarget(player);
+			if (target != null) {
+				inventory.setItemInOffHand(inventory.getItemInMainHand());
+				inventory.setItemInMainHand(off);
+				startRelease(player, target);
+				releasing = true;
 			}
-			if (now % CLAMP_INTERVAL == 0) {
-				keepOthersSingle(inventory);
+		}
+		ItemStack held = inventory.getItemInMainHand();
+		if (Items.isLaevatein(held)) {
+			showHits(held);
+			if (!releasing && ready(held) && now % READY_EFFECT_INTERVAL == 0) {
+				LaevateinEffects.ready(player);
 			}
+		}
+		if (now % CLAMP_INTERVAL == 0) {
+			keepOthersSingle(inventory);
 		}
 	}
 
 	/** The held Laevatein's stack size shows the hits toward the next release. */
 	private static void showHits(ItemStack held) {
-		if (!held.getItemMeta().getPersistentDataContainer().has(UNIQUE) || held.getItemMeta().getMaxStackSize() < HITS_TO_RELEASE[MAX_STAGE - 1]) {
-			held.editMeta(meta -> {
-				meta.getPersistentDataContainer().set(UNIQUE, PersistentDataType.STRING, UUID.randomUUID().toString());
-				meta.setMaxStackSize(HITS_TO_RELEASE[MAX_STAGE - 1]);
-			});
+		Items.makeStackable(held);
+		if (!held.getItemMeta().getPersistentDataContainer().has(UNIQUE)) {
+			held.editMeta(meta -> meta.getPersistentDataContainer().set(UNIQUE, PersistentDataType.STRING, UUID.randomUUID().toString()));
 		}
-		int stage = Items.laevateinStage(held);
-		int count = stage < MAX_STAGE ? Math.max(1, hits(held)) : 1;
+		int count = displayedCount(held);
 		if (held.getAmount() != count) {
 			held.setAmount(count);
 		}
+	}
+
+	static int displayedCount(ItemStack held) {
+		return Items.laevateinStage(held) < MAX_STAGE ? Math.max(1, hits(held)) : 1;
 	}
 
 	/** Every Laevatein not in the main hand is a single item. */

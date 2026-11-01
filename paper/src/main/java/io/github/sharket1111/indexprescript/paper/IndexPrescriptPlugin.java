@@ -102,6 +102,12 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			return true;
 		}
 		ItemStack held = player.getInventory().getItemInMainHand();
+		if (args.length < 2 && Items.isLaevatein(held)) {
+			// Status for testing: stage, hits toward the next release, and the displayed stack size.
+			sender.sendMessage(Messages.get(sender, "command.laevatein_status", Items.laevateinStage(held), Laevatein.hits(held),
+					held.getAmount(), Laevatein.ready(held)));
+			return true;
+		}
 		int stage;
 		try {
 			stage = Integer.parseInt(args.length >= 2 ? args[1] : "");
