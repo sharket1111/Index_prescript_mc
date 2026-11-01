@@ -25,7 +25,6 @@ import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
  */
 final class CaduceusListener implements Listener {
 	private static final int FORM_TICKS = 40;
-	private static final float CHARGED_THRESHOLD = 0.9F;
 
 	// Per-player bookkeeping, keyed by player UUID.
 	private static final Map<UUID, Long> REVERT_AT = new ConcurrentHashMap<>();
@@ -78,7 +77,7 @@ final class CaduceusListener implements Listener {
 			return;
 		}
 
-		boolean charged = player.getAttackCooldown() >= CHARGED_THRESHOLD;
+		boolean charged = Swings.accept(player);
 		CHARGED.put(player.getUniqueId(), charged);
 		CaduceusForm current = CaduceusForm.of(stack);
 		if (charged || current == null) {

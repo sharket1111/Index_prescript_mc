@@ -10,6 +10,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -28,8 +29,8 @@ import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 
 /**
  * Matthias's Laevatein. The original releases it by spending stacks with
- * certain skills; here each stage unlocks after a number of charged hits
- * (5, 7, then 9), shown as the held stack's size. Putting a ready Laevatein
+ * certain skills; here each stage unlocks after a number of hits dealt or
+ * taken (5, 7, then 9), shown as the held stack's size. Putting a ready Laevatein
  * in the off hand (swap-hands on Java, the off-hand slot on Bedrock) with an
  * enemy nearby returns it to the main hand and releases one stage in a strike
  * sequence modelled on the in-game animation.
@@ -40,7 +41,6 @@ import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 final class Laevatein implements Listener {
 	private static final int[] HITS_TO_RELEASE = {5, 7, 9};
 	private static final int MAX_STAGE = Items.LAEVATEIN_STAGES.size() - 1;
-	private static final float CHARGED_THRESHOLD = 0.7F;
 	private static final int TARGET_RANGE = 6;
 	private static final int READY_EFFECT_INTERVAL = 4;
 	private static final int CLAMP_INTERVAL = 5;
@@ -151,25 +151,47 @@ final class Laevatein implements Listener {
 			event.setCancelled(true);
 			return;
 		}
-		CHARGED.put(player.getUniqueId(), player.getAttackCooldown() >= CHARGED_THRESHOLD);
+		CHARGED.put(player.getUniqueId(), Swings.accept(player));
 	}
 
-	/** Charged hits count toward the next release. */
+	/** Full swings that land count toward the next release. */
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
 	public void onHit(EntityDamageByEntityEvent event) {
 		if (Damage.dealing() || event.getCause() != EntityDamageEvent.DamageCause.ENTITY_ATTACK
 				|| !(event.getDamager() instanceof Player player) || !(event.getEntity() instanceof LivingEntity)) {
 			return;
 		}
+		if (Boolean.TRUE.equals(CHARGED.remove(player.getUniqueId()))) {
+			addHit(player);
+		}
+	}
+
+	/** Being hit by any mob or player while wielding Laevatein counts too. */
+	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+	public void onHurt(EntityDamageByEntityEvent event) {
+		if (event.getEntity() instanceof Player player && event.getFinalDamage() > 0 && attacker(event.getDamager()) != null
+				&& attacker(event.getDamager()) != player) {
+			addHit(player);
+		}
+	}
+
+	private static LivingEntity attacker(Entity damager) {
+		if (damager instanceof Projectile projectile && projectile.getShooter() instanceof LivingEntity shooter) {
+			return shooter;
+		}
+		return damager instanceof LivingEntity living ? living : null;
+	}
+
+	private static void addHit(Player player) {
 		ItemStack held = player.getInventory().getItemInMainHand();
-		if (!Items.isLaevatein(held) || !Boolean.TRUE.equals(CHARGED.remove(player.getUniqueId()))) {
+		if (!Items.isLaevatein(held) || RELEASING.containsKey(player.getUniqueId())) {
 			return;
 		}
 		int stage = Items.laevateinStage(held);
-		if (stage >= MAX_STAGE) {
+		if (stage >= MAX_STAGE || hits(held) >= HITS_TO_RELEASE[stage]) {
 			return;
 		}
-		int hits = Math.min(hits(held) + 1, HITS_TO_RELEASE[stage]);
+		int hits = hits(held) + 1;
 		setHits(held, hits);
 		if (hits == HITS_TO_RELEASE[stage]) {
 			LaevateinEffects.readySound(player);
