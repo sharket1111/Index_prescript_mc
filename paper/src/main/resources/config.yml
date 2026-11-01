@@ -17,3 +17,8 @@ resource-pack:
   host-address: ""
   # Kick players who decline the pack.
   required: false
+
+bedrock-pack:
+  # Copy the Bedrock pack (voice lines) into Geyser's packs folder on startup
+  # so Bedrock players hear the voices. Needs Geyser installed as a plugin.
+  install: true

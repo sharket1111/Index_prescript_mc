@@ -1,0 +1,29 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Index Prescript",
+    "description": "Index Prescript voices for Bedrock players (Geyser)",
+    "uuid": "57a13a64-8f58-502a-8524-235a81df9867",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      21,
+      0
+    ]
+  },
+  "modules": [
+    {
+      "type": "resources",
+      "uuid": "8a90ce49-a407-5672-b531-4924d2068724",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ]
+}

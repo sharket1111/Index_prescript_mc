@@ -1,0 +1,65 @@
+{
+  "voice.rien.prescript_1": {
+    "sounds": [
+      {
+        "name": "index_prescript:voice/rien/prescript_1"
+      }
+    ]
+  },
+  "voice.rien.prescript_2": {
+    "sounds": [
+      {
+        "name": "index_prescript:voice/rien/prescript_2"
+      }
+    ]
+  },
+  "voice.rien.prescript_3": {
+    "sounds": [
+      {
+        "name": "index_prescript:voice/rien/prescript_3"
+      }
+    ]
+  },
+  "voice.rien.prescript_4": {
+    "sounds": [
+      {
+        "name": "index_prescript:voice/rien/prescript_4"
+      }
+    ]
+  },
+  "voice.rien.prescript_5": {
+    "sounds": [
+      {
+        "name": "index_prescript:voice/rien/prescript_5"
+      }
+    ]
+  },
+  "voice.rien.prescript_6": {
+    "sounds": [
+      {
+        "name": "index_prescript:voice/rien/prescript_6"
+      }
+    ]
+  },
+  "voice.rien.prescript_7": {
+    "sounds": [
+      {
+        "name": "index_prescript:voice/rien/prescript_7"
+      }
+    ]
+  },
+  "voice.rien.prescript_8": {
+    "sounds": [
+      {
+        "name": "index_prescript:voice/rien/prescript_8"
+      }
+    ]
+  },
+  "voice.rien.prescript_9": {
+    "sounds": [
+      {
+        "name": "index_prescript:voice/rien/prescript_9"
+      }
+    ]
+  }
+}

@@ -27,6 +27,14 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 	}
 
 	@Override
+	public void onLoad() {
+		saveDefaultConfig();
+		if (getConfig().getBoolean("bedrock-pack.install", true)) {
+			BedrockPack.install(this);
+		}
+	}
+
+	@Override
 	public void onEnable() {
 		instance = this;
 		saveDefaultConfig();

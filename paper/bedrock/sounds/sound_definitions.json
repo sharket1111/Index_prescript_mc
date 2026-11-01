@@ -1,0 +1,113 @@
+{
+  "format_version": "1.14.0",
+  "sound_definitions": {
+    "index_prescript:voice.rien.prescript_1": {
+      "category": "player",
+      "min_distance": 1.0,
+      "max_distance": 24.0,
+      "sounds": [
+        {
+          "name": "sounds/voice/rien/prescript_1",
+          "volume": 1.0,
+          "load_on_low_memory": true
+        }
+      ]
+    },
+    "index_prescript:voice.rien.prescript_2": {
+      "category": "player",
+      "min_distance": 1.0,
+      "max_distance": 24.0,
+      "sounds": [
+        {
+          "name": "sounds/voice/rien/prescript_2",
+          "volume": 1.0,
+          "load_on_low_memory": true
+        }
+      ]
+    },
+    "index_prescript:voice.rien.prescript_3": {
+      "category": "player",
+      "min_distance": 1.0,
+      "max_distance": 24.0,
+      "sounds": [
+        {
+          "name": "sounds/voice/rien/prescript_3",
+          "volume": 1.0,
+          "load_on_low_memory": true
+        }
+      ]
+    },
+    "index_prescript:voice.rien.prescript_4": {
+      "category": "player",
+      "min_distance": 1.0,
+      "max_distance": 24.0,
+      "sounds": [
+        {
+          "name": "sounds/voice/rien/prescript_4",
+          "volume": 1.0,
+          "load_on_low_memory": true
+        }
+      ]
+    },
+    "index_prescript:voice.rien.prescript_5": {
+      "category": "player",
+      "min_distance": 1.0,
+      "max_distance": 24.0,
+      "sounds": [
+        {
+          "name": "sounds/voice/rien/prescript_5",
+          "volume": 1.0,
+          "load_on_low_memory": true
+        }
+      ]
+    },
+    "index_prescript:voice.rien.prescript_6": {
+      "category": "player",
+      "min_distance": 1.0,
+      "max_distance": 24.0,
+      "sounds": [
+        {
+          "name": "sounds/voice/rien/prescript_6",
+          "volume": 1.0,
+          "load_on_low_memory": true
+        }
+      ]
+    },
+    "index_prescript:voice.rien.prescript_7": {
+      "category": "player",
+      "min_distance": 1.0,
+      "max_distance": 24.0,
+      "sounds": [
+        {
+          "name": "sounds/voice/rien/prescript_7",
+          "volume": 1.0,
+          "load_on_low_memory": true
+        }
+      ]
+    },
+    "index_prescript:voice.rien.prescript_8": {
+      "category": "player",
+      "min_distance": 1.0,
+      "max_distance": 24.0,
+      "sounds": [
+        {
+          "name": "sounds/voice/rien/prescript_8",
+          "volume": 1.0,
+          "load_on_low_memory": true
+        }
+      ]
+    },
+    "index_prescript:voice.rien.prescript_9": {
+      "category": "player",
+      "min_distance": 1.0,
+      "max_distance": 24.0,
+      "sounds": [
+        {
+          "name": "sounds/voice/rien/prescript_9",
+          "volume": 1.0,
+          "load_on_low_memory": true
+        }
+      ]
+    }
+  }
+}

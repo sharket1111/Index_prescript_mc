@@ -57,6 +57,22 @@ def resourcePack = tasks.register('resourcePack', Zip) {
 		into 'assets'
 		exclude '**/lang/**', '**/icon.png'
 	}
+	// Plugin-only assets such as voice lines.
+	from('pack')
+}
+
+// Bedrock players (Geyser) get the voice lines from a Bedrock pack that the
+// plugin drops into Geyser's packs folder.
+def bedrockPack = tasks.register('bedrockPack', Zip) {
+	archiveFileName = 'index_prescript_bedrock.mcpack'
+	destinationDirectory = layout.buildDirectory.dir('pack')
+	preserveFileTimestamps = false
+	reproducibleFileOrder = true
+	from('bedrock')
+	from('pack/assets/index_prescript/sounds') {
+		into 'sounds'
+		include '**/*.ogg'
+	}
 }
 
 processResources {
@@ -67,4 +83,5 @@ processResources {
 		expand 'version': project.version, 'apiVersion': apiVersion
 	}
 	from(resourcePack)
+	from(bedrockPack)
 }

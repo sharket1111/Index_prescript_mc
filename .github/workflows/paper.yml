@@ -73,3 +73,4 @@ jobs:
           path: |
             paper/build/libs/*.jar
             paper/build/pack/index_prescript_pack.zip
+            paper/build/pack/index_prescript_bedrock.mcpack
