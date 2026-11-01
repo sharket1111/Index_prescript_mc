@@ -50,6 +50,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Bukkit.getScheduler().runTaskTimer(this, PrescriptTracker::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Laevatein::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Matthias::tick, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, IndexMark::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, () -> CombatState.prune(CaduceusListener.now()), 1200L, 1200L);
 
 		var command = getCommand("indexprescript");
@@ -62,6 +63,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 	@Override
 	public void onDisable() {
 		Cinematic.endAll();
+		IndexMark.clearAll();
 		if (resourcePack != null) {
 			resourcePack.stop();
 		}
@@ -71,6 +73,9 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 	public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 		if (args.length >= 1 && args[0].equalsIgnoreCase("laevatein")) {
 			return setLaevateinStage(sender, args);
+		}
+		if (args.length >= 1 && args[0].equalsIgnoreCase("sanity")) {
+			return sanity(sender, args);
 		}
 		if (args.length >= 1 && args[0].equalsIgnoreCase("pack")) {
 			if (!(sender instanceof Player player)) {
@@ -105,6 +110,24 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		return true;
 	}
 
+	/** /indexprescript sanity [value]: shows, or for testing sets, the sender's Sanity. */
+	private boolean sanity(CommandSender sender, String[] args) {
+		if (!(sender instanceof Player player)) {
+			sender.sendMessage(Messages.get(sender, "command.players_only"));
+			return true;
+		}
+		if (args.length >= 2) {
+			try {
+				Sanity.set(player, Integer.parseInt(args[1]));
+			} catch (NumberFormatException e) {
+				sender.sendMessage(Messages.get(sender, "command.usage"));
+				return true;
+			}
+		}
+		sender.sendMessage(Messages.get(sender, "command.sanity", Sanity.of(player)));
+		return true;
+	}
+
 	/** Test helper: /indexprescript laevatein <0-3> sets the held Laevatein's stage and clears its hit count. */
 	private boolean setLaevateinStage(CommandSender sender, String[] args) {
 		if (!(sender instanceof Player player)) {
@@ -136,7 +159,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 	@Override
 	public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
 		return switch (args.length) {
-			case 1 -> List.of("give", "pack", "laevatein");
+			case 1 -> List.of("give", "pack", "laevatein", "sanity");
 			case 2 -> switch (args[0].toLowerCase(Locale.ROOT)) {
 				case "give" -> List.of("caduceus", "terminal", "laevatein");
 				case "laevatein" -> List.of("0", "1", "2", "3");

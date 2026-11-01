@@ -289,4 +289,88 @@ final class Effects {
 		sound(target.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_BLAST, 1.0F, 0.6F);
 		sound(target.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1.0F, 1.6F);
 	}
+
+	private static final Particle.DustOptions SHIN_GOLD = dust(0xFFD24A, 1.0F);
+	private static final Particle.DustOptions SHIN_PALE = dust(0xFFF2B0, 0.7F);
+	private static final Particle.DustOptions MANG_GOLD = dust(0xFFE14D, 0.8F);
+
+	/** [Shin]: a golden glow rising around the wielder; call every tick. */
+	static void shin(LivingEntity holder, int tick) {
+		if (tick % 2 != 0) {
+			return;
+		}
+		World world = holder.getWorld();
+		ThreadLocalRandom random = ThreadLocalRandom.current();
+		Location base = holder.getLocation();
+		for (int i = 0; i < 4; i++) {
+			double a = random.nextDouble() * Math.PI * 2;
+			double r = 0.45 + random.nextDouble() * 0.35;
+			Vector p = new Vector(base.getX() + Math.cos(a) * r, base.getY() + random.nextDouble() * holder.getHeight() * 1.1,
+					base.getZ() + Math.sin(a) * r);
+			dustAt(world, i == 0 ? SHIN_PALE : SHIN_GOLD, p, 1, 0.02);
+		}
+		if (tick % 6 == 0) {
+			spawn(world, Particle.END_ROD, center(holder), 1, 0.35, 0.02);
+		}
+		if (tick % 10 == 0) {
+			for (int i = 0; i < 16; i++) {
+				double a = i * Math.PI / 8;
+				dustAt(world, SHIN_GOLD, new Vector(base.getX() + Math.cos(a) * 0.8, base.getY() + 0.05, base.getZ() + Math.sin(a) * 0.8), 1, 0.0);
+			}
+		}
+	}
+
+	/** [Shin] flaring up as the skill starts. */
+	static void shinBurst(LivingEntity holder) {
+		Vector c = center(holder);
+		dustAt(holder.getWorld(), SHIN_GOLD, c, 40, 0.7);
+		spawn(holder.getWorld(), Particle.END_ROD, c, 12, 0.3, 0.08);
+		sound(holder.getLocation(), Sound.BLOCK_BEACON_POWER_SELECT, 0.8F, 1.4F);
+	}
+
+	/** Where the held weapon's ring sits: along the blade, held up and forward from the right hand. */
+	private static Vector[] weaponFrame(LivingEntity holder) {
+		Location at = holder.getLocation();
+		Vector forward = at.getDirection().setY(0);
+		if (forward.lengthSquared() < 1.0E-4) {
+			forward = new Vector(0, 0, 1);
+		}
+		forward.normalize();
+		Vector right = new Vector(-forward.getZ(), 0, forward.getX());
+		Vector hand = at.toVector().add(new Vector(0, holder.getHeight() * 0.5, 0)).add(right.clone().multiply(0.38)).add(forward.clone().multiply(0.25));
+		Vector axis = forward.clone().add(new Vector(0, 1, 0)).normalize();
+		return new Vector[] {hand.add(axis.clone().multiply(0.75)), axis};
+	}
+
+	/** [Mang]: a glowing golden ring wound round the weapon, slowly turning; call every tick. */
+	static void mang(LivingEntity holder, int tick) {
+		Vector[] frame = weaponFrame(holder);
+		Vector c = frame[0];
+		Vector axis = frame[1];
+		Vector a = axis.clone().crossProduct(new Vector(0, 1, 0));
+		if (a.lengthSquared() < 1.0E-4) {
+			a = new Vector(1, 0, 0);
+		}
+		a.normalize();
+		Vector b = axis.clone().crossProduct(a).normalize();
+		World world = holder.getWorld();
+		double spin = tick * 0.3;
+		for (int i = 0; i < 14; i++) {
+			double t = spin + i * Math.PI / 7;
+			Vector p = c.clone().add(a.clone().multiply(Math.cos(t) * 0.32)).add(b.clone().multiply(Math.sin(t) * 0.32));
+			dustAt(world, MANG_GOLD, p, 1, 0.0);
+		}
+		if (tick % 5 == 0) {
+			spawn(world, Particle.END_ROD, c.clone().add(a.clone().multiply(Math.cos(spin) * 0.32)), 1, 0.0, 0.0);
+		}
+	}
+
+	/** [Mang] forming: the ring flashes into being round the weapon. */
+	static void mangForm(LivingEntity holder) {
+		Vector c = weaponFrame(holder)[0];
+		dustAt(holder.getWorld(), MANG_GOLD, c, 30, 0.35);
+		spawn(holder.getWorld(), Particle.END_ROD, c, 8, 0.1, 0.06);
+		sound(holder.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, 1.0F, 1.2F);
+		sound(holder.getLocation(), Sound.BLOCK_BELL_RESONATE, 0.6F, 1.6F);
+	}
 }

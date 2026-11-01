@@ -12,6 +12,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
@@ -46,6 +47,16 @@ import org.bukkit.util.Vector;
  * - every hit: inflict Sinking 1 or gain Poise 1, alternating
  * - coin 9: scythe, critical damage +90%, Sinking count +3
  * - attack end: Burn 5, Bind 3, Fragile 3 next turn; consume every [Hermes]
+ *
+ * [Shin (心) - Rien], shown as a golden glow around the wielder, is reckoned
+ * when the skill starts:
+ * - per 15% of health lost: Damage Up 1 (max 5), each damage +5%
+ * - per 40% of health lost: +1 power (max 2)
+ * - Poise gained by this skill: potency +1, count +1
+ * - Sanity above the target's: damage +1% per 2 points of difference (max 30%)
+ * [Mang] forms if the wielder's Sanity is 0 or more, shown as a glowing golden
+ * ring wound round the weapon: damage +40% and final power +4 (each +10%);
+ * at attack end it costs 20 Sanity.
  */
 final class Furioso {
 	// Timed after Furioso [Lacrimosa-Crescendo] at about 0.7x speed: eight strikes
@@ -67,6 +78,16 @@ final class Furioso {
 	private static final int POWER_STEP = 6;
 	private static final int MAX_POWER = 2;
 	private static final double FINAL_CRIT_MULTIPLIER = (1.2 + 0.9) / 1.2;
+	private static final double SHIN_DAMAGE_UP_STEP = 0.15;
+	private static final int SHIN_MAX_DAMAGE_UP = 5;
+	private static final double DAMAGE_UP_BONUS = 0.05;
+	private static final double SHIN_POWER_STEP = 0.40;
+	private static final int SHIN_MAX_POWER = 2;
+	private static final double SHIN_MAX_SANITY_BONUS = 0.30;
+	private static final double MANG_DAMAGE = 1.40;
+	private static final int MANG_FINAL_POWER = 4;
+	private static final double FINAL_POWER_BONUS = 0.10;
+	private static final int MANG_SANITY_COST = 20;
 
 	private static final Map<UUID, Furioso> ACTIVE = new ConcurrentHashMap<>();
 
@@ -84,6 +105,9 @@ final class Furioso {
 	private LivingEntity lastVictim;
 	private int tick;
 	private Cinematic camera;
+	private int shinDamageUp;
+	private int shinPower;
+	private boolean mang;
 
 	private Furioso(Player player, LivingEntity target) {
 		this.player = player;
@@ -112,11 +136,21 @@ final class Furioso {
 	private void open() {
 		long now = CaduceusListener.now();
 		freeze(target);
-		CombatState.of(player).addPoise(3, 3, now);
+		// [Shin] is reckoned from the health lost when the skill starts.
+		double maxHealth = player.getAttribute(Attribute.MAX_HEALTH) == null ? 20.0 : player.getAttribute(Attribute.MAX_HEALTH).getValue();
+		double lost = Math.max(0.0, 1.0 - player.getHealth() / maxHealth);
+		shinDamageUp = Math.min(SHIN_MAX_DAMAGE_UP, (int) (lost / SHIN_DAMAGE_UP_STEP));
+		shinPower = Math.min(SHIN_MAX_POWER, (int) (lost / SHIN_POWER_STEP));
+		mang = Sanity.of(player) >= 0;
+		gainPoise(3, now);
 		PrescriptTracker.blockHermes(player, now + END_TICK + CombatState.TURN_TICKS);
 
 		camera = Cinematic.start(player, anchor.clone().add(0, 2, 0));
 		Effects.auraBurst(actor());
+		Effects.shinBurst(actor());
+		if (mang) {
+			Effects.mangForm(actor());
+		}
 		sound(actor().getLocation(), Sound.ITEM_BUCKET_FILL_LAVA, 1.0F, 0.6F);
 		sound(actor().getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.0F, 0.5F);
 	}
@@ -130,6 +164,10 @@ final class Furioso {
 		}
 		holdTarget();
 		shoot();
+		Effects.shin(actor(), tick);
+		if (mang) {
+			Effects.mang(actor(), tick);
+		}
 		player.setFallDistance(0.0F);
 		CaduceusListener.keepFormed(player, 30);
 
@@ -317,19 +355,29 @@ final class Furioso {
 
 		CombatState self = CombatState.of(player);
 		CombatState other = CombatState.of(victim);
-		int power = Math.min(MAX_POWER, (self.poisePotency(now) + other.sinkingPotency(now)) / POWER_STEP);
+		int power = Math.min(MAX_POWER, (self.poisePotency(now) + other.sinkingPotency(now)) / POWER_STEP) + shinPower;
 		CaduceusForm.Hit hit = form.resolve(player, victim, now);
 		double damage = hit.damage() * (last ? 1.0 : COIN_RATIO) * PRESCRIPT_MARK_BONUS * (1.0 + power * POWER_DAMAGE_BONUS);
 		if (last) {
 			damage *= FINAL_CRIT_MULTIPLIER;
 		}
+		damage *= 1.0 + shinDamageUp * DAMAGE_UP_BONUS;
+		int sanityGap = Sanity.of(player) - Sanity.of(victim);
+		if (sanityGap > 0) {
+			damage *= 1.0 + Math.min(SHIN_MAX_SANITY_BONUS, sanityGap / 2 * 0.01);
+		}
+		if (mang) {
+			damage *= MANG_DAMAGE * (1.0 + MANG_FINAL_POWER * FINAL_POWER_BONUS);
+		}
+		damage *= IndexMark.multiplier(player, victim);
 		// Coins land faster than the hurt cooldown, so it is reset for each one.
 		Damage.deal(victim, damage, player, true);
+		IndexMark.strike(player, victim);
 
 		if (coin % 2 == 0) {
 			other.addSinking(1, 1, now);
 		} else {
-			self.addPoise(1, 1, now);
+			gainPoise(1, now);
 		}
 
 		Effects.form(actor());
@@ -437,6 +485,11 @@ final class Furioso {
 		camera.frame(position, focus, shake);
 	}
 
+	/** Poise from this skill, raised by [Shin]: potency +1, count +1. */
+	private void gainPoise(int amount, long now) {
+		CombatState.of(player).addPoise(amount + 1, amount + 1, now);
+	}
+
 	/** The body that dashes and swings: the camera's stand-in while one runs, else the player. */
 	private LivingEntity actor() {
 		return camera != null ? camera.actor() : player;
@@ -462,6 +515,9 @@ final class Furioso {
 			}
 		}
 		PrescriptTracker.consumeHermes(player, now + CombatState.TURN_TICKS);
+		if (mang) {
+			Sanity.add(player, -MANG_SANITY_COST);
+		}
 		CaduceusListener.keepFormed(player, 20);
 	}
 

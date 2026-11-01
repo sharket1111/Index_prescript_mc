@@ -77,6 +77,11 @@ final class PrescriptTracker implements Listener {
 				&& of(player).hermes >= Items.MAX_HERMES;
 	}
 
+	static int hermes(Player player) {
+		PrescriptTracker tracker = TRACKERS.get(player.getUniqueId());
+		return tracker == null ? 0 : tracker.hermes;
+	}
+
 	static void markCombat(Player player) {
 		of(player).lastCombat = CaduceusListener.now();
 	}
@@ -274,6 +279,7 @@ final class PrescriptTracker implements Listener {
 		}
 		player.playSound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.PLAYERS, 1.0F, granted ? 1.2F : 0.8F);
 		Voice.prescriptComplete(player, granted ? hermes : 0);
+		Sanity.add(player, 5);
 		if (granted && hermes == Items.MAX_HERMES) {
 			player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_LAND, SoundCategory.PLAYERS, 0.5F, 0.6F);
 		}

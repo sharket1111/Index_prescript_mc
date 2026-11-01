@@ -24,7 +24,7 @@
 	"prescript.sink_twice": "Stab an enemy %s times with the stiletto",
 	"prescript.untouched": "Strike an enemy %s times without taking damage",
 	"message.prescript_reveal": "%s",
-	"command.usage": "Usage: /indexprescript give <caduceus|terminal|laevatein> [player], /indexprescript laevatein <0-3>, /indexprescript pack",
+	"command.usage": "Usage: /indexprescript give <caduceus|terminal|laevatein> [player], /indexprescript laevatein <0-3>, /indexprescript pack, /indexprescript sanity [value]",
 	"command.given": "Gave %2$s to %1$s.",
 	"command.no_player": "Player not found: %s",
 	"command.pack_sent": "Resource pack sent again.",
@@ -33,5 +33,6 @@
 	"item.laevatein": "Laevatein",
 	"command.laevatein_usage": "Hold Laevatein and use /indexprescript laevatein <0-3> (0: sealed, 1-3: release stage)",
 	"command.laevatein_status": "Laevatein - stage: %s, hits: %s, icon count: %s, ready: %s",
-	"item.laevatein_icon": "Seal Release"
+	"item.laevatein_icon": "Seal Release",
+	"command.sanity": "Sanity: %s (-45 to 45)"
 }
