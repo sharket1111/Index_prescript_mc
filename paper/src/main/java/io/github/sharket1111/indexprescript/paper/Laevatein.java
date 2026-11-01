@@ -34,6 +34,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
+import io.papermc.paper.entity.TeleportFlag;
 
 /**
  * Matthias's Laevatein. The original releases it by spending stacks with
@@ -574,7 +575,7 @@ final class Laevatein implements Listener {
 				Location back = anchor.clone();
 				back.setYaw(here.getYaw());
 				back.setPitch(here.getPitch());
-				target.teleport(back);
+				target.teleport(back, TeleportFlag.EntityState.RETAIN_PASSENGERS);
 			}
 			target.setVelocity(new Vector());
 		}

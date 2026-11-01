@@ -22,6 +22,7 @@ import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
+import io.papermc.paper.entity.TeleportFlag;
 
 /**
  * Matthias's Laevatein skills, each a timed strike sequence after the in-game
@@ -605,7 +606,7 @@ final class LaevateinSkill {
 			Location back = anchor.clone();
 			back.setYaw(here.getYaw());
 			back.setPitch(here.getPitch());
-			target.teleport(back);
+			target.teleport(back, TeleportFlag.EntityState.RETAIN_PASSENGERS);
 		}
 		target.setVelocity(new Vector());
 	}
