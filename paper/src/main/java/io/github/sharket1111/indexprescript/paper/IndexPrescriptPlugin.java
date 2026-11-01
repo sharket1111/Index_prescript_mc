@@ -36,7 +36,9 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		getServer().getPluginManager().registerEvents(new CaduceusListener(), this);
 		getServer().getPluginManager().registerEvents(new PrescriptTracker(), this);
 		getServer().getPluginManager().registerEvents(resourcePack, this);
+		getServer().getPluginManager().registerEvents(new Laevatein(), this);
 		Bukkit.getScheduler().runTaskTimer(this, PrescriptTracker::tick, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, Laevatein::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, () -> CombatState.prune(CaduceusListener.now()), 1200L, 1200L);
 
 		var command = getCommand("indexprescript");
@@ -91,7 +93,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		return true;
 	}
 
-	/** Test helper until release conditions exist: /indexprescript laevatein <0-3> sets the held Laevatein's stage. */
+	/** Test helper: /indexprescript laevatein <0-3> sets the held Laevatein's stage and clears its hit count. */
 	private boolean setLaevateinStage(CommandSender sender, String[] args) {
 		if (!(sender instanceof Player player)) {
 			sender.sendMessage(Messages.get(sender, "command.players_only"));
@@ -109,6 +111,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			return true;
 		}
 		Items.setLaevateinStage(held, stage);
+		Laevatein.setHits(held, 0);
 		return true;
 	}
 
