@@ -1,0 +1,35 @@
+# Prints paper-api signatures needed by the plugin. Used while developing; run manually.
+name: paper-discover
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/paper-discover.yml
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: paper-api signatures
+        run: |
+          set +e
+          v=26.3.build.231-stable
+          base=https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/$v
+          curl -fsS -o api.jar "$base/paper-api-$v.jar"
+          ls -la api.jar
+          unzip -l api.jar | grep -i -E 'Mannequin|ResolvableProfile|SpectatingEntity|SkinParts' | awk '{print $4}'
+          for c in org.bukkit.entity.Mannequin io.papermc.paper.datacomponent.item.ResolvableProfile \
+                   com.destroystokyo.paper.event.player.PlayerStopSpectatingEntityEvent \
+                   com.destroystokyo.paper.event.player.PlayerStartSpectatingEntityEvent; do
+            echo "=================== $c"
+            javap -cp api.jar "$c"
+          done
+          echo "=================== Player spectator / hide"
+          javap -cp api.jar org.bukkit.entity.Player | grep -i -E 'spectat|hideEntity|showEntity|setGameMode'
+          javap -cp api.jar org.bukkit.entity.HumanEntity | grep -i -E 'gamemode'
+          javap -cp api.jar org.bukkit.entity.LivingEntity | grep -i -E 'swing|getEquipment'
