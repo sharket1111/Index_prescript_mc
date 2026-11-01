@@ -29,6 +29,8 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
@@ -38,13 +40,30 @@ import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
  * certain skills; here each stage unlocks after a number of hits dealt or
  * taken (5, 7, then 9), shown as the stack size of a [Seal Release] icon held
  * in the off hand while Laevatein is wielded. Right-click (or swap-hands on
- * Java) with a ready Laevatein and an enemy nearby releases one stage in a
- * strike sequence modelled on the in-game animation.
+ * Java) with full hits and an enemy nearby releases one stage in a strike
+ * sequence modelled on the in-game animation; with fewer hits it uses the
+ * stage's skill instead (see {@link LaevateinSkill}). Sneak + right-click
+ * enters a counter stance.
  */
 final class Laevatein implements Listener {
 	private static final int[] HITS_TO_RELEASE = {5, 7, 9};
 	/** Burn on every hit once released: 1, 4, then 9 seconds by stage. */
 	private static final int[] BURN_TICKS = {0, 20, 80, 180};
+	/** At full release hits keep counting (for Stab and Summary Execution) up to this cap. */
+	private static final int MAX_HITS = 9;
+	/** Hits needed for each stage's skill, and the skill itself. */
+	private static final int[] SKILL_HITS = {1, 3, 5, 7};
+	private static final LaevateinSkill.Kind[] SKILLS = {
+		LaevateinSkill.Kind.STOMP, LaevateinSkill.Kind.HEATED, LaevateinSkill.Kind.MELT, LaevateinSkill.Kind.STAB};
+	private static final int EXECUTION_HITS = 8;
+	private static final int STANCE_TICKS = 40;
+	private static final int STANCE_COOLDOWN_TICKS = 40;
+	private static final PotionEffectType[] AILMENTS = {
+		PotionEffectType.SLOWNESS, PotionEffectType.WEAKNESS, PotionEffectType.POISON, PotionEffectType.WITHER,
+		PotionEffectType.BLINDNESS, PotionEffectType.DARKNESS, PotionEffectType.NAUSEA, PotionEffectType.HUNGER,
+		PotionEffectType.MINING_FATIGUE, PotionEffectType.LEVITATION};
+	private static final Map<UUID, Long> STANCE_UNTIL = new ConcurrentHashMap<>();
+	private static final Map<UUID, Long> STANCE_READY_AT = new ConcurrentHashMap<>();
 	private static final int MAX_STAGE = Items.LAEVATEIN_STAGES.size() - 1;
 	private static final int TARGET_RANGE = 6;
 	private static final int READY_EFFECT_INTERVAL = 4;
@@ -77,6 +96,7 @@ final class Laevatein implements Listener {
 
 	/** Called every tick: the off-hand icon and the ready embers. */
 	static void tick() {
+		LaevateinSkill.tickAll();
 		RELEASING.values().removeIf(release -> {
 			try {
 				return !release.tick();
@@ -120,12 +140,12 @@ final class Laevatein implements Listener {
 	/**
 	 * Keeps the [Seal Release] icon in the off hand while Laevatein is held; its
 	 * stack size is the hit count and it glints once a release is ready. There is
-	 * no icon before the first hit or once fully released. Whatever was in the off
+	 * no icon before the first hit. Whatever was in the off
 	 * hand moves to a free inventory slot (no icon if there is none).
 	 */
 	private static void showIcon(Player player, PlayerInventory inventory, ItemStack held) {
 		ItemStack off = inventory.getItemInOffHand();
-		if (hits(held) <= 0 || Items.laevateinStage(held) >= MAX_STAGE) {
+		if (hits(held) <= 0) {
 			if (Items.isLaevateinIcon(off)) {
 				inventory.setItemInOffHand(null);
 			}
@@ -154,7 +174,7 @@ final class Laevatein implements Listener {
 	}
 
 	static int iconCount(ItemStack held) {
-		return Items.laevateinStage(held) < MAX_STAGE ? Math.max(1, hits(held)) : 1;
+		return Math.max(1, hits(held));
 	}
 
 	/** The icon only ever lives in the off hand. */
@@ -179,7 +199,7 @@ final class Laevatein implements Listener {
 		if (!Items.isLaevatein(player.getInventory().getItemInMainHand())) {
 			return;
 		}
-		if (RELEASING.containsKey(player.getUniqueId())) {
+		if (busy(player)) {
 			event.setCancelled(true);
 			return;
 		}
@@ -207,10 +227,59 @@ final class Laevatein implements Listener {
 	/** Being hit by any mob or player while wielding Laevatein counts too. */
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
 	public void onHurt(EntityDamageByEntityEvent event) {
-		if (event.getEntity() instanceof Player player && event.getFinalDamage() > 0 && attacker(event.getDamager()) != null
-				&& attacker(event.getDamager()) != player) {
+		if (!(event.getEntity() instanceof Player player) || event.getFinalDamage() <= 0) {
+			return;
+		}
+		LivingEntity attacker = attacker(event.getDamager());
+		if (attacker == null || attacker == player) {
+			return;
+		}
+		if (!counter(player, attacker)) {
 			addHit(player);
 		}
+	}
+
+	/**
+	 * Struck while in the counter stance: every ailment is cleared and Rule
+	 * Violation answers, or Summary Execution at full release with 8+ hits
+	 * (spending them). Returns true if a counter fired.
+	 */
+	private static boolean counter(Player player, LivingEntity attacker) {
+		Long until = STANCE_UNTIL.get(player.getUniqueId());
+		ItemStack held = player.getInventory().getItemInMainHand();
+		if (until == null || CaduceusListener.now() >= until || !Items.isLaevatein(held) || busy(player) || attacker.isDead()) {
+			return false;
+		}
+		STANCE_UNTIL.remove(player.getUniqueId());
+		for (PotionEffectType ailment : AILMENTS) {
+			player.removePotionEffect(ailment);
+		}
+		player.setFireTicks(0);
+		int stage = Items.laevateinStage(held);
+		LaevateinSkill.Kind kind = LaevateinSkill.Kind.RULE_VIOLATION;
+		if (stage >= MAX_STAGE && hits(held) >= EXECUTION_HITS) {
+			setHits(held, 0);
+			kind = LaevateinSkill.Kind.EXECUTION;
+		}
+		LaevateinSkill.start(player, attacker, kind, stage);
+		return true;
+	}
+
+	/** Sneak + right-click: counter stance, Slowness V and Weakness V for 2 seconds. */
+	private static void enterStance(Player player) {
+		long now = CaduceusListener.now();
+		if (busy(player) || now < STANCE_READY_AT.getOrDefault(player.getUniqueId(), 0L)) {
+			return;
+		}
+		STANCE_UNTIL.put(player.getUniqueId(), now + STANCE_TICKS);
+		STANCE_READY_AT.put(player.getUniqueId(), now + STANCE_TICKS + STANCE_COOLDOWN_TICKS);
+		player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, STANCE_TICKS, 4));
+		player.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, STANCE_TICKS, 4));
+		LaevateinEffects.stance(player);
+	}
+
+	static boolean busy(Player player) {
+		return RELEASING.containsKey(player.getUniqueId()) || LaevateinSkill.active(player);
 	}
 
 	private static LivingEntity attacker(Entity damager) {
@@ -222,33 +291,49 @@ final class Laevatein implements Listener {
 
 	private static void addHit(Player player) {
 		ItemStack held = player.getInventory().getItemInMainHand();
-		if (!Items.isLaevatein(held) || RELEASING.containsKey(player.getUniqueId())) {
+		if (!Items.isLaevatein(held) || busy(player)) {
 			return;
 		}
 		int stage = Items.laevateinStage(held);
-		if (stage >= MAX_STAGE || hits(held) >= HITS_TO_RELEASE[stage]) {
+		int cap = stage < MAX_STAGE ? HITS_TO_RELEASE[stage] : MAX_HITS;
+		if (hits(held) >= cap) {
 			return;
 		}
 		int hits = hits(held) + 1;
 		setHits(held, hits);
-		if (hits == HITS_TO_RELEASE[stage]) {
+		if (stage < MAX_STAGE && hits == cap) {
 			LaevateinEffects.readySound(player);
 		}
 	}
 
-	/** Releases the next stage if the held Laevatein is ready and an enemy is near. */
-	private static void tryRelease(Player player) {
+	/**
+	 * Swap-hands or right-click: with full hits for the next stage this
+	 * releases it; otherwise, with enough hits, it uses the stage's skill and
+	 * spends every hit. Both need an enemy within reach.
+	 */
+	private static void act(Player player) {
 		ItemStack held = player.getInventory().getItemInMainHand();
-		if (!Items.isLaevatein(held) || RELEASING.containsKey(player.getUniqueId()) || !ready(held)) {
+		if (!Items.isLaevatein(held) || busy(player)) {
+			return;
+		}
+		int stage = Items.laevateinStage(held);
+		boolean release = ready(held);
+		if (!release && hits(held) < SKILL_HITS[stage]) {
 			return;
 		}
 		LivingEntity target = findTarget(player);
-		if (target != null) {
+		if (target == null) {
+			return;
+		}
+		if (release) {
 			startRelease(player, target);
+		} else {
+			setHits(held, 0);
+			LaevateinSkill.start(player, target, SKILLS[stage], stage);
 		}
 	}
 
-	/** Right-click with Laevatein releases it (works on Java and Bedrock). */
+	/** Right-click releases or uses a skill; sneak + right-click enters the counter stance. */
 	@EventHandler
 	public void onUse(PlayerInteractEvent event) {
 		if (event.getHand() != EquipmentSlot.HAND
@@ -256,10 +341,14 @@ final class Laevatein implements Listener {
 				|| !Items.isLaevatein(event.getItem())) {
 			return;
 		}
-		tryRelease(event.getPlayer());
+		if (event.getPlayer().isSneaking()) {
+			enterStance(event.getPlayer());
+		} else {
+			act(event.getPlayer());
+		}
 	}
 
-	/** Swap-hands (F) never moves Laevatein or the icon; it releases instead when ready. */
+	/** Swap-hands (F) never moves Laevatein or the icon; it releases or uses a skill instead. */
 	@EventHandler(ignoreCancelled = true)
 	public void onSwap(PlayerSwapHandItemsEvent event) {
 		PlayerInventory inventory = event.getPlayer().getInventory();
@@ -267,7 +356,7 @@ final class Laevatein implements Listener {
 			return;
 		}
 		event.setCancelled(true);
-		tryRelease(event.getPlayer());
+		act(event.getPlayer());
 	}
 
 	@EventHandler(ignoreCancelled = true)

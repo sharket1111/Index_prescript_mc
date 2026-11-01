@@ -209,4 +209,92 @@ final class LaevateinEffects {
 		flameArc(attacker, target, -100, 30);
 		explosion(target, 1.6);
 	}
+
+	private static final Particle.DustOptions PINK = dust(0xFF4FA8, 1.4F);
+	private static final Particle.DustOptions GOLD_LINE = dust(0xFFD84A, 1.1F);
+	private static final Particle.DustOptions SHADOW = dust(0x111014, 1.8F);
+
+	/** Stomp: a dust shockwave ring on the ground around the target. */
+	static void stomp(Entity target, double radius) {
+		World world = target.getWorld();
+		Location base = target.getLocation();
+		org.bukkit.block.data.BlockData ground = base.clone().subtract(0, 0.5, 0).getBlock().getBlockData();
+		for (int i = 0; i < 24; i++) {
+			double a = i * Math.PI / 12;
+			Vector p = new Vector(base.getX() + Math.cos(a) * radius, base.getY() + 0.1, base.getZ() + Math.sin(a) * radius);
+			spawn(world, Particle.CLOUD, p, 1, 0.05, 0.02);
+			if (!ground.getMaterial().isAir()) {
+				world.spawnParticle(Particle.BLOCK, p.getX(), p.getY(), p.getZ(), 3, 0.1, 0.05, 0.1, 0.0, ground);
+			}
+		}
+		dustAt(world, GREY, center(target), 12, 0.6);
+		spawn(world, Particle.ELECTRIC_SPARK, center(target), 8, 0.4, 0.2);
+		sound(base, Sound.ENTITY_GENERIC_EXPLODE, 0.5F, 1.5F);
+		sound(base, Sound.BLOCK_ANVIL_LAND, 0.6F, 0.6F);
+	}
+
+	/** A straight golden thrust from the wielder through the target. */
+	static void thrust(Entity attacker, Entity target) {
+		World world = target.getWorld();
+		Vector from = center(attacker);
+		Vector dir = center(target).subtract(from);
+		double length = dir.length() + 2.5;
+		dir.normalize();
+		for (double t = 0.6; t <= length; t += 0.2) {
+			Vector p = from.clone().add(dir.clone().multiply(t));
+			dustAt(world, GOLD_LINE, p, 1, 0.01);
+			if (((int) (t * 5)) % 3 == 0) {
+				spawn(world, Particle.END_ROD, p, 1, 0.0, 0.0);
+			}
+		}
+		// a ring at the point of impact
+		Vector c = center(target);
+		Vector up = Math.abs(dir.getY()) < 0.9 ? new Vector(0, 1, 0) : new Vector(1, 0, 0);
+		Vector a = dir.clone().crossProduct(up).normalize();
+		Vector b = dir.clone().crossProduct(a).normalize();
+		for (int i = 0; i < 16; i++) {
+			double r = i * Math.PI / 8;
+			dustAt(world, GOLD_LINE, c.clone().add(a.clone().multiply(Math.cos(r) * 0.7)).add(b.clone().multiply(Math.sin(r) * 0.7)), 1, 0.0);
+		}
+		sound(target.getLocation(), Sound.ITEM_TRIDENT_HIT, 1.0F, 0.8F);
+	}
+
+	/** Pink-and-purple burning crescent. */
+	static void pinkArc(Entity attacker, Entity target, double startDeg, double tiltDeg) {
+		arc(attacker, target, startDeg, 210, tiltDeg, PINK, PURPLE, Particle.FLAME);
+		sound(target.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1.0F, 0.9F);
+	}
+
+	/** Dark wings unfolding behind the wielder. */
+	static void wings(LivingEntity holder) {
+		World world = holder.getWorld();
+		Vector look = holder.getLocation().getDirection().setY(0).normalize();
+		Vector right = new Vector(-look.getZ(), 0, look.getX());
+		Vector back = holder.getLocation().toVector().add(new Vector(0, 1.4, 0)).subtract(look.clone().multiply(0.4));
+		for (int side = -1; side <= 1; side += 2) {
+			for (double t = 0; t <= 2.6; t += 0.12) {
+				Vector p = back.clone().add(right.clone().multiply(side * t)).add(new Vector(0, Math.sin(t * 1.2) * 0.9, 0));
+				dustAt(world, SHADOW, p, 2, 0.08);
+				if (t > 1.2) {
+					dustAt(world, PURPLE_DIM, p.clone().add(new Vector(0, -0.4, 0)), 1, 0.1);
+				}
+			}
+		}
+		sound(holder.getLocation(), Sound.ENTITY_PHANTOM_FLAP, 1.0F, 0.6F);
+	}
+
+	/** Counter stance: a purple ring around the wielder. */
+	static void stance(LivingEntity holder) {
+		World world = holder.getWorld();
+		Location base = holder.getLocation();
+		for (int i = 0; i < 20; i++) {
+			double a = i * Math.PI / 10;
+			dustAt(world, PURPLE, new Vector(base.getX() + Math.cos(a) * 1.0, base.getY() + 0.2, base.getZ() + Math.sin(a) * 1.0), 1, 0.0);
+		}
+		sound(base, Sound.ITEM_SHIELD_BLOCK, 0.8F, 0.7F);
+	}
+
+	static void smoke(Entity target) {
+		spawn(target.getWorld(), Particle.LARGE_SMOKE, center(target), 10, 0.6, 0.02);
+	}
 }

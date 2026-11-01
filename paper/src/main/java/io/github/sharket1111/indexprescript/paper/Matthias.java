@@ -100,6 +100,12 @@ final class Matthias implements Listener {
 		s.gritUntil = CaduceusListener.now() + GRIT_TICKS[Math.min(stage, GRIT_TICKS.length - 1)];
 	}
 
+	/** [Big Brother]: the wielder currently has at least one Grudge Tattoo. */
+	static boolean hasTattoo(Player player) {
+		State s = STATES.get(player.getUniqueId());
+		return s != null && s.tattoo(CaduceusListener.now()) > 0;
+	}
+
 	static void addTattoo(Player player) {
 		State s = state(player);
 		long now = CaduceusListener.now();
