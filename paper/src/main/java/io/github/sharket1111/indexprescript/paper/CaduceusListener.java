@@ -13,8 +13,6 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.inventory.ItemStack;
 
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
@@ -130,19 +128,5 @@ final class CaduceusListener implements Listener {
 		if (charged) {
 			PrescriptTracker.onHit(player, pending.form(), pending.crit(), staggered);
 		}
-	}
-
-	/** Slaying a foe with Caduceus (Furioso included) restores 3 Sanity. */
-	@EventHandler(priority = EventPriority.MONITOR)
-	public void onKill(EntityDeathEvent event) {
-		Player killer = event.getEntity().getKiller();
-		if (killer != null && killer != event.getEntity() && Items.isCaduceus(killer.getInventory().getItemInMainHand())) {
-			Sanity.add(killer, 3);
-		}
-	}
-
-	@EventHandler(priority = EventPriority.MONITOR)
-	public void onDeath(PlayerDeathEvent event) {
-		Sanity.reset(event.getPlayer());
 	}
 }

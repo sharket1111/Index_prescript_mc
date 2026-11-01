@@ -34,5 +34,5 @@
 	"command.laevatein_usage": "레바테인을 손에 들고 /indexprescript laevatein <0-3> (0: 해방 안 함, 1~3: 해방 단계)",
 	"command.laevatein_status": "레바테인 상태 - 해방 단계: %s, 타격 횟수: %s, 아이콘 개수: %s, 해방 준비: %s",
 	"item.laevatein_icon": "봉인 해제",
-	"command.sanity": "정신력: %s (-45 ~ 45)"
+	"command.sanity": "정신력: %s (-45 ~ 45, 체력 5칸이 0)"
 }

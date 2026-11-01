@@ -110,7 +110,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		return true;
 	}
 
-	/** /indexprescript sanity [value]: shows, or for testing sets, the sender's Sanity. */
+	/** /indexprescript sanity [value]: shows the sender's Sanity, or sets health to match a value for testing. */
 	private boolean sanity(CommandSender sender, String[] args) {
 		if (!(sender instanceof Player player)) {
 			sender.sendMessage(Messages.get(sender, "command.players_only"));
