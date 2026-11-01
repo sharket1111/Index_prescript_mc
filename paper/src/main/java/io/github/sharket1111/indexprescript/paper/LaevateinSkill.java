@@ -5,15 +5,23 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
+import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Pose;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
+import org.joml.AxisAngle4f;
+import org.joml.Vector3f;
 
 /**
  * Matthias's Laevatein skills, each a timed strike sequence after the in-game
@@ -42,6 +50,7 @@ final class LaevateinSkill {
 
 	private static final Map<UUID, LaevateinSkill> ACTIVE = new ConcurrentHashMap<>();
 	private static final int TURN = CombatState.TURN_TICKS;
+	private static final int[] EXECUTION_IMPACTS = {6, 16, 27, 40, 52};
 
 	private final Player player;
 	private final LivingEntity target;
@@ -50,6 +59,9 @@ final class LaevateinSkill {
 	private final boolean hadAi;
 	private final boolean repeat;
 	private Cinematic camera;
+	private ItemDisplay thrown;
+	private Vector thrownDir;
+	private Vector kickFrom;
 	private int selfBurn;
 	private int tick;
 
@@ -116,7 +128,7 @@ final class LaevateinSkill {
 			case MELT -> 28;
 			case STAB -> 34;
 			case RULE_VIOLATION -> repeat ? 24 : 12;
-			case EXECUTION -> 48;
+			case EXECUTION -> 64;
 		};
 	}
 
@@ -256,20 +268,58 @@ final class LaevateinSkill {
 	}
 
 	/** Summary Execution [Laevatein]: burning cuts, a pink blast, dark wings, a golden thrust and a final white sweep. */
+	/**
+	 * Summary Execution, after the in-game motion: a rising burning slash and a
+	 * chained sweep, a kick, the blade hurled into the target, a drop kick that
+	 * drives it deeper, the blade pulled back on its chains, and a final white
+	 * crescent. Ticks: coins at 6, 16, 27, 40 and 52.
+	 */
 	private void execution() {
 		switch (tick) {
-			case 4 -> LaevateinEffects.lightningStrike(target);
-			case 8 -> coin(6.0, 0, () -> LaevateinEffects.flameArc(actor(), target, -90, 20), () -> burn(5));
-			case 14 -> coin(6.0 + 1.0, 0, () -> LaevateinEffects.flameArc(actor(), target, 70, -30), () -> burnCount(3));
-			case 20 -> coin(6.0 + 1.0, 0, () -> {
-				LaevateinEffects.pinkArc(actor(), target, -120, 40);
+			case 2 -> {
+				LaevateinEffects.lightningStrike(target);
+				dashToTarget();
+			}
+			case 6 -> coin(6.0, 0, () -> LaevateinEffects.flameArc(actor(), target, -90, 60), () -> burn(5));
+			case 10 -> {
+				actor().swingMainHand();
+				LaevateinEffects.pinkArc(actor(), target, -150, -5);
+				LaevateinEffects.chain(actor(), target);
+			}
+			// Kick: chamber the leg, then plant the foot in the target.
+			case 13 -> pose(Pose.SNEAKING);
+			case 16 -> {
+				pose(Pose.STANDING);
+				stepToward(0.6);
+				hit(6.0 + 1.0, 0, () -> LaevateinEffects.kick(target), () -> burnCount(3));
+			}
+			// The blade is raised and hurled into the target.
+			case 20 -> {
+				actor().swingMainHand();
+				LaevateinEffects.wings(actor());
+			}
+			case 24 -> throwBlade();
+			case 27 -> hit(6.0 + 1.0, 0, () -> {
+				LaevateinEffects.thrust(actor(), target);
 				LaevateinEffects.explosion(target, 2.0);
 			}, () -> burn(10));
-			case 28 -> LaevateinEffects.wings(actor());
-			case 30 -> coin(6.0, 0, () -> LaevateinEffects.inferno(target), () -> burn(10));
-			case 40 -> coin(6.0 + 2.0, 0, () -> {
-				LaevateinEffects.thrust(actor(), target);
-				LaevateinEffects.greyArc(actor(), target, -110, 35);
+			// Backstep for a run-up, then a drop kick into the hilt.
+			case 29 -> stepBack();
+			case 32 -> pose(Pose.SNEAKING);
+			case 34, 35, 36, 37, 38, 39 -> dropKickFrame(tick - 33);
+			case 40 -> {
+				hit(6.0, 0, () -> {
+					LaevateinEffects.dropKick(target);
+					driveBlade();
+				}, () -> burn(10));
+				pose(Pose.STANDING);
+				stepBackFrom(1.6);
+			}
+			// The chains pull the blade back to the hand.
+			case 46 -> recallBlade();
+			case 49 -> catchBlade();
+			case 52 -> coin(6.0 + 2.0, 0, () -> {
+				LaevateinEffects.whiteCrescent(actor(), target);
 				LaevateinEffects.shatter(target);
 			}, () -> {
 				if (Matthias.hasTattoo(player)) {
@@ -279,6 +329,169 @@ final class LaevateinSkill {
 			default -> {
 			}
 		}
+		if (tick >= 44 && tick <= 47) {
+			LaevateinEffects.chain(actor(), thrown != null ? thrown : target);
+		}
+		if (thrown != null && tick > 24 && tick < 46) {
+			LaevateinEffects.embers(thrown);
+		}
+	}
+
+	/** Sets the stand-in's pose; the player's own pose is left to the client. */
+	private void pose(Pose pose) {
+		LivingEntity actor = actor();
+		if (actor != player && Mannequin.validPoses().contains(pose)) {
+			actor.setPose(pose, true);
+		}
+	}
+
+	/** Direction from the actor to the target along the ground. */
+	private Vector towardTarget() {
+		Vector dir = target.getLocation().toVector().subtract(actor().getLocation().toVector()).setY(0);
+		return dir.lengthSquared() < 1.0E-4 ? actor().getLocation().getDirection().setY(0).normalize() : dir.normalize();
+	}
+
+	/** Moves the actor to {@code spot} at the target's ground level facing {@code facing}, if there is room. */
+	private boolean placeActor(Vector spot, double height, Vector facing) {
+		Block feet = target.getWorld().getBlockAt(spot.getBlockX(), (int) Math.floor(anchor.getY() + height), spot.getBlockZ());
+		if (!feet.isPassable() || !feet.getRelative(0, 1, 0).isPassable()) {
+			return false;
+		}
+		Location destination = new Location(target.getWorld(), spot.getX(), anchor.getY() + height, spot.getZ());
+		destination.setDirection(facing);
+		actor().teleport(destination);
+		return true;
+	}
+
+	private void stepToward(double distance) {
+		Vector dir = towardTarget();
+		Vector spot = actor().getLocation().toVector().add(dir.clone().multiply(distance));
+		if (spot.distanceSquared(target.getLocation().toVector()) > 0.8) {
+			placeActor(spot, 0, dir);
+		}
+	}
+
+	/** Leaps back from the target for the run-up, as far as there is room (up to 4 blocks). */
+	private void stepBack() {
+		Vector from = actor().getLocation().toVector();
+		for (double distance = 4.0; distance >= 2.0; distance -= 0.5) {
+			if (stepBackFrom(distance)) {
+				Effects.dashTrail(target.getWorld(), from, actor().getLocation().toVector());
+				break;
+			}
+		}
+		kickFrom = actor().getLocation().toVector();
+	}
+
+	private boolean stepBackFrom(double distance) {
+		Vector dir = towardTarget();
+		Vector spot = target.getLocation().toVector().subtract(dir.clone().multiply(distance));
+		return placeActor(spot, 0, dir);
+	}
+
+	/**
+	 * One frame of the drop kick: the body flies feet first along an arc to the
+	 * target. A swimming pose lays the body flat with the head toward its facing,
+	 * so the actor faces away from the target to lead with the feet.
+	 */
+	private void dropKickFrame(int frame) {
+		if (kickFrom == null) {
+			kickFrom = actor().getLocation().toVector();
+		}
+		Vector to = target.getLocation().toVector();
+		Vector dir = to.clone().subtract(kickFrom).setY(0);
+		if (dir.lengthSquared() < 1.0E-4) {
+			return;
+		}
+		double length = dir.length();
+		dir.normalize();
+		double t = frame / 6.0;
+		Vector spot = kickFrom.clone().add(dir.clone().multiply(Math.max(0.0, length - 0.9) * t));
+		pose(Pose.SWIMMING);
+		Vector from = actor().getLocation().toVector();
+		boolean standIn = actor() != player;
+		Vector facing = standIn ? dir.clone().multiply(-1) : dir;
+		placeActor(spot, 0.5 + Math.sin(Math.PI * t) * 1.0, facing);
+		Effects.dashTrail(target.getWorld(), from, actor().getLocation().toVector());
+		if (player.isOnline()) {
+			player.setFallDistance(0.0F);
+		}
+	}
+
+	/** The point in front of the actor where a held blade would be. */
+	private Location handPoint() {
+		Location eye = actor().getEyeLocation();
+		Vector dir = towardTarget();
+		Vector right = new Vector(-dir.getZ(), 0, dir.getX());
+		return eye.clone().add(dir.multiply(0.5)).add(right.multiply(0.35)).subtract(0, 0.5, 0);
+	}
+
+	/** A display of the current blade flying point first along {@code dir}. */
+	private void aimBlade(Location at, Vector dir) {
+		Vector flat = dir.clone().setY(0);
+		double yaw = Math.toDegrees(Math.atan2(flat.getZ(), flat.getX()));
+		double dip = Math.atan2(dir.getY(), Math.max(1.0E-4, flat.length()));
+		at.setYaw((float) yaw);
+		at.setPitch(0.0F);
+		thrown.teleport(at);
+		// The blade model points up and to the right; turn its tip to the local +X axis, then dip it.
+		thrown.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f((float) (-Math.PI / 4 + dip), 0, 0, 1),
+				new Vector3f(1.6F, 1.6F, 1.6F), new AxisAngle4f()));
+	}
+
+	private void throwBlade() {
+		ItemStack held = player.getInventory().getItemInMainHand();
+		Location from = handPoint();
+		thrown = target.getWorld().spawn(from, ItemDisplay.class, display -> {
+			display.setPersistent(false);
+			display.setItemStack(held.clone());
+			display.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
+			display.setTeleportDuration(3);
+		});
+		if (actor() != player) {
+			actor().getEquipment().setItemInMainHand(null);
+		}
+		Vector toward = target.getLocation().toVector().add(new Vector(0, target.getHeight() * 0.55, 0)).subtract(from.toVector());
+		thrownDir = toward.clone().normalize();
+		aimBlade(from.clone(), thrownDir);
+		LaevateinEffects.throwSound(actor());
+		// Next tick it flies (interpolated) to stick out of the target.
+		Location stuck = target.getLocation().add(0, target.getHeight() * 0.55, 0).subtract(thrownDir.clone().multiply(0.6));
+		Bukkit.getScheduler().runTaskLater(IndexPrescriptPlugin.instance(), () -> {
+			if (thrown != null && thrown.isValid()) {
+				aimBlade(stuck, thrownDir);
+			}
+		}, 1L);
+	}
+
+	/** The drop kick hammers the blade deeper into the target. */
+	private void driveBlade() {
+		if (thrown != null && thrownDir != null) {
+			Location deeper = thrown.getLocation().add(thrownDir.clone().multiply(0.45));
+			aimBlade(deeper, thrownDir);
+		}
+	}
+
+	private void recallBlade() {
+		if (thrown != null) {
+			Location hand = handPoint();
+			aimBlade(hand, thrown.getLocation().toVector().subtract(hand.toVector()));
+			LaevateinEffects.recallSound(actor());
+		}
+	}
+
+	private void catchBlade() {
+		removeBlade();
+		if (camera != null) {
+			camera.syncHeld();
+		}
+	}
+
+	private void removeBlade() {
+		if (thrown != null) {
+			thrown.remove();
+			thrown = null;
+		}
 	}
 
 	/**
@@ -287,6 +500,11 @@ final class LaevateinSkill {
 	 */
 	private void coin(double damage, double bigBrotherExtra, Runnable effect, Runnable onHit) {
 		actor().swingMainHand();
+		hit(damage, bigBrotherExtra, effect, onHit);
+	}
+
+	/** A coin without the arm swing, for kicks and the thrown blade. */
+	private void hit(double damage, double bigBrotherExtra, Runnable effect, Runnable onHit) {
 		effect.run();
 		double total = damage + (Matthias.hasTattoo(player) ? bigBrotherExtra : 0.0);
 		if (health(player) <= maxHealth(player) * 0.5) {
@@ -368,8 +586,17 @@ final class LaevateinSkill {
 		Vector to = target.getLocation().toVector();
 		Vector focus = from.clone().midpoint(to).add(new Vector(0, 1.0, 0));
 		double side = Math.atan2(from.getZ() - to.getZ(), from.getX() - to.getX()) + Math.PI / 2;
-		boolean impact = kind == Kind.STAB ? tick >= 26 && tick < 30 : (tick >= 30 && tick < 34) || (tick >= 40 && tick < 44);
+		boolean impact = kind == Kind.STAB ? tick >= 26 && tick < 30 : executionImpact();
 		camera.frame(Cinematic.orbit(focus, side + tick * 0.04, 5.0, 1.8), focus, impact ? 0.6 : 0.0);
+	}
+
+	private boolean executionImpact() {
+		for (int at : EXECUTION_IMPACTS) {
+			if (tick >= at && tick < at + 4) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private void hold() {
@@ -395,6 +622,10 @@ final class LaevateinSkill {
 	}
 
 	private void finish() {
+		removeBlade();
+		if (actor() == player && player.isOnline()) {
+			player.setFallDistance(0.0F);
+		}
 		if (camera != null) {
 			camera.end();
 			camera = null;

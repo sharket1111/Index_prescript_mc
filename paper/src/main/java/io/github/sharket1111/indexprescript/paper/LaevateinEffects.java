@@ -297,4 +297,76 @@ final class LaevateinEffects {
 	static void smoke(Entity target) {
 		spawn(target.getWorld(), Particle.LARGE_SMOKE, center(target), 10, 0.6, 0.02);
 	}
+
+	/** A chain of grey links with gold glints from the wielder to {@code to}. */
+	static void chain(Entity from, Entity to) {
+		World world = from.getWorld();
+		Vector a = center(from);
+		Vector b = center(to);
+		Vector dir = b.clone().subtract(a);
+		double length = dir.length();
+		if (length < 0.1) {
+			return;
+		}
+		dir.normalize();
+		int i = 0;
+		for (double t = 0.4; t <= length; t += 0.18, i++) {
+			Vector p = a.clone().add(dir.clone().multiply(t)).add(new Vector(0, Math.sin(t * 0.9) * 0.15, 0));
+			dustAt(world, i % 5 == 0 ? GOLD : GREY, p, 1, 0.0);
+		}
+		sound(to.getLocation(), Sound.BLOCK_CHAIN_PLACE, 0.8F, 0.7F);
+	}
+
+	/** A heavy kick: a burst at the target's middle with a dull thud. */
+	static void kick(Entity target) {
+		World world = target.getWorld();
+		Vector c = center(target).add(new Vector(0, -0.2, 0));
+		spawn(world, Particle.SWEEP_ATTACK, c, 1, 0.0, 0.0);
+		spawn(world, Particle.CRIT, c, 20, 0.3, 0.4);
+		spawn(world, Particle.FLAME, c, 15, 0.3, 0.08);
+		spawn(world, Particle.CLOUD, c, 8, 0.3, 0.05);
+		dustAt(world, ORANGE, c, 12, 0.4);
+		sound(target.getLocation(), Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, 1.0F, 0.6F);
+		sound(target.getLocation(), Sound.ENTITY_ZOMBIE_ATTACK_IRON_DOOR, 0.7F, 0.7F);
+	}
+
+	/** The drop kick landing on the hilt: a shockwave of purple shards and smoke. */
+	static void dropKick(Entity target) {
+		World world = target.getWorld();
+		Vector c = center(target);
+		spawn(world, Particle.EXPLOSION, c, 2, 0.3, 0.0);
+		spawn(world, Particle.CLOUD, c, 25, 0.8, 0.1);
+		spawn(world, Particle.END_ROD, c, 15, 0.2, 0.3);
+		dustAt(world, PURPLE, c, 40, 1.2);
+		dustAt(world, WHITE, c, 30, 1.0);
+		dustAt(world, SHADOW, c, 20, 0.9);
+		sound(target.getLocation(), Sound.BLOCK_ANVIL_LAND, 1.0F, 0.5F);
+		sound(target.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 0.8F, 1.2F);
+		sound(target.getLocation(), Sound.BLOCK_GLASS_BREAK, 0.8F, 0.7F);
+	}
+
+	/** The closing cut: a wide white crescent edged with pink. */
+	static void whiteCrescent(Entity attacker, Entity target) {
+		arc(attacker, target, -130, 260, 10, WHITE, PINK, Particle.END_ROD);
+		arc(attacker, target, -120, 240, -15, GREY, null, null);
+		sound(target.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1.0F, 0.5F);
+		sound(target.getLocation(), Sound.ITEM_TRIDENT_RIPTIDE_3, 0.8F, 1.2F);
+	}
+
+	/** Embers rising from the embedded blade. */
+	static void embers(Entity blade) {
+		Vector p = blade.getLocation().toVector();
+		spawn(blade.getWorld(), Particle.FLAME, p, 2, 0.15, 0.01);
+		spawn(blade.getWorld(), Particle.SMALL_FLAME, p, 2, 0.2, 0.01);
+	}
+
+	static void throwSound(Entity thrower) {
+		sound(thrower.getLocation(), Sound.ITEM_TRIDENT_THROW, 1.0F, 0.6F);
+		sound(thrower.getLocation(), Sound.ENTITY_BLAZE_SHOOT, 0.7F, 0.7F);
+	}
+
+	static void recallSound(Entity holder) {
+		sound(holder.getLocation(), Sound.ITEM_TRIDENT_RETURN, 1.0F, 0.7F);
+		sound(holder.getLocation(), Sound.BLOCK_CHAIN_BREAK, 0.8F, 0.8F);
+	}
 }
