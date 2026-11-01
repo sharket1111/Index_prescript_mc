@@ -11,7 +11,6 @@ import math
 import sys
 from PIL import Image
 
-OUT = sys.argv[1]
 
 K = (16, 16, 20, 255)
 M = (52, 52, 60, 255)
@@ -192,6 +191,7 @@ FORMS = {
 }
 
 if __name__ == "__main__":
+    OUT = sys.argv[1]
     imgs = []
     for name, fn in FORMS.items():
         extra = {"whip": whip_extra, "scythe": scythe_extra}.get(name)

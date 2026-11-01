@@ -55,6 +55,9 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 
 	@Override
 	public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+		if (args.length >= 1 && args[0].equalsIgnoreCase("laevatein")) {
+			return setLaevateinStage(sender, args);
+		}
 		if (args.length >= 1 && args[0].equalsIgnoreCase("pack")) {
 			if (!(sender instanceof Player player)) {
 				sender.sendMessage(Messages.get(sender, "command.players_only"));
@@ -76,6 +79,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		ItemStack item = switch (args[1].toLowerCase(Locale.ROOT)) {
 			case "caduceus" -> Items.caduceus(target);
 			case "terminal", "rien_terminal" -> Items.terminal(target);
+			case "laevatein" -> Items.laevatein(target);
 			default -> null;
 		};
 		if (item == null) {
@@ -87,11 +91,36 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		return true;
 	}
 
+	/** Test helper until release conditions exist: /indexprescript laevatein <0-3> sets the held Laevatein's stage. */
+	private boolean setLaevateinStage(CommandSender sender, String[] args) {
+		if (!(sender instanceof Player player)) {
+			sender.sendMessage(Messages.get(sender, "command.players_only"));
+			return true;
+		}
+		ItemStack held = player.getInventory().getItemInMainHand();
+		int stage;
+		try {
+			stage = Integer.parseInt(args.length >= 2 ? args[1] : "");
+		} catch (NumberFormatException e) {
+			stage = -1;
+		}
+		if (!Items.isLaevatein(held) || stage < 0 || stage >= Items.LAEVATEIN_STAGES.size()) {
+			sender.sendMessage(Messages.get(sender, "command.laevatein_usage"));
+			return true;
+		}
+		Items.setLaevateinStage(held, stage);
+		return true;
+	}
+
 	@Override
 	public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
 		return switch (args.length) {
-			case 1 -> List.of("give", "pack");
-			case 2 -> args[0].equalsIgnoreCase("give") ? List.of("caduceus", "terminal") : List.of();
+			case 1 -> List.of("give", "pack", "laevatein");
+			case 2 -> switch (args[0].toLowerCase(Locale.ROOT)) {
+				case "give" -> List.of("caduceus", "terminal", "laevatein");
+				case "laevatein" -> List.of("0", "1", "2", "3");
+				default -> List.of();
+			};
 			case 3 -> null; // online player names
 			default -> List.of();
 		};

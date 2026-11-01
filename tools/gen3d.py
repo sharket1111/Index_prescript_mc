@@ -14,8 +14,6 @@ import sys
 
 from PIL import Image, ImageDraw
 
-ASSETS = sys.argv[1]
-PREVIEW = sys.argv[2]
 NS = "index_prescript"
 
 # 16x16 palette texture: 4x4 swatch per material
@@ -31,10 +29,11 @@ SWATCH = {
 }
 
 
-def make_texture(path):
+def make_texture(path, swatch=None):
+    swatch = swatch or SWATCH
     rnd = random.Random(7)
     img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    for x0, y0, (r, g, b) in SWATCH.values():
+    for x0, y0, (r, g, b) in swatch.values():
         for y in range(y0, y0 + 4):
             for x in range(x0, x0 + 4):
                 d = rnd.randint(-6, 6) - (y - y0) * 2
@@ -224,11 +223,12 @@ def r(v):
     return round(v, 3)
 
 
-def to_json(m):
-    tex = f"{NS}:item/caduceus_3d"
+def to_json(m, texture="caduceus_3d", swatch=None):
+    swatch = swatch or SWATCH
+    tex = f"{NS}:item/{texture}"
     elements = []
     for (x0, y0, z0), (x1, y1, z1), mat in m.boxes:
-        u, v, _ = SWATCH[mat]
+        u, v, _ = swatch[mat]
         uv = [u, v, u + 4, v + 4]
         for c in (x0, y0, z0, x1, y1, z1):
             assert -16 <= c <= 32, (mat, c)
@@ -262,7 +262,8 @@ FACES = [((0, 1, 3, 2), (-1, 0, 0)), ((4, 6, 7, 5), (1, 0, 0)), ((0, 4, 5, 1), (
          ((2, 3, 7, 6), (0, 1, 0)), ((0, 2, 6, 4), (0, 0, -1)), ((1, 5, 7, 3), (0, 0, 1))]
 
 
-def render(m, size=220, yaw=0.5, pitch=-0.35, scale=7.0):
+def render(m, size=220, yaw=0.5, pitch=-0.35, scale=7.0, swatch=None):
+    swatch = swatch or SWATCH
     img = Image.new("RGBA", (size, size), (210, 210, 214, 255))
     draw = ImageDraw.Draw(img)
     polys = []
@@ -275,7 +276,7 @@ def render(m, size=220, yaw=0.5, pitch=-0.35, scale=7.0):
             if nz < 0:
                 continue
             light = 0.55 + 0.45 * max(0.0, (nv[1] - view(tilt(ORIGIN), yaw, pitch)[1]) * 0.6 + nz * 0.6)
-            col = tuple(min(255, int(c * light)) for c in SWATCH[mat][2])
+            col = tuple(min(255, int(c * light)) for c in swatch[mat][2])
             pts = [(size / 2 + vc[i][0] * scale, size / 2 - vc[i][1] * scale) for i in idx]
             depth = sum(vc[i][2] for i in idx) / 4
             polys.append((depth, pts, col))
@@ -285,6 +286,7 @@ def render(m, size=220, yaw=0.5, pitch=-0.35, scale=7.0):
 
 
 if __name__ == "__main__":
+    ASSETS, PREVIEW = sys.argv[1], sys.argv[2]
     make_texture(f"{ASSETS}/textures/item/caduceus_3d.png")
     tiles = []
     for suffix, fn in FORMS.items():

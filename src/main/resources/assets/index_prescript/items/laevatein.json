@@ -1,0 +1,79 @@
+{
+	"model": {
+		"type": "minecraft:select",
+		"property": "minecraft:display_context",
+		"cases": [
+			{
+				"when": [
+					"gui",
+					"ground",
+					"fixed"
+				],
+				"model": {
+					"type": "minecraft:select",
+					"property": "minecraft:custom_model_data",
+					"index": 0,
+					"cases": [
+						{
+							"when": "release_1",
+							"model": {
+								"type": "minecraft:model",
+								"model": "index_prescript:item/laevatein_release_1"
+							}
+						},
+						{
+							"when": "release_2",
+							"model": {
+								"type": "minecraft:model",
+								"model": "index_prescript:item/laevatein_release_2"
+							}
+						},
+						{
+							"when": "release_3",
+							"model": {
+								"type": "minecraft:model",
+								"model": "index_prescript:item/laevatein_release_3"
+							}
+						}
+					],
+					"fallback": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/laevatein_sealed"
+					}
+				}
+			}
+		],
+		"fallback": {
+			"type": "minecraft:select",
+			"property": "minecraft:custom_model_data",
+			"index": 0,
+			"cases": [
+				{
+					"when": "release_1",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/laevatein_release_1_3d"
+					}
+				},
+				{
+					"when": "release_2",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/laevatein_release_2_3d"
+					}
+				},
+				{
+					"when": "release_3",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/laevatein_release_3_3d"
+					}
+				}
+			],
+			"fallback": {
+				"type": "minecraft:model",
+				"model": "index_prescript:item/laevatein_sealed_3d"
+			}
+		}
+	}
+}

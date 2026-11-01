@@ -26,6 +26,15 @@
 
 `/ip`로 줄여 쓸 수 있고, 기본적으로 OP만 쓸 수 있어요. 카두세우스는 철 검, 단말기는 종이를 바탕으로 만든 아이템이에요. 리소스팩이 있으면 전용 모습으로 보입니다.
 
+### 마티아스의 레바테인 (제작 중)
+
+```
+/indexprescript give laevatein [플레이어]
+/indexprescript laevatein <0-3>   (손에 든 레바테인의 해방 단계 변경, 테스트용)
+```
+
+해방 안 함(0)과 해방 1~3단계, 모두 네 가지 모습이 있어요. 인벤토리에서는 픽셀 스프라이트로, 손에 들면 3D 모델로 보여요. 네더라이트 검을 바탕으로 만들었고, 해방 조건과 단계별 능력은 아직 없어요.
+
 ### 리소스팩 설정 (`plugins/IndexPrescript/config.yml`)
 
 자바 플레이어가 카두세우스와 단말기의 텍스처, 3D 모델을 보려면 리소스팩이 필요해요. 두 가지 방법 중 하나를 고르세요.
@@ -142,4 +151,5 @@ PC에서 직접 빌드하려면 Java 25를 설치한 뒤 `gradle build`를 실�
 python3 tools/textures.py src/main/resources/assets/index_prescript
 python3 tools/forms.py src/main/resources/assets/index_prescript/textures/item
 python3 tools/gen3d.py src/main/resources/assets/index_prescript preview.png
+cd tools && python3 laevatein.py ../src/main/resources/assets/index_prescript preview.png
 ```

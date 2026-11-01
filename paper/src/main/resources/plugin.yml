@@ -7,7 +7,7 @@ authors: [sharket1111]
 commands:
   indexprescript:
     description: Give Index Prescript items or resend the resource pack.
-    usage: /indexprescript <give|pack> ...
+    usage: /indexprescript <give|laevatein|pack> ...
     aliases: [ip]
     permission: indexprescript.command
 permissions:

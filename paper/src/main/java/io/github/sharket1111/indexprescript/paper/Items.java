@@ -25,6 +25,9 @@ final class Items {
 	static final String NAMESPACE = "index_prescript";
 	static final String CADUCEUS = "caduceus";
 	static final String TERMINAL = "rien_terminal";
+	static final String LAEVATEIN = "laevatein";
+	/** Laevatein release stages after the sealed state; the index is the stage number. */
+	static final List<String> LAEVATEIN_STAGES = List.of("sealed", "release_1", "release_2", "release_3");
 	static final int MAX_HERMES = 9;
 
 	private static final NamespacedKey ID = new NamespacedKey(NAMESPACE, "item");
@@ -54,6 +57,35 @@ final class Items {
 			meta.setMaxStackSize(MAX_HERMES);
 		});
 		return stack;
+	}
+
+	static ItemStack laevatein(CommandSender viewer) {
+		ItemStack stack = ItemStack.of(Material.NETHERITE_SWORD);
+		stack.editMeta(meta -> {
+			tag(meta, LAEVATEIN);
+			meta.itemName(Component.text(Messages.get(viewer, "item.laevatein")));
+			meta.setRarity(ItemRarity.EPIC);
+			meta.setUnbreakable(true);
+		});
+		return stack;
+	}
+
+	static boolean isLaevatein(ItemStack stack) {
+		return is(stack, LAEVATEIN);
+	}
+
+	/** Release stage 0 (sealed) to 3, read from the first custom model data string. */
+	static int laevateinStage(ItemStack stack) {
+		int stage = LAEVATEIN_STAGES.indexOf(modelString(stack));
+		return Math.max(stage, 0);
+	}
+
+	static void setLaevateinStage(ItemStack stack, int stage) {
+		stack.editMeta(meta -> {
+			CustomModelDataComponent data = meta.getCustomModelDataComponent();
+			data.setStrings(stage <= 0 ? List.of() : List.of(LAEVATEIN_STAGES.get(stage)));
+			meta.setCustomModelDataComponent(data);
+		});
 	}
 
 	private static void tag(ItemMeta meta, String id) {
