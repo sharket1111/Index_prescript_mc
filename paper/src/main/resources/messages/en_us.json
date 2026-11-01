@@ -32,5 +32,6 @@
 	"resource_pack.prompt": "This pack shows Caduceus and the terminal.",
 	"item.laevatein": "Laevatein",
 	"command.laevatein_usage": "Hold Laevatein and use /indexprescript laevatein <0-3> (0: sealed, 1-3: release stage)",
-	"command.laevatein_status": "Laevatein - stage: %s, hits: %s, shown count: %s, ready: %s"
+	"command.laevatein_status": "Laevatein - stage: %s, hits: %s, icon count: %s, ready: %s",
+	"item.laevatein_icon": "Seal Release"
 }

@@ -17,10 +17,15 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.persistence.PersistentDataType;
@@ -31,23 +36,19 @@ import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
 /**
  * Matthias's Laevatein. The original releases it by spending stacks with
  * certain skills; here each stage unlocks after a number of hits dealt or
- * taken (5, 7, then 9), shown as the held stack's size. Putting a ready Laevatein
- * in the off hand (swap-hands on Java, the off-hand slot on Bedrock) with an
- * enemy nearby returns it to the main hand and releases one stage in a strike
- * sequence modelled on the in-game animation.
- *
- * The stack size is display only: each Laevatein carries a unique id so two
- * never stack, and splitting or dropping a displayed stack yields one item.
+ * taken (5, 7, then 9), shown as the stack size of a [Seal Release] icon held
+ * in the off hand while Laevatein is wielded. Right-click (or swap-hands on
+ * Java) with a ready Laevatein and an enemy nearby releases one stage in a
+ * strike sequence modelled on the in-game animation.
  */
 final class Laevatein implements Listener {
 	private static final int[] HITS_TO_RELEASE = {5, 7, 9};
 	private static final int MAX_STAGE = Items.LAEVATEIN_STAGES.size() - 1;
 	private static final int TARGET_RANGE = 6;
 	private static final int READY_EFFECT_INTERVAL = 4;
-	private static final int CLAMP_INTERVAL = 5;
+	private static final int CLEANUP_INTERVAL = 5;
 	private static final int ERROR_LOG_INTERVAL = 200;
 	private static final NamespacedKey HITS = new NamespacedKey(Items.NAMESPACE, "laevatein_hits");
-	private static final NamespacedKey UNIQUE = new NamespacedKey(Items.NAMESPACE, "laevatein_id");
 
 	private static final Map<UUID, Boolean> CHARGED = new ConcurrentHashMap<>();
 	private static final Map<UUID, Release> RELEASING = new ConcurrentHashMap<>();
@@ -72,7 +73,7 @@ final class Laevatein implements Listener {
 		return stage < MAX_STAGE && hits(stack) >= HITS_TO_RELEASE[stage];
 	}
 
-	/** Called every tick: off-hand releases, the hit count display and the ready embers. */
+	/** Called every tick: the off-hand icon and the ready embers. */
 	static void tick() {
 		RELEASING.values().removeIf(release -> {
 			try {
@@ -97,64 +98,64 @@ final class Laevatein implements Listener {
 
 	private static void tick(Player player, long now) {
 		PlayerInventory inventory = player.getInventory();
-		boolean releasing = RELEASING.containsKey(player.getUniqueId());
-		ItemStack off = inventory.getItemInOffHand();
-		if (!releasing && Items.isLaevatein(off) && ready(off)) {
-			LivingEntity target = findTarget(player);
-			if (target != null) {
-				inventory.setItemInOffHand(inventory.getItemInMainHand());
-				inventory.setItemInMainHand(off);
-				startRelease(player, target);
-				releasing = true;
-			}
-		}
 		ItemStack held = inventory.getItemInMainHand();
 		if (Items.isLaevatein(held)) {
-			showHits(held);
-			if (!releasing && ready(held) && now % READY_EFFECT_INTERVAL == 0) {
+			if (held.getAmount() > 1) {
+				held.setAmount(1); // left over from the old stack-size display
+			}
+			showIcon(player, inventory, held);
+			if (!RELEASING.containsKey(player.getUniqueId()) && ready(held) && now % READY_EFFECT_INTERVAL == 0) {
 				LaevateinEffects.ready(player);
 			}
+		} else if (Items.isLaevateinIcon(inventory.getItemInOffHand())) {
+			inventory.setItemInOffHand(null);
 		}
-		if (now % CLAMP_INTERVAL == 0) {
-			keepOthersSingle(inventory);
-		}
-	}
-
-	/** The held Laevatein's stack size shows the hits toward the next release. */
-	private static void showHits(ItemStack held) {
-		Items.makeStackable(held);
-		if (!held.getItemMeta().getPersistentDataContainer().has(UNIQUE)) {
-			held.editMeta(meta -> meta.getPersistentDataContainer().set(UNIQUE, PersistentDataType.STRING, UUID.randomUUID().toString()));
-		}
-		int count = displayedCount(held);
-		if (held.getAmount() != count) {
-			held.setAmount(count);
+		if (now % CLEANUP_INTERVAL == 0) {
+			removeStrayIcons(inventory);
 		}
 	}
 
-	static int displayedCount(ItemStack held) {
+	/**
+	 * Keeps the [Seal Release] icon in the off hand while Laevatein is held; its
+	 * stack size is the hit count and it glints once a release is ready. Whatever
+	 * was in the off hand moves to a free inventory slot (no icon if there is none).
+	 */
+	private static void showIcon(Player player, PlayerInventory inventory, ItemStack held) {
+		ItemStack off = inventory.getItemInOffHand();
+		if (!Items.isLaevateinIcon(off)) {
+			if (!off.isEmpty()) {
+				int free = inventory.firstEmpty();
+				if (free < 0) {
+					return;
+				}
+				inventory.setItem(free, off);
+			}
+			off = Items.laevateinIcon(player);
+		}
+		int count = iconCount(held);
+		boolean glint = ready(held);
+		off.setAmount(count);
+		ItemStack shown = off;
+		if (shown.getItemMeta().hasEnchantmentGlintOverride() != glint) {
+			shown.editMeta(meta -> meta.setEnchantmentGlintOverride(glint ? Boolean.TRUE : null));
+		}
+		if (!shown.equals(inventory.getItemInOffHand())) {
+			inventory.setItemInOffHand(shown);
+		}
+	}
+
+	static int iconCount(ItemStack held) {
 		return Items.laevateinStage(held) < MAX_STAGE ? Math.max(1, hits(held)) : 1;
 	}
 
-	/** Every Laevatein not in the main hand is a single item. */
-	private static void keepOthersSingle(PlayerInventory inventory) {
-		int heldSlot = inventory.getHeldItemSlot();
+	/** The icon only ever lives in the off hand. */
+	private static void removeStrayIcons(PlayerInventory inventory) {
 		ItemStack[] storage = inventory.getStorageContents();
 		for (int slot = 0; slot < storage.length; slot++) {
-			if (slot != heldSlot && Items.isLaevatein(storage[slot]) && storage[slot].getAmount() > 1) {
-				storage[slot].setAmount(1);
+			if (Items.isLaevateinIcon(storage[slot])) {
+				inventory.setItem(slot, null);
 			}
 		}
-		ItemStack off = inventory.getItemInOffHand();
-		if (Items.isLaevatein(off) && off.getAmount() > 1) {
-			off.setAmount(1);
-		}
-	}
-
-	private static boolean sameBlade(ItemStack a, ItemStack b) {
-		String idA = a.getItemMeta().getPersistentDataContainer().get(UNIQUE, PersistentDataType.STRING);
-		String idB = b.getItemMeta().getPersistentDataContainer().get(UNIQUE, PersistentDataType.STRING);
-		return idA != null && idA.equals(idB);
 	}
 
 	private static void startRelease(Player player, LivingEntity target) {
@@ -220,70 +221,66 @@ final class Laevatein implements Listener {
 		}
 	}
 
-	/** Swap-hands with a ready Laevatein and an enemy nearby releases the next stage instead of swapping. */
-	@EventHandler(ignoreCancelled = true)
-	public void onSwap(PlayerSwapHandItemsEvent event) {
-		Player player = event.getPlayer();
+	/** Releases the next stage if the held Laevatein is ready and an enemy is near. */
+	private static void tryRelease(Player player) {
 		ItemStack held = player.getInventory().getItemInMainHand();
-		if (!Items.isLaevatein(held)) {
-			return;
-		}
-		if (RELEASING.containsKey(player.getUniqueId())) {
-			event.setCancelled(true);
-			return;
-		}
-		if (!ready(held)) {
+		if (!Items.isLaevatein(held) || RELEASING.containsKey(player.getUniqueId()) || !ready(held)) {
 			return;
 		}
 		LivingEntity target = findTarget(player);
-		if (target == null) {
+		if (target != null) {
+			startRelease(player, target);
+		}
+	}
+
+	/** Right-click with Laevatein releases it (works on Java and Bedrock). */
+	@EventHandler
+	public void onUse(PlayerInteractEvent event) {
+		if (event.getHand() != EquipmentSlot.HAND
+				|| (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK)
+				|| !Items.isLaevatein(event.getItem())) {
+			return;
+		}
+		tryRelease(event.getPlayer());
+	}
+
+	/** Swap-hands (F) never moves Laevatein or the icon; it releases instead when ready. */
+	@EventHandler(ignoreCancelled = true)
+	public void onSwap(PlayerSwapHandItemsEvent event) {
+		PlayerInventory inventory = event.getPlayer().getInventory();
+		if (!Items.isLaevatein(inventory.getItemInMainHand()) && !Items.isLaevateinIcon(inventory.getItemInOffHand())) {
 			return;
 		}
 		event.setCancelled(true);
-		startRelease(player, target);
+		tryRelease(event.getPlayer());
 	}
 
-	/** Dropping a displayed stack drops the one Laevatein it stands for. */
 	@EventHandler(ignoreCancelled = true)
 	public void onDrop(PlayerDropItemEvent event) {
-		ItemStack dropped = event.getItemDrop().getItemStack();
-		if (!Items.isLaevatein(dropped)) {
-			return;
-		}
-		if (dropped.getAmount() > 1) {
-			dropped.setAmount(1);
-			event.getItemDrop().setItemStack(dropped);
-		}
-		// The rest of the displayed stack is the same Laevatein; remove it from the hand.
-		PlayerInventory inventory = event.getPlayer().getInventory();
-		ItemStack held = inventory.getItemInMainHand();
-		if (Items.isLaevatein(held) && sameBlade(held, dropped)) {
-			inventory.setItemInMainHand(null);
+		if (Items.isLaevateinIcon(event.getItemDrop().getItemStack())) {
+			event.setCancelled(true);
 		}
 	}
 
-	/** Picking up a displayed stack takes the one Laevatein, so it cannot be split. */
 	@EventHandler(ignoreCancelled = true)
 	public void onClick(InventoryClickEvent event) {
-		ItemStack current = event.getCurrentItem();
-		if (Items.isLaevatein(current) && current.getAmount() > 1) {
-			ItemStack single = current.clone();
-			single.setAmount(1);
-			event.setCurrentItem(single);
-		}
-		ItemStack cursor = event.getCursor();
-		if (Items.isLaevatein(cursor) && cursor.getAmount() > 1) {
-			ItemStack single = cursor.clone();
-			single.setAmount(1);
-			event.getWhoClicked().setItemOnCursor(single);
+		boolean offhandIcon = event.getClick() == ClickType.SWAP_OFFHAND
+				&& Items.isLaevateinIcon(event.getWhoClicked().getInventory().getItemInOffHand());
+		if (offhandIcon || Items.isLaevateinIcon(event.getCurrentItem()) || Items.isLaevateinIcon(event.getCursor())) {
+			event.setCancelled(true);
 		}
 	}
 
 	@EventHandler(ignoreCancelled = true)
 	public void onDrag(InventoryDragEvent event) {
-		if (Items.isLaevatein(event.getOldCursor())) {
+		if (Items.isLaevateinIcon(event.getOldCursor())) {
 			event.setCancelled(true);
 		}
+	}
+
+	@EventHandler
+	public void onDeath(PlayerDeathEvent event) {
+		event.getDrops().removeIf(Items::isLaevateinIcon);
 	}
 
 	private static LivingEntity findTarget(Player player) {

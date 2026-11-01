@@ -134,6 +134,26 @@ def sprite(fn):
     return outline(img)
 
 
+def icon_sprite():
+    """[Seal Release] passive icon: a small glowing orange sword with a dark hilt."""
+    img = Image.new("RGBA", (16, 16))
+    for y in range(16):
+        for x in range(16):
+            u, v = forms.uv(x, y)
+            c = None
+            if 1.0 <= u <= 4.2 and abs(v) <= 0.7:
+                c = METAL if v > 0 else METAL_DARK
+            elif 4.2 < u <= 5.0 and abs(v) <= 1.9:
+                c = GLOW_DARK
+            elif 5.0 < u <= forms.L - 0.8:
+                half = 1.3 if u < forms.L - 3.2 else 1.3 * (forms.L - 0.8 - u) / 2.4
+                if abs(v) <= half:
+                    c = GLOW_LIGHT if v > half - 0.6 else GLOW
+            if c:
+                img.putpixel((x, y), c)
+    return outline(img)
+
+
 # --- 3D models -------------------------------------------------------------
 
 SWATCH = {
@@ -247,6 +267,10 @@ if __name__ == "__main__":
         sprites.append(img)
         renders.append(gen3d.render(m, swatch=SWATCH))
     dump(f"{assets}/items/laevatein.json", item_definition())
+    icon_sprite().save(f"{assets}/textures/item/laevatein_icon.png")
+    dump(f"{assets}/models/item/laevatein_icon.json",
+         {"parent": "minecraft:item/generated", "textures": {"layer0": f"{NS}:item/laevatein_icon"}})
+    dump(f"{assets}/items/laevatein_icon.json", {"model": {"type": "minecraft:model", "model": f"{NS}:item/laevatein_icon"}})
     if preview:
         sheet = Image.new("RGBA", (4 * 220, 400), (210, 210, 214, 255))
         for i, (img, r) in enumerate(zip(sprites, renders)):
