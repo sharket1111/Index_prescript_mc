@@ -156,7 +156,7 @@ final class MangRing {
 				display.setInterpolationDelay(0);
 				display.setTransformation(new Transformation(new Vector3f(), turn, new Vector3f(SCALE, SCALE, SCALE), new Quaternionf()));
 			}
-			if (ring.age % 2 == 0) {
+			if (ring.age % 4 == 0) {
 				Effects.mang(ring.holder, ring.age, frame);
 			}
 			ring.age++;

@@ -488,7 +488,7 @@ final class Laevatein implements Listener {
 			}
 			hold();
 			shoot();
-			if (tick % 3 == 0) {
+			if (tick % 6 == 0) {
 				LaevateinEffects.aura(actor(), stage);
 			}
 			switch (stage) {

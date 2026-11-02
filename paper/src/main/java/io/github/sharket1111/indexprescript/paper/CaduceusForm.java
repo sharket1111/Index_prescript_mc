@@ -142,10 +142,13 @@ enum CaduceusForm {
 		CombatState self = CombatState.of(attacker);
 		CombatState other = CombatState.of(target);
 		float staggerDamage = this == HAMMER ? STAGGER_PER_HIT : STAGGER_PER_OTHER_HIT;
-		boolean staggered = other.addStagger(staggerDamage, (float) Math.max(10.0, maxHealth(target) * 0.5), now);
+		float threshold = (float) Math.max(10.0, maxHealth(target) * 0.5);
+		boolean staggered = other.addStagger(staggerDamage, threshold, now);
 		if (staggered) {
 			Stagger.apply(target, now);
 			Effects.staggered(target);
+		} else {
+			Stagger.gauge(target, other.staggerBuildUp(now) / threshold);
 		}
 		switch (this) {
 			case HATCHET -> self.addPoise(2, 2, now);

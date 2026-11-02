@@ -19,13 +19,17 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import io.papermc.paper.entity.TeleportFlag;
 
 
@@ -70,6 +74,14 @@ final class Furioso {
 	private static final int WINDUP_TICK = 104;
 	private static final int FLASH_TICK = 154;
 	private static final int END_TICK = 172;
+	// The last coin's scythe chop: raised overhead and back, then slammed down in front.
+	private static final int CHOP_RAISE_TICK = 148;
+	private static final int CHOP_SLAM_TICK = 155;
+	private static final int CHOP_HIT_TICK = 158;
+	private static final int CHOP_END_TICK = 168;
+	private static final double CHOP_READY = Math.toRadians(20);
+	private static final double CHOP_RAISED = Math.toRadians(-150);
+	private static final double CHOP_DOWN = Math.toRadians(105);
 	private static final int LAST_COIN = COIN_TICKS.length - 1;
 	private static final double DASH_RADIUS = 2.2;
 	private static final double SPREAD_RADIUS = 6.0;
@@ -107,6 +119,7 @@ final class Furioso {
 	private LivingEntity lastVictim;
 	private int tick;
 	private Cinematic camera;
+	private ItemDisplay scythe;
 	private int shinDamageUp;
 	private int shinPower;
 	private boolean mang;
@@ -197,6 +210,7 @@ final class Furioso {
 				strike(coin);
 			}
 		}
+		chop();
 		if (tick >= END_TICK) {
 			finish();
 			return false;
@@ -355,8 +369,10 @@ final class Furioso {
 		if (camera != null) {
 			camera.syncHeld();
 		}
-		actor().swingMainHand();
-		MangRing.swing(actor());
+		if (scythe == null) {
+			actor().swingMainHand();
+			MangRing.swing(actor());
+		}
 
 		CombatState self = CombatState.of(player);
 		CombatState other = CombatState.of(victim);
@@ -491,6 +507,79 @@ final class Furioso {
 		camera.frame(position, focus, shake);
 	}
 
+	/**
+	 * The last coin's own motion, filmed with the stand-in: its hand empties
+	 * and a 3D scythe is raised slowly overhead and back, then slammed down in
+	 * front at the cut and held there. Without a stand-in the wielder just swings.
+	 */
+	private void chop() {
+		if (camera == null || tick < CHOP_RAISE_TICK || tick > CHOP_END_TICK) {
+			return;
+		}
+		LivingEntity actor = actor();
+		if (tick == CHOP_RAISE_TICK) {
+			faceVictim(target);
+			ItemStack blade = player.getInventory().getItemInMainHand().clone();
+			if (Items.isCaduceus(blade)) {
+				Items.setForm(blade, CaduceusForm.SCYTHE);
+			}
+			actor.getEquipment().setItemInMainHand(null);
+			scythe = world.spawn(actor.getLocation(), ItemDisplay.class, d -> {
+				d.setPersistent(false);
+				d.setItemStack(blade);
+				d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
+				d.setTeleportDuration(1);
+				d.setInterpolationDuration(1);
+			});
+			sound(actor.getLocation(), Sound.ITEM_TRIDENT_RIPTIDE_1, 0.8F, 0.6F);
+		}
+		if (scythe == null) {
+			return;
+		}
+		if (tick == CHOP_END_TICK) {
+			scythe.remove();
+			scythe = null;
+			camera.syncHeld();
+			return;
+		}
+		double angle;
+		if (tick < CHOP_SLAM_TICK) {
+			double u = (tick - CHOP_RAISE_TICK) / (double) (CHOP_SLAM_TICK - CHOP_RAISE_TICK);
+			angle = CHOP_READY + (CHOP_RAISED - CHOP_READY) * Math.sin(u * Math.PI / 2);
+		} else if (tick < CHOP_HIT_TICK) {
+			double u = (tick - CHOP_SLAM_TICK) / (double) (CHOP_HIT_TICK - CHOP_SLAM_TICK);
+			angle = CHOP_RAISED + (CHOP_DOWN - CHOP_RAISED) * u * u;
+		} else {
+			angle = CHOP_DOWN;
+		}
+		poseScythe(actor, angle);
+	}
+
+	/**
+	 * Places the scythe for a chop angle: 0 is straight up from the shoulder,
+	 * positive tips it forward. The blade swings in the vertical plane the
+	 * stand-in faces, its flat side to the camera.
+	 */
+	private void poseScythe(LivingEntity actor, double angle) {
+		Location at = actor.getLocation();
+		Vector forward = at.getDirection().setY(0);
+		if (forward.lengthSquared() < 1.0E-4) {
+			forward = new Vector(0, 0, 1);
+		}
+		forward.normalize();
+		Vector right = new Vector(-forward.getZ(), 0, forward.getX());
+		Vector shoulder = at.toVector().add(new Vector(0, actor.getHeight() * 0.78, 0)).add(right.multiply(0.36));
+		Vector blade = new Vector(0, Math.cos(angle), 0).add(forward.clone().multiply(Math.sin(angle)));
+		Location place = shoulder.add(blade.multiply(0.55)).toLocation(world);
+		place.setYaw(at.getYaw());
+		place.setPitch(0F);
+		scythe.teleport(place);
+		// Model diagonal -> straight up, turned edge-on to face along the swing, then tipped by the angle.
+		Quaternionf turn = new Quaternionf().rotateX((float) angle).rotateY((float) (Math.PI / 2)).rotateZ((float) (Math.PI / 4));
+		scythe.setInterpolationDelay(0);
+		scythe.setTransformation(new Transformation(new Vector3f(), turn, new Vector3f(1.1F, 1.1F, 1.1F), new Quaternionf()));
+	}
+
 	/** Poise from this skill, raised by [Shin]: potency +1, count +1. */
 	private void gainPoise(int amount, long now) {
 		CombatState.of(player).addPoise(amount + 1, amount + 1, now);
@@ -502,6 +591,10 @@ final class Furioso {
 	}
 
 	private void finish() {
+		if (scythe != null) {
+			scythe.remove();
+			scythe = null;
+		}
 		MangRing.hide(actor());
 		TotalDamage.finish(player);
 		SkillOverlay.hide(player);

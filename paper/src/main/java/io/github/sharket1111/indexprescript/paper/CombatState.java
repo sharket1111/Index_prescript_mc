@@ -136,6 +136,11 @@ final class CombatState {
 		return false;
 	}
 
+	/** Stagger damage built up toward the next stagger, or 0 once it has worn off. */
+	float staggerBuildUp(long now) {
+		return now >= staggerResetAt ? 0F : stagger;
+	}
+
 	boolean staggered(long now) {
 		return now < staggeredUntil;
 	}

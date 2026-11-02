@@ -60,15 +60,13 @@ final class Effects {
 		Vector hand = holder.getEyeLocation().toVector().add(look.clone().multiply(0.5)).add(right.multiply(0.35)).add(new Vector(0, -0.45, 0));
 		for (int i = 0; i <= BLADE_STEPS; i++) {
 			Vector p = hand.clone().add(look.clone().multiply(BLADE_REACH * i / BLADE_STEPS));
-			spawn(world, Particle.SQUID_INK, p, 2, 0.12, 0.04);
 			if (i % 2 == 0) {
-				dustAt(world, BLUE_DROPLET, p, 2, 0.22);
+				dustAt(world, BLUE_DROPLET, p, 1, 0.18);
 			}
 		}
 		Vector mid = hand.clone().add(look.clone().multiply(BLADE_REACH * 0.5));
-		spawn(world, Particle.GLOW_SQUID_INK, mid, 6, 0.45, 0.06);
-		dustAt(world, PALE_DROPLET, mid, 10, 0.6);
-		spawn(world, Particle.SQUID_INK, hand, 6, 0.1, 0.12);
+		spawn(world, Particle.GLOW_SQUID_INK, mid, 2, 0.45, 0.06);
+		dustAt(world, PALE_DROPLET, mid, 5, 0.6);
 		sound(holder.getLocation(), Sound.ITEM_BUCKET_FILL_LAVA, 0.6F, 1.6F);
 		sound(holder.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.5F, 1.8F);
 	}
@@ -119,14 +117,14 @@ final class Effects {
 
 	static void auraBurst(LivingEntity holder) {
 		Vector c = center(holder);
-		dustAt(holder.getWorld(), AURA, c, 40, 0.85);
-		spawn(holder.getWorld(), Particle.SQUID_INK, c, 20, 0.55, 0.15);
-		spawn(holder.getWorld(), Particle.GLOW_SQUID_INK, c, 8, 0.6, 0.1);
+		dustAt(holder.getWorld(), AURA, c, 20, 0.85);
+		spawn(holder.getWorld(), Particle.SQUID_INK, c, 6, 0.55, 0.15);
+		spawn(holder.getWorld(), Particle.GLOW_SQUID_INK, c, 4, 0.6, 0.1);
 	}
 
 	static void gather(Entity target) {
 		Vector c = center(target);
-		spawn(target.getWorld(), Particle.SQUID_INK, c, 30, 1.3, 0.0);
+		spawn(target.getWorld(), Particle.SQUID_INK, c, 10, 1.3, 0.0);
 		dustAt(target.getWorld(), BLUE_DROPLET, c, 20, 1.1);
 	}
 
@@ -197,10 +195,10 @@ final class Effects {
 			return;
 		}
 		Vector dir = step.multiply(1.0 / length);
-		for (double t = 0; t <= length; t += 0.3) {
+		// A thin streak only: ink clouds here hid the wielder.
+		for (double t = 0; t <= length; t += 0.5) {
 			Vector p = from.clone().add(dir.clone().multiply(t)).add(new Vector(0, 1.0, 0));
-			spawn(world, Particle.SQUID_INK, p, 1, 0.15, 0.0);
-			dustAt(world, BLUE_ARC_DIM, p, 1, 0.2);
+			dustAt(world, BLUE_ARC_DIM, p, 1, 0.05);
 		}
 	}
 
@@ -297,38 +295,36 @@ final class Effects {
 
 	/** [Shin]: a golden glow rising around the wielder; call every tick. */
 	static void shin(LivingEntity holder, int tick) {
+		// Kept outside the body (and sparse) so the wielder's moves stay visible.
+		if (tick % 2 != 0) {
+			return;
+		}
 		World world = holder.getWorld();
 		ThreadLocalRandom random = ThreadLocalRandom.current();
 		Location base = holder.getLocation();
 		double height = holder.getHeight();
-		// Rising golden flames close around the body, every tick.
-		for (int i = 0; i < 6; i++) {
+		for (int i = 0; i < 3; i++) {
 			double a = random.nextDouble() * Math.PI * 2;
-			double r = 0.35 + random.nextDouble() * 0.3;
-			Vector p = new Vector(base.getX() + Math.cos(a) * r, base.getY() + random.nextDouble() * height * 1.15,
+			double r = 0.75 + random.nextDouble() * 0.25;
+			Vector p = new Vector(base.getX() + Math.cos(a) * r, base.getY() + random.nextDouble() * height * 1.1,
 					base.getZ() + Math.sin(a) * r);
-			dustAt(world, i % 3 == 0 ? SHIN_PALE : SHIN_GOLD, p, 1, 0.02);
+			dustAt(world, i == 0 ? SHIN_PALE : SHIN_GOLD, p, 1, 0.0);
 		}
-		// Two bright spirals winding up the body.
-		for (int k = 0; k < 2; k++) {
-			double a = tick * 0.45 + k * Math.PI;
-			double y = (tick * 0.09 + k * 0.5) % 1.0 * height * 1.1;
-			Vector p = new Vector(base.getX() + Math.cos(a) * 0.6, base.getY() + y, base.getZ() + Math.sin(a) * 0.6);
-			dustAt(world, SHIN_BRIGHT, p, 2, 0.03);
-			if (tick % 2 == 0) {
-				world.spawnParticle(Particle.END_ROD, p.getX(), p.getY(), p.getZ(), 1, 0.0, 0.03, 0.0, 0.01);
-			}
+		double a = tick * 0.45;
+		double y = (tick * 0.09) % 1.0 * height * 1.1;
+		Vector spiral = new Vector(base.getX() + Math.cos(a) * 0.9, base.getY() + y, base.getZ() + Math.sin(a) * 0.9);
+		dustAt(world, SHIN_BRIGHT, spiral, 1, 0.0);
+		if (tick % 8 == 0) {
+			world.spawnParticle(Particle.END_ROD, spiral.getX(), spiral.getY(), spiral.getZ(), 1, 0.0, 0.03, 0.0, 0.01);
 		}
-		if (tick % 3 == 0) {
-			world.spawnParticle(Particle.WAX_ON, base.getX(), base.getY() + height * 0.6, base.getZ(), 3, 0.4, 0.6, 0.4, 0.0);
-		}
-		if (tick % 6 == 0) {
+		if (tick % 10 == 0) {
 			for (int i = 0; i < 20; i++) {
-				double a = i * Math.PI / 10;
-				dustAt(world, SHIN_GOLD, new Vector(base.getX() + Math.cos(a) * 0.85, base.getY() + 0.05, base.getZ() + Math.sin(a) * 0.85), 1, 0.0);
+				double b = i * Math.PI / 10;
+				dustAt(world, SHIN_GOLD, new Vector(base.getX() + Math.cos(b) * 0.95, base.getY() + 0.05, base.getZ() + Math.sin(b) * 0.95), 1, 0.0);
 			}
 		}
 	}
+
 
 
 	/** [Shin] flaring up as the skill starts. */

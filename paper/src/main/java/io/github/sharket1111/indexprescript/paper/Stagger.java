@@ -25,6 +25,8 @@ import org.bukkit.potion.PotionEffectType;
 
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 
 /**
  * Stagger, in three stages: staggered again while still staggered, a foe goes
@@ -48,6 +50,22 @@ final class Stagger implements Listener {
 		new Particle.DustOptions(Color.fromRGB(0x3FE0A8), 1.2F),
 	};
 	private static final Map<UUID, State> STATES = new ConcurrentHashMap<>();
+	private static final Map<UUID, Gauge> GAUGES = new ConcurrentHashMap<>();
+	private static final int GAUGE_SEGMENTS = 20;
+	/** How long a gauge stays after the last hit; the build-up itself wears off later. */
+	private static final int GAUGE_TICKS = 200;
+
+	/** The bar over a foe's head showing how close it is to being staggered. */
+	private static final class Gauge {
+		final LivingEntity entity;
+		final TextDisplay display;
+		long until;
+
+		Gauge(LivingEntity entity, TextDisplay display) {
+			this.entity = entity;
+			this.display = display;
+		}
+	}
 
 	private static final class State {
 		final LivingEntity entity;
@@ -70,10 +88,54 @@ final class Stagger implements Listener {
 		target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, CombatState.TURN_TICKS, SLOWNESS_AMPLIFIER[index]));
 		target.removePotionEffect(PotionEffectType.WEAKNESS);
 		target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, CombatState.TURN_TICKS, WEAKNESS_AMPLIFIER));
+		removeGauge(target);
 		if (state.sign == null || !state.sign.isValid()) {
 			state.sign = spawnSign(target);
 		}
 		state.sign.text(glyph(state.stage));
+	}
+
+	/** Shows or updates the stagger gauge over {@code target}: {@code fill} is 0-1 of the way to a stagger. */
+	static void gauge(LivingEntity target, float fill) {
+		if (fill <= 0) {
+			return;
+		}
+		Gauge gauge = GAUGES.get(target.getUniqueId());
+		if (gauge == null || !gauge.display.isValid()) {
+			TextDisplay display = target.getWorld().spawn(overHead(target), TextDisplay.class, d -> {
+				d.setPersistent(false);
+				d.setBillboard(Display.Billboard.CENTER);
+				d.setShadowed(false);
+				d.setDefaultBackground(false);
+				d.setBackgroundColor(Color.fromARGB(110, 0, 0, 0));
+				d.setBrightness(new Display.Brightness(15, 15));
+				d.setTeleportDuration(2);
+				d.setTransformation(new org.bukkit.util.Transformation(new org.joml.Vector3f(),
+						new org.joml.AxisAngle4f(), new org.joml.Vector3f(0.6F, 0.6F, 0.6F), new org.joml.AxisAngle4f()));
+			});
+			gauge = new Gauge(target, display);
+			GAUGES.put(target.getUniqueId(), gauge);
+		}
+		gauge.until = CaduceusListener.now() + GAUGE_TICKS;
+		gauge.display.text(bar(fill));
+	}
+
+	private static Component bar(float fill) {
+		int filled = Math.max(1, Math.min(GAUGE_SEGMENTS, Math.round(fill * GAUGE_SEGMENTS)));
+		NamedTextColor color = fill >= 0.75F ? NamedTextColor.RED : fill >= 0.4F ? NamedTextColor.GOLD : NamedTextColor.YELLOW;
+		return Component.text("|".repeat(filled), color, TextDecoration.BOLD)
+				.append(Component.text("|".repeat(GAUGE_SEGMENTS - filled), NamedTextColor.DARK_GRAY, TextDecoration.BOLD));
+	}
+
+	private static Location overHead(LivingEntity entity) {
+		return entity.getLocation().add(0, entity.getHeight() + 0.3, 0);
+	}
+
+	private static void removeGauge(LivingEntity entity) {
+		Gauge gauge = GAUGES.remove(entity.getUniqueId());
+		if (gauge != null) {
+			gauge.display.remove();
+		}
 	}
 
 	/** The current stage (1-3), or 0 if not staggered. */
@@ -113,9 +175,21 @@ final class Stagger implements Listener {
 		return player.getUniqueId().toString().startsWith(FLOODGATE_PREFIX);
 	}
 
-	/** Called every tick: keeps pictures on the body, ends stagger, and shows sparks. */
+	/** Called every tick: keeps pictures on the body and gauges over heads, ends stagger, and shows sparks. */
 	static void tick() {
 		long now = CaduceusListener.now();
+		Iterator<Gauge> gauges = GAUGES.values().iterator();
+		while (gauges.hasNext()) {
+			Gauge gauge = gauges.next();
+			LivingEntity entity = gauge.entity;
+			if (now >= gauge.until || !entity.isValid() || entity.isDead() || !gauge.display.isValid()
+					|| CombatState.of(entity).staggerBuildUp(now) <= 0F) {
+				gauge.display.remove();
+				gauges.remove();
+			} else {
+				gauge.display.teleport(overHead(entity));
+			}
+		}
 		Iterator<State> it = STATES.values().iterator();
 		while (it.hasNext()) {
 			State state = it.next();
@@ -144,6 +218,8 @@ final class Stagger implements Listener {
 	static void clearAll() {
 		STATES.values().forEach(Stagger::removeSign);
 		STATES.clear();
+		GAUGES.values().forEach(gauge -> gauge.display.remove());
+		GAUGES.clear();
 	}
 
 	/** A staggered foe's attacks, melee or shot, do nothing. */

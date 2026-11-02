@@ -145,7 +145,7 @@ final class LaevateinSkill {
 		}
 		hold();
 		shoot();
-		if (tick % 4 == 0) {
+		if (tick % 8 == 0) {
 			LaevateinEffects.aura(actor(), 1);
 		}
 		switch (kind) {
