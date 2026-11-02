@@ -77,6 +77,10 @@ final class PrescriptTracker implements Listener {
 				&& of(player).hermes >= Items.MAX_HERMES;
 	}
 
+	private static boolean bedrock(Player player) {
+		return player.getUniqueId().toString().startsWith("00000000-0000-0000-");
+	}
+
 	static int hermes(Player player) {
 		PrescriptTracker tracker = TRACKERS.get(player.getUniqueId());
 		return tracker == null ? 0 : tracker.hermes;
@@ -249,12 +253,22 @@ final class PrescriptTracker implements Listener {
 	/** Sneak + right-click with the terminal rerolls the prescript, inflicting Weakness III for 10 seconds. */
 	@EventHandler
 	public void onUse(PlayerInteractEvent event) {
-		if ((event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK)
-				|| !Items.isTerminal(event.getItem())) {
+		Player player = event.getPlayer();
+		boolean rightClick = event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK;
+		if (rightClick && Items.isTerminal(event.getItem())) {
+			event.setCancelled(true);
+		} else if (!player.isSneaking() || !holdsTerminal(player) || Items.isLaevatein(player.getInventory().getItemInMainHand())) {
+			return;
+		} else if (rightClick) {
+			// Bedrock (Geyser) only uses the main hand, so a sneak + right-click with
+			// Caduceus while the terminal is in the off hand rerolls as well.
+			event.setCancelled(true);
+		} else if (!(event.getAction() == Action.LEFT_CLICK_AIR && bedrock(player) && player.getTargetEntity(4) == null)) {
+			// A Bedrock touch screen often sends nothing for a right-click on air with a
+			// sword, so for Bedrock players sneak + tapping the air (no foe in reach, so a
+			// sneaking attack is not mistaken for it) also rerolls.
 			return;
 		}
-		event.setCancelled(true);
-		Player player = event.getPlayer();
 		PrescriptTracker tracker = of(player);
 		long now = CaduceusListener.now();
 		if (!player.isSneaking() || tracker.prescript == null || now < tracker.rerollableAt) {

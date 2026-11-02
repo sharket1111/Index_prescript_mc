@@ -13,7 +13,7 @@
 	"form.scythe": "Scythe",
 	"message.prescript_line": "%s (%s/%s)",
 	"prescript.strike_thrice": "Strike an enemy %s times",
-	"prescript.break_with_hammer": "Stagger an enemy with the hammer",
+	"prescript.stagger_one": "Attack an enemy until it staggers",
 	"prescript.two_crits": "Land %s critical hits",
 	"prescript.slay_two": "Slay %s enemies",
 	"prescript.crouching_strike": "Strike an enemy while crouching",

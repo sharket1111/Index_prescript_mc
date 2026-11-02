@@ -49,6 +49,8 @@ enum CaduceusForm {
 	private static final double STAGGERED_MULTIPLIER = 1.5;
 	private static final double SINKING_DAMAGE_PER_POTENCY = 0.5;
 	private static final float STAGGER_PER_HIT = 5.0F;
+	/** Every other form staggers too, just less than the hammer. */
+	private static final float STAGGER_PER_OTHER_HIT = 2.0F;
 	private static final double GREATSWORD_MAX_FALL_BONUS = 8.0;
 	private static final double CROWD_RANGE = 2.5;
 	private static final double LANCE_PIERCE_LENGTH = 4.0;
@@ -139,6 +141,13 @@ enum CaduceusForm {
 	boolean onHit(LivingEntity attacker, LivingEntity target, long now) {
 		CombatState self = CombatState.of(attacker);
 		CombatState other = CombatState.of(target);
+		float staggerDamage = this == HAMMER ? STAGGER_PER_HIT : STAGGER_PER_OTHER_HIT;
+		boolean staggered = other.addStagger(staggerDamage, (float) Math.max(10.0, maxHealth(target) * 0.5), now);
+		if (staggered) {
+			target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, CombatState.TURN_TICKS, 6));
+			target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, CombatState.TURN_TICKS, 1));
+			Effects.staggered(target);
+		}
 		switch (this) {
 			case HATCHET -> self.addPoise(2, 2, now);
 			case STILETTO -> {
@@ -148,12 +157,7 @@ enum CaduceusForm {
 			case BASTARD_SWORD -> self.addAttackLevel(now);
 			case RAPIER -> other.addDefenseDown(now);
 			case HAMMER -> {
-				if (other.addStagger(STAGGER_PER_HIT, (float) Math.max(10.0, maxHealth(target) * 0.5), now)) {
-					target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, CombatState.TURN_TICKS, 6));
-					target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, CombatState.TURN_TICKS, 1));
-					Effects.staggered(target);
-					return true;
-				}
+				// Its weight is in the larger stagger damage above.
 			}
 			case GREATSWORD -> {
 				other.addFragile(DamageKind.SLASH, now);
@@ -172,7 +176,7 @@ enum CaduceusForm {
 			}
 			case SCYTHE -> Effects.sweep(target, 3, 1.0);
 		}
-		return false;
+		return staggered;
 	}
 
 	private static double maxHealth(LivingEntity entity) {

@@ -6,7 +6,7 @@ import java.util.concurrent.ThreadLocalRandom;
 /** Prescripts the terminal can issue. Each one is a trackable combat goal. */
 enum Prescript {
 	STRIKE_THRICE(Goal.HITS, 3, null),
-	BREAK_WITH_HAMMER(Goal.STAGGER, 1, null),
+	STAGGER_ONE(Goal.STAGGER, 1, null),
 	TWO_CRITS(Goal.CRITS, 2, null),
 	SLAY_TWO(Goal.KILLS, 2, null),
 	CROUCHING_STRIKE(Goal.SNEAK_HIT, 1, null),

@@ -13,7 +13,7 @@
 	"form.scythe": "대낫",
 	"message.prescript_line": "%s (%s/%s)",
 	"prescript.strike_thrice": "적을 %s번 공격하라",
-	"prescript.break_with_hammer": "망치로 적을 흐트러뜨려라",
+	"prescript.stagger_one": "적을 공격해 흐트러뜨려라",
 	"prescript.two_crits": "치명타를 %s번 성공시켜라",
 	"prescript.slay_two": "적 %s명을 처치하라",
 	"prescript.crouching_strike": "웅크린 채로 적을 공격하라",
