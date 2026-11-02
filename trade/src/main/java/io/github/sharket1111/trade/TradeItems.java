@@ -50,14 +50,37 @@ final class TradeItems {
 		return stack != null && stack.isSimilar(ItemStack.of(Material.DIAMOND));
 	}
 
-	/** The diamond button in the menu. */
-	static ItemStack exchangeButton() {
-		ItemStack stack = ItemStack.of(Material.DIAMOND);
+	/** The diamond button in the menu; its stack size shows the chosen amount. */
+	static ItemStack exchangeButton(int amount) {
+		ItemStack stack = ItemStack.of(Material.DIAMOND, amount);
 		stack.editMeta(meta -> {
-			meta.itemName(Component.text("거래 전용 다이아로 바꾸기", NamedTextColor.AQUA));
+			meta.itemName(Component.text("거래 전용 다이아로 바꾸기 (" + amount + "개)", NamedTextColor.AQUA));
 			meta.lore(List.of(
-					plain("우클릭: 인벤토리의 다이아몬드 1개를", NamedTextColor.GRAY),
-					plain("거래 전용 다이아 1개로 바꿉니다.", NamedTextColor.GRAY)));
+					plain("우클릭: 인벤토리의 다이아몬드 " + amount + "개를", NamedTextColor.GRAY),
+					plain("거래 전용 다이아로 바꿉니다.", NamedTextColor.GRAY),
+					plain("양옆의 버튼으로 개수를 정합니다.", NamedTextColor.DARK_GRAY)));
+		});
+		return stack;
+	}
+
+	/** A button that changes the amount by {@code delta}. */
+	static ItemStack amountButton(int delta, int amount) {
+		ItemStack stack = ItemStack.of(delta < 0 ? Material.RED_STAINED_GLASS_PANE : Material.LIME_STAINED_GLASS_PANE);
+		stack.editMeta(meta -> {
+			meta.itemName(Component.text((delta > 0 ? "+" : "") + delta, delta < 0 ? NamedTextColor.RED : NamedTextColor.GREEN));
+			meta.lore(List.of(plain("현재 개수: " + amount + "개", NamedTextColor.GRAY)));
+		});
+		return stack;
+	}
+
+	/** The button that exchanges every plain diamond at once. */
+	static ItemStack exchangeAllButton() {
+		ItemStack stack = ItemStack.of(Material.DIAMOND_BLOCK);
+		stack.editMeta(meta -> {
+			meta.itemName(Component.text("전부 바꾸기", NamedTextColor.AQUA));
+			meta.lore(List.of(
+					plain("우클릭: 인벤토리의 다이아몬드를 모두", NamedTextColor.GRAY),
+					plain("거래 전용 다이아로 바꿉니다.", NamedTextColor.GRAY)));
 		});
 		return stack;
 	}
