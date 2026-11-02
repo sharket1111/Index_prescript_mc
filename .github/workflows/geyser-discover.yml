@@ -11,27 +11,12 @@ jobs:
   discover:
     runs-on: ubuntu-latest
     steps:
-      - name: Wiki pages about custom items
-        run: |
-          set +e
-          for repo in GeyserMC/GeyserWiki GeyserMC/geysermc.org; do
-            for branch in master main; do
-              tree=$(curl -fsS "https://api.github.com/repos/$repo/git/trees/$branch?recursive=1") || continue
-              echo "### $repo@$branch"
-              echo "$tree" | jq -r '.tree[].path' | grep -i -E 'custom-item|custom_item|attachable|item' | head -60
-              for p in $(echo "$tree" | jq -r '.tree[].path' | grep -i -E 'custom-items.*\.mdx?$|custom_items.*\.mdx?$'); do
-                echo "=================== $p"
-                curl -fsS "https://raw.githubusercontent.com/$repo/$branch/$p"
-              done
-              break
-            done
-          done
-      - name: Geyser v2 mapping reader source
+      - name: Geyser v2 item mapping reader and predicates
         run: |
           set +e
           tree=$(curl -fsS "https://api.github.com/repos/GeyserMC/Geyser/git/trees/master?recursive=1")
-          echo "$tree" | jq -r '.tree[].path' | grep -i -E 'mappings/versions|MappingsReader|CustomItemDefinition|ItemPredicate|PredicateReader|NonVanilla' | head -60
-          for p in $(echo "$tree" | jq -r '.tree[].path' | grep -E 'item/custom/v2/mappings/.*\.java$|registry/mappings/versions/MappingsReader_v2\.java$|registry/mappings/versions/MappingsReader\.java$|MappingsConfigReader\.java$'); do
+          for p in $(echo "$tree" | jq -r '.tree[].path' | grep -E 'registry/mappings/versions/item/ItemMappingsReader_v2\.java$|registry/mappings/predicate/.*\.java$|registry/mappings/components/.*\.java$|registry/mappings/util/.*\.java$|api/item/custom/v2/CustomItemBedrockOptions\.java$'); do
             echo "=================== $p"
-            curl -fsS "https://raw.githubusercontent.com/GeyserMC/Geyser/master/$p"
+            # Strip the licence header and imports to keep the log short.
+            curl -fsS "https://raw.githubusercontent.com/GeyserMC/Geyser/master/$p" | sed '1,/^package /d' | grep -v -E '^import |^$'
           done
