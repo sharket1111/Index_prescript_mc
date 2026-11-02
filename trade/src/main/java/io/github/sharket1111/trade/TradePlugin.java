@@ -14,6 +14,7 @@ public final class TradePlugin extends JavaPlugin {
 	public void onEnable() {
 		TradeItems.init(this);
 		Market.load(this);
+		History.load(this);
 		getServer().getPluginManager().registerEvents(new Menu.Events(), this);
 	}
 

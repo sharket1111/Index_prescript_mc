@@ -9,8 +9,9 @@ import net.kyori.adventure.text.format.NamedTextColor;
 /** The first screen of /trade: pick a tab. */
 final class MainMenu extends Menu {
 	private static final int EXCHANGE_SLOT = 10;
-	private static final int SHOP_SLOT = 13;
-	private static final int GOODS_SLOT = 16;
+	private static final int SHOP_SLOT = 12;
+	private static final int GOODS_SLOT = 14;
+	private static final int HISTORY_SLOT = 16;
 
 	MainMenu(Player player) {
 		super(player, "거래");
@@ -24,6 +25,8 @@ final class MainMenu extends Menu {
 				"다른 플레이어를 골라 그 플레이어의", "물품을 보고 거래 전용 다이아로 삽니다."));
 		inventory.setItem(GOODS_SLOT, TradeItems.button(Material.CHEST, "물품", NamedTextColor.GOLD,
 				"다른 플레이어에게 팔 물품을", "가격을 정해 등록하고 관리합니다."));
+		inventory.setItem(HISTORY_SLOT, TradeItems.button(Material.BOOK, "기록", NamedTextColor.YELLOW,
+				"내가 산 물품과 판 물품의", "기록을 봅니다."));
 	}
 
 	@Override
@@ -37,6 +40,9 @@ final class MainMenu extends Menu {
 		} else if (slot == GOODS_SLOT) {
 			clickSound();
 			new GoodsMenu(player).open();
+		} else if (slot == HISTORY_SLOT) {
+			clickSound();
+			new HistoryMenu(player, 0, false).open();
 		}
 	}
 }

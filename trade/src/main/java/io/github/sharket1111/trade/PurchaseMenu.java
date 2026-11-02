@@ -70,6 +70,7 @@ final class PurchaseMenu extends Menu {
 		}
 		take(TradeItems::isTradeDiamond, price);
 		Market.remove(listing);
+		History.record(listing, player.getUniqueId(), player.getName());
 		give(listing.item.clone());
 		Component what = describe();
 		Market.pay(listing.seller, price, what, player.getName());
