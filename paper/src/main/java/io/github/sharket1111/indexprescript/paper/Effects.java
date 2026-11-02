@@ -329,7 +329,7 @@ final class Effects {
 	}
 
 	/** Where the held weapon's ring sits: along the blade, held up and forward from the right hand. */
-	private static Vector[] weaponFrame(LivingEntity holder) {
+	static Vector[] weaponFrame(LivingEntity holder) {
 		Location at = holder.getLocation();
 		Vector forward = at.getDirection().setY(0);
 		if (forward.lengthSquared() < 1.0E-4) {

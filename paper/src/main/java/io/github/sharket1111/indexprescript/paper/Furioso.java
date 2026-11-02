@@ -153,7 +153,7 @@ final class Furioso {
 		Effects.auraBurst(actor());
 		Effects.shinBurst(actor());
 		if (mang) {
-			Effects.mangForm(actor());
+			MangRing.show(actor(), 0);
 		}
 		sound(actor().getLocation(), Sound.ITEM_BUCKET_FILL_LAVA, 1.0F, 0.6F);
 		sound(actor().getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.0F, 0.5F);
@@ -169,9 +169,6 @@ final class Furioso {
 		holdTarget();
 		shoot();
 		Effects.shin(actor(), tick);
-		if (mang) {
-			Effects.mang(actor(), tick);
-		}
 		player.setFallDistance(0.0F);
 		CaduceusListener.keepFormed(player, 30);
 
@@ -266,13 +263,16 @@ final class Furioso {
 
 	/**
 	 * Furioso is a wide flurry: coins 1-8 each strike a random living thing
-	 * within {@link #SPREAD_RADIUS} blocks of the main target (the main target
-	 * included). The wielder, its stand-in, armour stands and players who
+	 * within {@link #SPREAD_RADIUS} blocks of the main target, or the main
+	 * target itself when nothing else is near. The wielder, its stand-in, armour stands and players who
 	 * cannot be hurt are left out.
 	 */
 	private LivingEntity pickVictim() {
 		List<LivingEntity> pool = foes();
-		pool.add(target);
+		if (pool.isEmpty()) {
+			return target;
+		}
+		// Coins 1-8 go to the foes around the main target; the scythe is saved for it.
 		return pool.get(ThreadLocalRandom.current().nextInt(pool.size()));
 	}
 
@@ -501,6 +501,7 @@ final class Furioso {
 	}
 
 	private void finish() {
+		MangRing.hide(actor());
 		TotalDamage.finish(player);
 		SkillOverlay.hide(player);
 		if (camera != null) {

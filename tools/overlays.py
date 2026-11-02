@@ -59,12 +59,12 @@ def band(points, inner_a, inner_b, seed):
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     # Small skills: a band along the top (thicker to the right) and one along the bottom (thicker to the left).
-    small = band([(0, 0), (W, 0), (W, 95), (0, 22)], (0, 22), (W, 95), 1)
-    small.alpha_composite(band([(0, H), (W, H), (W, H - 22), (0, H - 95)], (0, H - 95), (W, H - 22), 2))
+    small = band([(0, 0), (W, 0), (W, 52), (0, 10)], (0, 10), (W, 52), 1)
+    small.alpha_composite(band([(0, H), (W, H), (W, H - 10), (0, H - 52)], (0, H - 52), (W, H - 10), 2))
     small.save(OUT / "skill_small.png")
     # Big skills: a wedge in the top-right corner and a larger one in the bottom-left.
-    big = band([(int(W * 0.42), 0), (W, 0), (W, int(H * 0.40))], (int(W * 0.42), 0), (W, int(H * 0.40)), 3)
-    big.alpha_composite(band([(0, int(H * 0.50)), (0, H), (int(W * 0.66), H)], (0, int(H * 0.50)), (int(W * 0.66), H), 4))
+    big = band([(int(W * 0.64), 0), (W, 0), (W, int(H * 0.26))], (int(W * 0.64), 0), (W, int(H * 0.26)), 3)
+    big.alpha_composite(band([(0, int(H * 0.68)), (0, H), (int(W * 0.44), H)], (0, int(H * 0.68)), (int(W * 0.44), H), 4))
     big.save(OUT / "skill_big.png")
 
 

@@ -56,6 +56,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Bukkit.getScheduler().runTaskTimer(this, Stagger::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, TotalDamage::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, SkillOverlay::tick, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, MangRing::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, () -> CombatState.prune(CaduceusListener.now()), 1200L, 1200L);
 
 		var command = getCommand("indexprescript");
@@ -69,6 +70,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 	public void onDisable() {
 		Cinematic.endAll();
 		SkillOverlay.hideAll();
+		MangRing.hideAll();
 		IndexMark.clearAll();
 		Stagger.clearAll();
 		if (resourcePack != null) {
@@ -80,6 +82,9 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 	public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 		if (args.length >= 1 && args[0].equalsIgnoreCase("laevatein")) {
 			return setLaevateinStage(sender, args);
+		}
+		if (args.length >= 1 && args[0].equalsIgnoreCase("mang")) {
+			return mang(sender);
 		}
 		if (args.length >= 1 && args[0].equalsIgnoreCase("sanity")) {
 			return sanity(sender, args);
@@ -114,6 +119,22 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		}
 		target.getInventory().addItem(item).values().forEach(left -> target.getWorld().dropItem(target.getLocation(), left));
 		sender.sendMessage(Component.text(Messages.get(sender, "command.given", target.getName(), args[1]), NamedTextColor.GREEN));
+		return true;
+	}
+
+	/** /indexprescript mang: shows [Mang]'s ring on the held weapon for 15 seconds, or hides it. */
+	private boolean mang(CommandSender sender) {
+		if (!(sender instanceof Player player)) {
+			sender.sendMessage(Messages.get(sender, "command.players_only"));
+			return true;
+		}
+		if (MangRing.showing(player)) {
+			MangRing.hide(player);
+			sender.sendMessage(Messages.get(sender, "command.mang_off"));
+		} else {
+			MangRing.show(player, 300);
+			sender.sendMessage(Messages.get(sender, "command.mang_on"));
+		}
 		return true;
 	}
 
@@ -166,7 +187,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 	@Override
 	public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
 		return switch (args.length) {
-			case 1 -> List.of("give", "pack", "laevatein", "sanity");
+			case 1 -> List.of("give", "pack", "laevatein", "sanity", "mang");
 			case 2 -> switch (args[0].toLowerCase(Locale.ROOT)) {
 				case "give" -> List.of("caduceus", "terminal", "laevatein");
 				case "laevatein" -> List.of("0", "1", "2", "3");
