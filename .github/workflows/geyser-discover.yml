@@ -1,4 +1,4 @@
-# Prints Geyser's custom item documentation and mapping reader source. Used while developing.
+# Prints Geyser's custom item mapping reader source. Used while developing.
 name: geyser-discover
 
 on:
@@ -11,17 +11,16 @@ jobs:
   discover:
     runs-on: ubuntu-latest
     steps:
-      - name: Geyser v2 item mapping reader and predicates
+      - name: Geyser v2 item definition readers
         run: |
           set +e
           tree=$(curl -fsS "https://api.github.com/repos/GeyserMC/Geyser/git/trees/master?recursive=1")
-          for p in $(echo "$tree" | jq -r '.tree[].path' | grep -E 'registry/mappings/versions/item/ItemMappingsReader_v2\.java$|registry/mappings/predicate/.*\.java$|registry/mappings/components/.*\.java$|registry/mappings/util/.*\.java$|api/item/custom/v2/CustomItemBedrockOptions\.java$'); do
+          for p in $(echo "$tree" | jq -r '.tree[].path' | grep -E 'registry/mappings/versions/item/.*\.java$|registry/mappings/definition/.*\.java$|api/item/custom/v2/CustomItemBedrockOptions\.java$' | grep -v 'ItemMappingsReader_v'); do
             echo "=================== $p"
-            # Strip the licence header and imports to keep the log short.
             curl -fsS "https://raw.githubusercontent.com/GeyserMC/Geyser/master/$p" | sed '1,/^package /d' | grep -v -E '^import |^$'
           done
           echo "=================== identifier handling"
-          for p in $(echo "$tree" | jq -r '.tree[].path' | grep -E 'CustomItemRegistryPopulator\\.java$|GeyserCustomItemDefinition\\.java$'); do
+          for p in $(echo "$tree" | jq -r '.tree[].path' | grep -E 'CustomItemRegistryPopulator\.java$|GeyserCustomItemDefinition\.java$|GeyserCustomItemBedrockOptions\.java$'); do
             echo "--- $p"
-            curl -fsS "https://raw.githubusercontent.com/GeyserMC/Geyser/master/$p" | grep -n -i -E 'geyser_custom|bedrockIdentifier|identifier\\(|namespace|attachable|display_handheld|handheld|render_offset' | head -60
+            curl -fsS "https://raw.githubusercontent.com/GeyserMC/Geyser/master/$p" | grep -n -i -E 'geyser_custom|bedrockIdentifier|namespace|attachable|handheld|render_offset|icon|allowOffhand|texture' | head -80
           done
