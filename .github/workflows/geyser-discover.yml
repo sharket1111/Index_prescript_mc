@@ -20,3 +20,8 @@ jobs:
             # Strip the licence header and imports to keep the log short.
             curl -fsS "https://raw.githubusercontent.com/GeyserMC/Geyser/master/$p" | sed '1,/^package /d' | grep -v -E '^import |^$'
           done
+          echo "=================== identifier handling"
+          for p in $(echo "$tree" | jq -r '.tree[].path' | grep -E 'CustomItemRegistryPopulator\\.java$|GeyserCustomItemDefinition\\.java$'); do
+            echo "--- $p"
+            curl -fsS "https://raw.githubusercontent.com/GeyserMC/Geyser/master/$p" | grep -n -i -E 'geyser_custom|bedrockIdentifier|identifier\\(|namespace|attachable|display_handheld|handheld|render_offset' | head -60
+          done
