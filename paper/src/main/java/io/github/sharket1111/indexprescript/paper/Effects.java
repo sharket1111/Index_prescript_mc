@@ -340,22 +340,20 @@ final class Effects {
 	}
 
 	/** Blade tilt above the horizontal of a sword held at rest in third person, in degrees. */
-	static final double REST_TILT = 35.0;
+	static final double REST_TILT = 10.0;
 
 	/**
 	 * Where the held weapon's blade is, as a sword sits in third person:
 	 * gripped at the right hand (low at the side, a little forward) and
-	 * pointing forward, tilted {@code tiltDeg} above the horizontal and turned
-	 * {@code yawDeg} to the left. Returns the middle of the blade and its
+	 * pointing forward along the body's facing, tilted {@code tiltDeg} above
+	 * the horizontal and turned {@code yawDeg} to the left. Returns the middle of the blade and its
 	 * direction.
 	 */
 	static Vector[] weaponFrame(LivingEntity holder, double tiltDeg, double yawDeg) {
 		Location at = holder.getLocation();
-		Vector forward = at.getDirection().setY(0);
-		if (forward.lengthSquared() < 1.0E-4) {
-			forward = new Vector(0, 0, 1);
-		}
-		forward.normalize();
+		// The arm turns with the body, not the head (which follows the camera), and ignores pitch.
+		double bodyYaw = Math.toRadians(holder.getBodyYaw());
+		Vector forward = new Vector(-Math.sin(bodyYaw), 0, Math.cos(bodyYaw));
 		Vector right = new Vector(-forward.getZ(), 0, forward.getX());
 		double scale = holder.getHeight() / 1.8;
 		Vector hand = at.toVector().add(new Vector(0, 0.62 * scale, 0)).add(right.clone().multiply(0.36 * scale))
