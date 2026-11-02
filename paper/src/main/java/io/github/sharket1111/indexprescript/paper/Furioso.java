@@ -148,6 +148,7 @@ final class Furioso {
 		PrescriptTracker.blockHermes(player, now + END_TICK + CombatState.TURN_TICKS);
 
 		camera = Cinematic.start(player, anchor.clone().add(0, 2, 0));
+		TotalDamage.start(player);
 		Effects.auraBurst(actor());
 		Effects.shinBurst(actor());
 		if (mang) {
@@ -453,32 +454,33 @@ final class Furioso {
 	}
 
 	/**
-	 * Camera path: circles the target while the wielder dashes through it,
-	 * pulls back and rises as the rings gather, then rushes in for the final
-	 * cut with a shake. Every coin gives a small jolt.
+	 * Camera path: a fixed side view of the target that pulls back as the
+	 * rings gather, then rushes in for the final cut with a shake. Every coin
+	 * gives a small jolt.
 	 */
 	private void shoot() {
 		if (camera == null) {
 			return;
 		}
+		// A fixed side view, square to the line from where the wielder began to the
+		// target; it only moves along its own line of sight (pulling back as the
+		// rings gather, rushing in for the last cut), so its direction never turns.
 		Vector focus = anchor.toVector().add(new Vector(0, 1.0, 0));
-		double start = baseAngle + Math.PI / 2;
-		double windupAngle = start + WINDUP_TICK * 0.05;
+		double side = baseAngle + Math.PI / 2;
 		int finalTick = COIN_TICKS[LAST_COIN];
-		Vector position;
+		double distance;
 		double shake = 0;
 		if (tick < WINDUP_TICK) {
-			position = Cinematic.orbit(focus, start + tick * 0.05, 7.5, 2.2);
+			distance = 8.0;
 		} else if (tick < finalTick) {
-			double t = (tick - WINDUP_TICK) / (double) (finalTick - WINDUP_TICK);
-			position = Cinematic.orbit(focus, windupAngle + t * 0.6, 7.5 + 0.5 * t, 2.2 + 1.8 * t);
+			distance = 8.0 + 1.5 * (tick - WINDUP_TICK) / (double) (finalTick - WINDUP_TICK);
 		} else {
-			double t = Math.min(1.0, (tick - finalTick) / 6.0);
-			position = Cinematic.orbit(focus, windupAngle + 0.6, 8.0 - 4.0 * t, 4.0 - 2.8 * t);
+			distance = 9.5 - 4.5 * Math.min(1.0, (tick - finalTick) / 6.0);
 			if (tick - finalTick < 6) {
 				shake = 0.6;
 			}
 		}
+		Vector position = Cinematic.orbit(focus, side, distance, distance * 0.22);
 		for (int coinTick : COIN_TICKS) {
 			if (coinTick == tick && shake == 0) {
 				shake = 0.25;
@@ -498,6 +500,7 @@ final class Furioso {
 	}
 
 	private void finish() {
+		TotalDamage.finish(player);
 		if (camera != null) {
 			camera.end();
 			camera = null;

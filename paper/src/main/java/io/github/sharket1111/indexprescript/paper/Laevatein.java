@@ -426,6 +426,7 @@ final class Laevatein implements Listener {
 		private final boolean hadAi;
 		private int tick;
 		private Cinematic camera;
+		private double cameraSide = Double.NaN;
 
 		Release(Player player, LivingEntity target, int stage) {
 			this.player = player;
@@ -440,6 +441,7 @@ final class Laevatein implements Listener {
 				target.setAI(false);
 			}
 			camera = Cinematic.start(player, player.getLocation().add(0, 2, 0));
+			TotalDamage.start(player);
 			LaevateinEffects.aura(actor(), 6);
 			LaevateinEffects.auraSound(actor());
 		}
@@ -452,7 +454,7 @@ final class Laevatein implements Listener {
 			};
 		}
 
-		/** Camera path: a slow orbit around the clash, shaking as the casing breaks or the fire bursts. */
+		/** Camera path: a fixed side view of the clash, shaking as the casing breaks or the fire bursts. */
 		private void shoot() {
 			if (camera == null) {
 				return;
@@ -460,10 +462,13 @@ final class Laevatein implements Listener {
 			Vector from = actor().getLocation().toVector();
 			Vector to = target.getLocation().toVector();
 			Vector focus = from.clone().midpoint(to).add(new Vector(0, 1.0, 0));
-			double side = Math.atan2(from.getZ() - to.getZ(), from.getX() - to.getX()) + Math.PI / 2;
+			if (Double.isNaN(cameraSide)) {
+				// Fixed once, square to the line between the two, so the view never turns.
+				cameraSide = Math.atan2(from.getZ() - to.getZ(), from.getX() - to.getX()) + Math.PI / 2;
+			}
 			int sinceRelease = tick - releaseTick();
 			double shake = sinceRelease >= 0 && sinceRelease < 5 ? 0.4 + 0.2 * stage : 0.0;
-			camera.frame(Cinematic.orbit(focus, side + tick * 0.035, 4.5 + 0.5 * stage, 1.8), focus, shake);
+			camera.frame(Cinematic.orbit(focus, cameraSide, 4.5 + 0.5 * stage, 1.8), focus, shake);
 		}
 
 		private int endTick() {
@@ -586,6 +591,7 @@ final class Laevatein implements Listener {
 		}
 
 		private void finish() {
+			TotalDamage.finish(player);
 			if (camera != null) {
 				camera.end();
 				camera = null;

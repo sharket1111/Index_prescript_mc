@@ -1,6 +1,7 @@
 package io.github.sharket1111.indexprescript.paper;
 
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 
 /** Extra damage dealt by the plugin itself, kept out of the Caduceus damage handler. */
 final class Damage {
@@ -18,11 +19,16 @@ final class Damage {
 		if (ignoreHurtCooldown) {
 			target.setNoDamageTicks(0);
 		}
+		double before = target.getHealth() + target.getAbsorptionAmount();
 		dealing = true;
 		try {
 			target.damage(amount, source);
 		} finally {
 			dealing = false;
+		}
+		if (source instanceof Player player) {
+			double after = target.isDead() ? 0.0 : target.getHealth() + target.getAbsorptionAmount();
+			TotalDamage.add(player, before - after);
 		}
 	}
 }

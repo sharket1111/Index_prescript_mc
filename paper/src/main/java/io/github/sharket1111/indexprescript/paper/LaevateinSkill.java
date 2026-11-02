@@ -60,6 +60,7 @@ final class LaevateinSkill {
 	private final boolean hadAi;
 	private final boolean repeat;
 	private Cinematic camera;
+	private double cameraSide = Double.NaN;
 	private ItemDisplay thrown;
 	private Vector thrownDir;
 	private Vector kickFrom;
@@ -108,6 +109,7 @@ final class LaevateinSkill {
 		}
 		if (kind == Kind.STAB || kind == Kind.EXECUTION) {
 			camera = Cinematic.start(player, player.getLocation().add(0, 2, 0));
+			TotalDamage.start(player);
 		}
 		// From release 2 on, the blade's heat burns the wielder too: 1 s, then 2 s at full release.
 		// A filmed wielder is a spectator, which cannot burn, so the burn waits until the camera ends.
@@ -578,7 +580,7 @@ final class LaevateinSkill {
 		LaevateinEffects.aura(actor(), 3);
 	}
 
-	/** Stab and Summary Execution are filmed from a separate camera orbiting the clash. */
+	/** Stab and Summary Execution are filmed from a separate camera fixed to one side of the clash. */
 	private void shoot() {
 		if (camera == null) {
 			return;
@@ -586,9 +588,12 @@ final class LaevateinSkill {
 		Vector from = actor().getLocation().toVector();
 		Vector to = target.getLocation().toVector();
 		Vector focus = from.clone().midpoint(to).add(new Vector(0, 1.0, 0));
-		double side = Math.atan2(from.getZ() - to.getZ(), from.getX() - to.getX()) + Math.PI / 2;
+		if (Double.isNaN(cameraSide)) {
+			// Fixed once, square to the line between the two, so the view never turns.
+			cameraSide = Math.atan2(from.getZ() - to.getZ(), from.getX() - to.getX()) + Math.PI / 2;
+		}
 		boolean impact = kind == Kind.STAB ? tick >= 26 && tick < 30 : executionImpact();
-		camera.frame(Cinematic.orbit(focus, side + tick * 0.04, 5.0, 1.8), focus, impact ? 0.6 : 0.0);
+		camera.frame(Cinematic.orbit(focus, cameraSide, 5.0, 1.8), focus, impact ? 0.6 : 0.0);
 	}
 
 	private boolean executionImpact() {
@@ -623,6 +628,9 @@ final class LaevateinSkill {
 	}
 
 	private void finish() {
+		if (kind == Kind.STAB || kind == Kind.EXECUTION) {
+			TotalDamage.finish(player);
+		}
 		removeBlade();
 		if (actor() == player && player.isOnline()) {
 			player.setFallDistance(0.0F);

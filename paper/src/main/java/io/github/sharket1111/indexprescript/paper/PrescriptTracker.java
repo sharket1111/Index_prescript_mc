@@ -126,7 +126,9 @@ final class PrescriptTracker implements Listener {
 			if (tracker.prescript == null) {
 				tracker.issue(player, now);
 			}
-			if (tracker.revealing(now)) {
+			if (TotalDamage.showing(player)) {
+				// The TOTAL counter has the line during big skills.
+			} else if (tracker.revealing(now)) {
 				player.sendActionBar(tracker.revealFrame(now));
 			} else if (now % OVERLAY_INTERVAL == 0) {
 				player.sendActionBar(tracker.line(player));
