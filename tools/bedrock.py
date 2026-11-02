@@ -176,7 +176,8 @@ def write(path, data):
 
 
 def main():
-    for folder in ("attachables", "models", "animations", "render_controllers", "textures"):
+    # Only what this script generates; textures/ui and texts are kept by hand.
+    for folder in ("attachables", "models", "animations", "render_controllers", "textures/items", "textures/models"):
         shutil.rmtree(OUT / folder, ignore_errors=True)
     item_textures = {}
     all_animations = {}

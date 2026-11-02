@@ -1,0 +1,31 @@
+{
+	"providers": [
+		{
+			"type": "bitmap",
+			"file": "index_prescript:font/stagger_1.png",
+			"ascent": 16,
+			"height": 32,
+			"chars": [
+				"\ue001"
+			]
+		},
+		{
+			"type": "bitmap",
+			"file": "index_prescript:font/stagger_2.png",
+			"ascent": 16,
+			"height": 32,
+			"chars": [
+				"\ue002"
+			]
+		},
+		{
+			"type": "bitmap",
+			"file": "index_prescript:font/stagger_3.png",
+			"ascent": 16,
+			"height": 32,
+			"chars": [
+				"\ue003"
+			]
+		}
+	]
+}

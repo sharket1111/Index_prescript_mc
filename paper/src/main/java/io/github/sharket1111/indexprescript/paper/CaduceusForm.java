@@ -144,8 +144,7 @@ enum CaduceusForm {
 		float staggerDamage = this == HAMMER ? STAGGER_PER_HIT : STAGGER_PER_OTHER_HIT;
 		boolean staggered = other.addStagger(staggerDamage, (float) Math.max(10.0, maxHealth(target) * 0.5), now);
 		if (staggered) {
-			target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, CombatState.TURN_TICKS, 6));
-			target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, CombatState.TURN_TICKS, 1));
+			Stagger.apply(target, now);
 			Effects.staggered(target);
 		}
 		switch (this) {
