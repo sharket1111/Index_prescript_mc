@@ -597,7 +597,6 @@ final class Furioso {
 		}
 		MangRing.hide(actor());
 		TotalDamage.finish(player);
-		SkillOverlay.hide(player);
 		if (camera != null) {
 			camera.end();
 			camera = null;

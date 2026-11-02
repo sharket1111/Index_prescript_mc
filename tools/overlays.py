@@ -3,7 +3,9 @@
 skill screens: slanted black bands at the top and bottom for small skills, big
 black wedges in the bottom-left and top-right corners for big skills, each
 edged with a jagged, glowing yellow line. The texture is stretched over the
-whole screen. Run from the repository root: python3 tools/overlays.py
+whole screen. Each comes in slide frames, from fully on screen to
+fully off it, for sliding in and out. Run from the repository root:
+python3 tools/overlays.py
 """
 import random
 from pathlib import Path
@@ -56,16 +58,41 @@ def band(points, inner_a, inner_b, seed):
     return image
 
 
+# Slide frames: 0 is fully on screen, the last is fully off it.
+OFFSETS = [0.0, 0.12, 0.3, 0.55, 0.8, 1.1]
+
+
+def moved(points, dx, dy):
+    return [(x + dx, y + dy) for x, y in points]
+
+
+def frame(parts, t):
+    """Draws the bands, each pushed out along its own direction by t of its reach."""
+    image = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    for polygon, inner_a, inner_b, seed, (dx, dy) in parts:
+        ox, oy = dx * t, dy * t
+        image.alpha_composite(band(moved(polygon, ox, oy), (inner_a[0] + ox, inner_a[1] + oy),
+                                   (inner_b[0] + ox, inner_b[1] + oy), seed))
+    return image
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
+    for old in OUT.glob("skill_*.png"):
+        old.unlink()
     # Small skills: a band along the top (thicker to the right) and one along the bottom (thicker to the left).
-    small = band([(0, 0), (W, 0), (W, 52), (0, 10)], (0, 10), (W, 52), 1)
-    small.alpha_composite(band([(0, H), (W, H), (W, H - 10), (0, H - 52)], (0, H - 52), (W, H - 10), 2))
-    small.save(OUT / "skill_small.png")
+    small = [
+        ([(0, 0), (W, 0), (W, 52), (0, 10)], (0, 10), (W, 52), 1, (0, -60)),
+        ([(0, H), (W, H), (W, H - 10), (0, H - 52)], (0, H - 52), (W, H - 10), 2, (0, 60)),
+    ]
     # Big skills: a wedge in the top-right corner and a larger one in the bottom-left.
-    big = band([(int(W * 0.64), 0), (W, 0), (W, int(H * 0.26))], (int(W * 0.64), 0), (W, int(H * 0.26)), 3)
-    big.alpha_composite(band([(0, int(H * 0.68)), (0, H), (int(W * 0.44), H)], (0, int(H * 0.68)), (int(W * 0.44), H), 4))
-    big.save(OUT / "skill_big.png")
+    big = [
+        ([(int(W * 0.64), 0), (W, 0), (W, int(H * 0.26))], (int(W * 0.64), 0), (W, int(H * 0.26)), 3, (300, -130)),
+        ([(0, int(H * 0.68)), (0, H), (int(W * 0.44), H)], (0, int(H * 0.68)), (int(W * 0.44), H), 4, (-370, 160)),
+    ]
+    for k, t in enumerate(OFFSETS):
+        frame(small, t).save(OUT / f"skill_small_{k}.png")
+        frame(big, t).save(OUT / f"skill_big_{k}.png")
 
 
 if __name__ == "__main__":

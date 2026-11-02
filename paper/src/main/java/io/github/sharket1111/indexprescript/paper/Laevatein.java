@@ -596,7 +596,6 @@ final class Laevatein implements Listener {
 
 		private void finish() {
 			TotalDamage.finish(player);
-			SkillOverlay.hide(player);
 			if (camera != null) {
 				camera.end();
 				camera = null;

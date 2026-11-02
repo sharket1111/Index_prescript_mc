@@ -634,9 +634,11 @@ final class LaevateinSkill {
 
 	private void finish() {
 		if (kind == Kind.STAB || kind == Kind.EXECUTION) {
+			// The big skill screen leaves together with the TOTAL counter.
 			TotalDamage.finish(player);
+		} else {
+			SkillOverlay.hide(player);
 		}
-		SkillOverlay.hide(player);
 		removeBlade();
 		if (actor() == player && player.isOnline()) {
 			player.setFallDistance(0.0F);
