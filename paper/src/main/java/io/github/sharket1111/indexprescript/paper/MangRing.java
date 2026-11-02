@@ -30,6 +30,7 @@ final class MangRing {
 	private static final float SCALE = 0.35F;
 	private static final double SPIN_PER_TICK = 0.12;
 	static final int MAX_RINGS = 6;
+	private static final int SWING_TICKS = 6;
 	/** Distance between neighbouring rings along the weapon, in blocks. */
 	private static final double SPACING = 0.15;
 	private static final Map<UUID, Ring> RINGS = new ConcurrentHashMap<>();
@@ -39,6 +40,7 @@ final class MangRing {
 		final List<ItemDisplay> displays;
 		final long until;
 		int age;
+		int swingAge = -100;
 
 		Ring(LivingEntity holder, List<ItemDisplay> displays, long until) {
 			this.holder = holder;
@@ -88,6 +90,41 @@ final class MangRing {
 		}
 	}
 
+	/** The holder swung: the rings follow the blade through the swing. */
+	static void swing(LivingEntity holder) {
+		Ring ring = RINGS.get(holder.getUniqueId());
+		if (ring != null) {
+			ring.swingAge = ring.age;
+		}
+	}
+
+	/**
+	 * The blade through a swing (vanilla's lasts 6 ticks): raised up and to the
+	 * right, chopped down across to the left, then back to rest.
+	 */
+	private static Vector[] swingFrame(Ring ring) {
+		double t = (ring.age - ring.swingAge) / (double) SWING_TICKS;
+		if (t < 0 || t >= 1) {
+			return Effects.weaponFrame(ring.holder);
+		}
+		double tilt;
+		double yaw;
+		if (t < 0.3) {
+			double u = t / 0.3;
+			tilt = Effects.REST_TILT + (100 - Effects.REST_TILT) * u;
+			yaw = -30 * u;
+		} else if (t < 0.7) {
+			double u = (t - 0.3) / 0.4;
+			tilt = 100 - 140 * u;
+			yaw = -30 + 70 * u;
+		} else {
+			double u = (t - 0.7) / 0.3;
+			tilt = -40 + (Effects.REST_TILT + 40) * u;
+			yaw = 40 * (1 - u);
+		}
+		return Effects.weaponFrame(ring.holder, tilt, yaw);
+	}
+
 	static boolean showing(LivingEntity holder) {
 		return RINGS.containsKey(holder.getUniqueId());
 	}
@@ -104,7 +141,7 @@ final class MangRing {
 				it.remove();
 				continue;
 			}
-			Vector[] frame = Effects.weaponFrame(ring.holder);
+			Vector[] frame = swingFrame(ring);
 			Vector axis = frame[1];
 			Vector3f axisF = new Vector3f((float) axis.getX(), (float) axis.getY(), (float) axis.getZ());
 			int count = ring.displays.size();
@@ -120,7 +157,7 @@ final class MangRing {
 				display.setTransformation(new Transformation(new Vector3f(), turn, new Vector3f(SCALE, SCALE, SCALE), new Quaternionf()));
 			}
 			if (ring.age % 2 == 0) {
-				Effects.mang(ring.holder, ring.age);
+				Effects.mang(ring.holder, ring.age, frame);
 			}
 			ring.age++;
 		}

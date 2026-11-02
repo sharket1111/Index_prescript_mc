@@ -17,16 +17,18 @@ import net.kyori.adventure.text.format.TextDecoration;
  * The TOTAL damage counter shown during big skills (Furioso-Replica,
  * Laevatein's releases, Stab and Summary Execution), as in the original: it
  * counts the damage the skill actually deals and stays a moment after it
- * ends. It sits low on the screen, pushed left of centre with a negative
- * space from the resource pack (the action bar cannot be anchored to the
- * corner itself); Bedrock players get it centred. The prescript line waits
+ * ends. It sits in the bottom-left corner: the resource pack's "total" font
+ * draws it larger, drops it below the action bar line and pushes it left
+ * with a negative space (the action bar cannot be anchored to the corner
+ * itself); Bedrock players get it centred. The prescript line waits
  * while it shows.
  */
 final class TotalDamage {
 	private static final int LINGER_TICKS = 50;
 	private static final int REFRESH_TICKS = 10;
 	private static final String FLOODGATE_PREFIX = "00000000-0000-0000-";
-	private static final Component SHIFT_LEFT = Component.text("").font(Key.key(Items.NAMESPACE, "total"));
+	private static final Key FONT = Key.key(Items.NAMESPACE, "total");
+	private static final Component SHIFT_LEFT = Component.text("\ue100").font(FONT);
 	private static final Map<UUID, Tally> TALLIES = new ConcurrentHashMap<>();
 
 	private static final class Tally {
@@ -92,6 +94,7 @@ final class TotalDamage {
 		Component text = Component.text("TOTAL ", NamedTextColor.GRAY).decorate(TextDecoration.ITALIC)
 				.append(Component.text(total, NamedTextColor.GOLD).decorate(TextDecoration.BOLD).decoration(TextDecoration.ITALIC, false));
 		boolean bedrock = player.getUniqueId().toString().startsWith(FLOODGATE_PREFIX);
-		return bedrock ? text : Component.empty().append(SHIFT_LEFT).append(text);
+		// Java: the pack's "total" font draws it larger and lower, and pushes it left.
+		return bedrock ? text : Component.empty().append(SHIFT_LEFT).append(text.font(FONT));
 	}
 }

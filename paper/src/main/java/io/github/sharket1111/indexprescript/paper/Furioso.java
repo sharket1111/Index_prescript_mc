@@ -356,6 +356,7 @@ final class Furioso {
 			camera.syncHeld();
 		}
 		actor().swingMainHand();
+		MangRing.swing(actor());
 
 		CombatState self = CombatState.of(player);
 		CombatState other = CombatState.of(victim);

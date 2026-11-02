@@ -339,8 +339,21 @@ final class Effects {
 		sound(holder.getLocation(), Sound.BLOCK_BEACON_POWER_SELECT, 0.8F, 1.4F);
 	}
 
-	/** Where the held weapon's ring sits: along the blade, held up and forward from the right hand. */
 	static Vector[] weaponFrame(LivingEntity holder) {
+		return weaponFrame(holder, REST_TILT, 0.0);
+	}
+
+	/** Blade tilt above the horizontal of a sword held at rest in third person, in degrees. */
+	static final double REST_TILT = 35.0;
+
+	/**
+	 * Where the held weapon's blade is, as a sword sits in third person:
+	 * gripped at the right hand (low at the side, a little forward) and
+	 * pointing forward, tilted {@code tiltDeg} above the horizontal and turned
+	 * {@code yawDeg} to the left. Returns the middle of the blade and its
+	 * direction.
+	 */
+	static Vector[] weaponFrame(LivingEntity holder, double tiltDeg, double yawDeg) {
 		Location at = holder.getLocation();
 		Vector forward = at.getDirection().setY(0);
 		if (forward.lengthSquared() < 1.0E-4) {
@@ -348,14 +361,18 @@ final class Effects {
 		}
 		forward.normalize();
 		Vector right = new Vector(-forward.getZ(), 0, forward.getX());
-		Vector hand = at.toVector().add(new Vector(0, holder.getHeight() * 0.5, 0)).add(right.clone().multiply(0.38)).add(forward.clone().multiply(0.25));
-		Vector axis = forward.clone().add(new Vector(0, 1, 0)).normalize();
-		return new Vector[] {hand.add(axis.clone().multiply(0.75)), axis};
+		double scale = holder.getHeight() / 1.8;
+		Vector hand = at.toVector().add(new Vector(0, 0.62 * scale, 0)).add(right.clone().multiply(0.36 * scale))
+				.add(forward.clone().multiply(0.12 * scale));
+		double yaw = Math.toRadians(yawDeg);
+		Vector heading = forward.clone().multiply(Math.cos(yaw)).subtract(right.clone().multiply(Math.sin(yaw)));
+		double tilt = Math.toRadians(tiltDeg);
+		Vector axis = heading.multiply(Math.cos(tilt)).add(new Vector(0, Math.sin(tilt), 0)).normalize();
+		return new Vector[] {hand.add(axis.clone().multiply(0.45 * scale)), axis};
 	}
 
 	/** [Mang]: a glowing golden ring wound round the weapon, slowly turning; call every tick. */
-	static void mang(LivingEntity holder, int tick) {
-		Vector[] frame = weaponFrame(holder);
+	static void mang(LivingEntity holder, int tick, Vector[] frame) {
 		Vector c = frame[0];
 		Vector axis = frame[1];
 		Vector a = axis.clone().crossProduct(new Vector(0, 1, 0));

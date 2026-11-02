@@ -13,6 +13,8 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.PlayerAnimationEvent;
+import org.bukkit.event.player.PlayerAnimationType;
 import org.bukkit.inventory.ItemStack;
 
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
@@ -107,6 +109,14 @@ final class CaduceusListener implements Listener {
 		double marked = IndexMark.multiplier(player, event.getEntity());
 		event.setDamage(event.getDamage() * hit.damage() / CaduceusForm.ROD_DAMAGE * marked);
 		PENDING.put(player.getUniqueId(), new Pending(form, hit.crit()));
+	}
+
+	/** Mang's rings, if shown, follow the player's swings. */
+	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+	public void onSwing(PlayerAnimationEvent event) {
+		if (event.getAnimationType() == PlayerAnimationType.ARM_SWING) {
+			MangRing.swing(event.getPlayer());
+		}
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
