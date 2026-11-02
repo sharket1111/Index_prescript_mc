@@ -1,6 +1,9 @@
 package io.github.sharket1111.trade;
 
+import java.util.function.Predicate;
+
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
@@ -11,9 +14,11 @@ import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -96,9 +101,56 @@ abstract class Menu implements InventoryHolder {
 		player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 0.8F, 1.2F);
 	}
 
+	/** Gives trade diamonds in full stacks, dropping what does not fit. */
+	static void giveTradeDiamonds(Player to, int count) {
+		int max = Material.DIAMOND.getMaxStackSize();
+		for (int given = 0; given < count; given += max) {
+			to.getInventory().addItem(TradeItems.tradeDiamond(Math.min(max, count - given))).values()
+					.forEach(rest -> to.getWorld().dropItem(to.getLocation(), rest));
+		}
+	}
+
 	/** Gives items, dropping what does not fit at the player's feet. */
 	final void give(ItemStack stack) {
 		player.getInventory().addItem(stack).values().forEach(rest -> player.getWorld().dropItem(player.getLocation(), rest));
+	}
+
+	/** Removes up to {@code wanted} matching items from the inventory's storage; returns how many. */
+	final int take(Predicate<ItemStack> matches, int wanted) {
+		PlayerInventory inv = player.getInventory();
+		ItemStack[] contents = inv.getStorageContents();
+		int left = wanted;
+		for (int slot = 0; slot < contents.length && left > 0; slot++) {
+			ItemStack stack = contents[slot];
+			if (stack == null || !matches.test(stack)) {
+				continue;
+			}
+			int taken = Math.min(left, stack.getAmount());
+			stack.setAmount(stack.getAmount() - taken);
+			inv.setItem(slot, stack.getAmount() > 0 ? stack : null);
+			left -= taken;
+		}
+		return wanted - left;
+	}
+
+	final void giveStacks(ItemStack template, int count) {
+		int max = template.getMaxStackSize();
+		for (int given = 0; given < count; given += max) {
+			ItemStack stack = template.clone();
+			stack.setAmount(Math.min(max, count - given));
+			give(stack);
+		}
+	}
+
+	/** How many matching items the player carries. */
+	final int count(Predicate<ItemStack> matches) {
+		int count = 0;
+		for (ItemStack stack : player.getInventory().getStorageContents()) {
+			if (stack != null && matches.test(stack)) {
+				count += stack.getAmount();
+			}
+		}
+		return count;
 	}
 
 	static final class Events implements Listener {
@@ -114,6 +166,12 @@ abstract class Menu implements InventoryHolder {
 			} else if (event.getClickedInventory() != null) {
 				menu.clickOwn(event);
 			}
+		}
+
+		/** Hands over money from sales made while the seller was away. */
+		@EventHandler
+		public void onJoin(PlayerJoinEvent event) {
+			Market.payOut(event.getPlayer());
 		}
 
 		@EventHandler(priority = EventPriority.HIGHEST)

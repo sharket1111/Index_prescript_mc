@@ -3,13 +3,11 @@ package io.github.sharket1111.trade;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Predicate;
 
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
 
 import net.kyori.adventure.text.format.NamedTextColor;
 
@@ -115,32 +113,5 @@ final class ExchangeMenu extends Menu {
 			tell(what + " " + count + "개를 " + done, NamedTextColor.AQUA);
 		}
 		successSound();
-	}
-
-	/** Removes up to {@code wanted} matching items from the inventory's storage; returns how many. */
-	private int take(Predicate<ItemStack> matches, int wanted) {
-		PlayerInventory inv = player.getInventory();
-		ItemStack[] contents = inv.getStorageContents();
-		int left = wanted;
-		for (int slot = 0; slot < contents.length && left > 0; slot++) {
-			ItemStack stack = contents[slot];
-			if (stack == null || !matches.test(stack)) {
-				continue;
-			}
-			int taken = Math.min(left, stack.getAmount());
-			stack.setAmount(stack.getAmount() - taken);
-			inv.setItem(slot, stack.getAmount() > 0 ? stack : null);
-			left -= taken;
-		}
-		return wanted - left;
-	}
-
-	private void giveStacks(ItemStack template, int count) {
-		int max = template.getMaxStackSize();
-		for (int given = 0; given < count; given += max) {
-			ItemStack stack = template.clone();
-			stack.setAmount(Math.min(max, count - given));
-			give(stack);
-		}
 	}
 }

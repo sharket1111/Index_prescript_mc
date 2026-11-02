@@ -11,10 +11,15 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
 
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 /** All listings, saved to listings.yml after every change. */
 final class Market {
@@ -25,6 +30,8 @@ final class Market {
 	private static Plugin plugin;
 	private static File file;
 	private static final Map<UUID, Listing> LISTINGS = new LinkedHashMap<>();
+	/** Trade diamonds owed to sellers who were away when their goods sold. */
+	private static final Map<UUID, Integer> EARNINGS = new LinkedHashMap<>();
 
 	private Market() {
 	}
@@ -33,10 +40,17 @@ final class Market {
 		plugin = owner;
 		file = new File(owner.getDataFolder(), "listings.yml");
 		LISTINGS.clear();
+		EARNINGS.clear();
 		if (!file.exists()) {
 			return;
 		}
 		YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+		ConfigurationSection earnings = yaml.getConfigurationSection("earnings");
+		if (earnings != null) {
+			for (String key : earnings.getKeys(false)) {
+				EARNINGS.put(UUID.fromString(key), earnings.getInt(key));
+			}
+		}
 		ConfigurationSection root = yaml.getConfigurationSection("listings");
 		if (root == null) {
 			return;
@@ -64,6 +78,7 @@ final class Market {
 			yaml.set(path + ".created", listing.createdAt);
 			yaml.set(path + ".item", Base64.getEncoder().encodeToString(listing.item.serializeAsBytes()));
 		}
+		EARNINGS.forEach((seller, amount) -> yaml.set("earnings." + seller, amount));
 		try {
 			file.getParentFile().mkdirs();
 			yaml.save(file);
@@ -81,6 +96,56 @@ final class Market {
 		}
 		mine.sort(Comparator.comparingLong(l -> l.createdAt));
 		return mine;
+	}
+
+	/** Sellers with at least one listing, other than {@code viewer}, by name. */
+	static List<UUID> sellers(UUID viewer) {
+		List<UUID> sellers = new ArrayList<>();
+		for (Listing listing : LISTINGS.values()) {
+			if (!listing.seller.equals(viewer) && !sellers.contains(listing.seller)) {
+				sellers.add(listing.seller);
+			}
+		}
+		sellers.sort(Comparator.comparing(id -> name(id).toLowerCase(java.util.Locale.ROOT)));
+		return sellers;
+	}
+
+	/** A seller's current name, or the one saved with their listings. */
+	static String name(UUID seller) {
+		String name = Bukkit.getOfflinePlayer(seller).getName();
+		if (name != null) {
+			return name;
+		}
+		for (Listing listing : LISTINGS.values()) {
+			if (listing.seller.equals(seller)) {
+				return listing.sellerName;
+			}
+		}
+		return "?";
+	}
+
+	/** Pays a seller: straight into their inventory if online, otherwise on their next join. */
+	static void pay(UUID seller, int amount, Component what, String buyer) {
+		Player online = Bukkit.getPlayer(seller);
+		if (online != null) {
+			Menu.giveTradeDiamonds(online, amount);
+			online.sendMessage(Component.text(buyer + "님이 ").append(what)
+					.append(Component.text("을(를) 사서 거래 전용 다이아 " + amount + "개를 받았습니다.")).color(NamedTextColor.GREEN));
+		} else {
+			EARNINGS.merge(seller, amount, Integer::sum);
+		}
+		save();
+	}
+
+	/** Hands over what a seller earned while away. */
+	static void payOut(Player seller) {
+		Integer owed = EARNINGS.remove(seller.getUniqueId());
+		if (owed == null || owed <= 0) {
+			return;
+		}
+		save();
+		Menu.giveTradeDiamonds(seller, owed);
+		seller.sendMessage(Component.text("접속하지 않은 동안 물품이 팔려 거래 전용 다이아 " + owed + "개를 받았습니다.", NamedTextColor.GREEN));
 	}
 
 	static Listing get(UUID id) {
