@@ -55,6 +55,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Bukkit.getScheduler().runTaskTimer(this, StatusIcons::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Stagger::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, TotalDamage::tick, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, SkillOverlay::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, () -> CombatState.prune(CaduceusListener.now()), 1200L, 1200L);
 
 		var command = getCommand("indexprescript");
@@ -67,6 +68,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 	@Override
 	public void onDisable() {
 		Cinematic.endAll();
+		SkillOverlay.hideAll();
 		IndexMark.clearAll();
 		Stagger.clearAll();
 		if (resourcePack != null) {

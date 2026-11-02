@@ -149,6 +149,7 @@ final class Furioso {
 
 		camera = Cinematic.start(player, anchor.clone().add(0, 2, 0));
 		TotalDamage.start(player);
+		SkillOverlay.show(player, SkillOverlay.Size.BIG);
 		Effects.auraBurst(actor());
 		Effects.shinBurst(actor());
 		if (mang) {
@@ -501,6 +502,7 @@ final class Furioso {
 
 	private void finish() {
 		TotalDamage.finish(player);
+		SkillOverlay.hide(player);
 		if (camera != null) {
 			camera.end();
 			camera = null;

@@ -442,6 +442,7 @@ final class Laevatein implements Listener {
 			}
 			camera = Cinematic.start(player, player.getLocation().add(0, 2, 0));
 			TotalDamage.start(player);
+			SkillOverlay.show(player, SkillOverlay.Size.BIG);
 			LaevateinEffects.aura(actor(), 6);
 			LaevateinEffects.auraSound(actor());
 		}
@@ -592,6 +593,7 @@ final class Laevatein implements Listener {
 
 		private void finish() {
 			TotalDamage.finish(player);
+			SkillOverlay.hide(player);
 			if (camera != null) {
 				camera.end();
 				camera = null;

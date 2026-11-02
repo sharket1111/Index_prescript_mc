@@ -111,6 +111,8 @@ final class LaevateinSkill {
 			camera = Cinematic.start(player, player.getLocation().add(0, 2, 0));
 			TotalDamage.start(player);
 		}
+		boolean big = kind == Kind.STAB || kind == Kind.EXECUTION;
+		SkillOverlay.show(player, big ? SkillOverlay.Size.BIG : SkillOverlay.Size.SMALL);
 		// From release 2 on, the blade's heat burns the wielder too: 1 s, then 2 s at full release.
 		// A filmed wielder is a spectator, which cannot burn, so the burn waits until the camera ends.
 		selfBurn = stage >= 2 ? (stage >= 3 ? 40 : 20) : 0;
@@ -631,6 +633,7 @@ final class LaevateinSkill {
 		if (kind == Kind.STAB || kind == Kind.EXECUTION) {
 			TotalDamage.finish(player);
 		}
+		SkillOverlay.hide(player);
 		removeBlade();
 		if (actor() == player && player.isOnline()) {
 			player.setFallDistance(0.0F);
