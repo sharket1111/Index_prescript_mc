@@ -30,14 +30,14 @@ import net.kyori.adventure.text.Component;
  * Stagger, in three stages: staggered again while still staggered, a foe goes
  * from Stagger to Stagger+ to Stagger++. Each stage lasts a turn and binds it
  * (Slowness, which the resource pack shows as "Stagger" in the effect list) at
- * level I, II and IV, and with Weakness X it cannot attack at all: its melee
+ * level IV, VI and VIII, and with Weakness X it cannot attack at all: its melee
  * hits and projectiles do no damage. The stage's picture floats over the
  * foe's body, seen through it; Bedrock players, who cannot show it, see
  * coloured sparks instead.
  */
 final class Stagger implements Listener {
 	private static final int MAX_STAGE = 3;
-	private static final int[] SLOWNESS_AMPLIFIER = {0, 1, 3};
+	private static final int[] SLOWNESS_AMPLIFIER = {3, 5, 7};
 	/** Weakness X: a staggered foe cannot hurt anyone (its hits are also cancelled below). */
 	private static final int WEAKNESS_AMPLIFIER = 9;
 	private static final Key FONT = Key.key(Items.NAMESPACE, "stagger");
