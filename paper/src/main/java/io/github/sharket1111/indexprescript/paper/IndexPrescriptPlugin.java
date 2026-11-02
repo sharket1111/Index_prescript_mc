@@ -84,7 +84,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			return setLaevateinStage(sender, args);
 		}
 		if (args.length >= 1 && args[0].equalsIgnoreCase("mang")) {
-			return mang(sender);
+			return mang(sender, args);
 		}
 		if (args.length >= 1 && args[0].equalsIgnoreCase("sanity")) {
 			return sanity(sender, args);
@@ -122,19 +122,34 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		return true;
 	}
 
-	/** /indexprescript mang: shows [Mang]'s ring on the held weapon for 15 seconds, or hides it. */
-	private boolean mang(CommandSender sender) {
+	/**
+	 * /indexprescript mang [1-6]: shows that many of [Mang]'s rings (one by
+	 * default) on the held weapon for 15 seconds; without a number it hides
+	 * rings already shown.
+	 */
+	private boolean mang(CommandSender sender, String[] args) {
 		if (!(sender instanceof Player player)) {
 			sender.sendMessage(Messages.get(sender, "command.players_only"));
 			return true;
 		}
-		if (MangRing.showing(player)) {
+		int count = 1;
+		if (args.length >= 2) {
+			try {
+				count = Integer.parseInt(args[1]);
+			} catch (NumberFormatException e) {
+				count = -1;
+			}
+			if (count < 1 || count > MangRing.MAX_RINGS) {
+				sender.sendMessage(Messages.get(sender, "command.mang_usage"));
+				return true;
+			}
+		} else if (MangRing.showing(player)) {
 			MangRing.hide(player);
 			sender.sendMessage(Messages.get(sender, "command.mang_off"));
-		} else {
-			MangRing.show(player, 300);
-			sender.sendMessage(Messages.get(sender, "command.mang_on"));
+			return true;
 		}
+		MangRing.show(player, 300, count);
+		sender.sendMessage(Messages.get(sender, "command.mang_on", count));
 		return true;
 	}
 
@@ -191,6 +206,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			case 2 -> switch (args[0].toLowerCase(Locale.ROOT)) {
 				case "give" -> List.of("caduceus", "terminal", "laevatein");
 				case "laevatein" -> List.of("0", "1", "2", "3");
+				case "mang" -> List.of("1", "2", "3", "4", "5", "6");
 				default -> List.of();
 			};
 			case 3 -> null; // online player names

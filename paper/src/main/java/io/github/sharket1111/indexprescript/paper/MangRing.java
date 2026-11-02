@@ -1,6 +1,8 @@
 package io.github.sharket1111.indexprescript.paper;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -20,53 +22,69 @@ import org.joml.Vector3f;
 
 /**
  * [Mang]'s glowing golden ring as a 3D model (tools/mang_ring.py), wound round
- * the held weapon and slowly turning about it. Golden motes go with it, which
+ * the held weapon and slowly turning about it. Up to six can be wound at once,
+ * spaced along the blade and turning in alternate directions. Golden motes go with it, which
  * Bedrock players (who cannot see the model) see as well.
  */
 final class MangRing {
 	private static final float SCALE = 1.35F;
 	private static final double SPIN_PER_TICK = 0.12;
+	static final int MAX_RINGS = 6;
+	/** Distance between neighbouring rings along the weapon, in blocks. */
+	private static final double SPACING = 0.32;
 	private static final Map<UUID, Ring> RINGS = new ConcurrentHashMap<>();
 
 	private static final class Ring {
 		final LivingEntity holder;
-		final ItemDisplay display;
+		final List<ItemDisplay> displays;
 		final long until;
 		int age;
 
-		Ring(LivingEntity holder, ItemDisplay display, long until) {
+		Ring(LivingEntity holder, List<ItemDisplay> displays, long until) {
 			this.holder = holder;
-			this.display = display;
+			this.displays = displays;
 			this.until = until;
+		}
+
+		void remove() {
+			displays.forEach(ItemDisplay::remove);
 		}
 	}
 
 	private MangRing() {
 	}
 
-	/** Shows the ring on {@code holder}'s weapon for {@code ticks} ticks, or until hidden if 0. */
+	/** Shows one ring on {@code holder}'s weapon for {@code ticks} ticks, or until hidden if 0. */
 	static void show(LivingEntity holder, int ticks) {
+		show(holder, ticks, 1);
+	}
+
+	/** Shows {@code count} rings (1-6) on {@code holder}'s weapon for {@code ticks} ticks, or until hidden if 0. */
+	static void show(LivingEntity holder, int ticks, int count) {
 		hide(holder);
 		ItemStack model = ItemStack.of(Material.PAPER);
 		model.editMeta(meta -> meta.setItemModel(new NamespacedKey(Items.NAMESPACE, "mang_ring")));
 		Vector center = Effects.weaponFrame(holder)[0];
-		ItemDisplay display = holder.getWorld().spawn(center.toLocation(holder.getWorld()), ItemDisplay.class, d -> {
-			d.setPersistent(false);
-			d.setItemStack(model);
-			d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
-			d.setBrightness(new Display.Brightness(15, 15));
-			d.setTeleportDuration(1);
-			d.setInterpolationDuration(1);
-		});
+		List<ItemDisplay> displays = new ArrayList<>();
+		for (int i = 0; i < Math.max(1, Math.min(MAX_RINGS, count)); i++) {
+			displays.add(holder.getWorld().spawn(center.toLocation(holder.getWorld()), ItemDisplay.class, d -> {
+				d.setPersistent(false);
+				d.setItemStack(model);
+				d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
+				d.setBrightness(new Display.Brightness(15, 15));
+				d.setTeleportDuration(1);
+				d.setInterpolationDuration(1);
+			}));
+		}
 		long until = ticks > 0 ? CaduceusListener.now() + ticks : Long.MAX_VALUE;
-		RINGS.put(holder.getUniqueId(), new Ring(holder, display, until));
+		RINGS.put(holder.getUniqueId(), new Ring(holder, displays, until));
 		Effects.mangForm(holder);
 	}
 
 	static void hide(LivingEntity holder) {
 		Ring ring = RINGS.remove(holder.getUniqueId());
 		if (ring != null) {
-			ring.display.remove();
+			ring.remove();
 		}
 	}
 
@@ -80,20 +98,27 @@ final class MangRing {
 		Iterator<Ring> it = RINGS.values().iterator();
 		while (it.hasNext()) {
 			Ring ring = it.next();
-			if (now >= ring.until || !ring.holder.isValid() || ring.holder.isDead() || !ring.display.isValid()) {
-				ring.display.remove();
+			if (now >= ring.until || !ring.holder.isValid() || ring.holder.isDead()
+					|| ring.displays.stream().anyMatch(d -> !d.isValid())) {
+				ring.remove();
 				it.remove();
 				continue;
 			}
 			Vector[] frame = Effects.weaponFrame(ring.holder);
-			Location at = frame[0].toLocation(ring.holder.getWorld());
-			ring.display.teleport(at);
 			Vector axis = frame[1];
-			Quaternionf turn = new Quaternionf()
-					.rotationTo(new Vector3f(0, 0, 1), new Vector3f((float) axis.getX(), (float) axis.getY(), (float) axis.getZ()))
-					.rotateZ((float) (ring.age * SPIN_PER_TICK));
-			ring.display.setInterpolationDelay(0);
-			ring.display.setTransformation(new Transformation(new Vector3f(), turn, new Vector3f(SCALE, SCALE, SCALE), new Quaternionf()));
+			Vector3f axisF = new Vector3f((float) axis.getX(), (float) axis.getY(), (float) axis.getZ());
+			int count = ring.displays.size();
+			for (int i = 0; i < count; i++) {
+				ItemDisplay display = ring.displays.get(i);
+				// Spread along the blade around its middle, neighbours turning opposite ways.
+				double offset = (i - (count - 1) / 2.0) * SPACING;
+				Location at = frame[0].clone().add(axis.clone().multiply(offset)).toLocation(ring.holder.getWorld());
+				display.teleport(at);
+				double spin = ring.age * SPIN_PER_TICK * (i % 2 == 0 ? 1 : -1) + i * 0.7;
+				Quaternionf turn = new Quaternionf().rotationTo(new Vector3f(0, 0, 1), axisF).rotateZ((float) spin);
+				display.setInterpolationDelay(0);
+				display.setTransformation(new Transformation(new Vector3f(), turn, new Vector3f(SCALE, SCALE, SCALE), new Quaternionf()));
+			}
 			if (ring.age % 2 == 0) {
 				Effects.mang(ring.holder, ring.age);
 			}
@@ -103,7 +128,7 @@ final class MangRing {
 
 	static void hideAll() {
 		for (Ring ring : Set.copyOf(RINGS.values())) {
-			ring.display.remove();
+			ring.remove();
 		}
 		RINGS.clear();
 	}

@@ -24,7 +24,7 @@
 	"prescript.sink_twice": "Stab an enemy %s times with the stiletto",
 	"prescript.untouched": "Strike an enemy %s times without taking damage",
 	"message.prescript_reveal": "%s",
-	"command.usage": "Usage: /indexprescript give <caduceus|terminal|laevatein> [player], /indexprescript laevatein <0-3>, /indexprescript pack, /indexprescript sanity [value], /indexprescript mang",
+	"command.usage": "Usage: /indexprescript give <caduceus|terminal|laevatein> [player], /indexprescript laevatein <0-3>, /indexprescript pack, /indexprescript sanity [value], /indexprescript mang [1-6]",
 	"command.given": "Gave %2$s to %1$s.",
 	"command.no_player": "Player not found: %s",
 	"command.pack_sent": "Resource pack sent again.",
@@ -35,6 +35,7 @@
 	"command.laevatein_status": "Laevatein - stage: %s, hits: %s, icon count: %s, ready: %s",
 	"item.laevatein_icon": "Seal Release",
 	"command.sanity": "Sanity: %s (-45 to 45, 0 at 5 hearts)",
-	"command.mang_on": "Showing Mang for 15 seconds (view in third person; run again to hide).",
-	"command.mang_off": "Mang hidden."
+	"command.mang_on": "Showing %s Mang ring(s) for 15 seconds (view in third person; run again without a number to hide).",
+	"command.mang_off": "Mang hidden.",
+	"command.mang_usage": "Usage: /indexprescript mang [1-6]"
 }
