@@ -1,0 +1,15 @@
+name: PlayerTrade
+version: '${version}'
+main: io.github.sharket1111.trade.TradePlugin
+api-version: '${apiVersion}'
+description: Trading between players.
+authors: [sharket1111]
+commands:
+  trade:
+    description: Open the trade menu.
+    usage: /trade
+    permission: playertrade.use
+permissions:
+  playertrade.use:
+    description: Open the trade menu.
+    default: true

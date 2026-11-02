@@ -1,0 +1,32 @@
+plugins {
+	id 'java'
+}
+
+group = 'io.github.sharket1111'
+version = project.plugin_version
+
+repositories {
+	mavenCentral()
+	maven {
+		name = 'PaperMC'
+		url = 'https://repo.papermc.io/repository/maven-public/'
+	}
+}
+
+dependencies {
+	compileOnly "io.papermc.paper:paper-api:${project.paper_api_version}"
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+	it.options.encoding = 'UTF-8'
+}
+
+processResources {
+	def apiVersion = (project.paper_api_version =~ /^(\d+\.\d+)/)[0][1]
+	inputs.property 'version', project.version
+	inputs.property 'apiVersion', apiVersion
+	filesMatching('plugin.yml') {
+		expand 'version': project.version, 'apiVersion': apiVersion
+	}
+}

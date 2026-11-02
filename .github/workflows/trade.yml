@@ -1,0 +1,53 @@
+name: trade
+
+on:
+  push:
+    paths:
+      - trade/**
+      - .github/workflows/trade.yml
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: trade
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      # Newest stable paper-api build for minecraft_version.
+      - name: Resolve paper-api
+        id: v
+        run: |
+          mc=$(grep '^minecraft_version=' gradle.properties | cut -d= -f2)
+          versions=$(curl -fsS https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/maven-metadata.xml \
+            | grep -o '<version>[^<]*</version>' | sed 's/<[^>]*>//g')
+          api=$(echo "$versions" | grep -E "^${mc//./\\.}\.build\.[0-9]+-stable$" | sort -V | tail -1 || true)
+          if [ -z "$api" ]; then
+            api=$(echo "$versions" | grep -E "^${mc//./\\.}[.-]" | sort -V | tail -1 || true)
+          fi
+          if [ -z "$api" ]; then
+            echo "::error::No paper-api build for Minecraft $mc"
+            exit 1
+          fi
+          echo "paper-api=$api"
+          echo "api=$api" >> "$GITHUB_OUTPUT"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.8.2"
+
+      - name: Build
+        run: gradle build --stacktrace -Ppaper_api_version=${{ steps.v.outputs.api }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: player-trade
+          path: trade/build/libs/*.jar
