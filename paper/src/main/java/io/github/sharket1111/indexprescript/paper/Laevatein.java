@@ -119,8 +119,46 @@ final class Laevatein implements Listener {
 		}
 	}
 
+	/** Out of combat this long (neither hitting nor hit) the blade seals itself again. */
+	private static final int RESEAL_TICKS = 60 * 20;
+	private static final Map<UUID, Long> LAST_COMBAT = new ConcurrentHashMap<>();
+
+	static void markCombat(Player player) {
+		LAST_COMBAT.put(player.getUniqueId(), CaduceusListener.now());
+	}
+
+	/**
+	 * After a minute out of combat every released Laevatein the player carries
+	 * goes back to stage 0 (sealed in its chains) and its hits start over.
+	 */
+	private static void resealIfIdle(Player player, PlayerInventory inventory, long now) {
+		if (RELEASING.containsKey(player.getUniqueId()) || LaevateinSkill.active(player)) {
+			markCombat(player);
+			return;
+		}
+		long last = LAST_COMBAT.computeIfAbsent(player.getUniqueId(), id -> now);
+		if (now - last < RESEAL_TICKS) {
+			return;
+		}
+		boolean sealed = false;
+		for (ItemStack stack : inventory.getContents()) {
+			if (Items.isLaevatein(stack) && (Items.laevateinStage(stack) > 0 || hits(stack) > 0)) {
+				Items.setLaevateinStage(stack, 0);
+				setHits(stack, 0);
+				sealed = true;
+			}
+		}
+		if (sealed) {
+			LaevateinEffects.reseal(Cinematic.body(player));
+		}
+		LAST_COMBAT.put(player.getUniqueId(), now);
+	}
+
 	private static void tick(Player player, long now) {
 		PlayerInventory inventory = player.getInventory();
+		if (now % 20 == 0) {
+			resealIfIdle(player, inventory, now);
+		}
 		ItemStack held = inventory.getItemInMainHand();
 		if (Items.isLaevatein(held)) {
 			if (held.getAmount() > 1) {
@@ -210,6 +248,9 @@ final class Laevatein implements Listener {
 	/** Full swings that land count toward the next release. */
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
 	public void onHit(EntityDamageByEntityEvent event) {
+		if (event.getDamager() instanceof Player attacker && Items.isLaevatein(attacker.getInventory().getItemInMainHand())) {
+			markCombat(attacker);
+		}
 		if (Damage.dealing() || event.getCause() != EntityDamageEvent.DamageCause.ENTITY_ATTACK
 				|| !(event.getDamager() instanceof Player player) || !(event.getEntity() instanceof LivingEntity)) {
 			return;
@@ -235,6 +276,7 @@ final class Laevatein implements Listener {
 		if (attacker == null || attacker == player) {
 			return;
 		}
+		markCombat(player);
 		if (!counter(player, attacker)) {
 			addHit(player);
 		}

@@ -369,4 +369,17 @@ final class LaevateinEffects {
 		sound(holder.getLocation(), Sound.ITEM_TRIDENT_RETURN, 1.0F, 0.7F);
 		sound(holder.getLocation(), Sound.BLOCK_CHAIN_BREAK, 0.8F, 0.8F);
 	}
+
+	/** The blade sealing itself again: grey chain links wind round the wielder. */
+	static void reseal(LivingEntity holder) {
+		World world = holder.getWorld();
+		Vector c = center(holder);
+		for (int i = 0; i < 24; i++) {
+			double a = i * Math.PI / 6;
+			double y = -0.8 + i * 0.07;
+			dustAt(world, i % 4 == 0 ? GOLD : GREY, c.clone().add(new Vector(Math.cos(a) * 0.6, y, Math.sin(a) * 0.6)), 1, 0.0);
+		}
+		sound(holder.getLocation(), Sound.BLOCK_CHAIN_PLACE, 1.0F, 0.6F);
+		sound(holder.getLocation(), Sound.BLOCK_IRON_TRAPDOOR_CLOSE, 0.6F, 0.7F);
+	}
 }
