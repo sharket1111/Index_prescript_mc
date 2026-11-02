@@ -12,8 +12,8 @@ from PIL import Image
 
 PACK = Path(__file__).resolve().parent.parent / "paper/pack/assets/index_prescript"
 SEGMENTS = 16
-RADIUS = 6.6
-THICK = 1.1
+RADIUS = 6.0
+THICK = 2.4
 CENTER = 8.0
 
 

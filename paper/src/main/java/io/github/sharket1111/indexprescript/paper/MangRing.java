@@ -27,11 +27,11 @@ import org.joml.Vector3f;
  * Bedrock players (who cannot see the model) see as well.
  */
 final class MangRing {
-	private static final float SCALE = 1.35F;
+	private static final float SCALE = 0.35F;
 	private static final double SPIN_PER_TICK = 0.12;
 	static final int MAX_RINGS = 6;
 	/** Distance between neighbouring rings along the weapon, in blocks. */
-	private static final double SPACING = 0.32;
+	private static final double SPACING = 0.15;
 	private static final Map<UUID, Ring> RINGS = new ConcurrentHashMap<>();
 
 	private static final class Ring {

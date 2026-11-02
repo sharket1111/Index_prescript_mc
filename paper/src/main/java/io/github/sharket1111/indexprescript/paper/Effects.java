@@ -366,20 +366,20 @@ final class Effects {
 		Vector b = axis.clone().crossProduct(a).normalize();
 		World world = holder.getWorld();
 		double spin = tick * 0.3;
-		for (int i = 0; i < 14; i++) {
-			double t = spin + i * Math.PI / 7;
-			Vector p = c.clone().add(a.clone().multiply(Math.cos(t) * 0.32)).add(b.clone().multiply(Math.sin(t) * 0.32));
+		for (int i = 0; i < 8; i++) {
+			double t = spin + i * Math.PI / 4;
+			Vector p = c.clone().add(a.clone().multiply(Math.cos(t) * 0.15)).add(b.clone().multiply(Math.sin(t) * 0.15));
 			dustAt(world, MANG_GOLD, p, 1, 0.0);
 		}
 		if (tick % 5 == 0) {
-			spawn(world, Particle.END_ROD, c.clone().add(a.clone().multiply(Math.cos(spin) * 0.32)), 1, 0.0, 0.0);
+			spawn(world, Particle.END_ROD, c.clone().add(a.clone().multiply(Math.cos(spin) * 0.15)), 1, 0.0, 0.0);
 		}
 	}
 
 	/** [Mang] forming: the ring flashes into being round the weapon. */
 	static void mangForm(LivingEntity holder) {
 		Vector c = weaponFrame(holder)[0];
-		dustAt(holder.getWorld(), MANG_GOLD, c, 30, 0.35);
+		dustAt(holder.getWorld(), MANG_GOLD, c, 20, 0.15);
 		spawn(holder.getWorld(), Particle.END_ROD, c, 8, 0.1, 0.06);
 		sound(holder.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, 1.0F, 1.2F);
 		sound(holder.getLocation(), Sound.BLOCK_BELL_RESONATE, 0.6F, 1.6F);
