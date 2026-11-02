@@ -28,8 +28,8 @@ import org.joml.Vector3f;
 
 /**
  * [Index Prescript Target]: Caduceus hits mark the foe struck and one random
- * foe within 6 blocks of it. A marked foe shows a translucent blue prescript
- * sign over its head (plus faint blue motes, which Bedrock players see too) and
+ * foe within 6 blocks of it. A marked foe shows a translucent blue flower
+^ * sign over its head (plus faint blue motes, which Bedrock players see too) and
  * takes more damage from Rien:
  * - marked: damage taken +20%, and +2.5% per [Hermes] (max +20%)
  * - at 9 [Hermes]: +30% against every target instead of the per-[Hermes] bonus
