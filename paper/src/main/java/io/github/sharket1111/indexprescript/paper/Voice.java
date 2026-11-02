@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 final class Voice {
 	private static final int PRESCRIPT_LINES = 9;
 	private static final float VOLUME = 1.2F;
+	private static final int LAYERS = 2;
 
 	private Voice() {
 	}
@@ -27,6 +28,9 @@ final class Voice {
 
 	private static void play(Player player, String key) {
 		var speaker = Cinematic.body(player);
-		speaker.getWorld().playSound(speaker, Items.NAMESPACE + ":" + key, SoundCategory.VOICE, VOLUME, 1.0F);
+		// Volume above 1 only widens the range, so the line is played twice at once to sound louder.
+		for (int i = 0; i < LAYERS; i++) {
+			speaker.getWorld().playSound(speaker, Items.NAMESPACE + ":" + key, SoundCategory.VOICE, VOLUME, 1.0F);
+		}
 	}
 }
