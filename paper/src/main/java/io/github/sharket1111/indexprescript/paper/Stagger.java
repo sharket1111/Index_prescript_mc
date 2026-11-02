@@ -10,11 +10,15 @@ import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.entity.Display;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -26,13 +30,16 @@ import net.kyori.adventure.text.Component;
  * Stagger, in three stages: staggered again while still staggered, a foe goes
  * from Stagger to Stagger+ to Stagger++. Each stage lasts a turn and binds it
  * (Slowness, which the resource pack shows as "Stagger" in the effect list) at
- * level I, II and IV, with Weakness II. The stage's picture floats over the
+ * level I, II and IV, and with Weakness X it cannot attack at all: its melee
+ * hits and projectiles do no damage. The stage's picture floats over the
  * foe's body, seen through it; Bedrock players, who cannot show it, see
  * coloured sparks instead.
  */
 final class Stagger implements Listener {
 	private static final int MAX_STAGE = 3;
 	private static final int[] SLOWNESS_AMPLIFIER = {0, 1, 3};
+	/** Weakness X: a staggered foe cannot hurt anyone (its hits are also cancelled below). */
+	private static final int WEAKNESS_AMPLIFIER = 9;
 	private static final Key FONT = Key.key(Items.NAMESPACE, "stagger");
 	private static final String FLOODGATE_PREFIX = "00000000-0000-0000-";
 	private static final Particle.DustOptions[] SPARK = {
@@ -61,7 +68,8 @@ final class Stagger implements Listener {
 		int index = state.stage - 1;
 		target.removePotionEffect(PotionEffectType.SLOWNESS);
 		target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, CombatState.TURN_TICKS, SLOWNESS_AMPLIFIER[index]));
-		target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, CombatState.TURN_TICKS, 1));
+		target.removePotionEffect(PotionEffectType.WEAKNESS);
+		target.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, CombatState.TURN_TICKS, WEAKNESS_AMPLIFIER));
 		if (state.sign == null || !state.sign.isValid()) {
 			state.sign = spawnSign(target);
 		}
@@ -136,6 +144,18 @@ final class Stagger implements Listener {
 	static void clearAll() {
 		STATES.values().forEach(Stagger::removeSign);
 		STATES.clear();
+	}
+
+	/** A staggered foe's attacks, melee or shot, do nothing. */
+	@EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+	public void onAttack(EntityDamageByEntityEvent event) {
+		Entity damager = event.getDamager();
+		if (damager instanceof Projectile projectile && projectile.getShooter() instanceof Entity shooter) {
+			damager = shooter;
+		}
+		if (damager instanceof LivingEntity attacker && stage(attacker, CaduceusListener.now()) > 0) {
+			event.setCancelled(true);
+		}
 	}
 
 	/** Bedrock players joining later do not get the pictures either. */
