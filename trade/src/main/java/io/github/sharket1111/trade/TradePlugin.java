@@ -13,7 +13,13 @@ public final class TradePlugin extends JavaPlugin {
 	@Override
 	public void onEnable() {
 		TradeItems.init(this);
-		getServer().getPluginManager().registerEvents(new TradeMenu.Events(), this);
+		Market.load(this);
+		getServer().getPluginManager().registerEvents(new Menu.Events(), this);
+	}
+
+	@Override
+	public void onDisable() {
+		Market.save();
 	}
 
 	@Override
@@ -22,7 +28,7 @@ public final class TradePlugin extends JavaPlugin {
 			sender.sendMessage(Component.text("플레이어만 쓸 수 있습니다.", NamedTextColor.RED));
 			return true;
 		}
-		TradeMenu.open(player);
+		new MainMenu(player).open();
 		return true;
 	}
 }
