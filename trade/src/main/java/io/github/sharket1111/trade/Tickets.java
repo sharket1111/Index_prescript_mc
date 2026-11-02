@@ -2,6 +2,9 @@ package io.github.sharket1111.trade;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -18,6 +21,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -37,6 +41,13 @@ import net.kyori.adventure.text.format.NamedTextColor;
 final class Tickets implements Listener {
 	private static final String SPAWN = "spawn";
 	private static final String CUSTOM = "custom";
+	/**
+	 * One right-click can arrive as two interactions (a cancelled block use is
+	 * followed by an item use, and Bedrock clients send both), so uses this
+	 * close together count once.
+	 */
+	private static final long USE_COOLDOWN_MS = 500;
+	private static final Map<UUID, Long> LAST_USE = new ConcurrentHashMap<>();
 	private static NamespacedKey kindKey;
 	private static NamespacedKey worldKey;
 	private static NamespacedKey positionKey;
@@ -120,12 +131,23 @@ final class Tickets implements Listener {
 		if (!player.isSneaking()) {
 			return;
 		}
+		long now = System.currentTimeMillis();
+		Long last = LAST_USE.get(player.getUniqueId());
+		if (last != null && now - last < USE_COOLDOWN_MS) {
+			return;
+		}
+		LAST_USE.put(player.getUniqueId(), now);
 		EquipmentSlot hand = event.getHand() == null ? EquipmentSlot.HAND : event.getHand();
 		if (SPAWN.equals(kind)) {
 			useSpawn(player, stack, hand);
 		} else if (CUSTOM.equals(kind)) {
 			useCustom(player, stack, hand);
 		}
+	}
+
+	@EventHandler
+	public void onQuit(PlayerQuitEvent event) {
+		LAST_USE.remove(event.getPlayer().getUniqueId());
 	}
 
 	private static void useSpawn(Player player, ItemStack stack, EquipmentSlot hand) {
