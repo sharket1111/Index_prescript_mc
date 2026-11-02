@@ -51,6 +51,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Bukkit.getScheduler().runTaskTimer(this, Laevatein::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Matthias::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, IndexMark::tick, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, StatusIcons::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, () -> CombatState.prune(CaduceusListener.now()), 1200L, 1200L);
 
 		var command = getCommand("indexprescript");

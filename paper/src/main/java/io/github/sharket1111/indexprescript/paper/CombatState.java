@@ -68,6 +68,12 @@ final class CombatState {
 		return poiseCount;
 	}
 
+	/** Ticks until all Poise has worn off (its count drops by one each turn). */
+	int poiseTicksLeft(long now) {
+		decayPoise(now);
+		return poiseCount == 0 ? 0 : (int) (poiseDecayAt - now) + (poiseCount - 1) * TURN_TICKS;
+	}
+
 	void consumePoise(long now) {
 		decayPoise(now);
 		if (poiseCount > 0 && --poiseCount == 0) {
