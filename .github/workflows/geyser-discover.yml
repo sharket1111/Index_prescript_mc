@@ -11,16 +11,13 @@ jobs:
   discover:
     runs-on: ubuntu-latest
     steps:
-      - name: Geyser v2 item definition readers
+      - name: NodeReader
         run: |
           set +e
+          curl -fsS "https://raw.githubusercontent.com/GeyserMC/Geyser/master/core/src/main/java/org/geysermc/geyser/registry/mappings/util/NodeReader.java" | sed '1,/^package /d' | grep -v -E '^import |^$' | head -150
+          echo "=================== priority / sorting"
           tree=$(curl -fsS "https://api.github.com/repos/GeyserMC/Geyser/git/trees/master?recursive=1")
-          for p in $(echo "$tree" | jq -r '.tree[].path' | grep -E 'registry/mappings/versions/item/.*\.java$|registry/mappings/definition/.*\.java$|api/item/custom/v2/CustomItemBedrockOptions\.java$' | grep -v 'ItemMappingsReader_v'); do
-            echo "=================== $p"
-            curl -fsS "https://raw.githubusercontent.com/GeyserMC/Geyser/master/$p" | sed '1,/^package /d' | grep -v -E '^import |^$'
-          done
-          echo "=================== identifier handling"
-          for p in $(echo "$tree" | jq -r '.tree[].path' | grep -E 'CustomItemRegistryPopulator\.java$|GeyserCustomItemDefinition\.java$|GeyserCustomItemBedrockOptions\.java$'); do
+          for p in $(echo "$tree" | jq -r '.tree[].path' | grep -E 'GeyserCustomItemDefinition\.java$|CustomItemTranslator\.java$|PredicateStrategy\.java$'); do
             echo "--- $p"
-            curl -fsS "https://raw.githubusercontent.com/GeyserMC/Geyser/master/$p" | grep -n -i -E 'geyser_custom|bedrockIdentifier|namespace|attachable|handheld|render_offset|icon|allowOffhand|texture' | head -80
+            curl -fsS "https://raw.githubusercontent.com/GeyserMC/Geyser/master/$p" | grep -n -i -E 'priority|sort|compar|predicate' | head -40
           done
