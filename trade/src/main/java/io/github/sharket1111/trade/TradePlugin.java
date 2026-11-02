@@ -16,12 +16,16 @@ public final class TradePlugin extends JavaPlugin {
 		Tickets.init(this);
 		Market.load(this);
 		History.load(this);
+		Mailbox.load(this);
+		BuyOrders.load(this);
+		ShopConfig.load(this);
 		getServer().getPluginManager().registerEvents(new Menu.Events(), this);
 		getServer().getPluginManager().registerEvents(new Tickets(), this);
 	}
 
 	@Override
 	public void onDisable() {
+		DirectTrade.cancelAll();
 		Market.save();
 	}
 

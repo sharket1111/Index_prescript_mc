@@ -75,6 +75,6 @@ final class ShopMenu extends Menu {
 			return;
 		}
 		clickSound();
-		new PurchaseMenu(player, listing).open();
+		new PurchaseMenu(player, listing, () -> new ShopMenu(player, seller)).open();
 	}
 }

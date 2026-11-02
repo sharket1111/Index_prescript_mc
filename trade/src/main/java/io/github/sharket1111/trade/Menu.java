@@ -14,7 +14,9 @@ import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -24,7 +26,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
- * A 9x3 chest-style menu. Its items cannot be taken out and nothing can be
+ * A chest-style menu (9x3, or 9x6 for long lists). Its items cannot be taken out and nothing can be
  * put in; clicks on it are handed to {@link #click}. Bedrock players
  * (Floodgate) cannot right-click on a touch screen, so where a button asks
  * for a right-click any click works for them.
@@ -38,8 +40,17 @@ abstract class Menu implements InventoryHolder {
 	protected final Inventory inventory;
 
 	Menu(Player player, String title) {
+		this(player, title, 3);
+	}
+
+	/** A menu of {@code rows} rows (3 or 6). */
+	Menu(Player player, String title, int rows) {
 		this.player = player;
-		this.inventory = Bukkit.createInventory(this, SIZE, Component.text(title));
+		this.inventory = Bukkit.createInventory(this, rows * 9, Component.text(title));
+	}
+
+	/** The player closed this menu (also when another menu replaces it). */
+	void closed() {
 	}
 
 	@Override
@@ -168,10 +179,23 @@ abstract class Menu implements InventoryHolder {
 			}
 		}
 
-		/** Hands over money from sales made while the seller was away. */
+		/** Hands over money from sales made while the seller was away, and points out new mail. */
 		@EventHandler
 		public void onJoin(PlayerJoinEvent event) {
 			Market.payOut(event.getPlayer());
+			Mailbox.notifyOnJoin(event.getPlayer());
+		}
+
+		@EventHandler
+		public void onClose(InventoryCloseEvent event) {
+			if (event.getInventory().getHolder(false) instanceof Menu menu && event.getPlayer() == menu.player) {
+				menu.closed();
+			}
+		}
+
+		@EventHandler
+		public void onQuit(PlayerQuitEvent event) {
+			DirectTrade.leave(event.getPlayer());
 		}
 
 		@EventHandler(priority = EventPriority.HIGHEST)

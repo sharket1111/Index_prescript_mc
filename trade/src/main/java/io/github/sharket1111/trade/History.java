@@ -69,7 +69,16 @@ final class History {
 		}
 	}
 
-	static void record(Listing listing, UUID buyer, String buyerName) {
+	/** A purchase not made through a listing (e.g. a filled buy request). */
+	static void recordRaw(UUID buyer, String buyerName, UUID seller, String sellerName, ItemStack item, int price) {
+		ENTRIES.add(new Entry(buyer, buyerName, seller, sellerName, item.clone(), price, System.currentTimeMillis()));
+		while (ENTRIES.size() > MAX_ENTRIES) {
+			ENTRIES.remove(0);
+		}
+		save();
+	}
+
+		static void record(Listing listing, UUID buyer, String buyerName) {
 		ENTRIES.add(new Entry(buyer, buyerName, listing.seller, Market.name(listing.seller), listing.item.clone(), listing.price,
 				System.currentTimeMillis()));
 		while (ENTRIES.size() > MAX_ENTRIES) {

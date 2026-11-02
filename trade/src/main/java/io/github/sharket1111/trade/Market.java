@@ -132,9 +132,9 @@ final class Market {
 			online.sendMessage(Component.text(buyer + "님이 ").append(what)
 					.append(Component.text("을(를) 사서 거래 전용 다이아 " + amount + "개를 받았습니다.")).color(NamedTextColor.GREEN));
 		} else {
-			EARNINGS.merge(seller, amount, Integer::sum);
+			// Away: the money waits in their mailbox.
+			Mailbox.deliverDiamonds(seller, amount, buyer + "님이 산 물품의 대금");
 		}
-		save();
 	}
 
 	/** Hands over what a seller earned while away. */
@@ -146,6 +146,13 @@ final class Market {
 		save();
 		Menu.giveTradeDiamonds(seller, owed);
 		seller.sendMessage(Component.text("접속하지 않은 동안 물품이 팔려 거래 전용 다이아 " + owed + "개를 받았습니다.", NamedTextColor.GREEN));
+	}
+
+	/** Every listing, oldest first. */
+	static List<Listing> all() {
+		List<Listing> list = new ArrayList<>(LISTINGS.values());
+		list.sort(Comparator.comparingLong(l -> l.createdAt));
+		return list;
 	}
 
 	static Listing get(UUID id) {

@@ -1,5 +1,7 @@
 package io.github.sharket1111.trade;
 
+import java.util.function.Supplier;
+
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -10,17 +12,19 @@ import net.kyori.adventure.text.format.NamedTextColor;
 /**
  * Confirming a purchase. The price in trade diamonds leaves the buyer's
  * inventory, the item goes to the buyer, and the seller is paid at once if
- * online or on their next join.
+ * online or else into their mailbox.
  */
 final class PurchaseMenu extends Menu {
 	private static final int ITEM_SLOT = 4;
 	private static final int PRICE_SLOT = 13;
 	private static final int BUY_SLOT = 22;
 	private final Listing listing;
+	private final Supplier<Menu> back;
 
-	PurchaseMenu(Player player, Listing listing) {
+	PurchaseMenu(Player player, Listing listing, Supplier<Menu> back) {
 		super(player, "거래 - 구매 확인");
 		this.listing = listing;
+		this.back = back;
 	}
 
 	@Override
@@ -43,7 +47,7 @@ final class PurchaseMenu extends Menu {
 	void click(int slot, ClickType click) {
 		if (slot == BACK_SLOT) {
 			clickSound();
-			new ShopMenu(player, listing.seller).open();
+			back.get().open();
 		} else if (slot == BUY_SLOT) {
 			buy();
 		}
@@ -53,7 +57,7 @@ final class PurchaseMenu extends Menu {
 		if (Market.get(listing.id) == null) {
 			tell("이미 팔렸거나 내려간 물품입니다.", NamedTextColor.RED);
 			failSound();
-			new ShopMenu(player, listing.seller).open();
+			back.get().open();
 			return;
 		}
 		if (listing.seller.equals(player.getUniqueId())) {
@@ -76,7 +80,7 @@ final class PurchaseMenu extends Menu {
 		Market.pay(listing.seller, price, what, player.getName());
 		player.sendMessage(what.append(Component.text("을(를) 거래 전용 다이아 " + price + "개에 샀습니다.")).color(NamedTextColor.GREEN));
 		successSound();
-		new ShopMenu(player, listing.seller).open();
+		back.get().open();
 	}
 
 	/** The item's name (in each reader's language) and amount, for messages. */

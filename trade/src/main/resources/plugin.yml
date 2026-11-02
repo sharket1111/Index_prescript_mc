@@ -13,3 +13,6 @@ permissions:
   playertrade.use:
     description: Open the trade menu.
     default: true
+  playertrade.admin:
+    description: Admin tab of the trade menu (listings, buy requests, records, server shop).
+    default: op
