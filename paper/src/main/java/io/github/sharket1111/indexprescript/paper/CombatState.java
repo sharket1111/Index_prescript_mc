@@ -13,7 +13,7 @@ import org.bukkit.entity.LivingEntity;
  * State lives in memory only and is dropped on server restart.
  */
 final class CombatState {
-	static final int TURN_TICKS = 60;
+	static final int TURN_TICKS = 140;
 	private static final int MAX_POISE_POTENCY = 20;
 	private static final int MAX_COUNT = 99;
 	private static final int MAX_TURN_STACKS = 2;
