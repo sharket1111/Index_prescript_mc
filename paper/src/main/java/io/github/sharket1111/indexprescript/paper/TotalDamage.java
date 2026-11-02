@@ -24,11 +24,10 @@ import net.kyori.adventure.text.format.TextDecoration;
  * while it shows.
  */
 final class TotalDamage {
-	private static final int LINGER_TICKS = 50;
+	private static final int LINGER_TICKS = 40;
 	private static final int REFRESH_TICKS = 10;
 	private static final String FLOODGATE_PREFIX = "00000000-0000-0000-";
 	private static final Key FONT = Key.key(Items.NAMESPACE, "total");
-	private static final Component SHIFT_LEFT = Component.text("\ue100").font(FONT);
 	private static final Map<UUID, Tally> TALLIES = new ConcurrentHashMap<>();
 
 	private static final class Tally {
@@ -37,6 +36,8 @@ final class TotalDamage {
 		long hideAt;
 		long shownTotal = -1;
 		long shownAt;
+		/** Slide-out frame once lingering is over, -1 before. */
+		int leaving = -1;
 	}
 
 	private TotalDamage() {
@@ -74,27 +75,42 @@ final class TotalDamage {
 			Map.Entry<UUID, Tally> entry = it.next();
 			Player player = Bukkit.getPlayer(entry.getKey());
 			Tally tally = entry.getValue();
-			if (player == null || (!tally.running && now >= tally.hideAt)) {
-				if (player != null) {
-					player.sendActionBar(Component.empty());
-				}
+			if (player == null) {
 				it.remove();
+				continue;
+			}
+			if (!tally.running && now >= tally.hideAt) {
+				// Slide out to the left together with the skill screen, then clear.
+				if (tally.leaving < 0) {
+					SkillOverlay.hide(player);
+				}
+				if (++tally.leaving >= SkillOverlay.FRAMES - 1) {
+					player.sendActionBar(Component.empty());
+					it.remove();
+				} else {
+					player.sendActionBar(line(player, Math.round(tally.total), tally.leaving));
+				}
 				continue;
 			}
 			long shown = Math.round(tally.total);
 			if (shown != tally.shownTotal || now - tally.shownAt >= REFRESH_TICKS) {
-				player.sendActionBar(line(player, shown));
+				player.sendActionBar(line(player, shown, 0));
 				tally.shownTotal = shown;
 				tally.shownAt = now;
 			}
 		}
 	}
 
-	private static Component line(Player player, long total) {
+	private static Component line(Player player, long total, int slide) {
 		Component text = Component.text("TOTAL ", NamedTextColor.GRAY).decorate(TextDecoration.ITALIC)
 				.append(Component.text(total, NamedTextColor.GOLD).decorate(TextDecoration.BOLD).decoration(TextDecoration.ITALIC, false));
 		boolean bedrock = player.getUniqueId().toString().startsWith(FLOODGATE_PREFIX);
 		// Java: the pack's "total" font draws it larger and lower, and pushes it left.
-		return bedrock ? text : Component.empty().append(SHIFT_LEFT).append(text.font(FONT));
+		if (bedrock) {
+			return slide > 0 ? Component.empty() : text;
+		}
+		// Each slide frame pushes it further left with a wider negative space.
+		Component shift = Component.text(String.valueOf((char) (0xE100 + slide))).font(FONT);
+		return Component.empty().append(shift).append(text.font(FONT));
 	}
 }
