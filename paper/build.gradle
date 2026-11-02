@@ -61,8 +61,9 @@ def resourcePack = tasks.register('resourcePack', Zip) {
 	from('pack')
 }
 
-// Bedrock players (Geyser) get the voice lines from a Bedrock pack that the
-// plugin drops into Geyser's packs folder.
+// Bedrock players (Geyser) get the items (3D attachables, icons) and voice
+// lines from a Bedrock pack that the plugin drops into Geyser's packs folder.
+// The item parts are generated from the Java pack by tools/bedrock.py.
 def bedrockPack = tasks.register('bedrockPack', Zip) {
 	archiveFileName = 'index_prescript_bedrock.mcpack'
 	destinationDirectory = layout.buildDirectory.dir('pack')

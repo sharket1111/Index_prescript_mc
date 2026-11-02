@@ -1,0 +1,247 @@
+{
+	"format_version": 2,
+	"items": {
+		"minecraft:iron_sword": [
+			{
+				"type": "group",
+				"model": "index_prescript:caduceus",
+				"definitions": [
+					{
+						"bedrock_identifier": "index_prescript:caduceus",
+						"display_name": "카두케우스",
+						"bedrock_options": {
+							"icon": "index_prescript.caduceus",
+							"display_handheld": true
+						}
+					},
+					{
+						"bedrock_identifier": "index_prescript:caduceus_hatchet",
+						"display_name": "카두케우스",
+						"bedrock_options": {
+							"icon": "index_prescript.caduceus_hatchet",
+							"display_handheld": true
+						},
+						"predicate": {
+							"type": "match",
+							"property": "custom_model_data",
+							"index": 0,
+							"value": "hatchet"
+						},
+						"priority": 1
+					},
+					{
+						"bedrock_identifier": "index_prescript:caduceus_stiletto",
+						"display_name": "카두케우스",
+						"bedrock_options": {
+							"icon": "index_prescript.caduceus_stiletto",
+							"display_handheld": true
+						},
+						"predicate": {
+							"type": "match",
+							"property": "custom_model_data",
+							"index": 0,
+							"value": "stiletto"
+						},
+						"priority": 1
+					},
+					{
+						"bedrock_identifier": "index_prescript:caduceus_bastard_sword",
+						"display_name": "카두케우스",
+						"bedrock_options": {
+							"icon": "index_prescript.caduceus_bastard_sword",
+							"display_handheld": true
+						},
+						"predicate": {
+							"type": "match",
+							"property": "custom_model_data",
+							"index": 0,
+							"value": "bastard_sword"
+						},
+						"priority": 1
+					},
+					{
+						"bedrock_identifier": "index_prescript:caduceus_rapier",
+						"display_name": "카두케우스",
+						"bedrock_options": {
+							"icon": "index_prescript.caduceus_rapier",
+							"display_handheld": true
+						},
+						"predicate": {
+							"type": "match",
+							"property": "custom_model_data",
+							"index": 0,
+							"value": "rapier"
+						},
+						"priority": 1
+					},
+					{
+						"bedrock_identifier": "index_prescript:caduceus_hammer",
+						"display_name": "카두케우스",
+						"bedrock_options": {
+							"icon": "index_prescript.caduceus_hammer",
+							"display_handheld": true
+						},
+						"predicate": {
+							"type": "match",
+							"property": "custom_model_data",
+							"index": 0,
+							"value": "hammer"
+						},
+						"priority": 1
+					},
+					{
+						"bedrock_identifier": "index_prescript:caduceus_greatsword",
+						"display_name": "카두케우스",
+						"bedrock_options": {
+							"icon": "index_prescript.caduceus_greatsword",
+							"display_handheld": true
+						},
+						"predicate": {
+							"type": "match",
+							"property": "custom_model_data",
+							"index": 0,
+							"value": "greatsword"
+						},
+						"priority": 1
+					},
+					{
+						"bedrock_identifier": "index_prescript:caduceus_lance",
+						"display_name": "카두케우스",
+						"bedrock_options": {
+							"icon": "index_prescript.caduceus_lance",
+							"display_handheld": true
+						},
+						"predicate": {
+							"type": "match",
+							"property": "custom_model_data",
+							"index": 0,
+							"value": "lance"
+						},
+						"priority": 1
+					},
+					{
+						"bedrock_identifier": "index_prescript:caduceus_whip",
+						"display_name": "카두케우스",
+						"bedrock_options": {
+							"icon": "index_prescript.caduceus_whip",
+							"display_handheld": true
+						},
+						"predicate": {
+							"type": "match",
+							"property": "custom_model_data",
+							"index": 0,
+							"value": "whip"
+						},
+						"priority": 1
+					},
+					{
+						"bedrock_identifier": "index_prescript:caduceus_scythe",
+						"display_name": "카두케우스",
+						"bedrock_options": {
+							"icon": "index_prescript.caduceus_scythe",
+							"display_handheld": true
+						},
+						"predicate": {
+							"type": "match",
+							"property": "custom_model_data",
+							"index": 0,
+							"value": "scythe"
+						},
+						"priority": 1
+					}
+				]
+			}
+		],
+		"minecraft:netherite_sword": [
+			{
+				"type": "group",
+				"model": "index_prescript:laevatein",
+				"definitions": [
+					{
+						"bedrock_identifier": "index_prescript:laevatein",
+						"display_name": "레바테인",
+						"bedrock_options": {
+							"icon": "index_prescript.laevatein",
+							"display_handheld": true
+						}
+					},
+					{
+						"bedrock_identifier": "index_prescript:laevatein_release_1",
+						"display_name": "레바테인",
+						"bedrock_options": {
+							"icon": "index_prescript.laevatein_release_1",
+							"display_handheld": true
+						},
+						"predicate": {
+							"type": "match",
+							"property": "custom_model_data",
+							"index": 0,
+							"value": "release_1"
+						},
+						"priority": 1
+					},
+					{
+						"bedrock_identifier": "index_prescript:laevatein_release_2",
+						"display_name": "레바테인",
+						"bedrock_options": {
+							"icon": "index_prescript.laevatein_release_2",
+							"display_handheld": true
+						},
+						"predicate": {
+							"type": "match",
+							"property": "custom_model_data",
+							"index": 0,
+							"value": "release_2"
+						},
+						"priority": 1
+					},
+					{
+						"bedrock_identifier": "index_prescript:laevatein_release_3",
+						"display_name": "레바테인",
+						"bedrock_options": {
+							"icon": "index_prescript.laevatein_release_3",
+							"display_handheld": true
+						},
+						"predicate": {
+							"type": "match",
+							"property": "custom_model_data",
+							"index": 0,
+							"value": "release_3"
+						},
+						"priority": 1
+					}
+				]
+			}
+		],
+		"minecraft:paper": [
+			{
+				"type": "group",
+				"model": "index_prescript:rien_terminal",
+				"definitions": [
+					{
+						"bedrock_identifier": "index_prescript:rien_terminal",
+						"display_name": "뤼엔의 단말기",
+						"bedrock_options": {
+							"icon": "index_prescript.rien_terminal",
+							"display_handheld": false
+						}
+					}
+				]
+			},
+			{
+				"type": "group",
+				"model": "index_prescript:laevatein_icon",
+				"definitions": [
+					{
+						"bedrock_identifier": "index_prescript:laevatein_icon",
+						"display_name": "봉인 해제",
+						"bedrock_options": {
+							"icon": "index_prescript.laevatein_icon",
+							"display_handheld": false
+						}
+					}
+				]
+			}
+		]
+	}
+}

@@ -19,6 +19,8 @@ resource-pack:
   required: false
 
 bedrock-pack:
-  # Copy the Bedrock pack (voice lines) into Geyser's packs folder on startup
-  # so Bedrock players hear the voices. Needs Geyser installed as a plugin.
+  # Copy the Bedrock pack (3D Caduceus/Laevatein, icons, voice lines) into
+  # Geyser's packs folder and the custom item mappings into its
+  # custom_mappings folder on startup, so Bedrock players see the items as
+  # Java players do. Needs Geyser installed as a plugin on this server.
   install: true

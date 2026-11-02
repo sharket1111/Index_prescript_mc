@@ -1,0 +1,44 @@
+{
+	"format_version": "1.10.0",
+	"minecraft:attachable": {
+		"description": {
+			"identifier": "index_prescript:caduceus",
+			"materials": {
+				"default": "entity_alphatest",
+				"enchanted": "entity_alphatest_glint"
+			},
+			"textures": {
+				"default": "textures/models/index_prescript/caduceus_3d",
+				"enchanted": "textures/misc/enchanted_item_glint"
+			},
+			"geometry": {
+				"default": "geometry.index_prescript.caduceus"
+			},
+			"animations": {
+				"thirdperson_main_hand": "animation.index_prescript.caduceus.thirdperson_main_hand",
+				"thirdperson_off_hand": "animation.index_prescript.caduceus.thirdperson_off_hand",
+				"firstperson_main_hand": "animation.index_prescript.caduceus.firstperson_main_hand",
+				"firstperson_off_hand": "animation.index_prescript.caduceus.firstperson_off_hand"
+			},
+			"scripts": {
+				"animate": [
+					{
+						"thirdperson_main_hand": "c.item_slot == 'main_hand' && !c.is_first_person"
+					},
+					{
+						"thirdperson_off_hand": "c.item_slot == 'off_hand' && !c.is_first_person"
+					},
+					{
+						"firstperson_main_hand": "c.item_slot == 'main_hand' && c.is_first_person"
+					},
+					{
+						"firstperson_off_hand": "c.item_slot == 'off_hand' && c.is_first_person"
+					}
+				]
+			},
+			"render_controllers": [
+				"controller.render.index_prescript.item"
+			]
+		}
+	}
+}

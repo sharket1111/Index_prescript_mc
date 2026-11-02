@@ -1,0 +1,54 @@
+{
+	"resource_pack_name": "Index Prescript",
+	"texture_name": "atlas.items",
+	"texture_data": {
+		"index_prescript.caduceus": {
+			"textures": "textures/items/caduceus"
+		},
+		"index_prescript.caduceus_hatchet": {
+			"textures": "textures/items/caduceus_hatchet"
+		},
+		"index_prescript.caduceus_stiletto": {
+			"textures": "textures/items/caduceus_stiletto"
+		},
+		"index_prescript.caduceus_bastard_sword": {
+			"textures": "textures/items/caduceus_bastard_sword"
+		},
+		"index_prescript.caduceus_rapier": {
+			"textures": "textures/items/caduceus_rapier"
+		},
+		"index_prescript.caduceus_hammer": {
+			"textures": "textures/items/caduceus_hammer"
+		},
+		"index_prescript.caduceus_greatsword": {
+			"textures": "textures/items/caduceus_greatsword"
+		},
+		"index_prescript.caduceus_lance": {
+			"textures": "textures/items/caduceus_lance"
+		},
+		"index_prescript.caduceus_whip": {
+			"textures": "textures/items/caduceus_whip"
+		},
+		"index_prescript.caduceus_scythe": {
+			"textures": "textures/items/caduceus_scythe"
+		},
+		"index_prescript.laevatein": {
+			"textures": "textures/items/laevatein"
+		},
+		"index_prescript.laevatein_release_1": {
+			"textures": "textures/items/laevatein_release_1"
+		},
+		"index_prescript.laevatein_release_2": {
+			"textures": "textures/items/laevatein_release_2"
+		},
+		"index_prescript.laevatein_release_3": {
+			"textures": "textures/items/laevatein_release_3"
+		},
+		"index_prescript.rien_terminal": {
+			"textures": "textures/items/rien_terminal"
+		},
+		"index_prescript.laevatein_icon": {
+			"textures": "textures/items/laevatein_icon"
+		}
+	}
+}
