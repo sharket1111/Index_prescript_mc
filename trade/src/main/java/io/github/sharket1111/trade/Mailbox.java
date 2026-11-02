@@ -49,18 +49,18 @@ final class Mailbox {
 		if (root == null) {
 			return;
 		}
-		for (String owner : root.getKeys(false)) {
+		for (String key : root.getKeys(false)) {
 			List<Mail> box = new ArrayList<>();
-			for (Map<?, ?> map : root.getMapList(owner)) {
+			for (Map<?, ?> map : root.getMapList(key)) {
 				try {
 					box.add(new Mail(UUID.fromString(String.valueOf(map.get("id"))),
 							ItemStack.deserializeBytes(Base64.getDecoder().decode(String.valueOf(map.get("item")))),
 							String.valueOf(map.get("note")), ((Number) map.get("time")).longValue()));
 				} catch (RuntimeException e) {
-					plugin.getLogger().log(Level.WARNING, "Skipping a broken mail for " + owner, e);
+					plugin.getLogger().log(Level.WARNING, "Skipping a broken mail for " + key, e);
 				}
 			}
-			BOXES.put(UUID.fromString(owner), box);
+			BOXES.put(UUID.fromString(key), box);
 		}
 	}
 
