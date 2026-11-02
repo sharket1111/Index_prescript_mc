@@ -13,9 +13,11 @@ public final class TradePlugin extends JavaPlugin {
 	@Override
 	public void onEnable() {
 		TradeItems.init(this);
+		Tickets.init(this);
 		Market.load(this);
 		History.load(this);
 		getServer().getPluginManager().registerEvents(new Menu.Events(), this);
+		getServer().getPluginManager().registerEvents(new Tickets(), this);
 	}
 
 	@Override
