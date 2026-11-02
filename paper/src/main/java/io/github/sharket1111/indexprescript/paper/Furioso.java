@@ -376,6 +376,9 @@ final class Furioso {
 		damage *= IndexMark.multiplier(player, victim);
 		// Coins land faster than the hurt cooldown, so it is reset for each one.
 		Damage.deal(victim, damage, player, true);
+		if (camera != null) {
+			camera.jolt(last ? 1.0 : 0.45);
+		}
 		IndexMark.strike(player, victim);
 
 		if (coin % 2 == 0) {
@@ -466,27 +469,24 @@ final class Furioso {
 		// A fixed side view, square to the line from where the wielder began to the
 		// target; it only moves along its own line of sight (pulling back as the
 		// rings gather, rushing in for the last cut), so its direction never turns.
-		Vector focus = anchor.toVector().add(new Vector(0, 1.0, 0));
+		// Close up on the wielder and the main target, between them.
+		Vector focus = anchor.toVector().midpoint(actor().getLocation().toVector()).add(new Vector(0, 1.0, 0));
 		double side = baseAngle + Math.PI / 2;
 		int finalTick = COIN_TICKS[LAST_COIN];
 		double distance;
 		double shake = 0;
 		if (tick < WINDUP_TICK) {
-			distance = 8.0;
+			distance = 4.5;
 		} else if (tick < finalTick) {
-			distance = 8.0 + 1.5 * (tick - WINDUP_TICK) / (double) (finalTick - WINDUP_TICK);
+			distance = 4.5 + 1.0 * (tick - WINDUP_TICK) / (double) (finalTick - WINDUP_TICK);
+			shake = 0.06;
 		} else {
-			distance = 9.5 - 4.5 * Math.min(1.0, (tick - finalTick) / 6.0);
-			if (tick - finalTick < 6) {
-				shake = 0.6;
+			distance = 5.5 - 2.5 * Math.min(1.0, (tick - finalTick) / 6.0);
+			if (tick - finalTick < 8) {
+				shake = 0.9;
 			}
 		}
-		Vector position = Cinematic.orbit(focus, side, distance, distance * 0.22);
-		for (int coinTick : COIN_TICKS) {
-			if (coinTick == tick && shake == 0) {
-				shake = 0.25;
-			}
-		}
+		Vector position = Cinematic.orbit(focus, side, distance, distance * 0.28);
 		camera.frame(position, focus, shake);
 	}
 

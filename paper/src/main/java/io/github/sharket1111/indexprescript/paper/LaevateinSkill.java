@@ -510,6 +510,9 @@ final class LaevateinSkill {
 
 	/** A coin without the arm swing, for kicks and the thrown blade. */
 	private void hit(double damage, double bigBrotherExtra, Runnable effect, Runnable onHit) {
+		if (camera != null) {
+			camera.jolt(0.5);
+		}
 		effect.run();
 		double total = damage + (Matthias.hasTattoo(player) ? bigBrotherExtra : 0.0);
 		if (health(player) <= maxHealth(player) * 0.5) {
@@ -595,7 +598,7 @@ final class LaevateinSkill {
 			cameraSide = Math.atan2(from.getZ() - to.getZ(), from.getX() - to.getX()) + Math.PI / 2;
 		}
 		boolean impact = kind == Kind.STAB ? tick >= 26 && tick < 30 : executionImpact();
-		camera.frame(Cinematic.orbit(focus, cameraSide, 5.0, 1.8), focus, impact ? 0.6 : 0.0);
+		camera.frame(Cinematic.orbit(focus, cameraSide, 3.2, 1.3), focus, impact ? 0.7 : 0.0);
 	}
 
 	private boolean executionImpact() {

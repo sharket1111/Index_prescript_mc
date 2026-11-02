@@ -41,6 +41,8 @@ import net.kyori.adventure.text.Component;
 final class Cinematic {
 	private static final String FLOODGATE_PREFIX = "00000000-0000-0000-";
 	private static final int ATTACH_DELAY_TICKS = 2;
+	private static final double HANDHELD_SHAKE = 0.04;
+	private static final double JOLT_DECAY = 0.62;
 	private static final NamespacedKey SAVED_MODE = new NamespacedKey(Items.NAMESPACE, "cinematic_mode");
 	private static final Map<UUID, Cinematic> ACTIVE = new ConcurrentHashMap<>();
 
@@ -48,6 +50,7 @@ final class Cinematic {
 	private final ItemDisplay camera;
 	private final Mannequin actor;
 	private int age;
+	private double jolt;
 	private boolean ended;
 
 	private Cinematic(Player viewer, ItemDisplay camera, Mannequin actor) {
@@ -113,16 +116,22 @@ final class Cinematic {
 		actor.getEquipment().setItemInMainHand(copy(viewer.getInventory().getItemInMainHand()));
 	}
 
+	/** Shakes the camera for a hit; the shake fades over a few ticks. */
+	void jolt(double amount) {
+		jolt = Math.max(jolt, amount);
+	}
+
 	/** Moves the camera to {@code position} looking at {@code focus}, optionally shaken; call every tick. */
 	void frame(Vector position, Vector focus, double shake) {
 		if (ended) {
 			return;
 		}
 		Vector pos = position.clone();
-		if (shake > 0) {
-			ThreadLocalRandom random = ThreadLocalRandom.current();
-			pos.add(new Vector((random.nextDouble() - 0.5) * shake, (random.nextDouble() - 0.5) * shake, (random.nextDouble() - 0.5) * shake));
-		}
+		// A faint handheld sway, the requested shake, and any jolt from a hit (fading fast).
+		double amount = HANDHELD_SHAKE + Math.max(shake, jolt);
+		jolt *= JOLT_DECAY;
+		ThreadLocalRandom random = ThreadLocalRandom.current();
+		pos.add(new Vector((random.nextDouble() - 0.5) * amount, (random.nextDouble() - 0.5) * amount, (random.nextDouble() - 0.5) * amount));
 		Location location = pos.toLocation(camera.getWorld());
 		location.setDirection(focus.clone().subtract(pos));
 		camera.teleport(location);

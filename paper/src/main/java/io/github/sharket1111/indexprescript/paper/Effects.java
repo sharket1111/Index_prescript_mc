@@ -290,35 +290,46 @@ final class Effects {
 		sound(target.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1.0F, 1.6F);
 	}
 
-	private static final Particle.DustOptions SHIN_GOLD = dust(0xFFD24A, 1.0F);
-	private static final Particle.DustOptions SHIN_PALE = dust(0xFFF2B0, 0.7F);
+	private static final Particle.DustOptions SHIN_GOLD = dust(0xFFC81E, 1.5F);
+	private static final Particle.DustOptions SHIN_PALE = dust(0xFFF2B0, 1.1F);
+	private static final Particle.DustOptions SHIN_BRIGHT = dust(0xFFE65A, 2.0F);
 	private static final Particle.DustOptions MANG_GOLD = dust(0xFFE14D, 0.8F);
 
 	/** [Shin]: a golden glow rising around the wielder; call every tick. */
 	static void shin(LivingEntity holder, int tick) {
-		if (tick % 2 != 0) {
-			return;
-		}
 		World world = holder.getWorld();
 		ThreadLocalRandom random = ThreadLocalRandom.current();
 		Location base = holder.getLocation();
-		for (int i = 0; i < 4; i++) {
+		double height = holder.getHeight();
+		// Rising golden flames close around the body, every tick.
+		for (int i = 0; i < 6; i++) {
 			double a = random.nextDouble() * Math.PI * 2;
-			double r = 0.45 + random.nextDouble() * 0.35;
-			Vector p = new Vector(base.getX() + Math.cos(a) * r, base.getY() + random.nextDouble() * holder.getHeight() * 1.1,
+			double r = 0.35 + random.nextDouble() * 0.3;
+			Vector p = new Vector(base.getX() + Math.cos(a) * r, base.getY() + random.nextDouble() * height * 1.15,
 					base.getZ() + Math.sin(a) * r);
-			dustAt(world, i == 0 ? SHIN_PALE : SHIN_GOLD, p, 1, 0.02);
+			dustAt(world, i % 3 == 0 ? SHIN_PALE : SHIN_GOLD, p, 1, 0.02);
+		}
+		// Two bright spirals winding up the body.
+		for (int k = 0; k < 2; k++) {
+			double a = tick * 0.45 + k * Math.PI;
+			double y = (tick * 0.09 + k * 0.5) % 1.0 * height * 1.1;
+			Vector p = new Vector(base.getX() + Math.cos(a) * 0.6, base.getY() + y, base.getZ() + Math.sin(a) * 0.6);
+			dustAt(world, SHIN_BRIGHT, p, 2, 0.03);
+			if (tick % 2 == 0) {
+				world.spawnParticle(Particle.END_ROD, p.getX(), p.getY(), p.getZ(), 1, 0.0, 0.03, 0.0, 0.01);
+			}
+		}
+		if (tick % 3 == 0) {
+			world.spawnParticle(Particle.WAX_ON, base.getX(), base.getY() + height * 0.6, base.getZ(), 3, 0.4, 0.6, 0.4, 0.0);
 		}
 		if (tick % 6 == 0) {
-			spawn(world, Particle.END_ROD, center(holder), 1, 0.35, 0.02);
-		}
-		if (tick % 10 == 0) {
-			for (int i = 0; i < 16; i++) {
-				double a = i * Math.PI / 8;
-				dustAt(world, SHIN_GOLD, new Vector(base.getX() + Math.cos(a) * 0.8, base.getY() + 0.05, base.getZ() + Math.sin(a) * 0.8), 1, 0.0);
+			for (int i = 0; i < 20; i++) {
+				double a = i * Math.PI / 10;
+				dustAt(world, SHIN_GOLD, new Vector(base.getX() + Math.cos(a) * 0.85, base.getY() + 0.05, base.getZ() + Math.sin(a) * 0.85), 1, 0.0);
 			}
 		}
 	}
+
 
 	/** [Shin] flaring up as the skill starts. */
 	static void shinBurst(LivingEntity holder) {

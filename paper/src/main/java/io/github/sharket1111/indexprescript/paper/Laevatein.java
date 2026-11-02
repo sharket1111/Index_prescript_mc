@@ -469,7 +469,7 @@ final class Laevatein implements Listener {
 			}
 			int sinceRelease = tick - releaseTick();
 			double shake = sinceRelease >= 0 && sinceRelease < 5 ? 0.4 + 0.2 * stage : 0.0;
-			camera.frame(Cinematic.orbit(focus, cameraSide, 4.5 + 0.5 * stage, 1.8), focus, shake);
+			camera.frame(Cinematic.orbit(focus, cameraSide, 3.0 + 0.3 * stage, 1.3), focus, shake);
 		}
 
 		private int endTick() {
@@ -553,6 +553,9 @@ final class Laevatein implements Listener {
 		}
 
 		private void strike(double damage, int fireTicks, Runnable effect) {
+			if (camera != null) {
+				camera.jolt(0.45);
+			}
 			actor().swingMainHand();
 			effect.run();
 			Matthias.addTattoo(player);
