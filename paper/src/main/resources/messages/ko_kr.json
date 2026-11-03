@@ -35,7 +35,7 @@
 	"command.laevatein_status": "레바테인 상태 - 해방 단계: %s, 타격 횟수: %s, 아이콘 개수: %s, 해방 준비: %s",
 	"item.laevatein_icon": "봉인 해제",
 	"command.sanity": "정신력: %s (-45 ~ 45, 체력 5칸이 0)",
-	"command.mang_on": "망 %s개를 15초 동안 보여준다. (숫자 없이 다시 입력하면 끈다)",
+	"command.mang_on": "망 %s개를 15초 동안 감는다 (힘 효과). 숫자 없이 다시 입력하면 끈다.",
 	"command.mang_off": "망을 껐다.",
 	"command.mang_usage": "사용법: /indexprescript mang [1~6]"
 }

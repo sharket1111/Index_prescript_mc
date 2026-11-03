@@ -21,40 +21,47 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 /**
- * [Mang]'s glowing golden rings, wound round the held weapon. The rings are
- * part of the weapon's model (tools/mang_models.py): while Mang is shown, the
- * weapon in the holder's main hand carries a second custom model data string
- * ("mang1".."mang6") that picks the variant with that many rings. Because the
- * rings belong to the item, they sit on the blade in first person, in third
- * person and in everyone else's view, and follow every swing.
+ * [Mang]'s glowing golden rings, wound round the held weapon. Mang is the
+ * Strength effect (shown as Mang, with a ring icon, by the resource pack):
+ * anyone with Strength has as many rings as its level (up to six), whether
+ * it came from a skill, /ip mang or a potion, and showing Mang gives Strength.
+ *
+ * The rings are part of the weapon's model (tools/mang_models.py): the
+ * weapon in the holder's main hand carries a second custom model data
+ * string ("mang1".."mang6") that picks the variant with that many rings.
+ * Because the rings belong to the item, they sit on the blade in first
+ * person, in third person and in everyone else's view, and follow every swing.
  *
  * The string only ever stays on the weapon in hand while Mang lasts: it is
- * taken off when Mang ends, when the weapon leaves the hand (another slot,
- * dropped, a chest opened, death, leaving) and by a sweep of the inventory.
- * Bedrock players cannot see the Java model, so they see golden motes instead.
+ * taken off when Strength ends, when the weapon leaves the hand (another
+ * slot, dropped, a chest opened, death, leaving) and by a sweep of the
+ * inventory. Bedrock players cannot see the Java model, so they see golden
+ * motes instead.
  */
 final class MangRing {
 	static final int MAX_RINGS = 6;
 	private static final int SWEEP_TICKS = 10;
-	private static final Map<UUID, Ring> RINGS = new ConcurrentHashMap<>();
+	/** Rings each holder had last tick, to unwind them and to flash when more appear. */
+	private static final Map<UUID, Integer> LEVELS = new ConcurrentHashMap<>();
+	/** Holders that are not players (a skill's stand-in), checked each tick alongside the players. */
+	private static final Map<UUID, LivingEntity> OTHERS = new ConcurrentHashMap<>();
 	private static int clock;
 
-	private static final class Ring {
-		final LivingEntity holder;
-		final long until;
-		final int count;
-		int age;
-
-		Ring(LivingEntity holder, long until, int count) {
-			this.holder = holder;
-			this.until = until;
-			this.count = count;
-		}
+	private MangRing() {
 	}
 
-	private MangRing() {
+	/** How many rings {@code holder} has: their Strength level, up to six, or 0. */
+	static int count(LivingEntity holder) {
+		PotionEffect strength = holder.getPotionEffect(PotionEffectType.STRENGTH);
+		return strength == null ? 0 : Math.min(MAX_RINGS, strength.getAmplifier() + 1);
+	}
+
+	static boolean showing(LivingEntity holder) {
+		return count(holder) > 0;
 	}
 
 	/** Shows one ring on {@code holder}'s weapon for {@code ticks} ticks, or until hidden if 0. */
@@ -62,36 +69,55 @@ final class MangRing {
 		show(holder, ticks, 1);
 	}
 
-	/** Shows {@code count} rings (1-6) on {@code holder}'s weapon for {@code ticks} ticks, or until hidden if 0. */
+	/**
+	 * Gives {@code holder} Mang with {@code count} rings (1-6) for {@code ticks}
+	 * ticks, or until hidden if 0: Strength of that level, icon shown, no swirls.
+	 */
 	static void show(LivingEntity holder, int ticks, int count) {
 		count = Math.max(1, Math.min(MAX_RINGS, count));
-		long until = ticks > 0 ? CaduceusListener.now() + ticks : Long.MAX_VALUE;
-		RINGS.put(holder.getUniqueId(), new Ring(holder, until, count));
-		wind(holder, count);
-		Effects.mangForm(holder);
-	}
-
-	static void hide(LivingEntity holder) {
-		if (RINGS.remove(holder.getUniqueId()) != null) {
-			unwind(holder);
+		holder.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, ticks > 0 ? ticks : PotionEffect.INFINITE_DURATION,
+				count - 1, false, false, true));
+		if (!(holder instanceof Player)) {
+			OTHERS.put(holder.getUniqueId(), holder);
 		}
+		update(holder);
 	}
 
-	static boolean showing(LivingEntity holder) {
-		return RINGS.containsKey(holder.getUniqueId());
+	/** Ends Mang: takes away Strength and the rings. */
+	static void hide(LivingEntity holder) {
+		holder.removePotionEffect(PotionEffectType.STRENGTH);
+		update(holder);
+		OTHERS.remove(holder.getUniqueId());
 	}
 
-	/** How many rings {@code holder} has, or 0. */
-	static int count(LivingEntity holder) {
-		Ring ring = RINGS.get(holder.getUniqueId());
-		return ring == null ? 0 : ring.count;
+	/** Ends Mang given until hidden (by a skill), leaving Strength from anything else (a potion) alone. */
+	static void hideEndless(LivingEntity holder) {
+		PotionEffect strength = holder.getPotionEffect(PotionEffectType.STRENGTH);
+		if (strength != null && strength.isInfinite()) {
+			hide(holder);
+		}
 	}
 
 	/** Puts the rings back on a weapon just put in {@code holder}'s hand (e.g. a new form), if Mang is shown. */
 	static void refresh(LivingEntity holder) {
-		Ring ring = RINGS.get(holder.getUniqueId());
-		if (ring != null) {
-			wind(holder, ring.count);
+		int count = count(holder);
+		if (count > 0) {
+			wind(holder, count);
+		}
+	}
+
+	/** Matches the rings to the holder's Strength now: winds, rewinds or unwinds them. */
+	private static void update(LivingEntity holder) {
+		int count = holder.isValid() && !holder.isDead() ? count(holder) : 0;
+		Integer before = count > 0 ? LEVELS.put(holder.getUniqueId(), count) : LEVELS.remove(holder.getUniqueId());
+		int was = before == null ? 0 : before;
+		if (count > 0) {
+			wind(holder, count);
+			if (count > was) {
+				Effects.mangForm(holder);
+			}
+		} else if (was > 0) {
+			unwind(holder);
 		}
 	}
 
@@ -146,35 +172,43 @@ final class MangRing {
 		}
 	}
 
-	/** Called every tick: keeps the rings on the weapon in hand, and only there. */
+	/** Called every tick: keeps each holder's rings matched to their Strength, on the weapon in hand only. */
 	static void tick() {
-		long now = CaduceusListener.now();
-		Iterator<Ring> it = RINGS.values().iterator();
-		while (it.hasNext()) {
-			Ring ring = it.next();
-			if (now >= ring.until || !ring.holder.isValid() || ring.holder.isDead()) {
-				it.remove();
-				unwind(ring.holder);
-				continue;
-			}
-			wind(ring.holder, ring.count);
-			if (ring.age % 4 == 0) {
-				Effects.mang(ring.holder, ring.age, Effects.weaponFrame(ring.holder));
-			}
-			ring.age++;
+		clock++;
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			tickHolder(player);
 		}
-		if (++clock % SWEEP_TICKS == 0) {
+		Iterator<LivingEntity> it = OTHERS.values().iterator();
+		while (it.hasNext()) {
+			LivingEntity holder = it.next();
+			tickHolder(holder);
+			if (!holder.isValid() || holder.isDead() || count(holder) == 0) {
+				it.remove();
+			}
+		}
+		if (clock % SWEEP_TICKS == 0) {
 			for (Player player : Bukkit.getOnlinePlayers()) {
 				strip(player, showing(player) ? player.getInventory().getHeldItemSlot() : -1);
 			}
 		}
 	}
 
-	static void hideAll() {
-		for (Ring ring : RINGS.values()) {
-			unwind(ring.holder);
+	private static void tickHolder(LivingEntity holder) {
+		update(holder);
+		if (clock % 4 == 0 && LEVELS.containsKey(holder.getUniqueId())) {
+			Effects.mang(holder, clock, Effects.weaponFrame(holder));
 		}
-		RINGS.clear();
+	}
+
+	static void hideAll() {
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			strip(player, -1);
+		}
+		for (LivingEntity holder : OTHERS.values()) {
+			unwind(holder);
+		}
+		OTHERS.clear();
+		LEVELS.clear();
 	}
 
 	/** Takes the rings off a weapon leaving the holder's hand, so they never stay on a stored item. */
@@ -208,12 +242,12 @@ final class MangRing {
 					Items.setMang(stack, 0);
 				}
 			}
-			hide(event.getPlayer());
+			LEVELS.remove(event.getPlayer().getUniqueId());
 		}
 
 		@EventHandler
 		public void onQuit(PlayerQuitEvent event) {
-			hide(event.getPlayer());
+			LEVELS.remove(event.getPlayer().getUniqueId());
 			strip(event.getPlayer(), -1);
 		}
 

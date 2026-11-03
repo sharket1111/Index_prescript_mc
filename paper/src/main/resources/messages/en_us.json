@@ -35,7 +35,7 @@
 	"command.laevatein_status": "Laevatein - stage: %s, hits: %s, icon count: %s, ready: %s",
 	"item.laevatein_icon": "Seal Release",
 	"command.sanity": "Sanity: %s (-45 to 45, 0 at 5 hearts)",
-	"command.mang_on": "Showing %s Mang ring(s) for 15 seconds (run again without a number to hide).",
+	"command.mang_on": "Winding %s Mang ring(s) for 15 seconds (Strength). Run again without a number to end it.",
 	"command.mang_off": "Mang hidden.",
 	"command.mang_usage": "Usage: /indexprescript mang [1-6]"
 }

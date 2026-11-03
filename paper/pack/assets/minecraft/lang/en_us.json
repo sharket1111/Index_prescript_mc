@@ -10,5 +10,6 @@
 	"enchantment.level.18": "18",
 	"enchantment.level.19": "19",
 	"enchantment.level.20": "20",
-	"effect.minecraft.slowness": "Stagger"
+	"effect.minecraft.slowness": "Stagger",
+	"effect.minecraft.strength": "Mang"
 }

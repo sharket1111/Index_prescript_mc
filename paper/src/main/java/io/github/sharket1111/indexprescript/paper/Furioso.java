@@ -123,6 +123,8 @@ final class Furioso {
 	private int shinDamageUp;
 	private int shinPower;
 	private boolean mang;
+	/** Whether this skill gave the player Mang (Strength), to take back at the end. */
+	private boolean mangGiven;
 
 	private Furioso(Player player, LivingEntity target) {
 		this.player = player;
@@ -166,7 +168,13 @@ final class Furioso {
 		Effects.auraBurst(actor());
 		Effects.shinBurst(actor());
 		if (mang) {
-			MangRing.show(actor(), 0);
+			// As many rings as the player's Strength (at least one); the player sees Mang in their effects.
+			MangRing.show(actor(), 0, Math.max(1, MangRing.count(player)));
+			if (!MangRing.showing(player)) {
+				// Timed, so it still wears off if the player leaves mid-skill.
+				MangRing.show(player, END_TICK + 20);
+				mangGiven = true;
+			}
 		}
 		sound(actor().getLocation(), Sound.ITEM_BUCKET_FILL_LAVA, 1.0F, 0.6F);
 		sound(actor().getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.0F, 0.5F);
@@ -595,7 +603,11 @@ final class Furioso {
 			scythe.remove();
 			scythe = null;
 		}
-		MangRing.hide(actor());
+		MangRing.hideEndless(actor());
+		if (mangGiven) {
+			MangRing.hide(player);
+			mangGiven = false;
+		}
 		TotalDamage.finish(player);
 		if (camera != null) {
 			camera.end();

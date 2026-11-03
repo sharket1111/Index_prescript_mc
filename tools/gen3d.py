@@ -82,16 +82,10 @@ def taper(m, y0, y1, w0, w1, t0, t1, mat, steps):
 
 
 def base():
-    m = Model()
-    m.rod(-1.0, 16.0, 1.3, "brass")
-    m.rod(-1.8, -1.0, 1.8, "metal_dark")
-    m.rod(16.0, 16.8, 1.8, "metal_dark")
-    m.rod(16.8, 18.4, 0.6, "metal")
-    m.rod(-3.4, -1.8, 0.6, "metal")
-    for y in (1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0):
-        m.box(9.3, y, 7.8, 9.8, y + 0.6, 8.2, "chain")
-    m.box(8.65, 7.4, 7.8, 9.8, 7.8, 8.2, "chain")
-    m.box(8.65, 0.8, 7.8, 9.8, 1.2, 8.2, "chain")
+    """The bare rod before it takes a form: just the brass handle (the same grip
+    every form has) with a short spike on top, so it is handle-sized in hand."""
+    m = grip(Model())
+    m.rod(6.6, 7.8, 0.6, "metal")
     return m
 
 
