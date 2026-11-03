@@ -356,7 +356,7 @@ final class Effects {
 		Vector forward = new Vector(-Math.sin(bodyYaw), 0, Math.cos(bodyYaw));
 		Vector right = new Vector(-forward.getZ(), 0, forward.getX());
 		double scale = holder.getHeight() / 1.8;
-		Vector hand = at.toVector().add(new Vector(0, 0.74 * scale, 0)).add(right.clone().multiply(0.32 * scale))
+		Vector hand = at.toVector().add(new Vector(0, 0.78 * scale, 0)).add(right.clone().multiply(0.36 * scale))
 				.add(forward.clone().multiply(0.05 * scale));
 		double yaw = Math.toRadians(yawDeg);
 		Vector heading = forward.clone().multiply(Math.cos(yaw)).subtract(right.clone().multiply(Math.sin(yaw)));
