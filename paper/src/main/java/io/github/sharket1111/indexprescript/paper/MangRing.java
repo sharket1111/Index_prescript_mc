@@ -40,8 +40,15 @@ final class MangRing {
 	private static final int SWING_TICKS = 6;
 	/** Distance between neighbouring rings along the weapon, in blocks. */
 	private static final double SPACING = 0.15;
-	/** First-person blade tilt above the line of sight at rest, in degrees. */
-	private static final double FIRST_PERSON_TILT = 30.0;
+	/**
+	 * First person, matched to where the held sword is drawn: near the right
+	 * edge of the view, standing almost upright and leaning left, so the rings
+	 * there are smaller and closer together.
+	 */
+	private static final double FIRST_PERSON_TILT = 65.0;
+	private static final double FIRST_PERSON_LEAN = 30.0;
+	private static final float FIRST_PERSON_SCALE = 0.18F;
+	private static final double FIRST_PERSON_SPACING = 0.08;
 	private static final Map<UUID, Ring> RINGS = new ConcurrentHashMap<>();
 	/** Holders who see their own rings as in third person. */
 	private static final Set<UUID> THIRD_PERSON_VIEW = ConcurrentHashMap.newKeySet();
@@ -174,7 +181,7 @@ final class MangRing {
 	 * The blade as a held item sits in first person: in the lower right of the
 	 * view, following where the player looks, pointing ahead and up.
 	 */
-	private static Vector[] firstPersonFrame(Player player, double tiltDeg, double yawDeg) {
+	private static Vector[] firstPersonFrame(Player player, double tiltDeg, double leanDeg) {
 		Location eye = player.getEyeLocation();
 		Vector look = eye.getDirection().normalize();
 		Vector right = look.clone().crossProduct(new Vector(0, 1, 0));
@@ -184,27 +191,28 @@ final class MangRing {
 		}
 		right.normalize();
 		Vector up = right.clone().crossProduct(look).normalize();
-		Vector hand = eye.toVector().add(look.clone().multiply(0.55)).add(right.clone().multiply(0.32)).subtract(up.clone().multiply(0.30));
-		double yaw = Math.toRadians(yawDeg);
-		Vector heading = look.clone().multiply(Math.cos(yaw)).subtract(right.clone().multiply(Math.sin(yaw)));
+		// The middle of the blade, 0.6 ahead: near the right edge and a little below the centre of the view.
+		Vector middle = eye.toVector().add(look.clone().multiply(0.6)).add(right.clone().multiply(0.6)).subtract(up.clone().multiply(0.08));
+		double lean = Math.toRadians(leanDeg);
+		Vector heading = look.clone().multiply(Math.cos(lean)).subtract(right.clone().multiply(Math.sin(lean)));
 		double tilt = Math.toRadians(tiltDeg);
 		Vector axis = heading.multiply(Math.cos(tilt)).add(up.multiply(Math.sin(tilt))).normalize();
-		return new Vector[] {hand.add(axis.clone().multiply(0.25)), axis};
+		return new Vector[] {middle, axis};
 	}
 
-	private static void place(List<ItemDisplay> displays, Vector[] frame, LivingEntity holder, int age) {
+	private static void place(List<ItemDisplay> displays, Vector[] frame, LivingEntity holder, int age, float scale, double spacing) {
 		Vector axis = frame[1];
 		Vector3f axisF = new Vector3f((float) axis.getX(), (float) axis.getY(), (float) axis.getZ());
 		int count = displays.size();
 		for (int i = 0; i < count; i++) {
 			ItemDisplay display = displays.get(i);
 			// Spread along the blade around its middle, neighbours turning opposite ways.
-			double offset = (i - (count - 1) / 2.0) * SPACING;
+			double offset = (i - (count - 1) / 2.0) * spacing;
 			display.teleport(frame[0].clone().add(axis.clone().multiply(offset)).toLocation(holder.getWorld()));
 			double spin = age * SPIN_PER_TICK * (i % 2 == 0 ? 1 : -1) + i * 0.7;
 			Quaternionf turn = new Quaternionf().rotationTo(new Vector3f(0, 0, 1), axisF).rotateZ((float) spin);
 			display.setInterpolationDelay(0);
-			display.setTransformation(new Transformation(new Vector3f(), turn, new Vector3f(SCALE, SCALE, SCALE), new Quaternionf()));
+			display.setTransformation(new Transformation(new Vector3f(), turn, new Vector3f(scale, scale, scale), new Quaternionf()));
 		}
 	}
 
@@ -225,9 +233,11 @@ final class MangRing {
 			}
 			double[] pose = swingPose(ring);
 			Vector[] frame = Effects.weaponFrame(ring.holder, Effects.REST_TILT + pose[0], pose[1]);
-			place(ring.third, frame, ring.holder, ring.age);
+			place(ring.third, frame, ring.holder, ring.age, SCALE, SPACING);
 			if (!ring.first.isEmpty() && ring.holder instanceof Player player) {
-				place(ring.first, firstPersonFrame(player, FIRST_PERSON_TILT + pose[0], pose[1]), ring.holder, ring.age);
+				// A first-person swing tips the blade forward and across, more gently than on the arm.
+				Vector[] own = firstPersonFrame(player, FIRST_PERSON_TILT + pose[0] * 0.5, FIRST_PERSON_LEAN + pose[1]);
+				place(ring.first, own, ring.holder, ring.age, FIRST_PERSON_SCALE, FIRST_PERSON_SPACING);
 			}
 			if (ring.age % 4 == 0) {
 				Effects.mang(ring.holder, ring.age, frame);
