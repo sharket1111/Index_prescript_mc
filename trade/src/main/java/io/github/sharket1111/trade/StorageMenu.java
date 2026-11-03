@@ -125,6 +125,9 @@ final class StorageMenu extends Menu {
 		if (stack == null || stack.isEmpty()) {
 			return;
 		}
+		if (refuseTool(stack)) {
+			return;
+		}
 		int slot = SharedStorage.put(stack, player);
 		if (slot < 0) {
 			tell("공용 보관함이 가득 찼습니다.", NamedTextColor.RED);

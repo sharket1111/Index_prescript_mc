@@ -108,6 +108,9 @@ final class GoodsMenu extends Menu {
 		if (picked == null || picked.isEmpty()) {
 			return;
 		}
+		if (refuseTool(picked)) {
+			return;
+		}
 		if (Market.of(player.getUniqueId()).size() >= Market.MAX_LISTINGS_PER_PLAYER) {
 			tell("물품은 " + Market.MAX_LISTINGS_PER_PLAYER + "개까지 등록할 수 있습니다.", NamedTextColor.RED);
 			failSound();

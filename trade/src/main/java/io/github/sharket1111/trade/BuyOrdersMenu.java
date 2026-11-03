@@ -142,6 +142,9 @@ final class BuyOrdersMenu extends Menu {
 		if (picked == null || picked.isEmpty()) {
 			return;
 		}
+		if (refuseTool(picked)) {
+			return;
+		}
 		if (BuyOrders.of(player.getUniqueId()).size() >= BuyOrders.MAX_PER_PLAYER) {
 			tell("주문은 " + BuyOrders.MAX_PER_PLAYER + "개까지 올릴 수 있습니다.", NamedTextColor.RED);
 			failSound();

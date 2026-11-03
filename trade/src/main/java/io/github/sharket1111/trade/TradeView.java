@@ -105,6 +105,9 @@ final class TradeView extends Menu {
 		if (picked == null || picked.isEmpty()) {
 			return;
 		}
+		if (refuseTool(picked)) {
+			return;
+		}
 		ItemStack[] mine = session.offerOf(player);
 		for (int i = 0; i < DirectTrade.OFFER_SLOTS; i++) {
 			if (mine[i] == null) {

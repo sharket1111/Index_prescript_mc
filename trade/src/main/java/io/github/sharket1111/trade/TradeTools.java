@@ -11,7 +11,16 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.CrafterCraftEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryMoveItemEvent;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.inventory.PrepareAnvilEvent;
+import org.bukkit.event.inventory.PrepareGrindstoneEvent;
+import org.bukkit.event.inventory.PrepareItemCraftEvent;
+import org.bukkit.event.inventory.PrepareSmithingEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
@@ -32,6 +41,11 @@ import net.kyori.adventure.text.format.NamedTextColor;
  * - the trade menu star: right-click to open /trade. Free in the server shop.
  * Both come back on respawn (instead of dropping on death); the book also
  * when joining, and is free in the server shop in case it is thrown away.
+ *
+ * Being free, they must be worth nothing else: they cannot be crafted with
+ * (a beacon from the star, bookshelves from the book), used in an anvil,
+ * grindstone (experience from the Mending) or smithing table, an
+ * auto-crafter, or traded to villagers; the trade menus refuse them too.
  */
 final class TradeTools {
 	static final String WAYPOINT = "waypoint_book";
@@ -162,6 +176,84 @@ final class TradeTools {
 					return;
 				}
 				new WaypointListMenu(player).open();
+			}
+		}
+
+		private static boolean anyTool(ItemStack... stacks) {
+			for (ItemStack stack : stacks) {
+				if (toolOf(stack) != null) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		/** No crafting with them: crafting tables and the inventory's own grid. */
+		@EventHandler(priority = EventPriority.HIGHEST)
+		public void onCraft(PrepareItemCraftEvent event) {
+			if (anyTool(event.getInventory().getMatrix())) {
+				event.getInventory().setResult(null);
+			}
+		}
+
+		@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+		public void onCrafter(CrafterCraftEvent event) {
+			if (event.getBlock().getState() instanceof org.bukkit.block.Crafter crafter
+					&& anyTool(crafter.getInventory().getContents())) {
+				event.setCancelled(true);
+			}
+		}
+
+		@EventHandler(priority = EventPriority.HIGHEST)
+		public void onAnvil(PrepareAnvilEvent event) {
+			if (anyTool(event.getInventory().getContents())) {
+				event.setResult(null);
+			}
+		}
+
+		@EventHandler(priority = EventPriority.HIGHEST)
+		public void onGrindstone(PrepareGrindstoneEvent event) {
+			if (anyTool(event.getInventory().getContents())) {
+				event.setResult(null);
+			}
+		}
+
+		@EventHandler(priority = EventPriority.HIGHEST)
+		public void onSmithing(PrepareSmithingEvent event) {
+			if (anyTool(event.getInventory().getContents())) {
+				event.setResult(null);
+			}
+		}
+
+		/** Nor into villagers' trades or hoppers feeding a crafter. */
+		@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+		public void onClick(InventoryClickEvent event) {
+			if (event.getView().getTopInventory().getType() != InventoryType.MERCHANT) {
+				return;
+			}
+			boolean intoTop = event.getClickedInventory() == event.getView().getTopInventory() && toolOf(event.getCursor()) != null
+					|| event.getClickedInventory() != event.getView().getTopInventory() && event.isShiftClick()
+							&& toolOf(event.getCurrentItem()) != null
+					|| event.getClick() == org.bukkit.event.inventory.ClickType.NUMBER_KEY
+							&& event.getClickedInventory() == event.getView().getTopInventory()
+							&& toolOf(event.getWhoClicked().getInventory().getItem(event.getHotbarButton())) != null;
+			if (intoTop) {
+				event.setCancelled(true);
+			}
+		}
+
+		@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+		public void onDrag(InventoryDragEvent event) {
+			if (event.getView().getTopInventory().getType() == InventoryType.MERCHANT && toolOf(event.getOldCursor()) != null
+					&& event.getRawSlots().stream().anyMatch(slot -> slot < event.getView().getTopInventory().getSize())) {
+				event.setCancelled(true);
+			}
+		}
+
+		@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+		public void onMove(InventoryMoveItemEvent event) {
+			if (event.getDestination().getType() == InventoryType.CRAFTER && toolOf(event.getItem()) != null) {
+				event.setCancelled(true);
 			}
 		}
 

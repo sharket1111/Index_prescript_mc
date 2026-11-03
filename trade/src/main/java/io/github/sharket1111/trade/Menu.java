@@ -96,6 +96,16 @@ abstract class Menu implements InventoryHolder {
 		return player.getUniqueId().toString().startsWith(FLOODGATE_PREFIX);
 	}
 
+	/** Refuses (with a message) the free handy items, which may not be sold, traded or stored for others. */
+	final boolean refuseTool(ItemStack stack) {
+		if (TradeTools.toolOf(stack) == null) {
+			return false;
+		}
+		tell("무료 아이템(거래 메뉴, 웨이포인트 책)은 거래하거나 맡길 수 없습니다.", NamedTextColor.RED);
+		failSound();
+		return true;
+	}
+
 	final void tell(String message, NamedTextColor color) {
 		player.sendMessage(Component.text(message, color));
 	}
