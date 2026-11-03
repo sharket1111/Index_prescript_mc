@@ -79,7 +79,12 @@ final class History {
 	}
 
 		static void record(Listing listing, UUID buyer, String buyerName) {
-		ENTRIES.add(new Entry(buyer, buyerName, listing.seller, Market.name(listing.seller), listing.item.clone(), listing.price,
+		record(listing, buyer, buyerName, listing.price);
+	}
+
+	/** A sale at {@code paid} (the listed price less any group discount). */
+	static void record(Listing listing, UUID buyer, String buyerName, int paid) {
+		ENTRIES.add(new Entry(buyer, buyerName, listing.seller, Market.name(listing.seller), listing.item.clone(), paid,
 				System.currentTimeMillis()));
 		while (ENTRIES.size() > MAX_ENTRIES) {
 			ENTRIES.remove(0);

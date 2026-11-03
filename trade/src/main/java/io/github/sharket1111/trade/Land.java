@@ -60,6 +60,12 @@ final class Land {
 		final Map<UUID, EnumSet<Perm>> members = new LinkedHashMap<>();
 		final Map<UUID, String> memberNames = new LinkedHashMap<>();
 		EnumSet<Perm> everyone = EnumSet.noneOf(Perm.class);
+		/** The owner's group the group settings below belong to, or null for none. */
+		UUID group;
+		/** Permissions for every member of the owner's group, or null to treat them like everyone. */
+		EnumSet<Perm> groupAll;
+		/** Permissions by role in the owner's group (before the whole-group setting). */
+		final Map<String, EnumSet<Perm>> roles = new LinkedHashMap<>();
 
 		Claim(String key, UUID owner, String ownerName) {
 			this.key = key;
@@ -113,6 +119,18 @@ final class Land {
 						claim.memberNames.put(uuid, members.getString(id + ".name", "?"));
 					}
 				}
+				if (s.isString("group")) {
+					claim.group = UUID.fromString(s.getString("group"));
+					if (s.isList("group-all")) {
+						claim.groupAll = perms(s.getStringList("group-all"));
+					}
+					ConfigurationSection roles = s.getConfigurationSection("roles");
+					if (roles != null) {
+						for (String role : roles.getKeys(false)) {
+							claim.roles.put(role, perms(roles.getStringList(role)));
+						}
+					}
+				}
 				CLAIMS.put(key, claim);
 			} catch (RuntimeException e) {
 				owner.getLogger().log(Level.WARNING, "Skipping a broken land claim " + key, e);
@@ -149,6 +167,13 @@ final class Land {
 				yaml.set(path + ".members." + id + ".name", claim.memberNames.getOrDefault(id, "?"));
 				yaml.set(path + ".members." + id + ".perms", names(perms));
 			});
+			if (claim.group != null) {
+				yaml.set(path + ".group", claim.group.toString());
+				if (claim.groupAll != null) {
+					yaml.set(path + ".group-all", names(claim.groupAll));
+				}
+				claim.roles.forEach((role, perms) -> yaml.set(path + ".roles." + role, names(perms)));
+			}
 		}
 		try {
 			file.getParentFile().mkdirs();
@@ -249,7 +274,69 @@ final class Land {
 			return true;
 		}
 		EnumSet<Perm> perms = claim.members.get(player.getUniqueId());
+		if (perms == null) {
+			perms = groupPerms(claim, player.getUniqueId());
+		}
 		return (perms != null ? perms : claim.everyone).contains(perm);
+	}
+
+	/** The owner's group, if the claim's group settings belong to it. */
+	static Groups.Group ownerGroup(Claim claim) {
+		Groups.Group group = Groups.of(claim.owner);
+		return group != null && group.id.equals(claim.group) ? group : null;
+	}
+
+	/** What a fellow member of the owner's group may do: by their role, else as the whole group; null if neither is set. */
+	private static EnumSet<Perm> groupPerms(Claim claim, UUID player) {
+		Groups.Group group = ownerGroup(claim);
+		if (group == null || Groups.of(player) != group) {
+			return null;
+		}
+		EnumSet<Perm> byRole = claim.roles.get(group.roleOf(player).id);
+		return byRole != null ? byRole : claim.groupAll;
+	}
+
+	/** Makes {@code claim}'s group settings belong to its owner's current group, starting over if it changed. */
+	static void bindGroup(Claim claim) {
+		Groups.Group group = Groups.of(claim.owner);
+		UUID id = group == null ? null : group.id;
+		if (id == null || !id.equals(claim.group)) {
+			claim.group = id;
+			claim.groupAll = null;
+			claim.roles.clear();
+		}
+	}
+
+	/** {@code player} joined or left a group: group settings on their land no longer apply. */
+	static void groupChanged(UUID player) {
+		boolean changed = false;
+		for (Claim claim : CLAIMS.values()) {
+			if (claim.owner.equals(player) && claim.group != null) {
+				Groups.Group group = Groups.of(player);
+				if (group == null || !group.id.equals(claim.group)) {
+					claim.group = null;
+					claim.groupAll = null;
+					claim.roles.clear();
+					changed = true;
+				}
+			}
+		}
+		if (changed) {
+			save();
+		}
+	}
+
+	/** A role was deleted: land settings for it go. */
+	static void roleDeleted(Groups.Group group, String role) {
+		boolean changed = false;
+		for (Claim claim : CLAIMS.values()) {
+			if (group.id.equals(claim.group) && claim.roles.remove(role) != null) {
+				changed = true;
+			}
+		}
+		if (changed) {
+			save();
+		}
 	}
 
 	/** Whether anything at {@code location} is protected from explosions and the like. */

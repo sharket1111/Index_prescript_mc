@@ -29,6 +29,7 @@ final class LandMenu extends Menu {
 	private static final int BORDER_SLOT = 20;
 	private static final int INFO_SLOT = 22;
 	private static final int ADD_SLOT = 24;
+	private static final int GROUP_SLOT = 26;
 	private final Location at;
 	private final Map<Integer, UUID> bySlot = new HashMap<>();
 
@@ -109,6 +110,12 @@ final class LandMenu extends Menu {
 				"가진 땅: " + Land.claimsOf(player.getUniqueId()) + "청크"));
 		inventory.setItem(ADD_SLOT, TradeItems.button(Material.EMERALD, "플레이어 추가", NamedTextColor.GREEN,
 				"플레이어를 골라 이 땅의 권한을 따로 정합니다."));
+		Groups.Group group = Groups.of(player.getUniqueId());
+		inventory.setItem(GROUP_SLOT, group != null
+				? TradeItems.button(Material.CYAN_BANNER, "그룹 권한", NamedTextColor.AQUA, "그룹 '" + group.name + "' 전체,",
+						"또는 역할별로 이 땅의 권한을 한 번에 정합니다.")
+				: TradeItems.button(Material.GRAY_BANNER, "그룹 권한", NamedTextColor.GRAY, "그룹에 속하면 그룹원 전체나",
+						"역할별로 권한을 한 번에 정할 수 있습니다."));
 	}
 
 	@Override
@@ -127,7 +134,14 @@ final class LandMenu extends Menu {
 		if (claim == null) {
 			return;
 		}
-		if (slot == EVERYONE_SLOT) {
+		if (slot == GROUP_SLOT) {
+			if (Groups.of(player.getUniqueId()) == null) {
+				failSound();
+				return;
+			}
+			clickSound();
+			new LandGroupMenu(player, at).open();
+		} else if (slot == EVERYONE_SLOT) {
 			clickSound();
 			new LandPermissionMenu(player, at, null, "모든 사람").open();
 		} else if (slot == ADD_SLOT) {

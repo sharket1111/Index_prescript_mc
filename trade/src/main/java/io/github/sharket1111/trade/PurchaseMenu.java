@@ -27,20 +27,29 @@ final class PurchaseMenu extends Menu {
 		this.back = back;
 	}
 
+	/** The price this buyer pays: less the group discount if they and the seller share a group. */
+	private int price() {
+		return Groups.discounted(listing.price, Groups.discount(player.getUniqueId(), listing.seller));
+	}
+
 	@Override
 	void draw() {
 		int have = count(TradeItems::isTradeDiamond);
+		int price = price();
+		int discount = Groups.discount(player.getUniqueId(), listing.seller);
 		inventory.setItem(ITEM_SLOT, listing.item.clone());
-		inventory.setItem(PRICE_SLOT, TradeItems.glint(TradeItems.button(Material.DIAMOND, listing.price,
-				"가격: 거래 전용 다이아 " + listing.price + "개", NamedTextColor.AQUA,
-				"판매자: " + Market.name(listing.seller), "내 거래 전용 다이아: " + have + "개")));
+		inventory.setItem(PRICE_SLOT, TradeItems.glint(TradeItems.button(Material.DIAMOND, price,
+				"가격: 거래 전용 다이아 " + price + "개", NamedTextColor.AQUA,
+				discount > 0 ? "그룹 할인 " + discount + "% (원래 " + listing.price + "개)" : "판매자: " + Market.name(listing.seller),
+				discount > 0 ? "판매자: " + Market.name(listing.seller) + " (같은 그룹)" : "",
+				"내 거래 전용 다이아: " + have + "개")));
 		inventory.setItem(BACK_SLOT, TradeItems.back());
-		boolean enough = have >= listing.price;
+		boolean enough = have >= price;
 		inventory.setItem(BUY_SLOT, enough
 				? TradeItems.button(Material.LIME_CONCRETE, "구매하기", NamedTextColor.GREEN,
-						"거래 전용 다이아 " + listing.price + "개를 내고 삽니다.")
+						"거래 전용 다이아 " + price + "개를 내고 삽니다.")
 				: TradeItems.button(Material.GRAY_CONCRETE, "거래 전용 다이아가 부족합니다", NamedTextColor.RED,
-						(listing.price - have) + "개가 더 필요합니다."));
+						(price - have) + "개가 더 필요합니다."));
 	}
 
 	@Override
@@ -77,7 +86,7 @@ final class PurchaseMenu extends Menu {
 				return;
 			}
 		}
-		int price = listing.price;
+		int price = price();
 		if (count(TradeItems::isTradeDiamond) < price) {
 			tell("거래 전용 다이아가 부족합니다.", NamedTextColor.RED);
 			failSound();
@@ -86,7 +95,7 @@ final class PurchaseMenu extends Menu {
 		}
 		take(TradeItems::isTradeDiamond, price);
 		Market.remove(listing);
-		History.record(listing, player.getUniqueId(), player.getName());
+		History.record(listing, player.getUniqueId(), player.getName(), price);
 		if (chunk != null) {
 			Land.transfer(chunk, player);
 		} else {

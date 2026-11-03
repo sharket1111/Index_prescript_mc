@@ -19,6 +19,7 @@ final class MainMenu extends Menu {
 	private static final int MAIL_SLOT = 16;
 	private static final int LAND_SLOT = 20;
 	private static final int HISTORY_SLOT = 22;
+	private static final int GROUP_SLOT = 24;
 	private static final int ADMIN_SLOT = 26;
 
 	MainMenu(Player player) {
@@ -50,6 +51,11 @@ final class MainMenu extends Menu {
 				"서 있는 청크가 내 땅이면", "플레이어별 권한(건축/파괴/상호작용)을 정합니다."));
 		inventory.setItem(HISTORY_SLOT, TradeItems.button(Material.BOOK, "기록", NamedTextColor.YELLOW,
 				"내가 산 물품과 판 물품의", "기록을 봅니다."));
+		Groups.Group group = Groups.of(player.getUniqueId());
+		int invites = Groups.invitesFor(player.getUniqueId()).size();
+		inventory.setItem(GROUP_SLOT, TradeItems.button(Material.CYAN_BANNER, group != null ? "그룹: " + group.name : "그룹",
+				NamedTextColor.AQUA, group != null ? "그룹원, 역할, 접두사, 할인 관리" : "그룹을 만들거나 초대를 받습니다.",
+				group == null && invites > 0 ? "받은 초대: " + invites + "개" : "역할별 권한, 그룹원 공격 차단, 그룹 할인"));
 		if (player.hasPermission(AdminMenu.PERMISSION)) {
 			inventory.setItem(ADMIN_SLOT, TradeItems.button(Material.COMMAND_BLOCK, "관리자", NamedTextColor.RED,
 					"판매 물품/주문 관리, 기록 조회, 서버 상점 편집"));
@@ -69,6 +75,7 @@ final class MainMenu extends Menu {
 			case MAIL_SLOT -> new MailMenu(player, 0);
 			case LAND_SLOT -> new LandMenu(player);
 			case HISTORY_SLOT -> new HistoryMenu(player, 0, false);
+			case GROUP_SLOT -> new GroupMenu(player);
 			case ADMIN_SLOT -> player.hasPermission(AdminMenu.PERMISSION) ? new AdminMenu(player) : null;
 			default -> null;
 		};

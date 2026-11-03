@@ -20,9 +20,13 @@ public final class TradePlugin extends JavaPlugin {
 		BuyOrders.load(this);
 		ShopConfig.load(this);
 		Land.load(this);
+		ChatPrompt.init(this);
+		Groups.load(this);
 		getServer().getPluginManager().registerEvents(new Menu.Events(), this);
 		getServer().getPluginManager().registerEvents(new Tickets(), this);
 		getServer().getPluginManager().registerEvents(new LandListener(), this);
+		getServer().getPluginManager().registerEvents(new ChatPrompt.Events(), this);
+		getServer().getPluginManager().registerEvents(new Groups.Events(), this);
 	}
 
 	@Override
