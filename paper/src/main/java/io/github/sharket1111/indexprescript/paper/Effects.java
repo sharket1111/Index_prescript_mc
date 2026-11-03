@@ -362,7 +362,7 @@ final class Effects {
 		Vector heading = forward.clone().multiply(Math.cos(yaw)).subtract(right.clone().multiply(Math.sin(yaw)));
 		double tilt = Math.toRadians(tiltDeg);
 		Vector axis = heading.multiply(Math.cos(tilt)).add(new Vector(0, Math.sin(tilt), 0)).normalize();
-		return new Vector[] {hand.add(axis.clone().multiply(0.25 * scale)), axis};
+		return new Vector[] {hand.add(axis.clone().multiply(0.42 * scale)), axis};
 	}
 
 	/** [Mang]: a glowing golden ring wound round the weapon, slowly turning; call every tick. */

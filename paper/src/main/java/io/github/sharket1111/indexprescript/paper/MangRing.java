@@ -41,14 +41,14 @@ final class MangRing {
 	/** Distance between neighbouring rings along the weapon, in blocks. */
 	private static final double SPACING = 0.15;
 	/**
-	 * First person, matched to where the held sword is drawn: near the right
-	 * edge of the view, standing almost upright and leaning left, so the rings
-	 * there are smaller and closer together.
+	 * First person, matched to where the held sword is drawn (FOV 80): close
+	 * to the eye in the lower right of the view, pointing up and away and
+	 * leaning right, so the rings there are small and close together.
 	 */
-	private static final double FIRST_PERSON_TILT = 65.0;
-	private static final double FIRST_PERSON_LEAN = 30.0;
-	private static final float FIRST_PERSON_SCALE = 0.18F;
-	private static final double FIRST_PERSON_SPACING = 0.08;
+	private static final double FIRST_PERSON_TILT = 60.0;
+	private static final double FIRST_PERSON_LEAN = -30.0;
+	private static final float FIRST_PERSON_SCALE = 0.12F;
+	private static final double FIRST_PERSON_SPACING = 0.07;
 	private static final Map<UUID, Ring> RINGS = new ConcurrentHashMap<>();
 	/** Holders who see their own rings as in third person. */
 	private static final Set<UUID> THIRD_PERSON_VIEW = ConcurrentHashMap.newKeySet();
@@ -191,8 +191,8 @@ final class MangRing {
 		}
 		right.normalize();
 		Vector up = right.clone().crossProduct(look).normalize();
-		// The middle of the blade, 0.6 ahead: near the right edge and a little below the centre of the view.
-		Vector middle = eye.toVector().add(look.clone().multiply(0.6)).add(right.clone().multiply(0.72)).subtract(up.clone().multiply(0.08));
+		// The middle of the blade, 0.35 ahead of the eye: near the right edge, a little below the centre of the view.
+		Vector middle = eye.toVector().add(look.clone().multiply(0.35)).add(right.clone().multiply(0.42)).subtract(up.clone().multiply(0.09));
 		double lean = Math.toRadians(leanDeg);
 		Vector heading = look.clone().multiply(Math.cos(lean)).subtract(right.clone().multiply(Math.sin(lean)));
 		double tilt = Math.toRadians(tiltDeg);
