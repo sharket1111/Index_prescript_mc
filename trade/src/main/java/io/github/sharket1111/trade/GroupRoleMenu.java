@@ -17,16 +17,17 @@ import net.kyori.adventure.text.format.NamedTextColor;
  */
 final class GroupRoleMenu extends Menu {
 	private static final int INFO_SLOT = 4;
-	private static final int[] PERM_SLOTS = {9, 10, 11, 12, 13, 14, 15, 16};
-	private static final int UP_SLOT = 20;
-	private static final int RENAME_SLOT = 22;
-	private static final int DOWN_SLOT = 24;
-	private static final int DELETE_SLOT = 26;
+	private static final int[] PERM_SLOTS = {19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34};
+	private static final int BACK = 45;
+	private static final int UP_SLOT = 47;
+	private static final int RENAME_SLOT = 49;
+	private static final int DOWN_SLOT = 51;
+	private static final int DELETE_SLOT = 53;
 	private final java.util.UUID groupId;
 	private final String roleId;
 
 	GroupRoleMenu(Player player, java.util.UUID groupId, String roleId) {
-		super(player, "거래 - 역할");
+		super(player, "거래 - 역할", 6);
 		this.groupId = groupId;
 		this.roleId = roleId;
 	}
@@ -67,7 +68,7 @@ final class GroupRoleMenu extends Menu {
 
 	@Override
 	void draw() {
-		inventory.setItem(BACK_SLOT, TradeItems.back());
+		inventory.setItem(BACK, TradeItems.back());
 		Groups.Group group = Groups.member(groupId, player.getUniqueId());
 		Groups.Role role = group == null ? null : group.role(roleId);
 		if (role == null) {
@@ -111,7 +112,7 @@ final class GroupRoleMenu extends Menu {
 
 	@Override
 	void click(int slot, ClickType click) {
-		if (slot == BACK_SLOT) {
+		if (slot == BACK) {
 			clickSound();
 			new GroupRolesMenu(player, groupId).open();
 			return;

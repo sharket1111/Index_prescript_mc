@@ -24,6 +24,7 @@ final class GroupHomeMenu extends Menu {
 	private static final int TAG_SLOT = 15;
 	private static final int SETTINGS_SLOT = 16;
 	private static final int SHOW_TAG_SLOT = 22;
+	private static final int WAYPOINT_SLOT = 20;
 	private static final int LEAD_SLOT = 24;
 	private static final int LEAVE_SLOT = 26;
 	private final UUID groupId;
@@ -86,6 +87,9 @@ final class GroupHomeMenu extends Menu {
 				: TradeItems.button(Material.GRAY_DYE, "내 이름 앞에 이 접두사 달기", NamedTextColor.WHITE,
 						group.tag.isEmpty() ? "이 그룹은 아직 접두사가 없습니다." : "클릭: " + tag + player.getName() + "(으)로 표시",
 						"이름 앞에는 그룹 하나의 접두사만 붙습니다."));
+		inventory.setItem(WAYPOINT_SLOT, TradeItems.button(Material.LODESTONE, "그룹 웨이포인트 (" + group.waypoints.size() + "/"
+				+ Groups.WAYPOINT_PRICES.length + ")", NamedTextColor.AQUA, "그룹 웨이포인트로 텔레포트합니다. (다이아 " + Groups.TELEPORT_PRICE + "개)",
+				"좌표는 권한이 있는 역할만 볼 수 있습니다."));
 		if (me.equals(group.leader)) {
 			inventory.setItem(LEAD_SLOT, TradeItems.button(Material.GOLDEN_APPLE, "그룹장 넘기기", NamedTextColor.YELLOW,
 					"다른 그룹원에게 그룹장을 넘깁니다.", "나는 부대표가 됩니다."));
@@ -142,6 +146,10 @@ final class GroupHomeMenu extends Menu {
 				Groups.showTag(player.getUniqueId(), shown ? null : group);
 				successSound();
 				redraw();
+			}
+			case WAYPOINT_SLOT -> {
+				clickSound();
+				new GroupWaypointsMenu(player, groupId).open();
 			}
 			case LEAD_SLOT -> handOver(group);
 			case LEAVE_SLOT -> leave(group, click);

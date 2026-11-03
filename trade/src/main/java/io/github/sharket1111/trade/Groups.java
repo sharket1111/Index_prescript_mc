@@ -52,6 +52,9 @@ final class Groups {
 	static final int MAX_DISCOUNT = 50;
 	static final int MAX_INVITES = 18;
 	static final int MAX_GROUPS = 9;
+	/** What each new waypoint costs, in trade diamonds: the first, second... up to the last allowed. */
+	static final int[] WAYPOINT_PRICES = {14, 20, 30, 40, 50};
+	static final int TELEPORT_PRICE = 1;
 	private static final String NO_TAG = "none";
 	static final String LEADER = "leader";
 	static final String DEPUTY = "deputy";
@@ -66,7 +69,10 @@ final class Groups {
 		RENAME("이름·접두사", "그룹 이름과 이름 앞 접두사를 바꿉니다."),
 		SETTINGS("그룹 설정", "그룹 할인율을 정합니다."),
 		NO_PVP("그룹원 공격 차단", "이 역할은 그룹원과 서로 공격할 수 없습니다."),
-		DISCOUNT("그룹 할인", "그룹원의 물품을 그룹 할인율만큼 싸게 삽니다.");
+		DISCOUNT("그룹 할인", "그룹원의 물품을 그룹 할인율만큼 싸게 삽니다."),
+		WAYPOINT_USE("웨이포인트 사용", "그룹 웨이포인트로 텔레포트합니다. (거래 전용 다이아 1개)"),
+		WAYPOINT_VIEW("웨이포인트 좌표 보기", "그룹 웨이포인트의 좌표를 봅니다. (없으면 비공개)"),
+		WAYPOINT_MANAGE("웨이포인트 관리", "웨이포인트를 사서 만들고, 이름/위치를 바꾸고, 지웁니다.");
 
 		final String label;
 		final String help;
@@ -94,6 +100,45 @@ final class Groups {
 		}
 	}
 
+	/** A place the group can teleport to. */
+	static final class Waypoint {
+		String name;
+		String world;
+		double x;
+		double y;
+		double z;
+		float yaw;
+		float pitch;
+
+		Waypoint(String name, org.bukkit.Location at) {
+			this.name = name;
+			moveTo(at);
+		}
+
+		private Waypoint(String name) {
+			this.name = name;
+		}
+
+		void moveTo(org.bukkit.Location at) {
+			world = at.getWorld().getName();
+			x = at.getX();
+			y = at.getY();
+			z = at.getZ();
+			yaw = at.getYaw();
+			pitch = at.getPitch();
+		}
+
+		/** The spot, or null if its world is not loaded. */
+		org.bukkit.Location location() {
+			org.bukkit.World w = Bukkit.getWorld(world);
+			return w == null ? null : new org.bukkit.Location(w, x, y, z, yaw, pitch);
+		}
+
+		String coords() {
+			return world + " " + (int) Math.floor(x) + ", " + (int) Math.floor(y) + ", " + (int) Math.floor(z);
+		}
+	}
+
 	static final class Group {
 		final UUID id;
 		String name;
@@ -106,6 +151,7 @@ final class Groups {
 		final Map<UUID, String> memberRoles = new LinkedHashMap<>();
 		final Map<UUID, String> memberNames = new LinkedHashMap<>();
 		final Set<UUID> invites = new LinkedHashSet<>();
+		final List<Waypoint> waypoints = new ArrayList<>();
 
 		Group(UUID id, String name) {
 			this.id = id;
@@ -186,9 +232,9 @@ final class Groups {
 		group.leader = founder.getUniqueId();
 		EnumSet<Perm> all = EnumSet.allOf(Perm.class);
 		group.roles.add(new Role(LEADER, "그룹장", all));
-		group.roles.add(new Role(DEPUTY, "부대표",
-				EnumSet.of(Perm.INVITE, Perm.KICK, Perm.ASSIGN_ROLES, Perm.NO_PVP, Perm.DISCOUNT)));
-		group.roles.add(new Role(MEMBER, "멤버", EnumSet.of(Perm.NO_PVP, Perm.DISCOUNT)));
+		group.roles.add(new Role(DEPUTY, "부대표", EnumSet.of(Perm.INVITE, Perm.KICK, Perm.ASSIGN_ROLES, Perm.NO_PVP,
+				Perm.DISCOUNT, Perm.WAYPOINT_USE, Perm.WAYPOINT_VIEW)));
+		group.roles.add(new Role(MEMBER, "멤버", EnumSet.of(Perm.NO_PVP, Perm.DISCOUNT, Perm.WAYPOINT_USE)));
 		GROUPS.put(group.id, group);
 		addMember(group, founder.getUniqueId(), founder.getName(), LEADER);
 		save();
@@ -458,6 +504,25 @@ final class Groups {
 						group.memberNames.put(uuid, members.getString(id + ".name", "?"));
 					}
 				}
+				for (Map<?, ?> map : s.getMapList("waypoints")) {
+					Waypoint waypoint = new Waypoint(String.valueOf(map.get("name")));
+					waypoint.world = String.valueOf(map.get("world"));
+					waypoint.x = ((Number) map.get("x")).doubleValue();
+					waypoint.y = ((Number) map.get("y")).doubleValue();
+					waypoint.z = ((Number) map.get("z")).doubleValue();
+					waypoint.yaw = map.get("yaw") instanceof Number n ? n.floatValue() : 0F;
+					waypoint.pitch = map.get("pitch") instanceof Number n ? n.floatValue() : 0F;
+					group.waypoints.add(waypoint);
+				}
+				if (!s.getBoolean("waypoint-perms", false)) {
+					// Groups from before waypoints: members may use them, deputies also see where they are.
+					for (Role role : group.roles) {
+						role.perms.add(Perm.WAYPOINT_USE);
+						if (role.id.equals(DEPUTY)) {
+							role.perms.add(Perm.WAYPOINT_VIEW);
+						}
+					}
+				}
 				for (String id : s.getStringList("invites")) {
 					group.invites.add(UUID.fromString(id));
 				}
@@ -494,6 +559,20 @@ final class Groups {
 				yaml.set(path + ".members." + id + ".name", group.memberNames.getOrDefault(id, "?"));
 			});
 			yaml.set(path + ".invites", group.invites.stream().map(UUID::toString).toList());
+			yaml.set(path + ".waypoint-perms", true);
+			List<Map<String, Object>> waypoints = new ArrayList<>();
+			for (Waypoint waypoint : group.waypoints) {
+				Map<String, Object> map = new LinkedHashMap<>();
+				map.put("name", waypoint.name);
+				map.put("world", waypoint.world);
+				map.put("x", waypoint.x);
+				map.put("y", waypoint.y);
+				map.put("z", waypoint.z);
+				map.put("yaw", (double) waypoint.yaw);
+				map.put("pitch", (double) waypoint.pitch);
+				waypoints.add(map);
+			}
+			yaml.set(path + ".waypoints", waypoints);
 		}
 		try {
 			file.getParentFile().mkdirs();
