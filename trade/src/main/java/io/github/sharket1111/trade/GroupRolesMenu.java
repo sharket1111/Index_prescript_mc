@@ -117,6 +117,6 @@ final class GroupRolesMenu extends Menu {
 			tell("역할 '" + name + "'을(를) 만들었습니다.", NamedTextColor.GREEN);
 			successSound();
 			new GroupRoleMenu(player, groupId, role.id).open();
-		}, () -> new GroupRolesMenu(player).open());
+		}, () -> new GroupRolesMenu(player, groupId).open());
 	}
 }
