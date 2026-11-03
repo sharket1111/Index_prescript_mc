@@ -192,7 +192,7 @@ final class MangRing {
 		right.normalize();
 		Vector up = right.clone().crossProduct(look).normalize();
 		// The middle of the blade, 0.6 ahead: near the right edge and a little below the centre of the view.
-		Vector middle = eye.toVector().add(look.clone().multiply(0.6)).add(right.clone().multiply(0.6)).subtract(up.clone().multiply(0.08));
+		Vector middle = eye.toVector().add(look.clone().multiply(0.6)).add(right.clone().multiply(0.72)).subtract(up.clone().multiply(0.08));
 		double lean = Math.toRadians(leanDeg);
 		Vector heading = look.clone().multiply(Math.cos(lean)).subtract(right.clone().multiply(Math.sin(lean)));
 		double tilt = Math.toRadians(tiltDeg);
