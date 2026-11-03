@@ -34,21 +34,10 @@ import org.joml.Vector3f;
  * (for looking with F5).
  */
 final class MangRing {
-	private static final float SCALE = 0.35F;
 	private static final double SPIN_PER_TICK = 0.12;
 	static final int MAX_RINGS = 6;
 	private static final int SWING_TICKS = 6;
-	/** Distance between neighbouring rings along the weapon, in blocks. */
-	private static final double SPACING = 0.15;
-	/**
-	 * First person, matched to where the held sword is drawn (FOV 80): close
-	 * to the eye in the lower right of the view, pointing up and away and
-	 * leaning right, so the rings there are small and close together.
-	 */
-	private static final double FIRST_PERSON_TILT = 60.0;
-	private static final double FIRST_PERSON_LEAN = -30.0;
-	private static final float FIRST_PERSON_SCALE = 0.12F;
-	private static final double FIRST_PERSON_SPACING = 0.07;
+	// Positions, angles and sizes come from MangTuning (adjustable with /ip mang tune).
 	private static final Map<UUID, Ring> RINGS = new ConcurrentHashMap<>();
 	/** Holders who see their own rings as in third person. */
 	private static final Set<UUID> THIRD_PERSON_VIEW = ConcurrentHashMap.newKeySet();
@@ -164,8 +153,8 @@ final class MangRing {
 		if (t < 0 || t >= 1) {
 			return new double[] {0, 0};
 		}
-		double rise = 100 - Effects.REST_TILT;
-		double fall = -40 - Effects.REST_TILT;
+		double rise = 100 - Effects.restTilt();
+		double fall = -40 - Effects.restTilt();
 		if (t < 0.3) {
 			double u = t / 0.3;
 			return new double[] {rise * u, -30 * u};
@@ -192,7 +181,8 @@ final class MangRing {
 		right.normalize();
 		Vector up = right.clone().crossProduct(look).normalize();
 		// The middle of the blade, 0.35 ahead of the eye: near the right edge, a little below the centre of the view.
-		Vector middle = eye.toVector().add(look.clone().multiply(0.35)).add(right.clone().multiply(0.42)).subtract(up.clone().multiply(0.09));
+		Vector middle = eye.toVector().add(look.clone().multiply(MangTuning.first("dist")))
+				.add(right.clone().multiply(MangTuning.first("right"))).subtract(up.clone().multiply(MangTuning.first("down")));
 		double lean = Math.toRadians(leanDeg);
 		Vector heading = look.clone().multiply(Math.cos(lean)).subtract(right.clone().multiply(Math.sin(lean)));
 		double tilt = Math.toRadians(tiltDeg);
@@ -232,12 +222,12 @@ final class MangRing {
 				continue;
 			}
 			double[] pose = swingPose(ring);
-			Vector[] frame = Effects.weaponFrame(ring.holder, Effects.REST_TILT + pose[0], pose[1]);
-			place(ring.third, frame, ring.holder, ring.age, SCALE, SPACING);
+			Vector[] frame = Effects.weaponFrame(ring.holder, Effects.restTilt() + pose[0], pose[1]);
+			place(ring.third, frame, ring.holder, ring.age, (float) MangTuning.third("scale"), MangTuning.third("spacing"));
 			if (!ring.first.isEmpty() && ring.holder instanceof Player player) {
 				// A first-person swing tips the blade forward and across, more gently than on the arm.
-				Vector[] own = firstPersonFrame(player, FIRST_PERSON_TILT + pose[0] * 0.5, FIRST_PERSON_LEAN + pose[1]);
-				place(ring.first, own, ring.holder, ring.age, FIRST_PERSON_SCALE, FIRST_PERSON_SPACING);
+				Vector[] own = firstPersonFrame(player, MangTuning.first("tilt") + pose[0] * 0.5, MangTuning.first("lean") + pose[1]);
+				place(ring.first, own, ring.holder, ring.age, (float) MangTuning.first("scale"), MangTuning.first("spacing"));
 			}
 			if (ring.age % 4 == 0) {
 				Effects.mang(ring.holder, ring.age, frame);

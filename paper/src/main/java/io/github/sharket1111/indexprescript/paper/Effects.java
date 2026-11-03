@@ -336,11 +336,13 @@ final class Effects {
 	}
 
 	static Vector[] weaponFrame(LivingEntity holder) {
-		return weaponFrame(holder, REST_TILT, 0.0);
+		return weaponFrame(holder, restTilt(), 0.0);
 	}
 
 	/** Blade tilt above the horizontal of a sword held at rest in third person, in degrees. */
-	static final double REST_TILT = 10.0;
+	static double restTilt() {
+		return MangTuning.third("tilt");
+	}
 
 	/**
 	 * Where the held weapon's blade is, as a sword sits in third person:
@@ -356,13 +358,14 @@ final class Effects {
 		Vector forward = new Vector(-Math.sin(bodyYaw), 0, Math.cos(bodyYaw));
 		Vector right = new Vector(-forward.getZ(), 0, forward.getX());
 		double scale = holder.getHeight() / 1.8;
-		Vector hand = at.toVector().add(new Vector(0, 0.78 * scale, 0)).add(right.clone().multiply(0.36 * scale))
-				.add(forward.clone().multiply(0.05 * scale));
+		Vector hand = at.toVector().add(new Vector(0, MangTuning.third("up") * scale, 0))
+				.add(right.clone().multiply(MangTuning.third("right") * scale))
+				.add(forward.clone().multiply(MangTuning.third("forward") * scale));
 		double yaw = Math.toRadians(yawDeg);
 		Vector heading = forward.clone().multiply(Math.cos(yaw)).subtract(right.clone().multiply(Math.sin(yaw)));
 		double tilt = Math.toRadians(tiltDeg);
 		Vector axis = heading.multiply(Math.cos(tilt)).add(new Vector(0, Math.sin(tilt), 0)).normalize();
-		return new Vector[] {hand.add(axis.clone().multiply(0.42 * scale)), axis};
+		return new Vector[] {hand.add(axis.clone().multiply(MangTuning.third("along") * scale)), axis};
 	}
 
 	/** [Mang]: a glowing golden ring wound round the weapon, slowly turning; call every tick. */
