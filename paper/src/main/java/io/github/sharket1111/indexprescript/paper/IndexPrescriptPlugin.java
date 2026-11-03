@@ -47,6 +47,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		getServer().getPluginManager().registerEvents(new Laevatein(), this);
 		getServer().getPluginManager().registerEvents(new Matthias(), this);
 		getServer().getPluginManager().registerEvents(new Cinematic.Events(), this);
+		getServer().getPluginManager().registerEvents(new MangRing.Events(), this);
 		getServer().getPluginManager().registerEvents(new Stagger(), this);
 		Bukkit.getScheduler().runTaskTimer(this, PrescriptTracker::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Laevatein::tick, 1L, 1L);
@@ -132,14 +133,6 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			sender.sendMessage(Messages.get(sender, "command.players_only"));
 			return true;
 		}
-		if (args.length >= 2 && args[1].equalsIgnoreCase("tune")) {
-			return tuneMang(sender, args);
-		}
-		if (args.length >= 2 && args[1].equalsIgnoreCase("view")) {
-			boolean third = MangRing.toggleView(player);
-			sender.sendMessage(Messages.get(sender, third ? "command.mang_view_third" : "command.mang_view_first"));
-			return true;
-		}
 		int count = 1;
 		if (args.length >= 2) {
 			try {
@@ -158,35 +151,6 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		}
 		MangRing.show(player, 300, count);
 		sender.sendMessage(Messages.get(sender, "command.mang_on", count));
-		return true;
-	}
-
-	/**
-	 * /indexprescript mang tune: shows Mang's placement values; "tune <first|third>
-	 * <key> <value>" changes one (seen at once), "tune reset" restores them.
-	 */
-	private boolean tuneMang(CommandSender sender, String[] args) {
-		if (args.length >= 3 && args[2].equalsIgnoreCase("reset")) {
-			MangTuning.reset();
-		} else if (args.length >= 5) {
-			double value;
-			try {
-				value = Double.parseDouble(args[4]);
-			} catch (NumberFormatException e) {
-				sender.sendMessage(Component.text("숫자를 입력하세요: " + args[4], NamedTextColor.RED));
-				return true;
-			}
-			if (!MangTuning.set(args[2], args[3], value)) {
-				sender.sendMessage(Component.text("알 수 없는 항목입니다. 예: /ip mang tune first right 0.5", NamedTextColor.RED));
-				return true;
-			}
-		} else if (args.length > 2) {
-			sender.sendMessage(Component.text("사용법: /ip mang tune <first|third> <항목> <값>  /  /ip mang tune reset", NamedTextColor.RED));
-			return true;
-		}
-		sender.sendMessage(Component.text("[망 위치값] 이 두 줄을 그대로 복사해서 알려 주세요.", NamedTextColor.GOLD));
-		sender.sendMessage(Component.text("third: " + MangTuning.line(MangTuning.THIRD), NamedTextColor.YELLOW));
-		sender.sendMessage(Component.text("first: " + MangTuning.line(MangTuning.FIRST), NamedTextColor.AQUA));
 		return true;
 	}
 
@@ -243,12 +207,9 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			case 2 -> switch (args[0].toLowerCase(Locale.ROOT)) {
 				case "give" -> List.of("caduceus", "terminal", "laevatein");
 				case "laevatein" -> List.of("0", "1", "2", "3");
-				case "mang" -> List.of("1", "2", "3", "4", "5", "6", "view", "tune");
+				case "mang" -> List.of("1", "2", "3", "4", "5", "6");
 				default -> List.of();
 			};
-			case 3 -> args[0].equalsIgnoreCase("mang") && args[1].equalsIgnoreCase("tune") ? List.of("first", "third", "reset") : null;
-			case 4 -> args[0].equalsIgnoreCase("mang") && args[1].equalsIgnoreCase("tune") && MangTuning.side(args[2]) != null
-					? List.copyOf(MangTuning.side(args[2]).keySet()) : List.of();
 			default -> List.of();
 		};
 	}

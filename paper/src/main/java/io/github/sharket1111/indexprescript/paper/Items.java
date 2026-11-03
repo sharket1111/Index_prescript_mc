@@ -97,11 +97,7 @@ final class Items {
 	}
 
 	static void setLaevateinStage(ItemStack stack, int stage) {
-		stack.editMeta(meta -> {
-			CustomModelDataComponent data = meta.getCustomModelDataComponent();
-			data.setStrings(stage <= 0 ? List.of() : List.of(LAEVATEIN_STAGES.get(stage)));
-			meta.setCustomModelDataComponent(data);
-		});
+		setModelStrings(stack, stage <= 0 ? null : LAEVATEIN_STAGES.get(stage), mangString(stack));
 	}
 
 	private static void tag(ItemMeta meta, String id) {
@@ -134,7 +130,38 @@ final class Items {
 			return null;
 		}
 		List<String> strings = meta.getCustomModelDataComponent().getStrings();
-		return strings.isEmpty() ? null : strings.getFirst();
+		return strings.isEmpty() || strings.getFirst().isEmpty() ? null : strings.getFirst();
+	}
+
+	/** The second custom model data string: "mang1".."mang6" while [Mang]'s rings are on the blade, else null. */
+	static String mangString(ItemStack stack) {
+		if (stack == null || !stack.hasItemMeta() || !stack.getItemMeta().hasCustomModelDataComponent()) {
+			return null;
+		}
+		List<String> strings = stack.getItemMeta().getCustomModelDataComponent().getStrings();
+		return strings.size() < 2 || strings.get(1).isEmpty() ? null : strings.get(1);
+	}
+
+	/** Winds {@code count} of [Mang]'s rings round the weapon's model (tools/mang_models.py); 0 removes them. */
+	static void setMang(ItemStack stack, int count) {
+		setModelStrings(stack, modelString(stack), count <= 0 ? null : "mang" + count);
+	}
+
+	static boolean isWeapon(ItemStack stack) {
+		return isCaduceus(stack) || isLaevatein(stack);
+	}
+
+	/** The form or stage string first, then the Mang string; an empty first string stands for none. */
+	private static void setModelStrings(ItemStack stack, String model, String mang) {
+		stack.editMeta(meta -> {
+			CustomModelDataComponent data = meta.getCustomModelDataComponent();
+			if (mang == null) {
+				data.setStrings(model == null ? List.of() : List.of(model));
+			} else {
+				data.setStrings(List.of(model == null ? "" : model, mang));
+			}
+			meta.setCustomModelDataComponent(data);
+		});
 	}
 
 	/**
@@ -142,10 +169,6 @@ final class Items {
 	 * left alone so no text pops up over the hotbar.
 	 */
 	static void setForm(ItemStack stack, CaduceusForm form) {
-		stack.editMeta(meta -> {
-			CustomModelDataComponent data = meta.getCustomModelDataComponent();
-			data.setStrings(form == null ? List.of() : List.of(form.id()));
-			meta.setCustomModelDataComponent(data);
-		});
+		setModelStrings(stack, form == null ? null : form.id(), mangString(stack));
 	}
 }

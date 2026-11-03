@@ -10,6 +10,7 @@ import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
 /**
@@ -335,40 +336,39 @@ final class Effects {
 		sound(holder.getLocation(), Sound.BLOCK_BEACON_POWER_SELECT, 0.8F, 1.4F);
 	}
 
-	static Vector[] weaponFrame(LivingEntity holder) {
-		return weaponFrame(holder, restTilt(), 0.0);
-	}
-
-	/** Blade tilt above the horizontal of a sword held at rest in third person, in degrees. */
-	static double restTilt() {
-		return MangTuning.third("tilt");
-	}
+	// Where a sword's blade sits held in third person, as fitted in game (/ip mang tune, before the
+	// rings became part of the weapon model); used for Mang's motes for Bedrock players.
+	private static final double HAND_UP = 0.77;
+	private static final double HAND_RIGHT = 0.36;
+	private static final double HAND_FORWARD = 0.05;
+	private static final double BLADE_ALONG = 0.42;
+	private static final double BLADE_TILT = 10.0;
 
 	/**
 	 * Where the held weapon's blade is, as a sword sits in third person:
 	 * gripped at the right hand (low at the side, a little forward) and
-	 * pointing forward along the body's facing, tilted {@code tiltDeg} above
-	 * the horizontal and turned {@code yawDeg} to the left. Returns the middle of the blade and its
-	 * direction.
+	 * pointing forward along the body's facing, tilted a little above the
+	 * horizontal. Returns the middle of the blade and its direction.
 	 */
-	static Vector[] weaponFrame(LivingEntity holder, double tiltDeg, double yawDeg) {
+	static Vector[] weaponFrame(LivingEntity holder) {
 		Location at = holder.getLocation();
 		// The arm turns with the body, not the head (which follows the camera), and ignores pitch.
 		double bodyYaw = Math.toRadians(holder.getBodyYaw());
 		Vector forward = new Vector(-Math.sin(bodyYaw), 0, Math.cos(bodyYaw));
 		Vector right = new Vector(-forward.getZ(), 0, forward.getX());
 		double scale = holder.getHeight() / 1.8;
-		Vector hand = at.toVector().add(new Vector(0, MangTuning.third("up") * scale, 0))
-				.add(right.clone().multiply(MangTuning.third("right") * scale))
-				.add(forward.clone().multiply(MangTuning.third("forward") * scale));
-		double yaw = Math.toRadians(yawDeg);
-		Vector heading = forward.clone().multiply(Math.cos(yaw)).subtract(right.clone().multiply(Math.sin(yaw)));
-		double tilt = Math.toRadians(tiltDeg);
-		Vector axis = heading.multiply(Math.cos(tilt)).add(new Vector(0, Math.sin(tilt), 0)).normalize();
-		return new Vector[] {hand.add(axis.clone().multiply(MangTuning.third("along") * scale)), axis};
+		Vector hand = at.toVector().add(new Vector(0, HAND_UP * scale, 0))
+				.add(right.clone().multiply(HAND_RIGHT * scale))
+				.add(forward.clone().multiply(HAND_FORWARD * scale));
+		double tilt = Math.toRadians(BLADE_TILT);
+		Vector axis = forward.multiply(Math.cos(tilt)).add(new Vector(0, Math.sin(tilt), 0)).normalize();
+		return new Vector[] {hand.add(axis.clone().multiply(BLADE_ALONG * scale)), axis};
 	}
 
-	/** [Mang]: a glowing golden ring wound round the weapon, slowly turning; call every tick. */
+	/**
+	 * [Mang] for Bedrock players, who cannot see the rings in the Java weapon
+	 * model: a turning circle of golden motes round the blade. Call every few ticks.
+	 */
 	static void mang(LivingEntity holder, int tick, Vector[] frame) {
 		Vector c = frame[0];
 		Vector axis = frame[1];
@@ -378,15 +378,17 @@ final class Effects {
 		}
 		a.normalize();
 		Vector b = axis.clone().crossProduct(a).normalize();
-		World world = holder.getWorld();
 		double spin = tick * 0.3;
-		for (int i = 0; i < 8; i++) {
-			double t = spin + i * Math.PI / 4;
-			Vector p = c.clone().add(a.clone().multiply(Math.cos(t) * 0.15)).add(b.clone().multiply(Math.sin(t) * 0.15));
-			dustAt(world, MANG_GOLD, p, 1, 0.0);
-		}
-		if (tick % 5 == 0) {
-			spawn(world, Particle.END_ROD, c.clone().add(a.clone().multiply(Math.cos(spin) * 0.15)), 1, 0.0, 0.0);
+		for (Player viewer : holder.getWorld().getPlayers()) {
+			if (!viewer.getUniqueId().toString().startsWith("00000000-0000-0000-")
+					|| viewer.getLocation().distanceSquared(holder.getLocation()) > 48 * 48) {
+				continue;
+			}
+			for (int i = 0; i < 8; i++) {
+				double t = spin + i * Math.PI / 4;
+				Vector p = c.clone().add(a.clone().multiply(Math.cos(t) * 0.15)).add(b.clone().multiply(Math.sin(t) * 0.15));
+				viewer.spawnParticle(Particle.DUST, p.getX(), p.getY(), p.getZ(), 1, 0.0, 0.0, 0.0, 0.0, MANG_GOLD);
+			}
 		}
 	}
 

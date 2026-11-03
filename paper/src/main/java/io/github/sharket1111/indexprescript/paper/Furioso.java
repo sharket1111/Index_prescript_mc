@@ -371,7 +371,6 @@ final class Furioso {
 		}
 		if (scythe == null) {
 			actor().swingMainHand();
-			MangRing.swing(actor());
 		}
 
 		CombatState self = CombatState.of(player);
@@ -522,6 +521,7 @@ final class Furioso {
 			ItemStack blade = player.getInventory().getItemInMainHand().clone();
 			if (Items.isCaduceus(blade)) {
 				Items.setForm(blade, CaduceusForm.SCYTHE);
+				Items.setMang(blade, MangRing.count(actor));
 			}
 			actor.getEquipment().setItemInMainHand(null);
 			scythe = world.spawn(actor.getLocation(), ItemDisplay.class, d -> {

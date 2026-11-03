@@ -114,6 +114,7 @@ final class Cinematic {
 	/** Shows the viewer's current main-hand item (e.g. a new form) in the actor's hand. */
 	void syncHeld() {
 		actor.getEquipment().setItemInMainHand(copy(viewer.getInventory().getItemInMainHand()));
+		MangRing.refresh(actor);
 	}
 
 	/** Shakes the camera for a hit; the shake fades over a few ticks. */
