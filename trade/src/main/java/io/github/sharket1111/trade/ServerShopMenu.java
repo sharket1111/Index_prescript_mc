@@ -67,9 +67,11 @@ final class ServerShopMenu extends Menu {
 			return;
 		}
 		take(TradeItems::isTradeDiamond, product.price);
-		product.deliver(player);
 		tell(product.name() + "을(를) 거래 전용 다이아 " + product.price + "개에 샀습니다.", NamedTextColor.GREEN);
 		successSound();
-		redraw();
+		product.deliver(player);
+		if (!product.type.equals("ender_chest")) {
+			redraw();
+		}
 	}
 }

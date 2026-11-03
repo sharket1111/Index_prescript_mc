@@ -110,9 +110,9 @@ final class LandMenu extends Menu {
 				"가진 땅: " + Land.claimsOf(player.getUniqueId()) + "청크"));
 		inventory.setItem(ADD_SLOT, TradeItems.button(Material.EMERALD, "플레이어 추가", NamedTextColor.GREEN,
 				"플레이어를 골라 이 땅의 권한을 따로 정합니다."));
-		Groups.Group group = Groups.of(player.getUniqueId());
-		inventory.setItem(GROUP_SLOT, group != null
-				? TradeItems.button(Material.CYAN_BANNER, "그룹 권한", NamedTextColor.AQUA, "그룹 '" + group.name + "' 전체,",
+		boolean grouped = !Groups.of(player.getUniqueId()).isEmpty();
+		inventory.setItem(GROUP_SLOT, grouped
+				? TradeItems.button(Material.CYAN_BANNER, "그룹 권한", NamedTextColor.AQUA, "내 그룹의 그룹원 전체,",
 						"또는 역할별로 이 땅의 권한을 한 번에 정합니다.")
 				: TradeItems.button(Material.GRAY_BANNER, "그룹 권한", NamedTextColor.GRAY, "그룹에 속하면 그룹원 전체나",
 						"역할별로 권한을 한 번에 정할 수 있습니다."));
@@ -135,7 +135,7 @@ final class LandMenu extends Menu {
 			return;
 		}
 		if (slot == GROUP_SLOT) {
-			if (Groups.of(player.getUniqueId()) == null) {
+			if (Groups.of(player.getUniqueId()).isEmpty()) {
 				failSound();
 				return;
 			}

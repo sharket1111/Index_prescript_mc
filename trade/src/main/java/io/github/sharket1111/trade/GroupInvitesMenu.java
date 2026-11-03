@@ -24,13 +24,16 @@ final class GroupInvitesMenu extends Menu {
 	private static final int ACCEPT_SLOT = 11;
 	private static final int DECLINE_SLOT = 15;
 	private final boolean sent;
+	private final UUID groupId;
 	private final Map<Integer, UUID> bySlot = new HashMap<>();
 	/** The received invitation being answered, or null while choosing. */
 	private UUID chosen;
 
-	GroupInvitesMenu(Player player, boolean sent) {
-		super(player, sent ? "거래 - 보낸 초대" : "거래 - 받은 초대");
-		this.sent = sent;
+	/** The invitations {@code groupId}'s group sent, or (null) those the player received. */
+	GroupInvitesMenu(Player player, UUID groupId) {
+		super(player, groupId != null ? "거래 - 보낸 초대" : "거래 - 받은 초대");
+		this.groupId = groupId;
+		this.sent = groupId != null;
 	}
 
 	private Groups.Group chosenGroup() {
@@ -54,7 +57,7 @@ final class GroupInvitesMenu extends Menu {
 					"접두사: " + (group.tag.isEmpty() ? "없음" : group.plainTag()), "그룹장: " + group.nameOf(group.leader),
 					"그룹원: " + group.memberRoles.size() + "명"));
 			inventory.setItem(ACCEPT_SLOT, TradeItems.button(Material.LIME_CONCRETE, "수락", NamedTextColor.GREEN,
-					"이 그룹에 들어갑니다. (다른 초대는 그대로 남습니다)"));
+					"이 그룹에 들어갑니다. (다른 그룹과 함께 속할 수 있습니다)"));
 			inventory.setItem(DECLINE_SLOT, TradeItems.button(Material.RED_CONCRETE, "거절", NamedTextColor.RED, "초대를 지웁니다."));
 		} else {
 			chosen = null;
@@ -76,7 +79,7 @@ final class GroupInvitesMenu extends Menu {
 	}
 
 	private void drawSent() {
-		Groups.Group group = Groups.of(player.getUniqueId());
+		Groups.Group group = Groups.member(groupId, player.getUniqueId());
 		if (group == null) {
 			return;
 		}
@@ -109,13 +112,15 @@ final class GroupInvitesMenu extends Menu {
 			if (!sent && chosen != null) {
 				chosen = null;
 				redraw();
+			} else if (sent) {
+				new GroupHomeMenu(player, groupId).open();
 			} else {
 				new GroupMenu(player).open();
 			}
 			return;
 		}
 		if (sent) {
-			Groups.Group group = Groups.of(player.getUniqueId());
+			Groups.Group group = Groups.member(groupId, player.getUniqueId());
 			UUID id = bySlot.get(slot);
 			if (group != null && id != null && group.has(player.getUniqueId(), Groups.Perm.INVITE)) {
 				group.invites.remove(id);
@@ -140,8 +145,17 @@ final class GroupInvitesMenu extends Menu {
 			return;
 		}
 		if (slot == ACCEPT_SLOT) {
-			if (Groups.of(player.getUniqueId()) != null) {
-				tell("이미 그룹에 속해 있습니다.", NamedTextColor.RED);
+			if (group.memberRoles.containsKey(player.getUniqueId())) {
+				group.invites.remove(player.getUniqueId());
+				Groups.save();
+				tell("이미 이 그룹원입니다.", NamedTextColor.RED);
+				failSound();
+				chosen = null;
+				redraw();
+				return;
+			}
+			if (Groups.of(player.getUniqueId()).size() >= Groups.MAX_GROUPS) {
+				tell("그룹은 " + Groups.MAX_GROUPS + "개까지 들어갈 수 있습니다.", NamedTextColor.RED);
 				failSound();
 				return;
 			}
@@ -152,6 +166,7 @@ final class GroupInvitesMenu extends Menu {
 			}
 			Groups.addMember(group, player.getUniqueId(), player.getName(), Groups.MEMBER);
 			Groups.save();
+			Groups.refreshName(player.getUniqueId());
 			tell("그룹 '" + group.name + "'에 들어왔습니다.", NamedTextColor.GREEN);
 			successSound();
 			for (UUID member : group.memberRoles.keySet()) {
@@ -160,7 +175,7 @@ final class GroupInvitesMenu extends Menu {
 					online.sendMessage(Component.text(player.getName() + "님이 그룹에 들어왔습니다.", NamedTextColor.GREEN));
 				}
 			}
-			new GroupMenu(player).open();
+			new GroupHomeMenu(player, group.id).open();
 		} else if (slot == DECLINE_SLOT) {
 			group.invites.remove(player.getUniqueId());
 			Groups.save();

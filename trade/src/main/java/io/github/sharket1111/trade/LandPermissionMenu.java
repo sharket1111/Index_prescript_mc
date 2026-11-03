@@ -25,29 +25,36 @@ final class LandPermissionMenu extends Menu {
 	private final Location at;
 	private final Kind kind;
 	private final UUID target;
+	private final UUID groupId;
 	private final String roleId;
 	private final String name;
 
-	private LandPermissionMenu(Player player, Location at, Kind kind, UUID target, String roleId, String name) {
+	private LandPermissionMenu(Player player, Location at, Kind kind, UUID target, UUID groupId, String roleId, String name) {
 		super(player, "거래 - 땅 권한: " + name);
 		this.at = at;
 		this.kind = kind;
 		this.target = target;
+		this.groupId = groupId;
 		this.roleId = roleId;
 		this.name = name;
 	}
 
 	/** One player's permissions, or everyone's if {@code target} is null. */
 	LandPermissionMenu(Player player, Location at, UUID target, String name) {
-		this(player, at, target == null ? Kind.EVERYONE : Kind.PLAYER, target, null, name);
+		this(player, at, target == null ? Kind.EVERYONE : Kind.PLAYER, target, null, null, name);
 	}
 
-	static LandPermissionMenu group(Player player, Location at) {
-		return new LandPermissionMenu(player, at, Kind.GROUP, null, null, "그룹 전체");
+	static LandPermissionMenu group(Player player, Location at, UUID groupId) {
+		Groups.Group group = Groups.byId(groupId);
+		return new LandPermissionMenu(player, at, Kind.GROUP, null, groupId, null, (group == null ? "?" : group.name) + " 전체");
 	}
 
-	static LandPermissionMenu role(Player player, Location at, Groups.Role role) {
-		return new LandPermissionMenu(player, at, Kind.ROLE, null, role.id, "역할 " + role.name);
+	static LandPermissionMenu role(Player player, Location at, UUID groupId, Groups.Role role) {
+		return new LandPermissionMenu(player, at, Kind.ROLE, null, groupId, role.id, "역할 " + role.name);
+	}
+
+	private Land.GroupLand land(Land.Claim claim) {
+		return Groups.member(groupId, claim.owner) == null ? null : claim.groups.get(groupId);
 	}
 
 	private Land.Claim claim() {
@@ -59,13 +66,13 @@ final class LandPermissionMenu extends Menu {
 		return switch (kind) {
 			case EVERYONE -> claim.everyone;
 			case PLAYER -> claim.members.get(target);
-			case GROUP -> Land.ownerGroup(claim) != null ? claim.groupAll : null;
-			case ROLE -> Land.ownerGroup(claim) != null ? claim.roles.get(roleId) : null;
+			case GROUP -> land(claim) != null ? land(claim).all : null;
+			case ROLE -> land(claim) != null ? land(claim).roles.get(roleId) : null;
 		};
 	}
 
 	private Menu back() {
-		return kind == Kind.GROUP || kind == Kind.ROLE ? new LandGroupMenu(player, at) : new LandMenu(player);
+		return kind == Kind.GROUP || kind == Kind.ROLE ? new LandGroupMenu(player, at, groupId) : new LandMenu(player);
 	}
 
 	@Override
@@ -127,8 +134,8 @@ final class LandPermissionMenu extends Menu {
 					claim.members.remove(target);
 					claim.memberNames.remove(target);
 				}
-				case GROUP -> claim.groupAll = null;
-				case ROLE -> claim.roles.remove(roleId);
+				case GROUP -> land(claim).all = null;
+				case ROLE -> land(claim).roles.remove(roleId);
 				default -> {
 				}
 			}

@@ -10,19 +10,35 @@ import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
  * One role: its permissions, turned on and off by those with 'edit roles'
- * whose own role is higher; renaming; deleting (its members become plain
- * members). The leader's role always runs the group; only its perks can change.
+ * whose own role is higher; renaming; moving it up or down in rank (never
+ * to or above the mover's own role, and never above the leader's); deleting
+ * (its members get the member role). The leader's role always runs the
+ * group; only its perks can change.
  */
 final class GroupRoleMenu extends Menu {
 	private static final int INFO_SLOT = 4;
 	private static final int[] PERM_SLOTS = {9, 10, 11, 12, 13, 14, 15, 16};
+	private static final int UP_SLOT = 20;
 	private static final int RENAME_SLOT = 22;
+	private static final int DOWN_SLOT = 24;
 	private static final int DELETE_SLOT = 26;
+	private final java.util.UUID groupId;
 	private final String roleId;
 
-	GroupRoleMenu(Player player, String roleId) {
+	GroupRoleMenu(Player player, java.util.UUID groupId, String roleId) {
 		super(player, "거래 - 역할");
+		this.groupId = groupId;
 		this.roleId = roleId;
+	}
+
+	/** Whether the player may move this role {@code by} places (-1 up, 1 down). */
+	private boolean movable(Groups.Group group, Groups.Role role, int by) {
+		int to = group.rank(role) + by;
+		if (role.id.equals(Groups.LEADER) || to <= 0 || to >= group.roles.size() || !editable(group, role)) {
+			return false;
+		}
+		// Nobody lifts a role to their own rank or above (the leader outranks every role).
+		return player.getUniqueId().equals(group.leader) || to > group.rankOf(player.getUniqueId());
 	}
 
 	static String badRoleName(Groups.Group group, String name, Groups.Role except) {
@@ -52,7 +68,7 @@ final class GroupRoleMenu extends Menu {
 	@Override
 	void draw() {
 		inventory.setItem(BACK_SLOT, TradeItems.back());
-		Groups.Group group = Groups.of(player.getUniqueId());
+		Groups.Group group = Groups.member(groupId, player.getUniqueId());
 		Groups.Role role = group == null ? null : group.role(roleId);
 		if (role == null) {
 			inventory.setItem(13, TradeItems.button(Material.BARRIER, "없는 역할입니다", NamedTextColor.GRAY));
@@ -73,6 +89,16 @@ final class GroupRoleMenu extends Menu {
 					perm.label + ": " + (on ? "켜짐" : "꺼짐"), on ? NamedTextColor.GREEN : NamedTextColor.RED, perm.help,
 					fixed ? "그룹장은 항상 가집니다." : edit ? "클릭: 바꾸기" : ""));
 		}
+		if (!leaderRole) {
+			boolean up = movable(group, role, -1);
+			boolean down = movable(group, role, 1);
+			inventory.setItem(UP_SLOT, TradeItems.button(up ? Material.LIME_STAINED_GLASS_PANE : Material.GRAY_STAINED_GLASS_PANE,
+					"순위 올리기", up ? NamedTextColor.GREEN : NamedTextColor.GRAY, "지금 순위: " + (group.rank(role) + 1),
+					up ? "클릭: 한 칸 위로" : "더 올릴 수 없습니다. (내 역할보다 높일 수 없음)"));
+			inventory.setItem(DOWN_SLOT, TradeItems.button(down ? Material.ORANGE_STAINED_GLASS_PANE : Material.GRAY_STAINED_GLASS_PANE,
+					"순위 내리기", down ? NamedTextColor.GOLD : NamedTextColor.GRAY, "지금 순위: " + (group.rank(role) + 1),
+					down ? "클릭: 한 칸 아래로" : "더 내릴 수 없습니다."));
+		}
 		if (edit) {
 			inventory.setItem(RENAME_SLOT, TradeItems.button(Material.OAK_SIGN, "역할 이름 바꾸기", NamedTextColor.GOLD,
 					"지금: " + role.name, "클릭: 채팅으로 입력"));
@@ -87,10 +113,10 @@ final class GroupRoleMenu extends Menu {
 	void click(int slot, ClickType click) {
 		if (slot == BACK_SLOT) {
 			clickSound();
-			new GroupRolesMenu(player).open();
+			new GroupRolesMenu(player, groupId).open();
 			return;
 		}
-		Groups.Group group = Groups.of(player.getUniqueId());
+		Groups.Group group = Groups.member(groupId, player.getUniqueId());
 		Groups.Role role = group == null ? null : group.role(roleId);
 		if (role == null || !editable(group, role)) {
 			return;
@@ -112,9 +138,19 @@ final class GroupRoleMenu extends Menu {
 				return;
 			}
 		}
+		if (slot == UP_SLOT || slot == DOWN_SLOT) {
+			int by = slot == UP_SLOT ? -1 : 1;
+			if (movable(group, role, by) && Groups.move(group, role, by)) {
+				clickSound();
+				redraw();
+			} else {
+				failSound();
+			}
+			return;
+		}
 		if (slot == RENAME_SLOT) {
 			ChatPrompt.ask(player, "새 역할 이름을 입력하세요. (1~12글자, 지금: " + role.name + ")", name -> {
-				Groups.Group current = Groups.of(player.getUniqueId());
+				Groups.Group current = Groups.member(groupId, player.getUniqueId());
 				Groups.Role now = current == null ? null : current.role(roleId);
 				if (now != null && editable(current, now)) {
 					String why = badRoleName(current, name, now);
@@ -128,8 +164,8 @@ final class GroupRoleMenu extends Menu {
 						successSound();
 					}
 				}
-				new GroupRoleMenu(player, roleId).open();
-			}, () -> new GroupRoleMenu(player, roleId).open());
+				new GroupRoleMenu(player, groupId, roleId).open();
+			}, () -> new GroupRoleMenu(player, groupId, roleId).open());
 		} else if (slot == DELETE_SLOT && !role.id.equals(Groups.LEADER) && !role.id.equals(Groups.MEMBER)) {
 			if (!confirmed(click)) {
 				tell("실수를 막기 위해 우클릭해야 합니다.", NamedTextColor.GRAY);
@@ -141,7 +177,7 @@ final class GroupRoleMenu extends Menu {
 			Groups.save();
 			tell("역할 '" + role.name + "'을(를) 지웠습니다.", NamedTextColor.YELLOW);
 			successSound();
-			new GroupRolesMenu(player).open();
+			new GroupRolesMenu(player, groupId).open();
 		}
 	}
 }

@@ -23,32 +23,34 @@ import net.kyori.adventure.text.format.NamedTextColor;
 final class GroupMemberPicker extends Menu {
 	private static final int BACK = 45;
 	private final boolean includeSelf;
+	private final UUID groupId;
 	private final Supplier<Menu> back;
 	private final Consumer<UUID> choice;
 	private final Map<Integer, UUID> bySlot = new HashMap<>();
 
-	GroupMemberPicker(Player player, String title, Supplier<Menu> back, Consumer<UUID> choice) {
-		this(player, title, false, back, choice);
+	GroupMemberPicker(Player player, String title, UUID groupId, Supplier<Menu> back, Consumer<UUID> choice) {
+		this(player, title, groupId, false, back, choice);
 	}
 
-	private GroupMemberPicker(Player player, String title, boolean includeSelf, Supplier<Menu> back, Consumer<UUID> choice) {
+	private GroupMemberPicker(Player player, String title, UUID groupId, boolean includeSelf, Supplier<Menu> back, Consumer<UUID> choice) {
 		super(player, title, 6);
+		this.groupId = groupId;
 		this.includeSelf = includeSelf;
 		this.back = back;
 		this.choice = choice;
 	}
 
 	/** The member list of the group tab: clicking a member opens what can be done to them. */
-	static GroupMemberPicker members(Player player) {
-		return new GroupMemberPicker(player, "거래 - 그룹원", true, () -> new GroupMenu(player),
-				id -> new GroupMemberMenu(player, id).open());
+	static GroupMemberPicker members(Player player, UUID groupId) {
+		return new GroupMemberPicker(player, "거래 - 그룹원", groupId, true, () -> new GroupHomeMenu(player, groupId),
+				id -> new GroupMemberMenu(player, groupId, id).open());
 	}
 
 	@Override
 	void draw() {
 		bySlot.clear();
 		inventory.setItem(BACK, TradeItems.back());
-		Groups.Group group = Groups.of(player.getUniqueId());
+		Groups.Group group = Groups.member(groupId, player.getUniqueId());
 		if (group == null) {
 			return;
 		}

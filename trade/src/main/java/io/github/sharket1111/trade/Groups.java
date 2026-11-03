@@ -35,9 +35,11 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 /**
- * Groups of players, saved to groups.yml. A group costs {@link #PRICE} trade
- * diamonds to found, has a name and an optional tag shown before its members'
- * names ([TAG]Name in chat, the player list and over their heads), and roles:
+ * Groups of players, saved to groups.yml. A player may be in several groups
+ * (up to {@link #MAX_GROUPS}). A group costs {@link #PRICE} trade diamonds to
+ * found, has a name and an optional tag; each player picks which of their
+ * groups' tags is shown before their name ([TAG]Name in chat, the player list
+ * and over their head), or none. Groups have roles in rank order (changeable):
  * the leader, a deputy and members by default, plus any the group adds. Each
  * role has its own permissions, from running the group (inviting, kicking,
  * giving roles...) to its perks: no fighting between group members, and the
@@ -49,6 +51,8 @@ final class Groups {
 	static final int MAX_ROLES = 8;
 	static final int MAX_DISCOUNT = 50;
 	static final int MAX_INVITES = 18;
+	static final int MAX_GROUPS = 9;
+	private static final String NO_TAG = "none";
 	static final String LEADER = "leader";
 	static final String DEPUTY = "deputy";
 	static final String MEMBER = "member";
@@ -171,7 +175,8 @@ final class Groups {
 	private static Plugin plugin;
 	private static File file;
 	private static final Map<UUID, Group> GROUPS = new LinkedHashMap<>();
-	private static final Map<UUID, Group> BY_MEMBER = new LinkedHashMap<>();
+	/** The group whose tag each player shows, or {@link #NO_TAG}; absent until they choose (then their first group). */
+	private static final Map<UUID, String> SHOWN_TAG = new LinkedHashMap<>();
 
 	private Groups() {
 	}
@@ -194,7 +199,7 @@ final class Groups {
 		group.memberRoles.put(member, roleId);
 		group.memberNames.put(member, name);
 		group.invites.remove(member);
-		BY_MEMBER.put(member, group);
+		SHOWN_TAG.putIfAbsent(member, group.id.toString());
 		Land.groupChanged(member);
 		refreshName(member);
 	}
@@ -202,7 +207,6 @@ final class Groups {
 	static void removeMember(Group group, UUID member) {
 		group.memberRoles.remove(member);
 		group.memberNames.remove(member);
-		BY_MEMBER.remove(member);
 		Land.groupChanged(member);
 		refreshName(member);
 	}
@@ -210,7 +214,6 @@ final class Groups {
 	static void disband(Group group) {
 		GROUPS.remove(group.id);
 		for (UUID member : List.copyOf(group.memberRoles.keySet())) {
-			BY_MEMBER.remove(member);
 			Land.groupChanged(member);
 			refreshName(member);
 		}
@@ -221,8 +224,58 @@ final class Groups {
 		save();
 	}
 
-	static Group of(UUID member) {
-		return BY_MEMBER.get(member);
+	/** The groups {@code member} is in, in the order they were founded. */
+	static List<Group> of(UUID member) {
+		return GROUPS.values().stream().filter(g -> g.memberRoles.containsKey(member)).toList();
+	}
+
+	static Group byId(UUID id) {
+		return id == null ? null : GROUPS.get(id);
+	}
+
+	/** The group with this id if {@code member} is in it, else null. */
+	static Group member(UUID id, UUID member) {
+		Group group = byId(id);
+		return group != null && group.memberRoles.containsKey(member) ? group : null;
+	}
+
+	/** The group whose tag {@code player} shows, or null for none. */
+	static Group shownTag(UUID player) {
+		String chosen = SHOWN_TAG.get(player);
+		if (NO_TAG.equals(chosen)) {
+			return null;
+		}
+		Group group = null;
+		try {
+			group = chosen == null ? null : member(UUID.fromString(chosen), player);
+		} catch (IllegalArgumentException ignored) {
+			// a broken entry
+		}
+		if (group == null) {
+			// Never chosen, or the chosen group is gone: the first of their groups.
+			group = of(player).stream().filter(g -> !g.tag.isEmpty()).findFirst().orElse(null);
+		}
+		return group;
+	}
+
+	/** Shows {@code group}'s tag before {@code player}'s name, or no tag if null. */
+	static void showTag(UUID player, Group group) {
+		SHOWN_TAG.put(player, group == null ? NO_TAG : group.id.toString());
+		save();
+		refreshName(player);
+	}
+
+	/** Moves {@code role} one place up ({@code -1}) or down ({@code 1}) in rank; the leader's role stays first. */
+	static boolean move(Group group, Role role, int by) {
+		int from = group.roles.indexOf(role);
+		int to = from + by;
+		if (from <= 0 || to <= 0 || to >= group.roles.size()) {
+			return false;
+		}
+		group.roles.remove(from);
+		group.roles.add(to, role);
+		save();
+		return true;
 	}
 
 	static Collection<Group> all() {
@@ -264,16 +317,20 @@ final class Groups {
 		return null;
 	}
 
-	/** Whether two players are in the same group. */
-	static Group shared(UUID a, UUID b) {
-		Group group = of(a);
-		return group != null && group == of(b) ? group : null;
+	/** The groups two players are both in. */
+	static List<Group> shared(UUID a, UUID b) {
+		return GROUPS.values().stream().filter(g -> g.memberRoles.containsKey(a) && g.memberRoles.containsKey(b)).toList();
 	}
 
-	/** The group discount (percent) {@code buyer} gets on {@code seller}'s goods. */
+	/** The group discount (percent) {@code buyer} gets on {@code seller}'s goods: the best of the groups they share. */
 	static int discount(UUID buyer, UUID seller) {
-		Group group = shared(buyer, seller);
-		return group != null && group.has(buyer, Perm.DISCOUNT) ? group.discount : 0;
+		int best = 0;
+		for (Group group : shared(buyer, seller)) {
+			if (group.has(buyer, Perm.DISCOUNT)) {
+				best = Math.max(best, group.discount);
+			}
+		}
+		return best;
 	}
 
 	/** A price after a discount: rounded up, at least one. */
@@ -301,7 +358,7 @@ final class Groups {
 			return;
 		}
 		Scoreboard board = board();
-		Group group = of(member);
+		Group group = shownTag(member);
 		for (Team team : board.getTeams()) {
 			if (team.getName().startsWith(TEAM_PREFIX) && team.hasEntry(player.getName())
 					&& (group == null || !team.getName().equals(teamName(group)))) {
@@ -336,13 +393,20 @@ final class Groups {
 		}
 	}
 
+	/** Refreshes after leaving or losing a group (which may have been the one whose tag showed). */
+	static void refreshAll(java.util.Collection<UUID> members) {
+		for (UUID member : members) {
+			refreshName(member);
+		}
+	}
+
 	// --- saving ------------------------------------------------------------
 
 	static void load(Plugin owner) {
 		plugin = owner;
 		file = new File(owner.getDataFolder(), "groups.yml");
 		GROUPS.clear();
-		BY_MEMBER.clear();
+		SHOWN_TAG.clear();
 		// Tags are put back as members join.
 		for (Team team : Set.copyOf(board().getTeams())) {
 			if (team.getName().startsWith(TEAM_PREFIX)) {
@@ -353,6 +417,12 @@ final class Groups {
 			return;
 		}
 		YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+		ConfigurationSection shown = yaml.getConfigurationSection("shown-tag");
+		if (shown != null) {
+			for (String id : shown.getKeys(false)) {
+				SHOWN_TAG.put(UUID.fromString(id), shown.getString(id));
+			}
+		}
 		ConfigurationSection root = yaml.getConfigurationSection("groups");
 		if (root == null) {
 			return;
@@ -386,7 +456,6 @@ final class Groups {
 						UUID uuid = UUID.fromString(id);
 						group.memberRoles.put(uuid, members.getString(id + ".role", MEMBER));
 						group.memberNames.put(uuid, members.getString(id + ".name", "?"));
-						BY_MEMBER.put(uuid, group);
 					}
 				}
 				for (String id : s.getStringList("invites")) {
@@ -404,6 +473,7 @@ final class Groups {
 
 	static void save() {
 		YamlConfiguration yaml = new YamlConfiguration();
+		SHOWN_TAG.forEach((id, group) -> yaml.set("shown-tag." + id, group));
 		for (Group group : GROUPS.values()) {
 			String path = "groups." + group.id;
 			yaml.set(path + ".name", group.name);
@@ -438,8 +508,7 @@ final class Groups {
 		@EventHandler
 		public void onJoin(PlayerJoinEvent event) {
 			Player player = event.getPlayer();
-			Group group = of(player.getUniqueId());
-			if (group != null) {
+			for (Group group : of(player.getUniqueId())) {
 				group.memberNames.put(player.getUniqueId(), player.getName());
 			}
 			refreshName(player.getUniqueId());
@@ -462,9 +531,11 @@ final class Groups {
 			if (!(damager instanceof Player attacker) || attacker == victim) {
 				return;
 			}
-			Group group = shared(attacker.getUniqueId(), victim.getUniqueId());
-			if (group != null && (group.has(attacker.getUniqueId(), Perm.NO_PVP) || group.has(victim.getUniqueId(), Perm.NO_PVP))) {
-				event.setCancelled(true);
+			for (Group group : shared(attacker.getUniqueId(), victim.getUniqueId())) {
+				if (group.has(attacker.getUniqueId(), Perm.NO_PVP) || group.has(victim.getUniqueId(), Perm.NO_PVP)) {
+					event.setCancelled(true);
+					return;
+				}
 			}
 		}
 	}

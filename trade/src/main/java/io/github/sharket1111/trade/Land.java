@@ -53,6 +53,18 @@ final class Land {
 	static final int SPAWN_RADIUS = 10;
 	static final int MAX_MEMBERS = 16;
 
+	/** Land permissions for one of the owner's groups. */
+	static final class GroupLand {
+		/** For every member of the group, or null to treat them like everyone. */
+		EnumSet<Perm> all;
+		/** By role in the group (before the whole-group setting). */
+		final Map<String, EnumSet<Perm>> roles = new LinkedHashMap<>();
+
+		boolean empty() {
+			return all == null && roles.isEmpty();
+		}
+	}
+
 	static final class Claim {
 		final String key;
 		final UUID owner;
@@ -60,12 +72,8 @@ final class Land {
 		final Map<UUID, EnumSet<Perm>> members = new LinkedHashMap<>();
 		final Map<UUID, String> memberNames = new LinkedHashMap<>();
 		EnumSet<Perm> everyone = EnumSet.noneOf(Perm.class);
-		/** The owner's group the group settings below belong to, or null for none. */
-		UUID group;
-		/** Permissions for every member of the owner's group, or null to treat them like everyone. */
-		EnumSet<Perm> groupAll;
-		/** Permissions by role in the owner's group (before the whole-group setting). */
-		final Map<String, EnumSet<Perm>> roles = new LinkedHashMap<>();
+		/** Settings for each of the owner's groups, by group id. */
+		final Map<UUID, GroupLand> groups = new LinkedHashMap<>();
 
 		Claim(String key, UUID owner, String ownerName) {
 			this.key = key;
@@ -120,14 +128,30 @@ final class Land {
 					}
 				}
 				if (s.isString("group")) {
-					claim.group = UUID.fromString(s.getString("group"));
+					// Saved before players could be in several groups.
+					GroupLand land = claim.groups.computeIfAbsent(UUID.fromString(s.getString("group")), id -> new GroupLand());
 					if (s.isList("group-all")) {
-						claim.groupAll = perms(s.getStringList("group-all"));
+						land.all = perms(s.getStringList("group-all"));
 					}
 					ConfigurationSection roles = s.getConfigurationSection("roles");
 					if (roles != null) {
 						for (String role : roles.getKeys(false)) {
-							claim.roles.put(role, perms(roles.getStringList(role)));
+							land.roles.put(role, perms(roles.getStringList(role)));
+						}
+					}
+				}
+				ConfigurationSection groups = s.getConfigurationSection("groups");
+				if (groups != null) {
+					for (String id : groups.getKeys(false)) {
+						GroupLand land = claim.groups.computeIfAbsent(UUID.fromString(id), g -> new GroupLand());
+						if (groups.isList(id + ".all")) {
+							land.all = perms(groups.getStringList(id + ".all"));
+						}
+						ConfigurationSection roles = groups.getConfigurationSection(id + ".roles");
+						if (roles != null) {
+							for (String role : roles.getKeys(false)) {
+								land.roles.put(role, perms(roles.getStringList(role)));
+							}
 						}
 					}
 				}
@@ -167,13 +191,12 @@ final class Land {
 				yaml.set(path + ".members." + id + ".name", claim.memberNames.getOrDefault(id, "?"));
 				yaml.set(path + ".members." + id + ".perms", names(perms));
 			});
-			if (claim.group != null) {
-				yaml.set(path + ".group", claim.group.toString());
-				if (claim.groupAll != null) {
-					yaml.set(path + ".group-all", names(claim.groupAll));
+			claim.groups.forEach((id, land) -> {
+				if (land.all != null) {
+					yaml.set(path + ".groups." + id + ".all", names(land.all));
 				}
-				claim.roles.forEach((role, perms) -> yaml.set(path + ".roles." + role, names(perms)));
-			}
+				land.roles.forEach((role, perms) -> yaml.set(path + ".groups." + id + ".roles." + role, names(perms)));
+			});
 		}
 		try {
 			file.getParentFile().mkdirs();
@@ -280,45 +303,45 @@ final class Land {
 		return (perms != null ? perms : claim.everyone).contains(perm);
 	}
 
-	/** The owner's group, if the claim's group settings belong to it. */
-	static Groups.Group ownerGroup(Claim claim) {
-		Groups.Group group = Groups.of(claim.owner);
-		return group != null && group.id.equals(claim.group) ? group : null;
+	/**
+	 * What a fellow member of the owner's groups may do: in each group they
+	 * share with the owner, their role's setting or else the whole group's;
+	 * everything any of those allows. Null if none is set.
+	 */
+	private static EnumSet<Perm> groupPerms(Claim claim, UUID player) {
+		EnumSet<Perm> result = null;
+		for (Map.Entry<UUID, GroupLand> entry : claim.groups.entrySet()) {
+			Groups.Group group = Groups.member(entry.getKey(), claim.owner);
+			if (group == null || !group.memberRoles.containsKey(player)) {
+				continue;
+			}
+			EnumSet<Perm> byRole = entry.getValue().roles.get(group.roleOf(player).id);
+			EnumSet<Perm> perms = byRole != null ? byRole : entry.getValue().all;
+			if (perms != null) {
+				if (result == null) {
+					result = EnumSet.noneOf(Perm.class);
+				}
+				result.addAll(perms);
+			}
+		}
+		return result;
 	}
 
-	/** What a fellow member of the owner's group may do: by their role, else as the whole group; null if neither is set. */
-	private static EnumSet<Perm> groupPerms(Claim claim, UUID player) {
-		Groups.Group group = ownerGroup(claim);
-		if (group == null || Groups.of(player) != group) {
+	/** The claim's settings for {@code group}, made if missing; null unless its owner is in that group. */
+	static GroupLand groupLand(Claim claim, UUID group) {
+		if (Groups.member(group, claim.owner) == null) {
 			return null;
 		}
-		EnumSet<Perm> byRole = claim.roles.get(group.roleOf(player).id);
-		return byRole != null ? byRole : claim.groupAll;
+		return claim.groups.computeIfAbsent(group, id -> new GroupLand());
 	}
 
-	/** Makes {@code claim}'s group settings belong to its owner's current group, starting over if it changed. */
-	static void bindGroup(Claim claim) {
-		Groups.Group group = Groups.of(claim.owner);
-		UUID id = group == null ? null : group.id;
-		if (id == null || !id.equals(claim.group)) {
-			claim.group = id;
-			claim.groupAll = null;
-			claim.roles.clear();
-		}
-	}
-
-	/** {@code player} joined or left a group: group settings on their land no longer apply. */
+	/** {@code player} joined or left a group: settings on their land for groups they left go. */
 	static void groupChanged(UUID player) {
 		boolean changed = false;
 		for (Claim claim : CLAIMS.values()) {
-			if (claim.owner.equals(player) && claim.group != null) {
-				Groups.Group group = Groups.of(player);
-				if (group == null || !group.id.equals(claim.group)) {
-					claim.group = null;
-					claim.groupAll = null;
-					claim.roles.clear();
-					changed = true;
-				}
+			if (claim.owner.equals(player)
+					&& claim.groups.keySet().removeIf(id -> Groups.member(id, player) == null)) {
+				changed = true;
 			}
 		}
 		if (changed) {
@@ -330,7 +353,8 @@ final class Land {
 	static void roleDeleted(Groups.Group group, String role) {
 		boolean changed = false;
 		for (Claim claim : CLAIMS.values()) {
-			if (group.id.equals(claim.group) && claim.roles.remove(role) != null) {
+			GroupLand land = claim.groups.get(group.id);
+			if (land != null && land.roles.remove(role) != null) {
 				changed = true;
 			}
 		}

@@ -12,12 +12,15 @@ final class GroupSettingsMenu extends Menu {
 	private static final int[] STEP_SLOTS = {10, 11, 15, 16};
 	private static final int[] STEPS = {-10, -5, 5, 10};
 
-	GroupSettingsMenu(Player player) {
+	private final java.util.UUID groupId;
+
+	GroupSettingsMenu(Player player, java.util.UUID groupId) {
 		super(player, "거래 - 그룹 할인율");
+		this.groupId = groupId;
 	}
 
 	private Groups.Group group() {
-		Groups.Group group = Groups.of(player.getUniqueId());
+		Groups.Group group = Groups.member(groupId, player.getUniqueId());
 		return group != null && group.has(player.getUniqueId(), Groups.Perm.SETTINGS) ? group : null;
 	}
 
@@ -43,7 +46,7 @@ final class GroupSettingsMenu extends Menu {
 	void click(int slot, ClickType click) {
 		if (slot == BACK_SLOT) {
 			clickSound();
-			new GroupMenu(player).open();
+			new GroupHomeMenu(player, groupId).open();
 			return;
 		}
 		Groups.Group group = group();

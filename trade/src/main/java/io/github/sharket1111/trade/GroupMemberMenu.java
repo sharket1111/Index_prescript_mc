@@ -15,17 +15,19 @@ final class GroupMemberMenu extends Menu {
 	private static final int INFO_SLOT = 4;
 	private static final int ROLE_SLOT = 11;
 	private static final int KICK_SLOT = 15;
+	private final UUID groupId;
 	private final UUID target;
 
-	GroupMemberMenu(Player player, UUID target) {
+	GroupMemberMenu(Player player, UUID groupId, UUID target) {
 		super(player, "거래 - 그룹원");
+		this.groupId = groupId;
 		this.target = target;
 	}
 
 	@Override
 	void draw() {
 		inventory.setItem(BACK_SLOT, TradeItems.back());
-		Groups.Group group = Groups.of(player.getUniqueId());
+		Groups.Group group = Groups.member(groupId, player.getUniqueId());
 		if (group == null || !group.memberRoles.containsKey(target)) {
 			inventory.setItem(13, TradeItems.button(Material.BARRIER, "그룹원이 아닙니다", NamedTextColor.GRAY));
 			return;
@@ -49,19 +51,19 @@ final class GroupMemberMenu extends Menu {
 	void click(int slot, ClickType click) {
 		if (slot == BACK_SLOT) {
 			clickSound();
-			GroupMemberPicker.members(player).open();
+			GroupMemberPicker.members(player, groupId).open();
 			return;
 		}
-		Groups.Group group = Groups.of(player.getUniqueId());
+		Groups.Group group = Groups.member(groupId, player.getUniqueId());
 		UUID me = player.getUniqueId();
 		if (group == null || !group.memberRoles.containsKey(target) || target.equals(me) || !group.outranks(me, target)) {
 			return;
 		}
 		if (slot == ROLE_SLOT && group.has(me, Groups.Perm.ASSIGN_ROLES)) {
 			clickSound();
-			new GroupRolePicker(player, "거래 - 줄 역할", () -> new GroupMemberMenu(player, target),
+			new GroupRolePicker(player, groupId, "거래 - 줄 역할", () -> new GroupMemberMenu(player, groupId, target),
 					role -> group.outranks(me, role), role -> {
-						Groups.Group current = Groups.of(me);
+						Groups.Group current = Groups.member(groupId, me);
 						if (current == group && current.memberRoles.containsKey(target) && current.outranks(me, target)
 								&& current.outranks(me, role) && current.has(me, Groups.Perm.ASSIGN_ROLES)) {
 							current.memberRoles.put(target, role.id);
@@ -74,7 +76,7 @@ final class GroupMemberMenu extends Menu {
 										NamedTextColor.GOLD));
 							}
 						}
-						new GroupMemberMenu(player, target).open();
+						new GroupMemberMenu(player, groupId, target).open();
 					}).open();
 		} else if (slot == KICK_SLOT && group.has(me, Groups.Perm.KICK)) {
 			if (!confirmed(click)) {
@@ -90,7 +92,7 @@ final class GroupMemberMenu extends Menu {
 			if (online != null) {
 				online.sendMessage(Component.text("그룹 '" + group.name + "'에서 추방되었습니다.", NamedTextColor.RED));
 			}
-			GroupMemberPicker.members(player).open();
+			GroupMemberPicker.members(player, groupId).open();
 		}
 	}
 }

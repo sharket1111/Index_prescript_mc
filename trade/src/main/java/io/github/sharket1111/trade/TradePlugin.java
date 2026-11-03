@@ -22,6 +22,7 @@ public final class TradePlugin extends JavaPlugin {
 		Land.load(this);
 		ChatPrompt.init(this);
 		Groups.load(this);
+		SharedStorage.load(this);
 		getServer().getPluginManager().registerEvents(new Menu.Events(), this);
 		getServer().getPluginManager().registerEvents(new Tickets(), this);
 		getServer().getPluginManager().registerEvents(new LandListener(), this);

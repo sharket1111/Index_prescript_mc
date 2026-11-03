@@ -16,9 +16,11 @@ import net.kyori.adventure.text.format.NamedTextColor;
 final class GroupRolesMenu extends Menu {
 	private static final int ADD_SLOT = 22;
 	private final Map<Integer, String> bySlot = new HashMap<>();
+	private final UUID groupId;
 
-	GroupRolesMenu(Player player) {
+	GroupRolesMenu(Player player, UUID groupId) {
 		super(player, "거래 - 역할 관리");
+		this.groupId = groupId;
 	}
 
 	static Material icon(Groups.Role role) {
@@ -43,7 +45,7 @@ final class GroupRolesMenu extends Menu {
 	void draw() {
 		bySlot.clear();
 		inventory.setItem(BACK_SLOT, TradeItems.back());
-		Groups.Group group = Groups.of(player.getUniqueId());
+		Groups.Group group = Groups.member(groupId, player.getUniqueId());
 		if (group == null) {
 			return;
 		}
@@ -60,7 +62,7 @@ final class GroupRolesMenu extends Menu {
 		}
 		boolean edit = group.has(player.getUniqueId(), Groups.Perm.EDIT_ROLES);
 		inventory.setItem(ADD_SLOT, TradeItems.button(edit ? Material.EMERALD : Material.GRAY_DYE, "역할 만들기",
-				edit ? NamedTextColor.GREEN : NamedTextColor.GRAY, "새 역할은 '" + group.roles.getLast().name + "' 바로 위 순위가 됩니다.",
+				edit ? NamedTextColor.GREEN : NamedTextColor.GRAY, "새 역할은 맨 아래 역할 바로 위 순위가 됩니다. (순위는 바꿀 수 있음)",
 				"역할은 " + Groups.MAX_ROLES + "개까지", edit ? "클릭: 이름을 채팅으로 정합니다." : "'역할 편집' 권한이 필요합니다."));
 	}
 
@@ -68,16 +70,16 @@ final class GroupRolesMenu extends Menu {
 	void click(int slot, ClickType click) {
 		if (slot == BACK_SLOT) {
 			clickSound();
-			new GroupMenu(player).open();
+			new GroupHomeMenu(player, groupId).open();
 			return;
 		}
-		Groups.Group group = Groups.of(player.getUniqueId());
+		Groups.Group group = Groups.member(groupId, player.getUniqueId());
 		if (group == null) {
 			return;
 		}
 		if (bySlot.containsKey(slot)) {
 			clickSound();
-			new GroupRoleMenu(player, bySlot.get(slot)).open();
+			new GroupRoleMenu(player, groupId, bySlot.get(slot)).open();
 		} else if (slot == ADD_SLOT) {
 			add(group);
 		}
@@ -96,16 +98,16 @@ final class GroupRolesMenu extends Menu {
 			return;
 		}
 		ChatPrompt.ask(player, "새 역할의 이름을 입력하세요. (1~12글자)", name -> {
-			Groups.Group current = Groups.of(me);
+			Groups.Group current = Groups.member(groupId, me);
 			if (current != group || !current.has(me, Groups.Perm.EDIT_ROLES) || current.roles.size() >= Groups.MAX_ROLES) {
-				new GroupRolesMenu(player).open();
+				new GroupRolesMenu(player, groupId).open();
 				return;
 			}
 			String why = GroupRoleMenu.badRoleName(current, name, null);
 			if (why != null) {
 				tell(why, NamedTextColor.RED);
 				failSound();
-				new GroupRolesMenu(player).open();
+				new GroupRolesMenu(player, groupId).open();
 				return;
 			}
 			Groups.Role role = new Groups.Role("r" + Long.toString(System.currentTimeMillis(), 36), name,
@@ -114,7 +116,7 @@ final class GroupRolesMenu extends Menu {
 			Groups.save();
 			tell("역할 '" + name + "'을(를) 만들었습니다.", NamedTextColor.GREEN);
 			successSound();
-			new GroupRoleMenu(player, role.id).open();
+			new GroupRoleMenu(player, groupId, role.id).open();
 		}, () -> new GroupRolesMenu(player).open());
 	}
 }

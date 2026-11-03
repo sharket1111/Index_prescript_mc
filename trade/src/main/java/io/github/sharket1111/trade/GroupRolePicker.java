@@ -14,13 +14,16 @@ import net.kyori.adventure.text.format.NamedTextColor;
 
 /** Picks one of the player's group's roles (those {@code allowed} lets through). */
 final class GroupRolePicker extends Menu {
+	private final java.util.UUID groupId;
 	private final Supplier<Menu> back;
 	private final Predicate<Groups.Role> allowed;
 	private final Consumer<Groups.Role> choice;
 	private final Map<Integer, String> bySlot = new HashMap<>();
 
-	GroupRolePicker(Player player, String title, Supplier<Menu> back, Predicate<Groups.Role> allowed, Consumer<Groups.Role> choice) {
+	GroupRolePicker(Player player, java.util.UUID groupId, String title, Supplier<Menu> back, Predicate<Groups.Role> allowed,
+			Consumer<Groups.Role> choice) {
 		super(player, title);
+		this.groupId = groupId;
 		this.back = back;
 		this.allowed = allowed;
 		this.choice = choice;
@@ -30,7 +33,7 @@ final class GroupRolePicker extends Menu {
 	void draw() {
 		bySlot.clear();
 		inventory.setItem(BACK_SLOT, TradeItems.back());
-		Groups.Group group = Groups.of(player.getUniqueId());
+		Groups.Group group = Groups.member(groupId, player.getUniqueId());
 		if (group == null) {
 			return;
 		}
@@ -54,7 +57,7 @@ final class GroupRolePicker extends Menu {
 			back.get().open();
 			return;
 		}
-		Groups.Group group = Groups.of(player.getUniqueId());
+		Groups.Group group = Groups.member(groupId, player.getUniqueId());
 		String id = bySlot.get(slot);
 		Groups.Role role = group == null || id == null ? null : group.role(id);
 		if (role != null) {
