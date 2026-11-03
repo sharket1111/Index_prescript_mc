@@ -28,7 +28,7 @@ final class ServerShopMenu extends Menu {
 			icon.editMeta(meta -> {
 				List<Component> lore = meta.hasLore() ? new ArrayList<>(meta.lore()) : new ArrayList<>();
 				lore.add(Component.empty());
-				lore.add(TradeItems.plain("가격: 거래 전용 다이아 " + product.price + "개", NamedTextColor.AQUA));
+				lore.add(TradeItems.plain(product.price == 0 ? "가격: 무료" : "가격: 거래 전용 다이아 " + product.price + "개", NamedTextColor.AQUA));
 				lore.add(TradeItems.plain(bedrock() ? "터치: 구매" : "우클릭: 구매", NamedTextColor.GRAY));
 				meta.lore(lore);
 			});
@@ -67,7 +67,8 @@ final class ServerShopMenu extends Menu {
 			return;
 		}
 		take(TradeItems::isTradeDiamond, product.price);
-		tell(product.name() + "을(를) 거래 전용 다이아 " + product.price + "개에 샀습니다.", NamedTextColor.GREEN);
+		tell(product.price == 0 ? product.name() + "을(를) 받았습니다." : product.name() + "을(를) 거래 전용 다이아 " + product.price + "개에 샀습니다.",
+				NamedTextColor.GREEN);
 		successSound();
 		product.deliver(player);
 		if (!product.type.equals("ender_chest")) {

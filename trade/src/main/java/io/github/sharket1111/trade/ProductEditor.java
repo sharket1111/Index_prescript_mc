@@ -52,7 +52,7 @@ final class ProductEditor extends Menu {
 		}
 		for (int i = 0; i < STEP_SLOTS.length; i++) {
 			if (slot == STEP_SLOTS[i]) {
-				price = Math.max(1, Math.min(ShopConfig.MAX_PRICE, price + STEPS[i]));
+				price = Math.max(0, Math.min(ShopConfig.MAX_PRICE, price + STEPS[i]));
 				clickSound();
 				redraw();
 				return;

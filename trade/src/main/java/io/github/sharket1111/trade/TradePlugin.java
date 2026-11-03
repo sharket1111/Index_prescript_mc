@@ -21,6 +21,7 @@ public final class TradePlugin extends JavaPlugin {
 		ShopConfig.load(this);
 		Land.load(this);
 		ChatPrompt.init(this);
+		TradeTools.init(this);
 		Groups.load(this);
 		SharedStorage.load(this);
 		getServer().getPluginManager().registerEvents(new Menu.Events(), this);
@@ -28,6 +29,7 @@ public final class TradePlugin extends JavaPlugin {
 		getServer().getPluginManager().registerEvents(new LandListener(), this);
 		getServer().getPluginManager().registerEvents(new ChatPrompt.Events(), this);
 		getServer().getPluginManager().registerEvents(new Groups.Events(), this);
+		getServer().getPluginManager().registerEvents(new TradeTools.Events(), this);
 	}
 
 	@Override

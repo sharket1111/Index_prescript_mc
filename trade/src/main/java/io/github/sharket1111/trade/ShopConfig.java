@@ -24,6 +24,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
  * - xp: {@code levels} experience levels
  * - land: the chunk the buyer stands in
  * - ender_chest: opens the buyer's ender chest on the spot, once
+ * - trade_menu / waypoint_book: the handy items of {@link TradeTools} (free by default)
  * - item: {@code material} and {@code amount} (easy to write by hand), or a
  *   full {@code item} (added by an admin from the trade menu)
  * Admins can add, reprice and remove goods in the trade menu, which saves
@@ -55,6 +56,8 @@ final class ShopConfig {
 				case "xp" -> "경험치 " + levels + "레벨";
 				case "land" -> "땅 소유권";
 				case "ender_chest" -> "원격 엔더 상자";
+				case "trade_menu" -> "거래 메뉴 아이템";
+				case "waypoint_book" -> "그룹 웨이포인트 책";
 				default -> item == null ? id : net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
 						.serialize(item.effectiveName()) + " x" + item.getAmount();
 			};
@@ -69,6 +72,8 @@ final class ShopConfig {
 				case "land" -> TradeItems.button(Material.GRASS_BLOCK, "땅 소유권 (청크)", NamedTextColor.GREEN,
 						"지금 서 있는 청크(16x16)를 내 땅으로 삽니다.", "거래 메뉴의 '내 땅'에서 권한을 정할 수 있습니다.",
 						"스폰(0,0) 주변 " + Land.SPAWN_RADIUS + "청크, 보호구역, 남의 땅은 살 수 없습니다.");
+				case "trade_menu" -> TradeTools.menuStar();
+				case "waypoint_book" -> TradeTools.waypointBook();
 				case "ender_chest" -> TradeItems.button(Material.ENDER_CHEST, "원격 엔더 상자", NamedTextColor.LIGHT_PURPLE,
 						"어디서든 내 엔더 상자를 바로 엽니다. (1회)", "닫으면 다시 사야 합니다.");
 				default -> item == null ? TradeItems.button(Material.BARRIER, id, NamedTextColor.RED) : item.clone();
@@ -89,6 +94,7 @@ final class ShopConfig {
 				case "spawn_ticket" -> give(player, Tickets.spawnTicket(1));
 				case "custom_ticket" -> give(player, Tickets.customTicket());
 				case "xp" -> player.giveExpLevels(levels);
+				case "trade_menu", "waypoint_book" -> TradeTools.deliver(player, type);
 				case "ender_chest" -> {
 					player.openInventory(player.getEnderChest());
 					player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_ENDER_CHEST_OPEN, 0.8F, 1.0F);
@@ -123,6 +129,8 @@ final class ShopConfig {
 			PRODUCTS.add(new Product("xp_3", "xp", 2, 3, null));
 			PRODUCTS.add(landProduct());
 			PRODUCTS.add(enderChestProduct());
+			PRODUCTS.add(new Product("trade_menu", "trade_menu", 0, 0, null));
+			PRODUCTS.add(new Product("waypoint_book", "waypoint_book", 0, 0, null));
 			save();
 			return;
 		}
@@ -147,7 +155,7 @@ final class ShopConfig {
 						item = ItemStack.of(material, Math.max(1, Math.min(material.getMaxStackSize(), s.getInt("amount", 1))));
 					}
 				}
-				PRODUCTS.add(new Product(id, type, Math.max(1, s.getInt("price", 1)), s.getInt("levels", 1), item));
+				PRODUCTS.add(new Product(id, type, Math.max(0, s.getInt("price", 1)), s.getInt("levels", 1), item));
 			} catch (RuntimeException e) {
 				owner.getLogger().log(Level.WARNING, "Skipping the broken shop product " + id + " in shop.yml", e);
 			}
@@ -161,6 +169,12 @@ final class ShopConfig {
 		// ...and the remote ender chest, once.
 		if (!yaml.getBoolean("ender-chest-added", false)) {
 			PRODUCTS.add(enderChestProduct());
+			added = true;
+		}
+		// ...and the free handy items, once.
+		if (!yaml.getBoolean("tools-added", false)) {
+			PRODUCTS.add(new Product("trade_menu", "trade_menu", 0, 0, null));
+			PRODUCTS.add(new Product("waypoint_book", "waypoint_book", 0, 0, null));
 			added = true;
 		}
 		if (added) {
@@ -184,10 +198,13 @@ final class ShopConfig {
 				"  xp: give 'levels' experience levels",
 				"  land: the chunk the buyer stands in becomes theirs",
 				"  ender_chest: opens the buyer's ender chest on the spot (once per purchase)",
+				"  trade_menu: an item that opens /trade on right-click (price 0 = free)",
+				"  waypoint_book: the group waypoint book (sneak + right-click; price 0 = free)",
 				"  item: give 'material' x 'amount' (or a full 'item', as saved by the in-game editor)",
 				"Up to 18 products. Restart the server after editing by hand."));
 		yaml.set("land-added", true);
 		yaml.set("ender-chest-added", true);
+		yaml.set("tools-added", true);
 		for (Product product : PRODUCTS) {
 			String path = "products." + product.id;
 			yaml.set(path + ".type", product.type);

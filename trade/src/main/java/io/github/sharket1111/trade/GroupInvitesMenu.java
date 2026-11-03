@@ -167,6 +167,7 @@ final class GroupInvitesMenu extends Menu {
 			Groups.addMember(group, player.getUniqueId(), player.getName(), Groups.MEMBER);
 			Groups.save();
 			Groups.refreshName(player.getUniqueId());
+			TradeTools.offerWaypointBook(player);
 			tell("그룹 '" + group.name + "'에 들어왔습니다.", NamedTextColor.GREEN);
 			successSound();
 			for (UUID member : group.memberRoles.keySet()) {

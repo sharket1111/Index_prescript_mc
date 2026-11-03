@@ -130,6 +130,7 @@ final class GroupWaypointsMenu extends Menu {
 			take(TradeItems::isTradeDiamond, price);
 			current.waypoints.add(new Groups.Waypoint(name, player.getLocation()));
 			Groups.save();
+			TradeTools.offerWaypointBook(current);
 			tell("웨이포인트 '" + name + "'을(를) 만들었습니다. 거래 전용 다이아 " + price + "개를 냈습니다.", NamedTextColor.GREEN);
 			successSound();
 			new GroupWaypointsMenu(player, groupId).open();

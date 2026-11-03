@@ -139,31 +139,38 @@ final class GroupWaypointMenu extends Menu {
 	}
 
 	private void teleport(Groups.Group group) {
+		teleport(this, player, group, waypoint);
+	}
+
+	/** Teleports {@code player} (looking at {@code menu}) to a waypoint, for a trade diamond, if their role may. */
+	static void teleport(Menu menu, Player player, Groups.Group group, Groups.Waypoint waypoint) {
 		if (!group.has(player.getUniqueId(), Groups.Perm.WAYPOINT_USE)) {
-			tell("'웨이포인트 사용' 권한이 있는 역할만 텔레포트할 수 있습니다.", NamedTextColor.RED);
-			failSound();
+			menu.tell("'웨이포인트 사용' 권한이 있는 역할만 텔레포트할 수 있습니다.", NamedTextColor.RED);
+			menu.failSound();
 			return;
 		}
 		Location to = waypoint.location();
 		if (to == null) {
-			tell("웨이포인트가 있는 월드를 찾을 수 없습니다.", NamedTextColor.RED);
-			failSound();
+			menu.tell("웨이포인트가 있는 월드를 찾을 수 없습니다.", NamedTextColor.RED);
+			menu.failSound();
 			return;
 		}
-		if (count(TradeItems::isTradeDiamond) < Groups.TELEPORT_PRICE) {
-			tell("텔레포트하려면 거래 전용 다이아 " + Groups.TELEPORT_PRICE + "개가 필요합니다.", NamedTextColor.RED);
-			failSound();
+		if (menu.count(TradeItems::isTradeDiamond) < Groups.TELEPORT_PRICE) {
+			menu.tell("텔레포트하려면 거래 전용 다이아 " + Groups.TELEPORT_PRICE + "개가 필요합니다.", NamedTextColor.RED);
+			menu.failSound();
 			return;
 		}
-		take(TradeItems::isTradeDiamond, Groups.TELEPORT_PRICE);
+		menu.take(TradeItems::isTradeDiamond, Groups.TELEPORT_PRICE);
 		player.closeInventory();
+		String name = waypoint.name;
 		player.teleportAsync(to).thenAccept(done -> {
 			if (done) {
 				player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 0.8F, 1.0F);
-				tell("'" + waypoint.name + "'(으)로 이동했습니다. (거래 전용 다이아 " + Groups.TELEPORT_PRICE + "개)", NamedTextColor.GREEN);
+				player.sendMessage(net.kyori.adventure.text.Component.text("'" + name + "'(으)로 이동했습니다. (거래 전용 다이아 "
+						+ Groups.TELEPORT_PRICE + "개)", NamedTextColor.GREEN));
 			} else {
 				giveTradeDiamonds(player, Groups.TELEPORT_PRICE);
-				tell("텔레포트하지 못해 다이아를 돌려드렸습니다.", NamedTextColor.RED);
+				player.sendMessage(net.kyori.adventure.text.Component.text("텔레포트하지 못해 다이아를 돌려드렸습니다.", NamedTextColor.RED));
 			}
 		});
 	}
