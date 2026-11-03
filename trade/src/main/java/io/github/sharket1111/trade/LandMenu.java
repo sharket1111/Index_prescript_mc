@@ -140,7 +140,7 @@ final class LandMenu extends Menu {
 			new PlayerPicker(player, "거래 - 권한을 줄 플레이어", false, false, 0, () -> new LandMenu(player), (id, name) -> {
 				Land.Claim current = Land.claimAt(at);
 				if (current != null && current.owner.equals(player.getUniqueId())) {
-					current.members.putIfAbsent(id, java.util.EnumSet.of(Land.Perm.ACCESS));
+					current.members.putIfAbsent(id, java.util.EnumSet.noneOf(Land.Perm.class));
 					current.memberNames.put(id, name);
 					Land.save();
 				}

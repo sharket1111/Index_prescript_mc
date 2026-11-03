@@ -12,7 +12,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 
 /** Turning one player's (or everyone's) permissions on the owner's chunk on and off. */
 final class LandPermissionMenu extends Menu {
-	private static final int[] PERM_SLOTS = {10, 12, 14, 16};
+	private static final int[] PERM_SLOTS = {11, 13, 15};
 	private static final int REMOVE_SLOT = 26;
 	private final Location at;
 	/** The player, or null for everyone not named. */
@@ -47,7 +47,7 @@ final class LandPermissionMenu extends Menu {
 		inventory.setItem(4, TradeItems.button(target == null ? Material.OAK_SIGN : Material.PLAYER_HEAD, name, NamedTextColor.YELLOW,
 				target == null ? "목록에 없는 모든 플레이어에게 적용됩니다." : "이 플레이어에게만 적용됩니다."));
 		Land.Perm[] all = Land.Perm.values();
-		String[] help = {"블록 설치, 물/용암 붓기, 불 붙이기", "블록 부수기, 양동이로 뜨기, 액자/동물 공격", "이 청크에 들어오기",
+		String[] help = {"블록 설치, 물/용암 붓기, 불 붙이기", "블록 부수기, 양동이로 뜨기, 액자/동물 공격",
 				"문, 상자, 버튼, 레버, 주민 등 사용"};
 		for (int i = 0; i < all.length; i++) {
 			boolean on = perms.contains(all[i]);

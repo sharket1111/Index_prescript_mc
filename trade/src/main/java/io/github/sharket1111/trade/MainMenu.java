@@ -47,7 +47,7 @@ final class MainMenu extends Menu {
 		inventory.setItem(MAIL_SLOT, TradeItems.button(mail > 0 ? Material.CHEST_MINECART : Material.MINECART, "우편함 (" + mail + ")",
 				mail > 0 ? NamedTextColor.GOLD : NamedTextColor.GRAY, "받지 않은 물건과 다이아를 받습니다."));
 		inventory.setItem(LAND_SLOT, TradeItems.button(Material.GRASS_BLOCK, "내 땅", NamedTextColor.GREEN,
-				"서 있는 청크가 내 땅이면", "플레이어별 권한(건축/파괴/접근/상호작용)을 정합니다."));
+				"서 있는 청크가 내 땅이면", "플레이어별 권한(건축/파괴/상호작용)을 정합니다."));
 		inventory.setItem(HISTORY_SLOT, TradeItems.button(Material.BOOK, "기록", NamedTextColor.YELLOW,
 				"내가 산 물품과 판 물품의", "기록을 봅니다."));
 		if (player.hasPermission(AdminMenu.PERMISSION)) {

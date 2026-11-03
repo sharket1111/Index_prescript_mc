@@ -27,8 +27,6 @@ import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerTeleportEvent;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -142,25 +140,5 @@ final class LandListener implements Listener {
 	@EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
 	public void onBlockExplode(BlockExplodeEvent event) {
 		event.blockList().removeIf(block -> Land.guarded(block.getLocation()));
-	}
-
-	/** Walking into a chunk without access is stopped at its edge. */
-	@EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
-	public void onMove(PlayerMoveEvent event) {
-		Location from = event.getFrom();
-		Location to = event.getTo();
-		if ((from.getBlockX() >> 4) == (to.getBlockX() >> 4) && (from.getBlockZ() >> 4) == (to.getBlockZ() >> 4)
-				&& from.getWorld() == to.getWorld()) {
-			return;
-		}
-		deny(event.getPlayer(), to, Land.Perm.ACCESS, event);
-	}
-
-	@EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
-	public void onTeleport(PlayerTeleportEvent event) {
-		if (event.getCause() == PlayerTeleportEvent.TeleportCause.ENDER_PEARL
-				|| event.getCause() == PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT) {
-			deny(event.getPlayer(), event.getTo(), Land.Perm.ACCESS, event);
-		}
 	}
 }

@@ -33,16 +33,14 @@ import net.kyori.adventure.text.format.NamedTextColor;
  * Land: chunks players own, and protected zones set by admins. Saved to land.yml.
  * - An owned chunk lets its owner do anything; everyone else gets the
  *   permissions the owner gave them by name, or else the owner's defaults for
- *   everyone (access only, unless changed).
- * - A protected zone may be entered by anyone, but only admins build, break
- *   or interact there.
+ *   everyone (none, unless changed). Anyone may walk in.
+ * - In a protected zone only admins build, break or interact; anyone may walk in.
  * Chunks within {@link #SPAWN_RADIUS} chunks of chunk 0,0 cannot be bought.
  */
 final class Land {
 	enum Perm {
 		BUILD("건축"),
 		BREAK("파괴"),
-		ACCESS("접근"),
 		INTERACT("상호작용");
 
 		final String label;
@@ -61,7 +59,7 @@ final class Land {
 		final String ownerName;
 		final Map<UUID, EnumSet<Perm>> members = new LinkedHashMap<>();
 		final Map<UUID, String> memberNames = new LinkedHashMap<>();
-		EnumSet<Perm> everyone = EnumSet.of(Perm.ACCESS);
+		EnumSet<Perm> everyone = EnumSet.noneOf(Perm.class);
 
 		Claim(String key, UUID owner, String ownerName) {
 			this.key = key;
@@ -223,7 +221,7 @@ final class Land {
 		return CLAIMS.get(key);
 	}
 
-	/** Hands a chunk to a new owner; permissions start over (everyone may enter). */
+	/** Hands a chunk to a new owner; permissions start over. */
 	static void transfer(String key, Player newOwner) {
 		CLAIMS.put(key, new Claim(key, newOwner.getUniqueId(), newOwner.getName()));
 		save();
@@ -244,7 +242,7 @@ final class Land {
 			return true;
 		}
 		if (zoneAt(location)) {
-			return perm == Perm.ACCESS;
+			return false;
 		}
 		Claim claim = claimAt(location);
 		if (claim == null || claim.owner.equals(player.getUniqueId())) {

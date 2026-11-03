@@ -43,7 +43,7 @@ final class ProtectMenu extends Menu {
 		inventory.setItem(PLUS_SLOT, TradeItems.stepButton(1, "범위: 반경 " + radius + "청크"));
 		inventory.setItem(BACK_SLOT, TradeItems.back());
 		inventory.setItem(SET_SLOT, TradeItems.button(Material.LIME_CONCRETE, "보호구역 지정", NamedTextColor.GREEN,
-				size + "x" + size + "청크를 보호구역으로 만듭니다.", "누구나 들어올 수 있지만 건축/파괴/상호작용은 관리자만 됩니다.",
+				size + "x" + size + "청크를 보호구역으로 만듭니다.", "건축/파괴/상호작용은 관리자만 됩니다.",
 				"이미 플레이어 땅인 청크는 건너뜁니다."));
 		inventory.setItem(BORDER_SLOT, TradeItems.button(Material.SPYGLASS, "현재 청크 경계 보기", NamedTextColor.WHITE));
 		inventory.setItem(CLEAR_SLOT, TradeItems.button(Material.RED_CONCRETE, "보호구역 해제", NamedTextColor.RED,
