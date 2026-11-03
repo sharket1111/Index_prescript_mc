@@ -14,6 +14,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
@@ -23,8 +24,14 @@ import org.joml.Vector3f;
 /**
  * [Mang]'s glowing golden ring as a 3D model (tools/mang_ring.py), wound round
  * the held weapon and slowly turning about it. Up to six can be wound at once,
- * spaced along the blade and turning in alternate directions. Golden motes go with it, which
- * Bedrock players (who cannot see the model) see as well.
+ * spaced along the blade and turning in alternate directions. Golden motes go
+ * with it, which Bedrock players (who cannot see the model) see as well.
+ *
+ * The server cannot tell first person from third, so a player holding Mang
+ * sees their own rings as in first person (following where they look, by the
+ * held item in the corner of the view) while everyone else sees them on the
+ * arm; /ip mang view switches the holder's own view to the third-person rings
+ * (for looking with F5).
  */
 final class MangRing {
 	private static final float SCALE = 0.35F;
@@ -33,23 +40,38 @@ final class MangRing {
 	private static final int SWING_TICKS = 6;
 	/** Distance between neighbouring rings along the weapon, in blocks. */
 	private static final double SPACING = 0.15;
+	/** First-person blade tilt above the line of sight at rest, in degrees. */
+	private static final double FIRST_PERSON_TILT = 30.0;
 	private static final Map<UUID, Ring> RINGS = new ConcurrentHashMap<>();
+	/** Holders who see their own rings as in third person. */
+	private static final Set<UUID> THIRD_PERSON_VIEW = ConcurrentHashMap.newKeySet();
 
 	private static final class Ring {
 		final LivingEntity holder;
-		final List<ItemDisplay> displays;
+		/** Seen by everyone else (and by the holder in third-person view). */
+		final List<ItemDisplay> third;
+		/** Seen only by a player holder, as in first person. */
+		final List<ItemDisplay> first;
 		final long until;
+		final int count;
 		int age;
 		int swingAge = -100;
 
-		Ring(LivingEntity holder, List<ItemDisplay> displays, long until) {
+		Ring(LivingEntity holder, List<ItemDisplay> third, List<ItemDisplay> first, long until, int count) {
 			this.holder = holder;
-			this.displays = displays;
+			this.third = third;
+			this.first = first;
 			this.until = until;
+			this.count = count;
 		}
 
 		void remove() {
-			displays.forEach(ItemDisplay::remove);
+			third.forEach(ItemDisplay::remove);
+			first.forEach(ItemDisplay::remove);
+		}
+
+		boolean broken() {
+			return third.stream().anyMatch(d -> !d.isValid()) || first.stream().anyMatch(d -> !d.isValid());
 		}
 	}
 
@@ -61,25 +83,41 @@ final class MangRing {
 		show(holder, ticks, 1);
 	}
 
+	private static ItemDisplay spawnRing(LivingEntity holder, Vector at, ItemStack model, boolean visible) {
+		return holder.getWorld().spawn(at.toLocation(holder.getWorld()), ItemDisplay.class, d -> {
+			d.setPersistent(false);
+			d.setVisibleByDefault(visible);
+			d.setItemStack(model);
+			d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
+			d.setBrightness(new Display.Brightness(15, 15));
+			d.setTeleportDuration(1);
+			d.setInterpolationDuration(1);
+		});
+	}
+
 	/** Shows {@code count} rings (1-6) on {@code holder}'s weapon for {@code ticks} ticks, or until hidden if 0. */
 	static void show(LivingEntity holder, int ticks, int count) {
 		hide(holder);
+		count = Math.max(1, Math.min(MAX_RINGS, count));
 		ItemStack model = ItemStack.of(Material.PAPER);
 		model.editMeta(meta -> meta.setItemModel(new NamespacedKey(Items.NAMESPACE, "mang_ring")));
 		Vector center = Effects.weaponFrame(holder)[0];
-		List<ItemDisplay> displays = new ArrayList<>();
-		for (int i = 0; i < Math.max(1, Math.min(MAX_RINGS, count)); i++) {
-			displays.add(holder.getWorld().spawn(center.toLocation(holder.getWorld()), ItemDisplay.class, d -> {
-				d.setPersistent(false);
-				d.setItemStack(model);
-				d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
-				d.setBrightness(new Display.Brightness(15, 15));
-				d.setTeleportDuration(1);
-				d.setInterpolationDuration(1);
-			}));
+		boolean firstPerson = holder instanceof Player player && !THIRD_PERSON_VIEW.contains(player.getUniqueId());
+		List<ItemDisplay> third = new ArrayList<>();
+		List<ItemDisplay> first = new ArrayList<>();
+		for (int i = 0; i < count; i++) {
+			ItemDisplay outer = spawnRing(holder, center, model, true);
+			third.add(outer);
+			if (firstPerson) {
+				Player player = (Player) holder;
+				player.hideEntity(IndexPrescriptPlugin.instance(), outer);
+				ItemDisplay own = spawnRing(holder, center, model, false);
+				player.showEntity(IndexPrescriptPlugin.instance(), own);
+				first.add(own);
+			}
 		}
 		long until = ticks > 0 ? CaduceusListener.now() + ticks : Long.MAX_VALUE;
-		RINGS.put(holder.getUniqueId(), new Ring(holder, displays, until));
+		RINGS.put(holder.getUniqueId(), new Ring(holder, third, first, until, count));
 		Effects.mangForm(holder);
 	}
 
@@ -88,6 +126,17 @@ final class MangRing {
 		if (ring != null) {
 			ring.remove();
 		}
+	}
+
+	/** Switches the player's own view of their rings between first and third person; returns true for third. */
+	static boolean toggleView(Player player) {
+		boolean third = THIRD_PERSON_VIEW.add(player.getUniqueId()) || !THIRD_PERSON_VIEW.remove(player.getUniqueId());
+		Ring ring = RINGS.get(player.getUniqueId());
+		if (ring != null) {
+			long left = ring.until == Long.MAX_VALUE ? 0 : Math.max(1, ring.until - CaduceusListener.now());
+			show(player, (int) left, ring.count);
+		}
+		return third;
 	}
 
 	/** The holder swung: the rings follow the blade through the swing. */
@@ -99,30 +148,64 @@ final class MangRing {
 	}
 
 	/**
-	 * The blade through a swing (vanilla's lasts 6 ticks): raised up and to the
-	 * right, chopped down across to the left, then back to rest.
+	 * The blade's tilt (degrees above rest) and sideways turn through a swing
+	 * (vanilla's lasts 6 ticks): raised up and to the right, chopped down
+	 * across to the left, then back to rest.
 	 */
-	private static Vector[] swingFrame(Ring ring) {
+	private static double[] swingPose(Ring ring) {
 		double t = (ring.age - ring.swingAge) / (double) SWING_TICKS;
 		if (t < 0 || t >= 1) {
-			return Effects.weaponFrame(ring.holder);
+			return new double[] {0, 0};
 		}
-		double tilt;
-		double yaw;
+		double rise = 100 - Effects.REST_TILT;
+		double fall = -40 - Effects.REST_TILT;
 		if (t < 0.3) {
 			double u = t / 0.3;
-			tilt = Effects.REST_TILT + (100 - Effects.REST_TILT) * u;
-			yaw = -30 * u;
+			return new double[] {rise * u, -30 * u};
 		} else if (t < 0.7) {
 			double u = (t - 0.3) / 0.4;
-			tilt = 100 - 140 * u;
-			yaw = -30 + 70 * u;
-		} else {
-			double u = (t - 0.7) / 0.3;
-			tilt = -40 + (Effects.REST_TILT + 40) * u;
-			yaw = 40 * (1 - u);
+			return new double[] {rise + (fall - rise) * u, -30 + 70 * u};
 		}
-		return Effects.weaponFrame(ring.holder, tilt, yaw);
+		double u = (t - 0.7) / 0.3;
+		return new double[] {fall * (1 - u), 40 * (1 - u)};
+	}
+
+	/**
+	 * The blade as a held item sits in first person: in the lower right of the
+	 * view, following where the player looks, pointing ahead and up.
+	 */
+	private static Vector[] firstPersonFrame(Player player, double tiltDeg, double yawDeg) {
+		Location eye = player.getEyeLocation();
+		Vector look = eye.getDirection().normalize();
+		Vector right = look.clone().crossProduct(new Vector(0, 1, 0));
+		if (right.lengthSquared() < 1.0E-4) {
+			double yaw = Math.toRadians(eye.getYaw());
+			right = new Vector(-Math.cos(yaw), 0, -Math.sin(yaw));
+		}
+		right.normalize();
+		Vector up = right.clone().crossProduct(look).normalize();
+		Vector hand = eye.toVector().add(look.clone().multiply(0.55)).add(right.clone().multiply(0.32)).subtract(up.clone().multiply(0.30));
+		double yaw = Math.toRadians(yawDeg);
+		Vector heading = look.clone().multiply(Math.cos(yaw)).subtract(right.clone().multiply(Math.sin(yaw)));
+		double tilt = Math.toRadians(tiltDeg);
+		Vector axis = heading.multiply(Math.cos(tilt)).add(up.multiply(Math.sin(tilt))).normalize();
+		return new Vector[] {hand.add(axis.clone().multiply(0.25)), axis};
+	}
+
+	private static void place(List<ItemDisplay> displays, Vector[] frame, LivingEntity holder, int age) {
+		Vector axis = frame[1];
+		Vector3f axisF = new Vector3f((float) axis.getX(), (float) axis.getY(), (float) axis.getZ());
+		int count = displays.size();
+		for (int i = 0; i < count; i++) {
+			ItemDisplay display = displays.get(i);
+			// Spread along the blade around its middle, neighbours turning opposite ways.
+			double offset = (i - (count - 1) / 2.0) * SPACING;
+			display.teleport(frame[0].clone().add(axis.clone().multiply(offset)).toLocation(holder.getWorld()));
+			double spin = age * SPIN_PER_TICK * (i % 2 == 0 ? 1 : -1) + i * 0.7;
+			Quaternionf turn = new Quaternionf().rotationTo(new Vector3f(0, 0, 1), axisF).rotateZ((float) spin);
+			display.setInterpolationDelay(0);
+			display.setTransformation(new Transformation(new Vector3f(), turn, new Vector3f(SCALE, SCALE, SCALE), new Quaternionf()));
+		}
 	}
 
 	static boolean showing(LivingEntity holder) {
@@ -135,26 +218,16 @@ final class MangRing {
 		Iterator<Ring> it = RINGS.values().iterator();
 		while (it.hasNext()) {
 			Ring ring = it.next();
-			if (now >= ring.until || !ring.holder.isValid() || ring.holder.isDead()
-					|| ring.displays.stream().anyMatch(d -> !d.isValid())) {
+			if (now >= ring.until || !ring.holder.isValid() || ring.holder.isDead() || ring.broken()) {
 				ring.remove();
 				it.remove();
 				continue;
 			}
-			Vector[] frame = swingFrame(ring);
-			Vector axis = frame[1];
-			Vector3f axisF = new Vector3f((float) axis.getX(), (float) axis.getY(), (float) axis.getZ());
-			int count = ring.displays.size();
-			for (int i = 0; i < count; i++) {
-				ItemDisplay display = ring.displays.get(i);
-				// Spread along the blade around its middle, neighbours turning opposite ways.
-				double offset = (i - (count - 1) / 2.0) * SPACING;
-				Location at = frame[0].clone().add(axis.clone().multiply(offset)).toLocation(ring.holder.getWorld());
-				display.teleport(at);
-				double spin = ring.age * SPIN_PER_TICK * (i % 2 == 0 ? 1 : -1) + i * 0.7;
-				Quaternionf turn = new Quaternionf().rotationTo(new Vector3f(0, 0, 1), axisF).rotateZ((float) spin);
-				display.setInterpolationDelay(0);
-				display.setTransformation(new Transformation(new Vector3f(), turn, new Vector3f(SCALE, SCALE, SCALE), new Quaternionf()));
+			double[] pose = swingPose(ring);
+			Vector[] frame = Effects.weaponFrame(ring.holder, Effects.REST_TILT + pose[0], pose[1]);
+			place(ring.third, frame, ring.holder, ring.age);
+			if (!ring.first.isEmpty() && ring.holder instanceof Player player) {
+				place(ring.first, firstPersonFrame(player, FIRST_PERSON_TILT + pose[0], pose[1]), ring.holder, ring.age);
 			}
 			if (ring.age % 4 == 0) {
 				Effects.mang(ring.holder, ring.age, frame);

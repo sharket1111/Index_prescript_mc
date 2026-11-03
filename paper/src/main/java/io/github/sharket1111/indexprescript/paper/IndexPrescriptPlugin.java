@@ -132,6 +132,11 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			sender.sendMessage(Messages.get(sender, "command.players_only"));
 			return true;
 		}
+		if (args.length >= 2 && args[1].equalsIgnoreCase("view")) {
+			boolean third = MangRing.toggleView(player);
+			sender.sendMessage(Messages.get(sender, third ? "command.mang_view_third" : "command.mang_view_first"));
+			return true;
+		}
 		int count = 1;
 		if (args.length >= 2) {
 			try {
@@ -206,7 +211,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			case 2 -> switch (args[0].toLowerCase(Locale.ROOT)) {
 				case "give" -> List.of("caduceus", "terminal", "laevatein");
 				case "laevatein" -> List.of("0", "1", "2", "3");
-				case "mang" -> List.of("1", "2", "3", "4", "5", "6");
+				case "mang" -> List.of("1", "2", "3", "4", "5", "6", "view");
 				default -> List.of();
 			};
 			case 3 -> null; // online player names

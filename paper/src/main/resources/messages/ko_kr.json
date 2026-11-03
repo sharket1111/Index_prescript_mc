@@ -37,5 +37,7 @@
 	"command.sanity": "정신력: %s (-45 ~ 45, 체력 5칸이 0)",
 	"command.mang_on": "망 %s개를 15초 동안 보여준다. (3인칭 F5로 보기, 숫자 없이 다시 입력하면 끈다)",
 	"command.mang_off": "망을 껐다.",
-	"command.mang_usage": "사용법: /indexprescript mang [1~6]"
+	"command.mang_usage": "사용법: /indexprescript mang [1~6|view]",
+	"command.mang_view_first": "내 망을 1인칭 기준(시점을 따라감)으로 봅니다.",
+	"command.mang_view_third": "내 망을 3인칭 기준(팔을 따라감)으로 봅니다. F5로 볼 때 쓰세요."
 }
