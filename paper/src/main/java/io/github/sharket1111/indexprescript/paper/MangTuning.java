@@ -31,18 +31,18 @@ final class MangTuning {
 
 	static void reset() {
 		THIRD.clear();
-		THIRD.put("up", 0.78);
+		THIRD.put("up", 0.77);
 		THIRD.put("right", 0.36);
 		THIRD.put("forward", 0.05);
 		THIRD.put("along", 0.42);
 		THIRD.put("tilt", 10.0);
-		THIRD.put("scale", 0.35);
+		THIRD.put("scale", 0.37);
 		THIRD.put("spacing", 0.15);
 		FIRST.clear();
-		FIRST.put("dist", 0.35);
-		FIRST.put("right", 0.42);
+		FIRST.put("dist", 0.28);
+		FIRST.put("right", 0.33);
 		FIRST.put("down", 0.09);
-		FIRST.put("tilt", 60.0);
+		FIRST.put("tilt", 120.0);
 		FIRST.put("lean", -30.0);
 		FIRST.put("scale", 0.12);
 		FIRST.put("spacing", 0.07);
