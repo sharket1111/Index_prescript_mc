@@ -19,8 +19,10 @@ public final class TradePlugin extends JavaPlugin {
 		Mailbox.load(this);
 		BuyOrders.load(this);
 		ShopConfig.load(this);
+		Land.load(this);
 		getServer().getPluginManager().registerEvents(new Menu.Events(), this);
 		getServer().getPluginManager().registerEvents(new Tickets(), this);
+		getServer().getPluginManager().registerEvents(new LandListener(), this);
 	}
 
 	@Override

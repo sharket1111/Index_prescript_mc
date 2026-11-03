@@ -54,6 +54,12 @@ final class ServerShopMenu extends Menu {
 			return;
 		}
 		ShopConfig.Product product = products.get(slot);
+		String why = product.whyNot(player);
+		if (why != null) {
+			tell(why, NamedTextColor.RED);
+			failSound();
+			return;
+		}
 		int have = count(TradeItems::isTradeDiamond);
 		if (have < product.price) {
 			tell("거래 전용 다이아가 부족합니다. (" + (product.price - have) + "개 더 필요)", NamedTextColor.RED);

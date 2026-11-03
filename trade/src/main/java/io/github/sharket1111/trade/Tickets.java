@@ -157,6 +157,11 @@ final class Tickets implements Listener {
 			fail(player);
 			return;
 		}
+		if (!Land.allowed(player, bed, Land.Perm.ACCESS)) {
+			player.sendMessage(Component.text("침대가 들어갈 수 없는 남의 땅에 있습니다.", NamedTextColor.RED));
+			fail(player);
+			return;
+		}
 		consume(player, stack, hand);
 		teleport(player, bed);
 	}
@@ -174,6 +179,11 @@ final class Tickets implements Listener {
 			player.getInventory().setItem(hand, stack);
 			player.sendMessage(Component.text("이곳을 커스텀 귀환권의 좌표로 정했습니다.", NamedTextColor.GREEN));
 			player.playSound(here, Sound.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.PLAYERS, 1.0F, 1.2F);
+			return;
+		}
+		if (!Land.allowed(player, target, Land.Perm.ACCESS)) {
+			player.sendMessage(Component.text("그 좌표는 들어갈 수 없는 남의 땅입니다.", NamedTextColor.RED));
+			fail(player);
 			return;
 		}
 		consume(player, stack, hand);

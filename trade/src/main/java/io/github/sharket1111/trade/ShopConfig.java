@@ -51,6 +51,7 @@ final class ShopConfig {
 				case "spawn_ticket" -> "스폰 귀환권";
 				case "custom_ticket" -> "커스텀 귀환권";
 				case "xp" -> "경험치 " + levels + "레벨";
+				case "land" -> "땅 소유권";
 				default -> item == null ? id : net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
 						.serialize(item.effectiveName()) + " x" + item.getAmount();
 			};
@@ -62,12 +63,24 @@ final class ShopConfig {
 				case "custom_ticket" -> Tickets.customTicket();
 				case "xp" -> TradeItems.button(Material.EXPERIENCE_BOTTLE, Math.min(64, Math.max(1, levels)), "경험치 " + levels + "레벨",
 						NamedTextColor.GREEN, "바로 경험치 " + levels + "레벨을 얻습니다.");
+				case "land" -> TradeItems.button(Material.GRASS_BLOCK, "땅 소유권 (청크)", NamedTextColor.GREEN,
+						"지금 서 있는 청크(16x16)를 내 땅으로 삽니다.", "거래 메뉴의 '내 땅'에서 권한을 정할 수 있습니다.",
+						"스폰(0,0) 주변 " + Land.SPAWN_RADIUS + "청크, 보호구역, 남의 땅은 살 수 없습니다.");
 				default -> item == null ? TradeItems.button(Material.BARRIER, id, NamedTextColor.RED) : item.clone();
 			};
 		}
 
+		/** Why the player cannot buy this right now, or null. */
+		String whyNot(Player player) {
+			return type.equals("land") ? Land.whyNotBuyable(player.getLocation()) : null;
+		}
+
 		void deliver(Player player) {
 			switch (type) {
+				case "land" -> {
+					Land.claim(player, player.getLocation());
+					Land.showBorder(player, player.getLocation(), org.bukkit.Color.LIME);
+				}
 				case "spawn_ticket" -> give(player, Tickets.spawnTicket(1));
 				case "custom_ticket" -> give(player, Tickets.customTicket());
 				case "xp" -> player.giveExpLevels(levels);
@@ -99,12 +112,14 @@ final class ShopConfig {
 			PRODUCTS.add(new Product("spawn_ticket", "spawn_ticket", 2, 0, null));
 			PRODUCTS.add(new Product("custom_ticket", "custom_ticket", 4, 0, null));
 			PRODUCTS.add(new Product("xp_3", "xp", 2, 3, null));
+			PRODUCTS.add(landProduct());
 			save();
 			return;
 		}
-		ConfigurationSection root = YamlConfiguration.loadConfiguration(file).getConfigurationSection("products");
+		YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+		ConfigurationSection root = yaml.getConfigurationSection("products");
 		if (root == null) {
-			return;
+			root = yaml.createSection("products");
 		}
 		for (String id : root.getKeys(false)) {
 			ConfigurationSection s = root.getConfigurationSection(id);
@@ -127,6 +142,15 @@ final class ShopConfig {
 				owner.getLogger().log(Level.WARNING, "Skipping the broken shop product " + id + " in shop.yml", e);
 			}
 		}
+		// Shops written before land existed get the land deed once.
+		if (!yaml.getBoolean("land-added", false)) {
+			PRODUCTS.add(landProduct());
+			save();
+		}
+	}
+
+	private static Product landProduct() {
+		return new Product("land", "land", 5, 0, null);
 	}
 
 	static void save() {
@@ -135,8 +159,10 @@ final class ShopConfig {
 				"PlayerTrade server shop. Prices are in trade diamonds. Types:",
 				"  spawn_ticket, custom_ticket: return tickets",
 				"  xp: give 'levels' experience levels",
+				"  land: the chunk the buyer stands in becomes theirs",
 				"  item: give 'material' x 'amount' (or a full 'item', as saved by the in-game editor)",
 				"Up to 18 products. Restart the server after editing by hand."));
+		yaml.set("land-added", true);
 		for (Product product : PRODUCTS) {
 			String path = "products." + product.id;
 			yaml.set(path + ".type", product.type);

@@ -13,6 +13,7 @@ final class AdminMenu extends Menu {
 	private static final int ORDERS_SLOT = 12;
 	private static final int HISTORY_SLOT = 14;
 	private static final int SHOP_SLOT = 16;
+	private static final int PROTECT_SLOT = 22;
 
 	AdminMenu(Player player) {
 		super(player, "거래 - 관리자");
@@ -28,6 +29,8 @@ final class AdminMenu extends Menu {
 				"플레이어를 골라 구매/판매 기록을 봅니다."));
 		inventory.setItem(SHOP_SLOT, TradeItems.button(Material.BELL, "서버 상점 편집", NamedTextColor.GOLD,
 				"상품 추가, 가격 수정, 삭제 (shop.yml에 저장)"));
+		inventory.setItem(PROTECT_SLOT, TradeItems.button(Material.BEDROCK, "보호구역", NamedTextColor.GOLD,
+				"서 있는 곳 주변 청크를 보호구역으로 지정/해제합니다."));
 		inventory.setItem(BACK_SLOT, TradeItems.back());
 	}
 
@@ -44,6 +47,7 @@ final class AdminMenu extends Menu {
 			case HISTORY_SLOT -> new PlayerPicker(player, "관리 - 기록을 볼 플레이어", false, true, 0, () -> new AdminMenu(player),
 					(id, name) -> new HistoryMenu(player, id, name, 0, false).open()).open();
 			case SHOP_SLOT -> new ShopEditorMenu(player).open();
+			case PROTECT_SLOT -> new ProtectMenu(player, 0).open();
 			default -> {
 				return;
 			}
