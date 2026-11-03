@@ -136,7 +136,9 @@ final class MarketMenu extends Menu {
 			} else if (admin) {
 				if (confirmed(click)) {
 					Market.remove(listing);
-					Mailbox.deliver(listing.seller, listing.item.clone(), "관리자가 판매를 취소한 물품");
+					if (Land.deedChunk(listing.item) == null) {
+						Mailbox.deliver(listing.seller, listing.item.clone(), "관리자가 판매를 취소한 물품");
+					}
 					tell("판매를 취소하고 물품을 판매자 우편함으로 보냈습니다.", NamedTextColor.YELLOW);
 					successSound();
 					redraw();

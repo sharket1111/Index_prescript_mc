@@ -16,11 +16,18 @@ import java.util.logging.Level;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
  * Land: chunks players own, and protected zones set by admins. Saved to land.yml.
@@ -64,6 +71,7 @@ final class Land {
 	}
 
 	private static Plugin plugin;
+	private static NamespacedKey deedKey;
 	private static File file;
 	private static final Map<String, Claim> CLAIMS = new LinkedHashMap<>();
 	private static final Set<String> ZONES = new LinkedHashSet<>();
@@ -81,6 +89,7 @@ final class Land {
 
 	static void load(Plugin owner) {
 		plugin = owner;
+		deedKey = new NamespacedKey(owner, "land_deed");
 		file = new File(owner.getDataFolder(), "land.yml");
 		CLAIMS.clear();
 		ZONES.clear();
@@ -180,6 +189,44 @@ final class Land {
 			return "이 청크는 이미 " + claim.ownerName + "님의 땅입니다.";
 		}
 		return null;
+	}
+
+	/**
+	 * The land deed shown for a chunk put up for sale: buying the listing
+	 * hands the chunk over (the deed itself is never handed out).
+	 */
+	static ItemStack deed(Claim claim) {
+		String[] parts = claim.key.split(";");
+		ItemStack deed = ItemStack.of(Material.MAP);
+		deed.editMeta(meta -> {
+			meta.itemName(Component.text("땅 문서 (" + parts[0] + " 청크 " + parts[1] + ", " + parts[2] + ")", NamedTextColor.GREEN));
+			int x = Integer.parseInt(parts[1]) * 16;
+			int z = Integer.parseInt(parts[2]) * 16;
+			meta.lore(List.of(
+					TradeItems.plain("블록 좌표 X " + x + " ~ " + (x + 15) + ", Z " + z + " ~ " + (z + 15), NamedTextColor.GRAY),
+					TradeItems.plain("사면 이 청크가 내 땅이 됩니다. (권한은 초기화)", NamedTextColor.GRAY)));
+			meta.setEnchantmentGlintOverride(true);
+			meta.getPersistentDataContainer().set(deedKey, PersistentDataType.STRING, claim.key);
+		});
+		return deed;
+	}
+
+	/** The chunk a deed stands for, or null if the item is not a deed. */
+	static String deedChunk(ItemStack stack) {
+		if (stack == null || !stack.hasItemMeta()) {
+			return null;
+		}
+		return stack.getItemMeta().getPersistentDataContainer().get(deedKey, PersistentDataType.STRING);
+	}
+
+	static Claim claimByKey(String key) {
+		return CLAIMS.get(key);
+	}
+
+	/** Hands a chunk to a new owner; permissions start over (everyone may enter). */
+	static void transfer(String key, Player newOwner) {
+		CLAIMS.put(key, new Claim(key, newOwner.getUniqueId(), newOwner.getName()));
+		save();
 	}
 
 	static void claim(Player owner, Location location) {

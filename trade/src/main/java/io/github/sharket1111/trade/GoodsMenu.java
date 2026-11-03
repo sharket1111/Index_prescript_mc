@@ -21,6 +21,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
  */
 final class GoodsMenu extends Menu {
 	private static final int INFO_SLOT = 22;
+	private static final int LAND_SLOT = 26;
 	private final Map<Integer, Listing> bySlot = new HashMap<>();
 
 	GoodsMenu(Player player) {
@@ -37,6 +38,14 @@ final class GoodsMenu extends Menu {
 			bySlot.put(i, listing);
 		}
 		inventory.setItem(BACK_SLOT, TradeItems.back());
+		Land.Claim here = Land.claimAt(player.getLocation());
+		if (here != null && here.owner.equals(player.getUniqueId())) {
+			boolean listed = mine.stream().anyMatch(l -> here.key.equals(Land.deedChunk(l.item)));
+			inventory.setItem(LAND_SLOT, listed
+					? TradeItems.button(Material.MAP, "이 땅은 이미 판매 중입니다", NamedTextColor.GRAY)
+					: TradeItems.glint(TradeItems.button(Material.MAP, "서 있는 내 땅 팔기", NamedTextColor.GREEN,
+							"지금 서 있는 청크를 판매 물품으로 등록합니다.", "팔릴 때까지는 계속 내 땅입니다.")));
+		}
 		inventory.setItem(INFO_SLOT, TradeItems.button(Material.BOOK, "물품 등록 (" + mine.size() + "/" + Market.MAX_LISTINGS_PER_PLAYER + ")",
 				NamedTextColor.GOLD, "아래 내 인벤토리에서 팔 아이템을 클릭하면", "가격을 정해 등록할 수 있습니다.",
 				"등록한 물품을 클릭하면 가격 수정이나 삭제를 합니다."));
@@ -62,11 +71,33 @@ final class GoodsMenu extends Menu {
 			new MainMenu(player).open();
 			return;
 		}
+		if (slot == LAND_SLOT) {
+			sellLand();
+			return;
+		}
 		Listing listing = bySlot.get(slot);
 		if (listing != null && Market.get(listing.id) != null) {
 			clickSound();
 			ListingEditor.edit(player, listing).open();
 		}
+	}
+
+	private void sellLand() {
+		Land.Claim here = Land.claimAt(player.getLocation());
+		if (here == null || !here.owner.equals(player.getUniqueId())) {
+			return;
+		}
+		List<Listing> mine = Market.of(player.getUniqueId());
+		if (mine.stream().anyMatch(l -> here.key.equals(Land.deedChunk(l.item)))) {
+			return;
+		}
+		if (mine.size() >= Market.MAX_LISTINGS_PER_PLAYER) {
+			tell("물품은 " + Market.MAX_LISTINGS_PER_PLAYER + "개까지 등록할 수 있습니다.", NamedTextColor.RED);
+			failSound();
+			return;
+		}
+		clickSound();
+		ListingEditor.createLand(player, Land.deed(here)).open();
 	}
 
 	/** Picking an item from the player's own inventory to list it. */

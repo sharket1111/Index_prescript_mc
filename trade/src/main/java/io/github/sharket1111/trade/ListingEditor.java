@@ -41,6 +41,11 @@ final class ListingEditor extends Menu {
 		return new ListingEditor(player, "거래 - 물품 등록", null, sourceSlot, item, Market.MIN_PRICE);
 	}
 
+	/** Listing the land deed of a chunk the player owns; nothing leaves their inventory. */
+	static ListingEditor createLand(Player player, ItemStack deed) {
+		return new ListingEditor(player, "거래 - 땅 판매 등록", null, -1, deed, Market.MIN_PRICE);
+	}
+
 	static ListingEditor edit(Player player, Listing listing) {
 		return new ListingEditor(player, "거래 - 물품 수정", listing, -1, listing.item, listing.price);
 	}
@@ -56,7 +61,8 @@ final class ListingEditor extends Menu {
 		inventory.setItem(BACK_SLOT, TradeItems.back());
 		if (existing == null) {
 			inventory.setItem(CONFIRM_SLOT, TradeItems.button(Material.LIME_CONCRETE, "등록하기", NamedTextColor.GREEN,
-					"이 아이템을 거래 전용 다이아 " + price + "개에", "판매 물품으로 등록합니다.", "등록한 아이템은 인벤토리에서 빠집니다."));
+					"이 " + (Land.deedChunk(item) != null ? "땅을" : "아이템을") + " 거래 전용 다이아 " + price + "개에", "판매 물품으로 등록합니다.",
+					Land.deedChunk(item) != null ? "팔릴 때까지는 계속 내 땅입니다." : "등록한 아이템은 인벤토리에서 빠집니다."));
 		} else {
 			inventory.setItem(CONFIRM_SLOT, TradeItems.button(Material.LIME_CONCRETE, "가격 저장", NamedTextColor.GREEN,
 					"가격을 거래 전용 다이아 " + price + "개로 바꿉니다."));
@@ -103,14 +109,25 @@ final class ListingEditor extends Menu {
 			failSound();
 			return;
 		}
-		ItemStack now = player.getInventory().getItem(sourceSlot);
-		if (now == null || !now.isSimilar(item) || now.getAmount() != item.getAmount()) {
-			tell("인벤토리의 아이템이 바뀌어서 등록하지 못했습니다.", NamedTextColor.RED);
-			failSound();
-			new GoodsMenu(player).open();
-			return;
+		String chunk = Land.deedChunk(item);
+		if (chunk != null) {
+			Land.Claim claim = Land.claimByKey(chunk);
+			if (claim == null || !claim.owner.equals(player.getUniqueId())) {
+				tell("더 이상 내 땅이 아닙니다.", NamedTextColor.RED);
+				failSound();
+				new GoodsMenu(player).open();
+				return;
+			}
+		} else {
+			ItemStack now = player.getInventory().getItem(sourceSlot);
+			if (now == null || !now.isSimilar(item) || now.getAmount() != item.getAmount()) {
+				tell("인벤토리의 아이템이 바뀌어서 등록하지 못했습니다.", NamedTextColor.RED);
+				failSound();
+				new GoodsMenu(player).open();
+				return;
+			}
+			player.getInventory().setItem(sourceSlot, null);
 		}
-		player.getInventory().setItem(sourceSlot, null);
 		Market.add(new Listing(UUID.randomUUID(), player.getUniqueId(), player.getName(), item.clone(), price, System.currentTimeMillis()));
 		tell("물품을 거래 전용 다이아 " + price + "개에 등록했습니다.", NamedTextColor.GREEN);
 		successSound();
@@ -136,8 +153,12 @@ final class ListingEditor extends Menu {
 			failSound();
 		} else {
 			Market.remove(existing);
-			give(existing.item.clone());
-			tell("등록을 취소하고 아이템을 돌려받았습니다.", NamedTextColor.YELLOW);
+			if (Land.deedChunk(existing.item) != null) {
+				tell("땅 판매를 취소했습니다. 땅은 계속 내 것입니다.", NamedTextColor.YELLOW);
+			} else {
+				give(existing.item.clone());
+				tell("등록을 취소하고 아이템을 돌려받았습니다.", NamedTextColor.YELLOW);
+			}
 			successSound();
 		}
 		new GoodsMenu(player).open();

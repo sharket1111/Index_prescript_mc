@@ -65,6 +65,18 @@ final class PurchaseMenu extends Menu {
 			failSound();
 			return;
 		}
+		String chunk = Land.deedChunk(listing.item);
+		if (chunk != null) {
+			Land.Claim claim = Land.claimByKey(chunk);
+			if (claim == null || !claim.owner.equals(listing.seller)) {
+				// The seller no longer owns it: the listing is void.
+				Market.remove(listing);
+				tell("판매자가 더 이상 이 땅의 주인이 아니어서 판매가 취소되었습니다.", NamedTextColor.RED);
+				failSound();
+				back.get().open();
+				return;
+			}
+		}
 		int price = listing.price;
 		if (count(TradeItems::isTradeDiamond) < price) {
 			tell("거래 전용 다이아가 부족합니다.", NamedTextColor.RED);
@@ -75,7 +87,11 @@ final class PurchaseMenu extends Menu {
 		take(TradeItems::isTradeDiamond, price);
 		Market.remove(listing);
 		History.record(listing, player.getUniqueId(), player.getName());
-		give(listing.item.clone());
+		if (chunk != null) {
+			Land.transfer(chunk, player);
+		} else {
+			give(listing.item.clone());
+		}
 		Component what = describe();
 		Market.pay(listing.seller, price, what, player.getName());
 		player.sendMessage(what.append(Component.text("을(를) 거래 전용 다이아 " + price + "개에 샀습니다.")).color(NamedTextColor.GREEN));
