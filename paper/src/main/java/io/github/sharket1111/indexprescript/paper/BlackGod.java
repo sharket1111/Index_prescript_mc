@@ -284,6 +284,9 @@ final class BlackGod implements Listener {
 	private static ItemDisplay ride(Map<UUID, ItemDisplay> map, Player player, String name) {
 		ItemDisplay display = map.get(player.getUniqueId());
 		if (display != null && display.isValid() && display.getVehicle() == player) {
+			if (player.canSee(display)) {
+				player.hideEntity(IndexPrescriptPlugin.instance(), display);
+			}
 			return display;
 		}
 		if (display != null) {
@@ -299,6 +302,9 @@ final class BlackGod implements Listener {
 			d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
 			d.setInterpolationDuration(1);
 		});
+		// The wearer never sees their own figure: in first person it sits over the camera
+		// (the server cannot tell first person from third). Everyone else sees it.
+		player.hideEntity(IndexPrescriptPlugin.instance(), display);
 		player.addPassenger(display);
 		map.put(player.getUniqueId(), display);
 		return display;

@@ -304,6 +304,10 @@ final class BlackGodState {
 				d.setTransformation(new Transformation(new Vector3f(0, 0.55F, 0), new Quaternionf(),
 						new Vector3f(0.8F, 0.8F, 0.8F), new Quaternionf()));
 			});
+			if (foe instanceof Player player) {
+				// Not over the holder's own camera.
+				player.hideEntity(IndexPrescriptPlugin.instance(), nails.label);
+			}
 			if (!foe.addPassenger(nails.label)) {
 				nails.label.setTeleportDuration(2);
 			}
