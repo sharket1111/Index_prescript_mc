@@ -63,7 +63,9 @@ import net.kyori.adventure.title.Title;
  * the hotbar; switching to a slot then (number key, scroll, a tap on
  * Bedrock) uses that slot's skill instead of moving, right-click uses the
  * one in hand, and the hotbar goes back. A Black God's body is hidden in a
- * 3D black robe, with a sunburst halo behind where the head was. Turning the mode off gives the
+ * 3D black robe, with a sunburst halo behind where the head was; twice per
+ * time the mode is taken up, a killing blow brings the revival instead
+ * ({@link BlackGodRevive}). Turning the mode off gives the
  * saved inventory back, keeping anything picked up meanwhile.
  */
 final class BlackGod implements Listener {
@@ -201,6 +203,7 @@ final class BlackGod implements Listener {
 		PersistentDataContainer data = player.getPersistentDataContainer();
 		data.set(SAVED, PersistentDataType.BYTE_ARRAY, ItemStack.serializeItemsAsBytes(saved));
 		data.set(ACTIVE, PersistentDataType.BYTE, (byte) 1);
+		BlackGodRevive.reset(player);
 		inventory.clear();
 		giveHotbar(player);
 		inventory.setHeldItemSlot(USE_SLOT);

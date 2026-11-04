@@ -51,6 +51,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		getServer().getPluginManager().registerEvents(new Stagger(), this);
 		getServer().getPluginManager().registerEvents(new RenoirHammer(), this);
 		getServer().getPluginManager().registerEvents(new BlackGod(), this);
+		getServer().getPluginManager().registerEvents(new BlackGodRevive(), this);
 		Bukkit.getScheduler().runTaskTimer(this, PrescriptTracker::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Laevatein::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Matthias::tick, 1L, 1L);
@@ -62,6 +63,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Bukkit.getScheduler().runTaskTimer(this, MangRing::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, RenoirHammer::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, BlackGod::tick, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, BlackGodRevive::tickAll, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, () -> CombatState.prune(CaduceusListener.now()), 1200L, 1200L);
 
 		var command = getCommand("indexprescript");
@@ -74,6 +76,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 	@Override
 	public void onDisable() {
 		RenoirSkill.endAll();
+		BlackGodRevive.endAll();
 		BlackGod.stopAll();
 		PromisedNails.clearAll();
 		Cinematic.endAll();

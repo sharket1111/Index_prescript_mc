@@ -215,9 +215,37 @@ def robe3d():
     write(PACK / "items/black_god_robe.json", {"model": {"type": "minecraft:model", "model": f"{NS}:item/black_god_robe"}})
 
 
+# --- revival overlays ---------------------------------------------------------------
+
+def glitch_frames(count=4, w=256, h=144):
+    """Camera overlays for the revival: the screen breaking into dark and golden blocks."""
+    for k in range(count):
+        rnd = random.Random(100 + k)
+        img = Image.new("RGBA", (w, h))
+        d = ImageDraw.Draw(img)
+        for _ in range(26 + k * 6):
+            bw, bh = rnd.randint(8, 46), rnd.randint(4, 14)
+            x, y = rnd.randint(-10, w), rnd.randint(-4, h)
+            if rnd.random() < 0.55:
+                colour = (8, 8, 10, rnd.randint(200, 255))
+            else:
+                g = rnd.randint(150, 240)
+                colour = (g, int(g * 0.8), int(g * 0.45), rnd.randint(110, 200))
+            d.rectangle((x, y, x + bw, y + bh), fill=colour)
+        for _ in range(5):
+            y = rnd.randint(0, h)
+            d.rectangle((0, y, w, y + 1), fill=(255, 236, 180, 150))
+        path = PACK / f"textures/misc/glitch_{k}.png"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        img.save(path)
+    flash = Image.new("RGBA", (16, 9), (255, 250, 236, 235))
+    flash.save(PACK / "textures/misc/white_flash.png")
+
+
 if __name__ == "__main__":
     halo()
     robe3d()
+    glitch_frames()
     if len(sys.argv) > 1:
         sheet = Image.new("RGBA", (420, 200), (90, 96, 110, 255))
         h = Image.open(PACK / "textures/item/black_god_halo.png").resize((192, 192), Image.NEAREST)

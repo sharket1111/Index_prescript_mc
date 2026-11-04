@@ -175,7 +175,12 @@ final class Cinematic {
 		}
 	}
 
-	private static void restoreMode(Player player) {
+	/** Remembers the player's game mode on them, for {@link #restoreMode} (also on their next join after a crash). */
+	static void saveMode(Player player) {
+		player.getPersistentDataContainer().set(SAVED_MODE, PersistentDataType.STRING, player.getGameMode().name());
+	}
+
+	static void restoreMode(Player player) {
 		String saved = player.getPersistentDataContainer().get(SAVED_MODE, PersistentDataType.STRING);
 		if (saved == null) {
 			return;
