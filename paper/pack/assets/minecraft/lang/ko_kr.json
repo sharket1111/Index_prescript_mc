@@ -11,5 +11,6 @@
 	"enchantment.level.19": "19",
 	"enchantment.level.20": "20",
 	"effect.minecraft.slowness": "흐트러짐",
-	"effect.minecraft.strength": "망"
+	"effect.minecraft.strength": "망",
+	"effect.minecraft.unluck": "보존"
 }

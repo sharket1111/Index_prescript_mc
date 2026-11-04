@@ -38,5 +38,10 @@
 	"command.sanity": "Sanity: %s (-45 to 45, 0 at 5 hearts)",
 	"command.mang_on": "Winding %s Mang ring(s) for 15 seconds (Strength). Run again without a number to end it.",
 	"command.mang_off": "Mang hidden.",
-	"command.mang_usage": "Usage: /indexprescript mang [1-6]"
+	"command.mang_usage": "Usage: /indexprescript mang [1-6]",
+	"item.black_god_voice": "Black God's Voice",
+	"renoir.sever": "Sever Birth!",
+	"renoir.again": "Strike Again and Again, Sever Birth!",
+	"renoir.cooldown": "Sever Birth is ready again in %s s.",
+	"renoir.no_target": "No enemy where you are looking."
 }

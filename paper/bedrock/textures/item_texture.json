@@ -52,6 +52,9 @@
 		},
 		"index_prescript.laevatein_icon": {
 			"textures": "textures/items/laevatein_icon"
+		},
+		"index_prescript.black_god_voice": {
+			"textures": "textures/items/black_god_voice"
 		}
 	}
 }

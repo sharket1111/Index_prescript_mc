@@ -1,0 +1,428 @@
+package io.github.sharket1111.indexprescript.paper;
+
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+
+import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
+import org.bukkit.NamespacedKey;
+import org.bukkit.damage.DamageType;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mannequin;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.util.Vector;
+
+import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+
+/**
+ * The Brand Manager's hammer (fan-made, after Limbus Company), on a mace.
+ *
+ * - [Promised Nail]: three full normal hits in a row on the same foe drive a
+ *   glowing nail into it from above (up to 10 per foe). A smash (the mace's
+ *   falling attack) deals +1 damage per nail in the foe and spends them all.
+ * - [Black God's Voice]: +5 for every hit on a foe, up to 50, shown as the
+ *   stack size of an icon in the off hand while the hammer is held.
+ * - Right-click (or swap-hands on Java) looking at a foe: with 50 Voice,
+ *   "Strike Again and Again, Sever Birth" (every foe within 8 blocks of it,
+ *   spending all Voice); otherwise "Sever Birth", once a turn (see {@link RenoirSkill}).
+ * - [Preservation]: a count (up to 20) and a potency, shown as the Unluck
+ *   effect renamed by the resource pack: its level is the potency and its
+ *   time the count in seconds, held still while the hammer is in hand.
+ *   Skills add to the count. After [Malleus Promissionis], driving a nail
+ *   spends Preservation: with 12 or more it drives one more nail and spends 4,
+ *   otherwise 2 (none if there is not enough; the nail still goes in). Every
+ *   10 spent in all raises the potency by 1.
+ */
+final class RenoirHammer implements Listener {
+	static final int MAX_VOICE = 50;
+	static final int VOICE_PER_HIT = 5;
+	static final int MAX_PRESERVATION = 20;
+	static final int MAX_POTENCY = 10;
+	private static final int HITS_PER_NAIL = 3;
+	private static final int STREAK_TICKS = 60;
+	private static final int SEVER_COOLDOWN = CombatState.TURN_TICKS;
+	private static final int TARGET_RANGE = 8;
+	private static final int ICON_INTERVAL = 2;
+	private static final int STATUS_INTERVAL = 5;
+	private static final NamespacedKey VOICE = new NamespacedKey(Items.NAMESPACE, "renoir_voice");
+	private static final NamespacedKey PRESERVATION = new NamespacedKey(Items.NAMESPACE, "renoir_preservation");
+	private static final NamespacedKey POTENCY = new NamespacedKey(Items.NAMESPACE, "renoir_preservation_potency");
+	private static final NamespacedKey SPENT = new NamespacedKey(Items.NAMESPACE, "renoir_preservation_spent");
+
+	private static final Map<UUID, Boolean> CHARGED = new ConcurrentHashMap<>();
+	private static final Map<UUID, Streak> STREAKS = new ConcurrentHashMap<>();
+	private static final Map<UUID, Long> SEVER_READY_AT = new ConcurrentHashMap<>();
+	private static long lastError = Long.MIN_VALUE / 2;
+
+	private record Streak(UUID foe, int hits, long at) {
+	}
+
+	// --- state ---------------------------------------------------------------
+
+	private static int read(Player player, NamespacedKey key, int fallback) {
+		return player.getPersistentDataContainer().getOrDefault(key, PersistentDataType.INTEGER, fallback);
+	}
+
+	private static void write(Player player, NamespacedKey key, int value) {
+		player.getPersistentDataContainer().set(key, PersistentDataType.INTEGER, value);
+	}
+
+	static int voice(Player player) {
+		return read(player, VOICE, 0);
+	}
+
+	static void setVoice(Player player, int value) {
+		write(player, VOICE, Math.max(0, Math.min(MAX_VOICE, value)));
+	}
+
+	static int preservation(Player player) {
+		return read(player, PRESERVATION, 0);
+	}
+
+	static int potency(Player player) {
+		return Math.max(1, read(player, POTENCY, 1));
+	}
+
+	static void addPreservation(Player player, int amount) {
+		write(player, PRESERVATION, Math.max(0, Math.min(MAX_PRESERVATION, preservation(player) + amount)));
+	}
+
+	/** Spends Preservation; every 10 spent in all raises the potency by 1. */
+	static void spendPreservation(Player player, int amount) {
+		int spent = Math.min(amount, preservation(player));
+		if (spent <= 0) {
+			return;
+		}
+		write(player, PRESERVATION, preservation(player) - spent);
+		int total = read(player, SPENT, 0) + spent;
+		int potency = potency(player);
+		while (total >= 10 && potency < MAX_POTENCY) {
+			total -= 10;
+			potency++;
+			RenoirSkill.potencyUp(Cinematic.body(player));
+		}
+		write(player, SPENT, total);
+		write(player, POTENCY, potency);
+	}
+
+	/**
+	 * Drives a nail into {@code foe}, after [Malleus Promissionis]: with 12+
+	 * Preservation one more nail goes in and 4 are spent, otherwise 2 are
+	 * spent (if there are 2).
+	 */
+	static void driveNail(Player player, LivingEntity foe) {
+		int count = preservation(player);
+		int nails = 1;
+		if (count >= 12) {
+			nails = 2;
+			spendPreservation(player, 4);
+		} else if (count >= 2) {
+			spendPreservation(player, 2);
+		}
+		PromisedNails.drop(foe, nails);
+	}
+
+	static boolean holding(Player player) {
+		return Items.isRenoirHammer(player.getInventory().getItemInMainHand());
+	}
+
+	// --- every tick ----------------------------------------------------------
+
+	static void tick() {
+		RenoirSkill.tickAll();
+		PromisedNails.tick();
+		long now = CaduceusListener.now();
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			try {
+				if (now % ICON_INTERVAL == 0) {
+					showVoice(player);
+				}
+				if (now % STATUS_INTERVAL == 0) {
+					showPreservation(player);
+				}
+			} catch (RuntimeException e) {
+				if (now - lastError > 200) {
+					lastError = now;
+					IndexPrescriptPlugin.instance().getLogger().log(Level.WARNING, "Renoir hammer tick failed for " + player.getName(), e);
+				}
+			}
+		}
+	}
+
+	/**
+	 * The [Black God's Voice] icon in the off hand while the hammer is held,
+	 * its stack size the value; it glints at 50. Whatever was in the off hand
+	 * moves to a free slot (no icon if there is none). Nothing shows at 0.
+	 */
+	private static void showVoice(Player player) {
+		PlayerInventory inventory = player.getInventory();
+		ItemStack off = inventory.getItemInOffHand();
+		int voice = voice(player);
+		if (!holding(player) || voice <= 0) {
+			if (Items.isVoiceIcon(off)) {
+				inventory.setItemInOffHand(null);
+			}
+			removeStrayIcons(inventory);
+			return;
+		}
+		if (!Items.isVoiceIcon(off)) {
+			if (!off.isEmpty()) {
+				int free = inventory.firstEmpty();
+				if (free < 0) {
+					return;
+				}
+				inventory.setItem(free, off);
+			}
+			off = Items.voiceIcon(player);
+		}
+		boolean full = voice >= MAX_VOICE;
+		ItemStack shown = off.clone();
+		shown.setAmount(voice);
+		shown.editMeta(meta -> meta.setEnchantmentGlintOverride(full ? Boolean.TRUE : null));
+		if (!shown.equals(inventory.getItemInOffHand())) {
+			inventory.setItemInOffHand(shown);
+		}
+	}
+
+	private static void removeStrayIcons(PlayerInventory inventory) {
+		ItemStack[] storage = inventory.getStorageContents();
+		for (int slot = 0; slot < storage.length; slot++) {
+			if (Items.isVoiceIcon(storage[slot])) {
+				inventory.setItem(slot, null);
+			}
+		}
+	}
+
+	/**
+	 * [Preservation] as the renamed Unluck effect while the hammer is held:
+	 * level = potency, time = count seconds, kept from running down.
+	 */
+	private static void showPreservation(Player player) {
+		PotionEffect shown = player.getPotionEffect(PotionEffectType.UNLUCK);
+		int count = preservation(player);
+		if (!holding(player) || count <= 0) {
+			if (shown != null && !shown.hasParticles() && !shown.isAmbient()) {
+				player.removePotionEffect(PotionEffectType.UNLUCK);
+			}
+			return;
+		}
+		int ticks = count * 20;
+		int amplifier = potency(player) - 1;
+		if (shown != null && shown.getAmplifier() == amplifier && Math.abs(shown.getDuration() - ticks) <= STATUS_INTERVAL) {
+			return;
+		}
+		player.addPotionEffect(new PotionEffect(PotionEffectType.UNLUCK, ticks, amplifier, false, false, true));
+	}
+
+	// --- hits ----------------------------------------------------------------
+
+	@EventHandler(ignoreCancelled = true)
+	public void onPreAttack(PrePlayerAttackEntityEvent event) {
+		Player player = event.getPlayer();
+		if (!holding(player)) {
+			return;
+		}
+		if (RenoirSkill.active(player)) {
+			event.setCancelled(true);
+			return;
+		}
+		CHARGED.put(player.getUniqueId(), Swings.accept(player));
+	}
+
+	private static boolean smash(EntityDamageByEntityEvent event) {
+		try {
+			if (event.getDamageSource().getDamageType() == DamageType.MACE_SMASH) {
+				return true;
+			}
+		} catch (RuntimeException ignored) {
+			// fall back on the fall distance below
+		}
+		return event.getDamager() instanceof Player player && player.getFallDistance() > 1.5F;
+	}
+
+	/** Smashes spend the foe's nails for damage; full normal hits build toward the next nail; every hit gives Voice. */
+	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+	public void onHit(EntityDamageByEntityEvent event) {
+		if (Damage.dealing() || event.getCause() != EntityDamageEvent.DamageCause.ENTITY_ATTACK
+				&& event.getCause() != EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK) {
+			return;
+		}
+		if (!(event.getDamager() instanceof Player player) || !(event.getEntity() instanceof LivingEntity foe) || !holding(player)
+				|| !foe(player, foe)) {
+			return;
+		}
+		boolean charged = Boolean.TRUE.equals(CHARGED.remove(player.getUniqueId()));
+		if (smash(event)) {
+			int nails = PromisedNails.spend(foe);
+			if (nails > 0) {
+				event.setDamage(event.getDamage() + nails);
+				RenoirSkill.nailSmash(foe, nails);
+			}
+			STREAKS.remove(player.getUniqueId());
+		} else if (charged && event.getCause() == EntityDamageEvent.DamageCause.ENTITY_ATTACK) {
+			long now = CaduceusListener.now();
+			Streak streak = STREAKS.get(player.getUniqueId());
+			int hits = streak != null && streak.foe().equals(foe.getUniqueId()) && now - streak.at() <= STREAK_TICKS ? streak.hits() + 1 : 1;
+			if (hits >= HITS_PER_NAIL) {
+				STREAKS.remove(player.getUniqueId());
+				if (PromisedNails.count(foe) < PromisedNails.MAX) {
+					driveNail(player, foe);
+				}
+			} else {
+				STREAKS.put(player.getUniqueId(), new Streak(foe.getUniqueId(), hits, now));
+			}
+		}
+		int before = voice(player);
+		setVoice(player, before + VOICE_PER_HIT);
+		if (before < MAX_VOICE && voice(player) >= MAX_VOICE) {
+			RenoirSkill.voiceFull(player);
+		}
+	}
+
+	// --- skills --------------------------------------------------------------
+
+	/** Something the skills may strike: alive, not the wielder or a stand-in, not a spectator. */
+	static boolean foe(Player player, Entity entity) {
+		if (!(entity instanceof LivingEntity living) || entity == player || entity == Cinematic.body(player)
+				|| entity instanceof ArmorStand || entity instanceof Mannequin || !living.isValid() || living.isDead()
+				|| living.isInvulnerable()) {
+			return false;
+		}
+		return !(living instanceof Player other)
+				|| other.getGameMode() != GameMode.CREATIVE && other.getGameMode() != GameMode.SPECTATOR;
+	}
+
+	/** The foe the player is looking at, within reach. */
+	private static LivingEntity lookedAt(Player player) {
+		if (player.getTargetEntity(TARGET_RANGE) instanceof LivingEntity living && foe(player, living)) {
+			return living;
+		}
+		Vector eye = player.getEyeLocation().toVector();
+		Vector look = player.getEyeLocation().getDirection();
+		LivingEntity best = null;
+		double bestDot = 0.9;
+		for (Entity entity : player.getNearbyEntities(TARGET_RANGE, TARGET_RANGE, TARGET_RANGE)) {
+			if (!foe(player, entity)) {
+				continue;
+			}
+			LivingEntity living = (LivingEntity) entity;
+			Vector to = living.getLocation().add(0, living.getHeight() * 0.5, 0).toVector().subtract(eye);
+			if (to.length() > TARGET_RANGE) {
+				continue;
+			}
+			double dot = to.normalize().dot(look);
+			if (dot > bestDot && player.hasLineOfSight(living)) {
+				best = living;
+				bestDot = dot;
+			}
+		}
+		return best;
+	}
+
+	private static void act(Player player) {
+		if (!holding(player) || RenoirSkill.active(player)) {
+			return;
+		}
+		LivingEntity target = lookedAt(player);
+		if (target == null) {
+			player.sendActionBar(Component.text(Messages.get(player, "renoir.no_target"), NamedTextColor.GRAY));
+			return;
+		}
+		if (voice(player) >= MAX_VOICE) {
+			RenoirSkill.start(player, target, RenoirSkill.Kind.AGAIN);
+			return;
+		}
+		long now = CaduceusListener.now();
+		long ready = SEVER_READY_AT.getOrDefault(player.getUniqueId(), 0L);
+		if (now < ready) {
+			player.sendActionBar(Component.text(Messages.get(player, "renoir.cooldown", (ready - now + 19) / 20), NamedTextColor.GRAY));
+			return;
+		}
+		SEVER_READY_AT.put(player.getUniqueId(), now + SEVER_COOLDOWN);
+		RenoirSkill.start(player, target, RenoirSkill.Kind.SEVER);
+	}
+
+	@EventHandler
+	public void onUse(PlayerInteractEvent event) {
+		if (event.getHand() != EquipmentSlot.HAND
+				|| event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK
+				|| !Items.isRenoirHammer(event.getItem())) {
+			return;
+		}
+		act(event.getPlayer());
+	}
+
+	/** Swap-hands (F) never moves the hammer or the icon; it uses a skill instead. */
+	@EventHandler(ignoreCancelled = true)
+	public void onSwap(PlayerSwapHandItemsEvent event) {
+		PlayerInventory inventory = event.getPlayer().getInventory();
+		if (!Items.isRenoirHammer(inventory.getItemInMainHand()) && !Items.isVoiceIcon(inventory.getItemInOffHand())) {
+			return;
+		}
+		event.setCancelled(true);
+		act(event.getPlayer());
+	}
+
+	// --- the icon stays put ----------------------------------------------------
+
+	@EventHandler(ignoreCancelled = true)
+	public void onDrop(PlayerDropItemEvent event) {
+		if (Items.isVoiceIcon(event.getItemDrop().getItemStack())) {
+			event.setCancelled(true);
+		}
+	}
+
+	@EventHandler(ignoreCancelled = true)
+	public void onClick(InventoryClickEvent event) {
+		boolean offhandIcon = event.getClick() == ClickType.SWAP_OFFHAND
+				&& Items.isVoiceIcon(event.getWhoClicked().getInventory().getItemInOffHand());
+		if (offhandIcon || Items.isVoiceIcon(event.getCurrentItem()) || Items.isVoiceIcon(event.getCursor())) {
+			event.setCancelled(true);
+		}
+	}
+
+	@EventHandler(ignoreCancelled = true)
+	public void onDrag(InventoryDragEvent event) {
+		if (Items.isVoiceIcon(event.getOldCursor())) {
+			event.setCancelled(true);
+		}
+	}
+
+	@EventHandler
+	public void onDeath(PlayerDeathEvent event) {
+		event.getDrops().removeIf(Items::isVoiceIcon);
+	}
+
+	/** Testing: sets the player's Voice and Preservation. */
+	static void set(Player player, int voice, int preservation) {
+		setVoice(player, voice);
+		PersistentDataContainer data = player.getPersistentDataContainer();
+		data.set(PRESERVATION, PersistentDataType.INTEGER, Math.max(0, Math.min(MAX_PRESERVATION, preservation)));
+	}
+}

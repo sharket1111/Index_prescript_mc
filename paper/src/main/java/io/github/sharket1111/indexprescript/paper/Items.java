@@ -28,6 +28,7 @@ final class Items {
 	static final String LAEVATEIN = "laevatein";
 	static final String LAEVATEIN_ICON = "laevatein_icon";
 	static final String RENOIR_HAMMER = "renoir_hammer";
+	static final String BLACK_GOD_VOICE = "black_god_voice";
 	/** Laevatein release stages after the sealed state; the index is the stage number. */
 	static final List<String> LAEVATEIN_STAGES = List.of("sealed", "release_1", "release_2", "release_3");
 	static final int MAX_HERMES = 9;
@@ -85,6 +86,22 @@ final class Items {
 
 	static boolean isRenoirHammer(ItemStack stack) {
 		return is(stack, RENOIR_HAMMER);
+	}
+
+	/** The off-hand [Black God's Voice] icon; its stack size is the value. */
+	static ItemStack voiceIcon(CommandSender viewer) {
+		ItemStack stack = ItemStack.of(Material.PAPER);
+		stack.editMeta(meta -> {
+			tag(meta, BLACK_GOD_VOICE);
+			meta.itemName(Component.text(Messages.get(viewer, "item.black_god_voice")));
+			meta.setRarity(ItemRarity.RARE);
+			meta.setMaxStackSize(RenoirHammer.MAX_VOICE);
+		});
+		return stack;
+	}
+
+	static boolean isVoiceIcon(ItemStack stack) {
+		return is(stack, BLACK_GOD_VOICE);
 	}
 
 	/** Off-hand [Seal Release] icon whose stack size shows Laevatein's hits toward the next release. */

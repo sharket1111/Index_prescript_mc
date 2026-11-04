@@ -257,6 +257,20 @@
 						}
 					}
 				]
+			},
+			{
+				"type": "group",
+				"model": "index_prescript:black_god_voice",
+				"definitions": [
+					{
+						"bedrock_identifier": "index_prescript:black_god_voice",
+						"display_name": "검은 신의 목소리",
+						"bedrock_options": {
+							"icon": "index_prescript.black_god_voice",
+							"display_handheld": false
+						}
+					}
+				]
 			}
 		]
 	}

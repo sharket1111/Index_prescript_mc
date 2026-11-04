@@ -36,6 +36,7 @@ ITEMS = [
     ("minecraft:mace", "renoir_hammer", [], "르누아르의 망치"),
     ("minecraft:paper", "rien_terminal", [], "뤼엔의 단말기"),
     ("minecraft:paper", "laevatein_icon", [], "봉인 해제"),
+    ("minecraft:paper", "black_god_voice", [], "검은 신의 목소리"),
 ]
 
 

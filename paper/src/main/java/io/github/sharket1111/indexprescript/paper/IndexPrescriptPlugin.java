@@ -49,6 +49,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		getServer().getPluginManager().registerEvents(new Cinematic.Events(), this);
 		getServer().getPluginManager().registerEvents(new MangRing.Events(), this);
 		getServer().getPluginManager().registerEvents(new Stagger(), this);
+		getServer().getPluginManager().registerEvents(new RenoirHammer(), this);
 		Bukkit.getScheduler().runTaskTimer(this, PrescriptTracker::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Laevatein::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Matthias::tick, 1L, 1L);
@@ -58,6 +59,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Bukkit.getScheduler().runTaskTimer(this, TotalDamage::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, SkillOverlay::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, MangRing::tick, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, RenoirHammer::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, () -> CombatState.prune(CaduceusListener.now()), 1200L, 1200L);
 
 		var command = getCommand("indexprescript");
@@ -69,6 +71,8 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 
 	@Override
 	public void onDisable() {
+		RenoirSkill.endAll();
+		PromisedNails.clearAll();
 		Cinematic.endAll();
 		SkillOverlay.hideAll();
 		MangRing.hideAll();
@@ -89,6 +93,9 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		}
 		if (args.length >= 1 && args[0].equalsIgnoreCase("sanity")) {
 			return sanity(sender, args);
+		}
+		if (args.length >= 1 && args[0].equalsIgnoreCase("renoir")) {
+			return renoir(sender, args);
 		}
 		if (args.length >= 1 && args[0].equalsIgnoreCase("pack")) {
 			if (!(sender instanceof Player player)) {
@@ -201,14 +208,36 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		return true;
 	}
 
+	/** /indexprescript renoir [voice] [preservation]: shows or sets the hammer's Black God's Voice and Preservation, for testing. */
+	private boolean renoir(CommandSender sender, String[] args) {
+		if (!(sender instanceof Player player)) {
+			sender.sendMessage(Messages.get(sender, "command.players_only"));
+			return true;
+		}
+		try {
+			if (args.length >= 2) {
+				int voice = Integer.parseInt(args[1]);
+				int preservation = args.length >= 3 ? Integer.parseInt(args[2]) : RenoirHammer.preservation(player);
+				RenoirHammer.set(player, voice, preservation);
+			}
+		} catch (NumberFormatException e) {
+			sender.sendMessage(Component.text("/ip renoir [voice 0-50] [preservation 0-20]", NamedTextColor.RED));
+			return true;
+		}
+		sender.sendMessage(Component.text("Voice " + RenoirHammer.voice(player) + "/" + RenoirHammer.MAX_VOICE
+				+ ", Preservation " + RenoirHammer.preservation(player) + " (potency " + RenoirHammer.potency(player) + ")", NamedTextColor.GOLD));
+		return true;
+	}
+
 	@Override
 	public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
 		return switch (args.length) {
-			case 1 -> List.of("give", "pack", "laevatein", "sanity", "mang");
+			case 1 -> List.of("give", "pack", "laevatein", "sanity", "mang", "renoir");
 			case 2 -> switch (args[0].toLowerCase(Locale.ROOT)) {
 				case "give" -> List.of("caduceus", "terminal", "laevatein", "hammer");
 				case "laevatein" -> List.of("0", "1", "2", "3");
 				case "mang" -> List.of("1", "2", "3", "4", "5", "6");
+				case "renoir" -> List.of("0", "25", "50");
 				default -> List.of();
 			};
 			default -> List.of();
