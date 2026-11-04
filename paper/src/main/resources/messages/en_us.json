@@ -54,5 +54,6 @@
 	"blackgod.on": "Inventory kept. 'Leave Black God' turns you back.",
 	"blackgod.off": "Left Black God mode. Inventory returned.",
 	"blackgod.choose": "Pick a skill with a number key (1-9); right-click uses the one in hand.",
-	"blackgod.revive": "The Black God refuses death. (%s revival(s) left)"
+	"blackgod.revive": "The Black God refuses death. (%s revival(s) left)",
+	"blackgod.cooldown": "This skill is ready again in %s s."
 }

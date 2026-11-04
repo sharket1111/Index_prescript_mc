@@ -399,11 +399,15 @@ final class BlackGod implements Listener {
 	}
 
 	/**
-	 * Uses skill {@code index} (0-8). The skills' own effects and animations
-	 * are still to come (see docs/black_god.md); for now the skill is named.
+	 * Uses skill {@code index} (0-8): the great skills (7-9) play out in
+	 * {@link BlackGodSkill}; the others are still to come (see
+	 * docs/black_god.md) and only show their name for now.
 	 */
 	private static void useSkill(Player player, int index) {
 		stopChoosing(player);
+		if (BlackGodSkill.use(player, index)) {
+			return;
+		}
 		Skill skill = SKILLS.get(index);
 		player.showTitle(Title.title(Component.empty(), Component.text(skill.name(), skill.colour()),
 				Title.Times.times(java.time.Duration.ofMillis(100), java.time.Duration.ofMillis(1200), java.time.Duration.ofMillis(300))));

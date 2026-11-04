@@ -54,5 +54,6 @@
 	"blackgod.on": "인벤토리를 보관했다. '검은 신 해제'로 돌아갈 수 있다.",
 	"blackgod.off": "검은 신을 해제했다. 인벤토리를 돌려받았다.",
 	"blackgod.choose": "숫자키(1~9)로 스킬을 고른다. 손에 든 스킬은 우클릭.",
-	"blackgod.revive": "검은 신은 죽음을 거부한다. (남은 부활 %s회)"
+	"blackgod.revive": "검은 신은 죽음을 거부한다. (남은 부활 %s회)",
+	"blackgod.cooldown": "이 스킬은 %s초 뒤에 다시 쓸 수 있습니다."
 }

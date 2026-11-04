@@ -64,6 +64,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Bukkit.getScheduler().runTaskTimer(this, RenoirHammer::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, BlackGod::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, BlackGodRevive::tickAll, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, BlackGodSkill::tickAll, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, () -> CombatState.prune(CaduceusListener.now()), 1200L, 1200L);
 
 		var command = getCommand("indexprescript");
@@ -77,6 +78,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 	public void onDisable() {
 		RenoirSkill.endAll();
 		BlackGodRevive.endAll();
+		BlackGodSkill.endAll();
 		BlackGod.stopAll();
 		PromisedNails.clearAll();
 		Cinematic.endAll();
