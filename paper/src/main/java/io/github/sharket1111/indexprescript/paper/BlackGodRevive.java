@@ -439,6 +439,15 @@ final class BlackGodRevive {
 			player.sendMessage(Component.text(Messages.get(player, "blackgod.revive", REVIVES - used - 1), NamedTextColor.GOLD));
 		}
 
+		/** A Black God on guard ('신 앞에 뉘우쳐라'던가?) turns the blow away. */
+		@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+		public void onStruck(org.bukkit.event.entity.EntityDamageByEntityEvent event) {
+			if (event.getEntity() instanceof Player player && BlackGod.active(player)
+					&& BlackGodSkill.guarded(player, event.getDamager())) {
+				event.setCancelled(true);
+			}
+		}
+
 		/** Watchers cannot leave the camera while the scene plays. */
 		@EventHandler(ignoreCancelled = true)
 		public void onStopSpectating(PlayerStopSpectatingEntityEvent event) {

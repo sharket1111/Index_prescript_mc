@@ -63,6 +63,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
  */
 final class BlackGodSkill {
 	enum Kind {
+		SIGH(0, 56, 5), CLOCK_OUT(1, 66, 6), JUDGMENT(2, 84, 8), ATONE(4, 84, 8), PUNISH(5, 92, 8),
 		SISYPHUS(6, 140, 30), FORCED_EXIT(7, 112, 60), SHIFT_DELETE(8, 162, 60);
 
 		final int slot;
@@ -133,6 +134,10 @@ final class BlackGodSkill {
 
 	/** Uses the great skill in hotbar {@code slot} (0-8) if it is one; returns false for the others. */
 	static boolean use(Player god, int slot) {
+		if (slot == GUARD_SLOT) {
+			guard(god);
+			return true;
+		}
 		Kind kind = Kind.ofSlot(slot);
 		if (kind == null) {
 			return false;
@@ -265,6 +270,7 @@ final class BlackGodSkill {
 		}
 		TotalDamage.start(god);
 		SkillOverlay.show(god, SkillOverlay.Size.BIG);
+		announce(god, kind.slot);
 		World world = spot.getWorld();
 		world.playSound(spot, Sound.BLOCK_BEACON_ACTIVATE, SoundCategory.PLAYERS, 1.5F, 0.5F);
 		world.playSound(spot, Sound.BLOCK_BELL_RESONATE, SoundCategory.PLAYERS, 1.5F, 0.6F);
@@ -294,6 +300,11 @@ final class BlackGodSkill {
 			case SISYPHUS -> sisyphus();
 			case FORCED_EXIT -> forcedExit();
 			case SHIFT_DELETE -> shiftDelete();
+			case SIGH -> sigh();
+			case CLOCK_OUT -> clockOut();
+			case JUDGMENT -> judgment();
+			case ATONE -> atone();
+			case PUNISH -> punish();
 		}
 		if (tick >= kind.length) {
 			finish();
@@ -553,6 +564,338 @@ final class BlackGodSkill {
 		if (tick > DELETE_LAST && tick < kind.length - 6 && tick % 3 == 0) {
 			sparkle(target.getLocation(), 3.0);
 		}
+	}
+
+	// --- the lesser skills ----------------------------------------------------------------
+
+	/** The usual camera: on the Black God as it starts, over the shoulder for the coins, on the target for the last, then wide. */
+	private void usualCamera(int[] coins) {
+		boolean impact = false;
+		for (int at : coins) {
+			impact |= tick >= at && tick < at + 4;
+		}
+		double shake = impact ? 0.35 : 0.0;
+		int last = coins[coins.length - 1];
+		if (tick < 14) {
+			onGod(3.0, 1.7, 1.6, 0.0);
+			flareHalo(1.9F + tick * 0.04F);
+		} else if (tick < last - 6) {
+			wide(5.5, 3.2, shake);
+		} else if (tick < last + 10) {
+			onTarget(4.0, 1.6, shake);
+		} else {
+			wide(7.5, 4.5, 0.0);
+		}
+	}
+
+	private Location targetMid() {
+		return target.getLocation().add(0, target.getHeight() * 0.6, 0);
+	}
+
+	private static final int[] SIGH_COINS = {18, 34};
+
+	/** 하아…이제 좀 돌아가 주지?: a white-gold crescent, then a pale one, each with a burst on the target. */
+	private void sigh() {
+		usualCamera(SIGH_COINS);
+		if (tick == SIGH_COINS[0] - 3) {
+			crescent(targetMid(), 2.4, 1, GOLD_WHITE);
+			swoosh();
+		}
+		if (tick == SIGH_COINS[1] - 3) {
+			crescent(targetMid(), 2.6, -1, PALE);
+			swoosh();
+		}
+		for (int at : SIGH_COINS) {
+			if (tick == at) {
+				starburst(targetMid());
+				hit(target, 4.0);
+			}
+		}
+	}
+
+	private static final int[] CLOCK_COINS = {20, 44};
+
+	/** 퇴근 좀 하자고.: a pale crescent and a great diagonal beam, then a clock face whose hand sweeps round. */
+	private void clockOut() {
+		usualCamera(CLOCK_COINS);
+		if (tick == CLOCK_COINS[0] - 4) {
+			crescent(targetMid(), 2.8, 1, PALE);
+			swoosh();
+		}
+		if (tick == CLOCK_COINS[0]) {
+			beamSlash(targetMid());
+			starburst(targetMid());
+			hit(target, 5.0);
+		}
+		if (tick >= CLOCK_COINS[1] - 12 && tick <= CLOCK_COINS[1] + 4) {
+			clockFace(targetMid(), 2.2, (tick - (CLOCK_COINS[1] - 12)) / 16.0);
+		}
+		if (tick == CLOCK_COINS[1] - 12) {
+			spot.getWorld().playSound(target.getLocation(), Sound.BLOCK_BELL_RESONATE, SoundCategory.PLAYERS, 1.2F, 1.4F);
+		}
+		if (tick == CLOCK_COINS[1]) {
+			starburst(targetMid());
+			spot.getWorld().playSound(target.getLocation(), Sound.BLOCK_BELL_USE, SoundCategory.PLAYERS, 1.5F, 0.6F);
+			hit(target, 6.0);
+		}
+	}
+
+	private static final int[] JUDGMENT_COINS = {26, 42, 64};
+
+	/**
+	 * '심판': the Black God spreads its arms (close, from below), a pale
+	 * crescent, a white flash with golden bursts, then a red glitch pillar and a
+	 * great golden nail on the target, dealing more the more health the Black
+	 * God has lost (up to double).
+	 */
+	private void judgment() {
+		if (tick < 22) {
+			onGod(2.4, 0.6, 1.9, 0.0);
+			flareHalo(1.9F + tick * 0.06F);
+			if (tick % 3 == 0) {
+				rays(spot.clone().add(0, 1.6, 0), 3);
+			}
+		} else {
+			usualCamera(JUDGMENT_COINS);
+		}
+		if (tick == JUDGMENT_COINS[0] - 3) {
+			crescent(targetMid(), 2.8, 1, PALE);
+			swoosh();
+		}
+		if (tick == JUDGMENT_COINS[0]) {
+			starburst(targetMid());
+			hit(target, 4.0);
+		}
+		if (tick == JUDGMENT_COINS[1]) {
+			whiteBurst(target.getLocation(), 0.8);
+			hit(target, 4.0);
+		}
+		if (tick >= JUDGMENT_COINS[2] - 6 && tick < JUDGMENT_COINS[2] + 10) {
+			glitchPillar(target.getLocation());
+		}
+		if (tick == JUDGMENT_COINS[2]) {
+			goldenNail(target.getLocation());
+			double lost = 1.0 - god.getHealth() / maxHealth(god);
+			hit(target, 7.0 * (1.0 + Math.max(0.0, Math.min(1.0, lost))));
+		}
+	}
+
+	private static final int[] ATONE_COINS = {24, 44, 66};
+
+	/** '속죄하라': a pillar of golden light, a pale crescent, then a white tremor burst. */
+	private void atone() {
+		usualCamera(ATONE_COINS);
+		if (tick == ATONE_COINS[0]) {
+			goldPillar(target.getLocation());
+			starburst(targetMid());
+			hit(target, 4.0);
+		}
+		if (tick == ATONE_COINS[1] - 3) {
+			crescent(targetMid(), 2.6, -1, PALE);
+			swoosh();
+		}
+		if (tick == ATONE_COINS[1]) {
+			starburst(targetMid());
+			hit(target, 4.0);
+		}
+		if (tick == ATONE_COINS[2]) {
+			overlay(FLASH);
+			whiteBurst(target.getLocation(), 1.4);
+			spot.getWorld().playSound(target.getLocation(), Sound.ITEM_MACE_SMASH_GROUND_HEAVY, SoundCategory.PLAYERS, 1.4F, 0.6F);
+			hit(target, 6.0);
+		}
+		if (tick == ATONE_COINS[2] + 5) {
+			clearOverlay();
+		}
+	}
+
+	private static final int[] PUNISH_COINS = {30, 50, 72};
+	private ItemDisplay greatHalo;
+
+	/** '형벌받으라': a great halo blazes up over the field, a white flash, then a great diagonal beam comes down. */
+	private void punish() {
+		if (tick < 26) {
+			wide(8.0, 4.0, 0.0);
+		} else {
+			usualCamera(PUNISH_COINS);
+		}
+		if (tick == 4) {
+			greatHalo = prop(spot.clone().add(0, 7, 0), "black_god_halo", 0.5F, true);
+			greatHalo.setBillboard(Display.Billboard.CENTER);
+			greatHalo.setInterpolationDuration(14);
+			greatHalo.setInterpolationDelay(1);
+			greatHalo.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(9, 9, 9), new Quaternionf()));
+			spot.getWorld().playSound(spot, Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.5F, 0.5F);
+		}
+		if (greatHalo != null && tick % 4 == 0) {
+			rays(greatHalo.getLocation(), 3);
+		}
+		if (tick == PUNISH_COINS[0]) {
+			starburst(targetMid());
+			pillar(target.getLocation(), 7, false);
+			hit(target, 4.0);
+		}
+		if (tick == PUNISH_COINS[1]) {
+			whiteBurst(target.getLocation(), 0.9);
+			hit(target, 4.0);
+		}
+		if (tick == PUNISH_COINS[2] - 2) {
+			beamSlash(targetMid());
+		}
+		if (tick == PUNISH_COINS[2]) {
+			beamSlash(targetMid());
+			whiteBurst(target.getLocation(), 1.2);
+			hit(target, 6.0);
+		}
+	}
+
+	// --- '신 앞에 뉘우쳐라'던가? (guard) -------------------------------------------------
+
+	private static final int GUARD_SLOT = 3;
+	private static final int GUARD_TICKS = 60;
+	private static final int GUARD_COOLDOWN = 8 * 20;
+	private static final Map<UUID, Long> GUARD_UNTIL = new ConcurrentHashMap<>();
+
+	/** Takes up the guard for 3 seconds: the next blow is turned away and answered with a pillar of light. */
+	private static void guard(Player god) {
+		String key = god.getUniqueId() + ":guard";
+		long now = CaduceusListener.now();
+		long ready = READY_AT.getOrDefault(key, 0L);
+		if (now < ready) {
+			god.sendActionBar(Component.text(Messages.get(god, "blackgod.cooldown", (ready - now + 19) / 20), NamedTextColor.GRAY));
+			return;
+		}
+		READY_AT.put(key, now + GUARD_COOLDOWN);
+		GUARD_UNTIL.put(god.getUniqueId(), now + GUARD_TICKS);
+		announce(god, GUARD_SLOT);
+		Location at = god.getLocation();
+		for (int i = 0; i < 24; i++) {
+			double a = i * Math.PI / 12;
+			at.getWorld().spawnParticle(Particle.DUST, at.clone().add(Math.cos(a) * 1.2, 1.0, Math.sin(a) * 1.2), 2, 0.02, 0.6, 0.02, 0.0, GOLD);
+		}
+		at.getWorld().playSound(at, Sound.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS, 1.2F, 0.6F);
+		at.getWorld().playSound(at, Sound.BLOCK_BELL_RESONATE, SoundCategory.PLAYERS, 1.0F, 1.2F);
+	}
+
+	/** Struck while on guard: the blow is turned away and the striker repents before a pillar of light. Returns true if so. */
+	static boolean guarded(Player god, Entity damager) {
+		Long until = GUARD_UNTIL.get(god.getUniqueId());
+		if (until == null || CaduceusListener.now() > until) {
+			return false;
+		}
+		GUARD_UNTIL.remove(god.getUniqueId());
+		LivingEntity attacker = damager instanceof org.bukkit.entity.Projectile projectile
+				&& projectile.getShooter() instanceof LivingEntity shooter ? shooter
+				: damager instanceof LivingEntity living ? living : null;
+		god.getWorld().playSound(god.getLocation(), Sound.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS, 1.5F, 0.5F);
+		if (attacker != null && attacker != god && attacker.isValid()) {
+			pillar(attacker.getLocation(), 7, true);
+			starburst(attacker.getLocation().add(0, attacker.getHeight() * 0.6, 0));
+			Damage.deal(attacker, 8.0, god, true);
+		}
+		return true;
+	}
+
+	/** The skill's name under the crosshair, in its sin's colour. */
+	private static void announce(Player god, int slot) {
+		BlackGod.Skill skill = BlackGod.SKILLS.get(slot);
+		god.showTitle(net.kyori.adventure.title.Title.title(Component.empty(), Component.text(skill.name(), skill.colour()),
+				net.kyori.adventure.title.Title.Times.times(java.time.Duration.ofMillis(100), java.time.Duration.ofMillis(1500),
+						java.time.Duration.ofMillis(300))));
+	}
+
+	// --- more effects ---------------------------------------------------------------------
+
+	private static final Particle.DustOptions GOLD_WHITE = new Particle.DustOptions(Color.fromRGB(0xFFF0C0), 1.6F);
+	private static final Particle.DustOptions BLUE = new Particle.DustOptions(Color.fromRGB(0x7FB4FF), 1.4F);
+	private static final Particle.DustOptions RED = new Particle.DustOptions(Color.fromRGB(0xD01818), 1.8F);
+
+	private void swoosh() {
+		spot.getWorld().playSound(target.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1.3F, 0.6F);
+		spot.getWorld().playSound(target.getLocation(), Sound.ITEM_TRIDENT_RIPTIDE_2, SoundCategory.PLAYERS, 0.8F, 1.5F);
+	}
+
+	/** A great white beam slashing diagonally through {@code through}. */
+	private void beamSlash(Location through) {
+		World world = through.getWorld();
+		ThreadLocalRandom r = ThreadLocalRandom.current();
+		Vector across = side().multiply(r.nextBoolean() ? 1 : -1).add(new Vector(0, -0.9, 0)).normalize();
+		for (double d = -5; d <= 5; d += 0.2) {
+			Location p = through.clone().add(across.clone().multiply(d));
+			world.spawnParticle(Particle.DUST, p, 3, 0.12, 0.12, 0.12, 0.0, WHITE);
+			if (Math.abs(d) < 3) {
+				world.spawnParticle(Particle.END_ROD, p, 1, 0.05, 0.05, 0.05, 0.02);
+			}
+		}
+		world.playSound(through, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, SoundCategory.PLAYERS, 1.2F, 1.2F);
+		world.playSound(through, Sound.ITEM_TRIDENT_THROW, SoundCategory.PLAYERS, 1.0F, 0.6F);
+	}
+
+	/** A clock face round {@code center} facing the Black God; its hand at {@code turn} (0-1) of the way round. */
+	private void clockFace(Location center, double radius, double turn) {
+		World world = center.getWorld();
+		Vector toGod = spot.toVector().subtract(center.toVector()).setY(0);
+		Vector normal = toGod.lengthSquared() < 1.0E-4 ? facing() : toGod.normalize();
+		Vector u = new Vector(-normal.getZ(), 0, normal.getX());
+		Vector v = new Vector(0, 1, 0);
+		for (int i = 0; i < 48; i++) {
+			double a = i * Math.PI * 2 / 48;
+			world.spawnParticle(Particle.DUST, center.clone().add(u.clone().multiply(Math.cos(a) * radius)).add(v.clone().multiply(Math.sin(a) * radius)),
+					1, 0, 0, 0, 0.0, GOLD_WHITE);
+		}
+		for (int h = 0; h < 12; h++) {
+			double a = h * Math.PI / 6;
+			for (double d = radius * 0.8; d <= radius; d += 0.1) {
+				world.spawnParticle(Particle.DUST, center.clone().add(u.clone().multiply(Math.cos(a) * d)).add(v.clone().multiply(Math.sin(a) * d)),
+						1, 0, 0, 0, 0.0, GOLD);
+			}
+		}
+		double hand = Math.PI / 2 - turn * Math.PI * 2;
+		for (double d = 0; d <= radius * 0.9; d += 0.12) {
+			world.spawnParticle(Particle.DUST, center.clone().add(u.clone().multiply(Math.cos(hand) * d)).add(v.clone().multiply(Math.sin(hand) * d)),
+					1, 0, 0, 0, 0.0, BLUE);
+		}
+		if (((int) (turn * 16)) % 2 == 0) {
+			world.playSound(center, Sound.BLOCK_NOTE_BLOCK_HAT, SoundCategory.PLAYERS, 0.8F, 1.6F);
+		}
+	}
+
+	/** Red glitch blocks rising round {@code at}. */
+	private static void glitchPillar(Location at) {
+		World world = at.getWorld();
+		ThreadLocalRandom r = ThreadLocalRandom.current();
+		for (int i = 0; i < 10; i++) {
+			Location p = at.clone().add(r.nextDouble(-0.7, 0.7), r.nextDouble(0, 4), r.nextDouble(-0.7, 0.7));
+			world.spawnParticle(Particle.DUST, p, 4, 0.12, 0.05, 0.12, 0.0, RED);
+		}
+		if (r.nextInt(3) == 0) {
+			world.playSound(at, Sound.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.PLAYERS, 0.8F, 0.5F);
+		}
+	}
+
+	/** A great golden nail (a cross of light) standing over {@code at}. */
+	private static void goldenNail(Location at) {
+		World world = at.getWorld();
+		for (double y = 0; y < 4.5; y += 0.15) {
+			world.spawnParticle(Particle.DUST, at.clone().add(0, y, 0), 2, 0.06, 0.02, 0.06, 0.0, GOLD);
+		}
+		for (double x = -0.9; x <= 0.9; x += 0.15) {
+			world.spawnParticle(Particle.DUST, at.clone().add(x, 3.4, 0), 2, 0.02, 0.06, 0.02, 0.0, GOLD);
+			world.spawnParticle(Particle.DUST, at.clone().add(0, 3.4, x), 2, 0.02, 0.06, 0.02, 0.0, GOLD);
+		}
+		world.spawnParticle(Particle.END_ROD, at.clone().add(0, 1, 0), 30, 0.3, 0.6, 0.3, 0.2);
+		world.playSound(at, Sound.BLOCK_ANVIL_LAND, SoundCategory.PLAYERS, 1.0F, 0.6F);
+		world.playSound(at, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, SoundCategory.PLAYERS, 0.8F, 1.5F);
+	}
+
+	/** A pillar of golden light rising from the ground at {@code at}. */
+	private static void goldPillar(Location at) {
+		World world = at.getWorld();
+		for (double y = 0; y < 8; y += 0.25) {
+			world.spawnParticle(Particle.DUST, at.clone().add(0, y, 0), 3, 0.3, 0.05, 0.3, 0.0, GOLD);
+		}
+		world.spawnParticle(Particle.END_ROD, at.clone().add(0, 0.5, 0), 20, 0.4, 2.0, 0.4, 0.05);
+		world.playSound(at, Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.2F, 1.4F);
 	}
 
 	// --- damage ----------------------------------------------------------------------

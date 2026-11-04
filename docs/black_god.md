@@ -180,3 +180,15 @@ mobs), "간수" = the Black God (here: the player in Black God mode),
 - Right-click "스킬 사용": the 9 skills fill the hotbar; then switching to a
   slot (number key, scroll, or tapping a slot on Bedrock) uses that skill
   (right-click uses the one in hand), and the hotbar goes back.
+- In game (BlackGodSkill): every skill but the guard is a filmed sequence on
+  the looked-at foe (24 blocks): 1 two crescents (4, 4); 2 crescent + diagonal
+  beam, then a clock face (5, 6); 3 arms spread, crescent, white flash, red
+  glitch pillar + golden nail (4, 4, 7 × up to 2 by own lost health);
+  5 golden pillar, crescent, white tremor burst (4, 4, 6); 6 great halo over
+  the field, flash, diagonal beam (4, 4, 6); 7 Sisyphus on up to 7 foes;
+  8 Forced Exit (200% max HP fixed); 9 Shift+Delete (50%, 50%, 200%).
+  4 is a 3 s guard: the next blow is turned away and answered (8 damage).
+  Cooldowns 5-8 s (lesser), 30/60/60 s (great), 8 s (guard).
+- Death: twice per time the mode is taken up, a killing blow plays the
+  revival instead (BlackGodRevive): nearby players watch one camera, health
+  comes back in full.
