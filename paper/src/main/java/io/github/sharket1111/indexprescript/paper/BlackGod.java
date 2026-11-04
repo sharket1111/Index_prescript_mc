@@ -41,12 +41,10 @@ import org.bukkit.util.Transformation;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-import io.papermc.paper.datacomponent.DataComponentTypes;
-import io.papermc.paper.datacomponent.item.DyedItemColor;
-import io.papermc.paper.datacomponent.item.Equippable;
-import net.kyori.adventure.key.Key;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -64,8 +62,8 @@ import net.kyori.adventure.title.Title;
  * "leave" in slot 9. Right-clicking "use skills" lays the nine skills along
  * the hotbar; switching to a slot then (number key, scroll, a tap on
  * Bedrock) uses that slot's skill instead of moving, right-click uses the
- * one in hand, and the hotbar goes back. A Black God wears a black robe
- * (a custom equipment look) and a sunburst halo rides behind their head. Turning the mode off gives the
+ * one in hand, and the hotbar goes back. A Black God's body is hidden in a
+ * 3D black robe, with a sunburst halo behind where the head was. Turning the mode off gives the
  * saved inventory back, keeping anything picked up meanwhile.
  */
 final class BlackGod implements Listener {
@@ -105,6 +103,9 @@ final class BlackGod implements Listener {
 	private static final Map<UUID, Long> CHOOSING = new ConcurrentHashMap<>();
 	/** Each Black God's halo, riding them. */
 	private static final Map<UUID, ItemDisplay> HALOS = new ConcurrentHashMap<>();
+	/** Each Black God's 3D robe, riding them. */
+	private static final Map<UUID, ItemDisplay> ROBES = new ConcurrentHashMap<>();
+	private static final float ROBE_SIZE = 1.05F;
 	private static final String ROBE = "robe";
 	private static final float HALO_SIZE = 1.9F;
 	private static final float HALO_BEHIND = 0.42F;
@@ -241,90 +242,109 @@ final class BlackGod implements Listener {
 		}
 		data.remove(SAVED);
 		data.remove(ACTIVE);
-		keepHalo(player);
+		keepFigure(player);
 		Location at = player.getLocation().add(0, 1, 0);
 		player.getWorld().spawnParticle(Particle.DUST, at, 30, 0.5, 0.8, 0.5, 0.0, new Particle.DustOptions(GOLD, 1.2F));
 		player.getWorld().playSound(at, Sound.BLOCK_BEACON_DEACTIVATE, SoundCategory.PLAYERS, 1.0F, 0.7F);
 		player.sendActionBar(Component.text(Messages.get(player, "blackgod.off"), NamedTextColor.GRAY));
 	}
 
-	/** One piece of the black robe: a custom equipment look (Java), plain black leather (Bedrock). */
-	private static ItemStack robePiece(Player viewer, Material material, EquipmentSlot slot) {
-		ItemStack stack = tagged(material, 1, ROBE, Component.text(Messages.get(viewer, "blackgod.robe"), NamedTextColor.DARK_GRAY),
-				List.of(line(Messages.get(viewer, "blackgod.robe.desc"), NamedTextColor.GRAY)));
-		stack.setData(DataComponentTypes.EQUIPPABLE, Equippable.equippable(slot)
-				.assetId(Key.key(Items.NAMESPACE, "black_god_robe")).build());
-		stack.setData(DataComponentTypes.DYED_COLOR, DyedItemColor.dyedItemColor(Color.fromRGB(0x1A1A1E)));
-		stack.editMeta(meta -> meta.setUnbreakable(true));
-		return stack;
-	}
-
-	/** The robe on the chest, legs and feet; whatever armour was worn meanwhile goes into the inventory. */
-	private static void giveRobe(Player player) {
+	/** Takes off robe armour left over from before the robe was a 3D model. */
+	private static void clearOldRobe(Player player) {
 		PlayerInventory inventory = player.getInventory();
-		List<ItemStack> displaced = new ArrayList<>();
-		for (ItemStack worn : new ItemStack[] {inventory.getChestplate(), inventory.getLeggings(), inventory.getBoots()}) {
-			if (worn != null && !worn.isEmpty() && !modeItem(worn)) {
-				displaced.add(worn);
-			}
+		if (ROBE.equals(idOf(inventory.getChestplate()))) {
+			inventory.setChestplate(null);
 		}
-		inventory.setChestplate(robePiece(player, Material.LEATHER_CHESTPLATE, EquipmentSlot.CHEST));
-		inventory.setLeggings(robePiece(player, Material.LEATHER_LEGGINGS, EquipmentSlot.LEGS));
-		inventory.setBoots(robePiece(player, Material.LEATHER_BOOTS, EquipmentSlot.FEET));
-		stash(player, displaced);
+		if (ROBE.equals(idOf(inventory.getLeggings()))) {
+			inventory.setLeggings(null);
+		}
+		if (ROBE.equals(idOf(inventory.getBoots()))) {
+			inventory.setBoots(null);
+		}
 	}
 
-	private static ItemStack haloModel() {
+	private static ItemStack model(String name) {
 		ItemStack stack = ItemStack.of(Material.PAPER);
-		stack.editMeta(meta -> meta.setItemModel(new NamespacedKey(Items.NAMESPACE, "black_god_halo")));
+		stack.editMeta(meta -> meta.setItemModel(new NamespacedKey(Items.NAMESPACE, name)));
 		return stack;
+	}
+
+	/** The display riding {@code player} from {@code map}, spawned (or remounted) if needed. */
+	private static ItemDisplay ride(Map<UUID, ItemDisplay> map, Player player, String name) {
+		ItemDisplay display = map.get(player.getUniqueId());
+		if (display != null && display.isValid() && display.getVehicle() == player) {
+			return display;
+		}
+		if (display != null) {
+			display.remove();
+		}
+		display = player.getWorld().spawn(player.getLocation().add(0, player.getHeight(), 0), ItemDisplay.class, d -> {
+			d.setPersistent(false);
+			d.setItemStack(model(name));
+			d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
+			d.setInterpolationDuration(1);
+		});
+		player.addPassenger(display);
+		map.put(player.getUniqueId(), display);
+		return display;
+	}
+
+	private static void drop(Map<UUID, ItemDisplay> map, UUID id) {
+		ItemDisplay display = map.remove(id);
+		if (display != null) {
+			display.remove();
+		}
 	}
 
 	/**
-	 * Keeps the halo behind the Black God's head: it rides them, and its
-	 * transformation turns it to their body's facing every tick (a rider's own
-	 * rotation is not sent), smoothed over a tick.
+	 * Keeps the Black God's figure on them, as in the art: the body hidden
+	 * (Invisibility, no particles or icon), the 3D robe round it and the
+	 * halo behind where the head was, its black disc in place of a face.
+	 * Both ride the player, and their transformations turn them to the
+	 * body's facing every tick (a rider's own rotation is not sent),
+	 * smoothed over a tick.
 	 */
-	private static void keepHalo(Player player) {
-		ItemDisplay halo = HALOS.get(player.getUniqueId());
+	private static void keepFigure(Player player) {
+		UUID id = player.getUniqueId();
 		boolean wanted = active(player) && !player.isDead() && player.getGameMode() != org.bukkit.GameMode.SPECTATOR;
 		if (!wanted) {
-			if (halo != null) {
-				halo.remove();
-				HALOS.remove(player.getUniqueId());
+			drop(HALOS, id);
+			drop(ROBES, id);
+			PotionEffect hidden = player.getPotionEffect(PotionEffectType.INVISIBILITY);
+			if (hidden != null && hidden.isInfinite() && !hidden.hasParticles()) {
+				player.removePotionEffect(PotionEffectType.INVISIBILITY);
 			}
 			return;
 		}
-		if (halo == null || !halo.isValid() || halo.getVehicle() != player) {
-			if (halo != null) {
-				halo.remove();
-			}
-			halo = player.getWorld().spawn(player.getLocation().add(0, player.getHeight(), 0), ItemDisplay.class, display -> {
-				display.setPersistent(false);
-				display.setItemStack(haloModel());
-				display.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
-				display.setBrightness(new Display.Brightness(15, 15));
-				display.setInterpolationDuration(1);
-			});
-			player.addPassenger(halo);
-			HALOS.put(player.getUniqueId(), halo);
+		if (!player.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
+			player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, PotionEffect.INFINITE_DURATION, 0, false, false, false));
 		}
+		ItemDisplay halo = ride(HALOS, player, "black_god_halo");
+		ItemDisplay robe = ride(ROBES, player, "black_god_robe");
+		halo.setBrightness(new Display.Brightness(15, 15));
 		double yaw = Math.toRadians(player.getBodyYaw());
 		Vector3f facing = new Vector3f((float) -Math.sin(yaw), 0, (float) Math.cos(yaw));
-		Vector3f offset = new Vector3f(facing).mul(-HALO_BEHIND).add(0, -HALO_DROP, 0);
 		Quaternionf turn = new Quaternionf().rotateY((float) -yaw);
+		Vector3f haloAt = new Vector3f(facing).mul(-HALO_BEHIND).add(0, -HALO_DROP, 0);
 		halo.setInterpolationDelay(0);
-		halo.setTransformation(new Transformation(offset, turn, new Vector3f(HALO_SIZE, HALO_SIZE, HALO_SIZE), new Quaternionf()));
+		halo.setTransformation(new Transformation(haloAt, turn, new Vector3f(HALO_SIZE, HALO_SIZE, HALO_SIZE), new Quaternionf()));
+		// The robe model's feet are its bottom; the rider sits at the top of the player.
+		Vector3f robeAt = new Vector3f(0, (float) (-player.getHeight() + 0.5 * ROBE_SIZE), 0);
+		robe.setInterpolationDelay(0);
+		robe.setTransformation(new Transformation(robeAt, new Quaternionf(turn), new Vector3f(ROBE_SIZE, ROBE_SIZE, ROBE_SIZE),
+				new Quaternionf()));
 	}
 
 	static void removeHalos() {
 		HALOS.values().forEach(ItemDisplay::remove);
 		HALOS.clear();
+		ROBES.values().forEach(ItemDisplay::remove);
+		ROBES.clear();
 	}
 
 	/** The mode's hotbar: "use skills" first, "leave" last. */
 	private static void giveHotbar(Player player) {
-		giveRobe(player);
+		clearOldRobe(player);
 		PlayerInventory inventory = player.getInventory();
 		for (int slot = 0; slot < 9; slot++) {
 			if (modeItem(inventory.getItem(slot))) {
@@ -394,20 +414,20 @@ final class BlackGod implements Listener {
 	static void tick() {
 		long now = CaduceusListener.now();
 		for (Player player : Bukkit.getOnlinePlayers()) {
-			if (active(player) || HALOS.containsKey(player.getUniqueId())) {
-				keepHalo(player);
+			if (active(player) || HALOS.containsKey(player.getUniqueId()) || ROBES.containsKey(player.getUniqueId())) {
+				keepFigure(player);
 			}
 		}
-		HALOS.keySet().removeIf(id -> {
+		for (UUID id : List.copyOf(HALOS.keySet())) {
 			if (Bukkit.getPlayer(id) == null) {
-				ItemDisplay halo = HALOS.get(id);
-				if (halo != null) {
-					halo.remove();
-				}
-				return true;
+				drop(HALOS, id);
 			}
-			return false;
-		});
+		}
+		for (UUID id : List.copyOf(ROBES.keySet())) {
+			if (Bukkit.getPlayer(id) == null) {
+				drop(ROBES, id);
+			}
+		}
 		for (Map.Entry<UUID, Long> entry : Map.copyOf(CHOOSING).entrySet()) {
 			Player player = Bukkit.getPlayer(entry.getKey());
 			if (player == null) {

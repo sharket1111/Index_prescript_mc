@@ -4,8 +4,9 @@
 - the halo: a sunburst behind the head (a black disc in a white-gold glow,
   a stepped golden burst, dark spikes and long pale rays), drawn on one flat,
   glowing, two-sided element so an item display can carry it;
-- the robe: a long black coat with pale and gold stripes and studs, as a
-  custom equipment asset worn on the chest, legs and feet.
+- the robe: a 3D long black coat with wide drooping sleeves, a tall collar,
+  pale and gold stripes, studs and black ribbons trailing to the ground,
+  carried by an item display round the hidden body.
 
 Run from the repository root: python3 tools/black_god_assets.py [preview.png]
 """
@@ -102,53 +103,124 @@ def halo():
     write(PACK / "items/black_god_halo.json", {"model": {"type": "minecraft:model", "model": f"{NS}:item/black_god_halo"}})
 
 
-# --- robe -----------------------------------------------------------------------
+# --- the 3D robe -------------------------------------------------------------------
 
-def robe_layer(legs):
-    """A 64x32 armour layer: everything but the helmet part, as a striped black coat."""
-    rnd = random.Random(5 if legs else 3)
-    img = Image.new("RGBA", (64, 32))
-    for y in range(16, 32):
-        for x in range(0, 56):
-            n = rnd.randint(-6, 6)
-            base = (26 + n, 25 + n, 28 + n, 255)
-            if rnd.random() < 0.18:
-                base = (54 + n, 48 + n, 40 + n, 255)
-            column = x % 7
-            if column == 2:
-                base = (208, 198, 168, 255)
-            elif column == 3:
-                base = (140, 120, 76, 255)
-            img.putpixel((x, y), base)
-    # Studs down the front of the coat and its edges.
-    for y in range(21, 32, 3):
-        for x in (19, 23, 24, 28):
-            img.putpixel((x, y), (150, 150, 156, 255))
-    # A pale hem.
-    for x in range(0, 56):
-        img.putpixel((x, 31), (196, 186, 150, 255))
+ROBE_SWATCH = {
+    "black": (0, 0, (20, 20, 23)),
+    "dark": (4, 0, (36, 35, 38)),
+    "smoke": (8, 0, (58, 54, 48)),
+    "pale": (12, 0, (214, 204, 172)),
+    "gold": (0, 4, (156, 134, 84)),
+    "stud": (4, 4, (150, 150, 158)),
+    "lining": (8, 4, (44, 40, 34)),
+}
+
+
+def robe_palette():
+    rnd = random.Random(9)
+    img = Image.new("RGBA", (16, 16))
+    for x0, y0, (r, g, b) in ROBE_SWATCH.values():
+        for y in range(y0, y0 + 4):
+            for x in range(x0, x0 + 4):
+                d = rnd.randint(-5, 5)
+                img.putpixel((x, y), (max(0, r + d), max(0, g + d), max(0, b + d), 255))
     return img
 
 
-def robe():
-    for layer, legs in (("humanoid", False), ("humanoid_leggings", True)):
-        path = PACK / "textures/entity/equipment" / layer / "black_god_robe.png"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        robe_layer(legs).save(path)
-    write(PACK / "equipment/black_god_robe.json", {"layers": {
-        "humanoid": [{"texture": f"{NS}:black_god_robe"}],
-        "humanoid_leggings": [{"texture": f"{NS}:black_god_robe"}],
-    }})
+class Robe:
+    def __init__(self):
+        self.elements = []
+
+    def box(self, x0, y0, z0, x1, y1, z1, mat, rotation=None):
+        u, v, _ = ROBE_SWATCH[mat]
+        uv = [u + 0.5, v + 0.5, u + 3.5, v + 3.5]
+        element = {
+            "from": [round(x0, 3), round(y0, 3), round(z0, 3)],
+            "to": [round(x1, 3), round(y1, 3), round(z1, 3)],
+            "faces": {f: {"uv": uv, "texture": "#0"} for f in ("north", "east", "south", "west", "up", "down")},
+        }
+        if rotation:
+            element["rotation"] = rotation
+        for c in element["from"] + element["to"]:
+            assert -16 <= c <= 32, (mat, c)
+        self.elements.append(element)
+
+
+def robe_model():
+    """The coat in model units (16 = a block): feet at y 0, the body's middle at x = z = 8,
+    the front towards +z (south), as an item display facing its wearer's way."""
+    m = Robe()
+    # The bell of the coat, in tiers, widening to the ground.
+    tiers = [(0, 5, 0.0, 1.0), (5, 10, 1.0, 2.0), (10, 15, 2.0, 3.0), (15, 22, 3.2, 3.8)]
+    for y0, y1, inset_x, inset_z in tiers:
+        m.box(0 + inset_x, y0, 1.2 + inset_z, 16 - inset_x, y1, 14.8 - inset_z, "black")
+    # The tall collar where the head would be: thin plates round an open middle, flaring out.
+    m.box(4.6, 22, 4.2, 11.4, 23.2, 11.8, "dark")
+    m.box(4.0, 22, 4.4, 4.9, 28.0, 11.6, "dark", {"angle": -22.5, "axis": "z", "origin": [4.5, 22, 8]})
+    m.box(11.1, 22, 4.4, 12.0, 28.0, 11.6, "dark", {"angle": 22.5, "axis": "z", "origin": [11.5, 22, 8]})
+    m.box(4.6, 22, 3.6, 11.4, 29.0, 4.5, "dark", {"angle": -22.5, "axis": "x", "origin": [8, 22, 4.0]})
+    m.box(4.6, 22, 11.5, 7.6, 27.0, 12.4, "dark", {"angle": 22.5, "axis": "x", "origin": [8, 22, 12.0]})
+    m.box(8.4, 22, 11.5, 11.4, 27.0, 12.4, "dark", {"angle": 22.5, "axis": "x", "origin": [8, 22, 12.0]})
+    m.box(7.6, 22, 11.6, 7.9, 26.8, 12.5, "pale", {"angle": 22.5, "axis": "x", "origin": [8, 22, 12.0]})
+    m.box(8.1, 22, 11.6, 8.4, 26.8, 12.5, "pale", {"angle": 22.5, "axis": "x", "origin": [8, 22, 12.0]})
+    # Pale and gold stripes down the front and back of every tier, studs down the middle.
+    for y0, y1, inset_x, inset_z in tiers:
+        front, back = 14.8 - inset_z, 1.2 + inset_z
+        for x in (inset_x + 1.2, 16 - inset_x - 1.65, 5.2, 10.35):
+            if inset_x + 0.5 < x < 16 - inset_x - 0.5:
+                m.box(x, y0 + 0.1, front, x + 0.45, y1 - 0.1, front + 0.15, "pale")
+                m.box(x, y0 + 0.1, back - 0.15, x + 0.45, y1 - 0.1, back, "pale")
+        for x in (7.0, 8.55):
+            m.box(x, y0, front, x + 0.45, y1, front + 0.2, "gold")
+        m.box(inset_x - 0.15, y0 + 0.1, 7.6, inset_x, y1 - 0.1, 8.4, "pale")
+        m.box(16 - inset_x, y0 + 0.1, 7.6, 16 - inset_x + 0.15, y1 - 0.1, 8.4, "pale")
+    for y in range(2, 21, 2):
+        z = 14.8 - next(iz for y0, y1, ix, iz in tiers if y0 <= y < y1) + 0.2
+        m.box(7.7, y, z, 8.3, y + 0.5, z + 0.25, "stud")
+    m.box(-0.1, 0, 1.0, 16.1, 0.6, 15.0, "pale")
+    # Wide sleeves hanging from the shoulders, drooping outwards, with pale cuffs.
+    for side in (-1, 1):
+        x_in = 3.4 if side < 0 else 12.6
+        x_out = x_in + side * 9.0
+        x0, x1 = min(x_in, x_out), max(x_in, x_out)
+        origin = [x_in, 20, 8]
+        rot = {"angle": -22.5 * side, "axis": "z", "origin": origin}
+        m.box(x0, 14.5, 4.5, x1, 21.0, 11.5, "black", rot)
+        cuff0, cuff1 = (x0, x0 + 1.2) if side < 0 else (x1 - 1.2, x1)
+        m.box(cuff0, 13.6, 3.8, cuff1, 21.6, 12.2, "pale", rot)
+        m.box(cuff0 + (0.3 if side < 0 else -0.3), 13.9, 4.1, cuff1 - (0.3 if side > 0 else -0.3), 21.3, 11.9, "lining", rot)
+        # Gloved hands open at the sleeve ends.
+        hand = x0 - 1.6 if side < 0 else x1
+        m.box(hand, 15.0, 6.6, hand + 1.6, 16.4, 9.4, "dark", rot)
+    # Black ribbons trailing out behind and to the sides, down to the ground.
+    for side in (-1, 1):
+        for i, (y, length, slope) in enumerate(((18.0, 13.0, 22.5), (11.0, 12.0, 45.0))):
+            x0 = 8 + side * 6
+            x1 = x0 + side * length
+            lo, hi = min(x0, x1), max(x0, x1)
+            z = 3.0 - i * 1.5
+            m.box(lo, y, z, hi, y + 1.6, z + 1.0, "black",
+                  {"angle": slope * -side, "axis": "z", "origin": [x0, y + 0.8, z + 0.5]})
+            m.box(lo, y + 0.6, z - 0.05, hi, y + 0.9, z + 0.02, "pale",
+                  {"angle": slope * -side, "axis": "z", "origin": [x0, y + 0.8, z + 0.5]})
+    return m
+
+
+def robe3d():
+    tex = PACK / "textures/item/black_god_robe.png"
+    tex.parent.mkdir(parents=True, exist_ok=True)
+    robe_palette().save(tex)
+    t = f"{NS}:item/black_god_robe"
+    write(PACK / "models/item/black_god_robe.json", {"textures": {"0": t, "particle": t}, "elements": robe_model().elements})
+    write(PACK / "items/black_god_robe.json", {"model": {"type": "minecraft:model", "model": f"{NS}:item/black_god_robe"}})
 
 
 if __name__ == "__main__":
     halo()
-    robe()
+    robe3d()
     if len(sys.argv) > 1:
         sheet = Image.new("RGBA", (420, 200), (90, 96, 110, 255))
         h = Image.open(PACK / "textures/item/black_god_halo.png").resize((192, 192), Image.NEAREST)
         sheet.alpha_composite(h, (4, 4))
-        r = Image.open(PACK / "textures/entity/equipment/humanoid/black_god_robe.png").resize((192, 96), Image.NEAREST)
-        sheet.alpha_composite(r, (210, 50))
         sheet.save(sys.argv[1])
     print("done")
