@@ -65,20 +65,21 @@ import io.papermc.paper.entity.TeleportFlag;
  * so [Mang] forms at 5 hearts or more and its cost is taken from health.
  */
 final class Furioso {
-	// Timed after Furioso [Lacrimosa-Crescendo] at about 0.7x speed: eight strikes
-	// spaced like the original, a long gathering flurry, a flash, then the last line.
-	private static final int[] COIN_TICKS = {11, 21, 29, 42, 53, 67, 91, 99, 158};
+	// Timed to Furioso [Lacrimosa-Crescendo] at its own speed (measured from the video,
+	// frame brightness at 20 frames a second): eight strikes at 0.6-6.4 s, the
+	// gathering flurry from 6.8 s, the flash and the last line at 10.6-10.8 s, 12.5 s in all.
+	private static final int[] COIN_TICKS = {12, 27, 45, 59, 79, 96, 112, 128, 216};
 	/** Ticks before a strike at which the wielder appears beside its victim. */
 	private static final int APPEAR_LEAD = 3;
-	private static final int FOLLOW_UP_TICK = 78;
-	private static final int WINDUP_TICK = 104;
-	private static final int FLASH_TICK = 154;
-	private static final int END_TICK = 172;
+	private static final int FOLLOW_UP_TICK = 104;
+	private static final int WINDUP_TICK = 136;
+	private static final int FLASH_TICK = 212;
+	private static final int END_TICK = 250;
 	// The last coin's scythe chop: raised overhead and back, then slammed down in front.
-	private static final int CHOP_RAISE_TICK = 148;
-	private static final int CHOP_SLAM_TICK = 155;
-	private static final int CHOP_HIT_TICK = 158;
-	private static final int CHOP_END_TICK = 168;
+	private static final int CHOP_RAISE_TICK = 204;
+	private static final int CHOP_SLAM_TICK = 213;
+	private static final int CHOP_HIT_TICK = 216;
+	private static final int CHOP_END_TICK = 232;
 	private static final double CHOP_READY = Math.toRadians(20);
 	private static final double CHOP_RAISED = Math.toRadians(-150);
 	private static final double CHOP_DOWN = Math.toRadians(105);
@@ -255,7 +256,7 @@ final class Furioso {
 	 */
 	private void flurry(int step) {
 		Effects.orbitRings(actor(), step);
-		int every = step < 25 ? 5 : 3;
+		int every = step < 50 ? 5 : 3;
 		if (step % every == 0) {
 			Effects.flicker(target, 1.8);
 			sound(target.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.6F, 0.6F + step * 0.02F);
