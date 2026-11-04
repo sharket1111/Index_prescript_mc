@@ -51,7 +51,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		getServer().getPluginManager().registerEvents(new Stagger(), this);
 		getServer().getPluginManager().registerEvents(new RenoirHammer(), this);
 		getServer().getPluginManager().registerEvents(new BlackGod(), this);
-		getServer().getPluginManager().registerEvents(new BlackGodRevive(), this);
+		getServer().getPluginManager().registerEvents(new BlackGodRevive.Events(), this);
 		Bukkit.getScheduler().runTaskTimer(this, PrescriptTracker::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Laevatein::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Matthias::tick, 1L, 1L);

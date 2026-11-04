@@ -59,7 +59,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
  * server stopped). Bedrock players, who cannot be given a camera, are held
  * in place instead.
  */
-final class BlackGodRevive implements Listener {
+final class BlackGodRevive {
 	static final int REVIVES = 2;
 	private static final double WATCH_RADIUS = 32.0;
 	private static final int END = 170;
@@ -409,58 +409,59 @@ final class BlackGodRevive implements Listener {
 		}
 	}
 
-	// --- events --------------------------------------------------------------------------
-
-	/** A killing blow on a Black God with a revival left starts the scene instead; no harm comes during it. */
-	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-	public void onDamage(EntityDamageEvent event) {
-		if (!(event.getEntity() instanceof Player player)) {
-			return;
-		}
-		if (ACTIVE.containsKey(player.getUniqueId())) {
+	/** A killing blow on a Black God with a revival left starts the scene; watchers stay on the camera. */
+	static final class Events implements Listener {
+		/** A killing blow on a Black God with a revival left starts the scene instead; no harm comes during it. */
+		@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+		public void onDamage(EntityDamageEvent event) {
+			if (!(event.getEntity() instanceof Player player)) {
+				return;
+			}
+			if (ACTIVE.containsKey(player.getUniqueId())) {
+				event.setCancelled(true);
+				return;
+			}
+			if (!BlackGod.active(player) || event.getCause() == EntityDamageEvent.DamageCause.KILL
+					|| event.getCause() == EntityDamageEvent.DamageCause.VOID
+					|| event.getFinalDamage() < player.getHealth() + player.getAbsorptionAmount()) {
+				return;
+			}
+			int used = player.getPersistentDataContainer().getOrDefault(USED, PersistentDataType.INTEGER, 0);
+			if (used >= REVIVES) {
+				return;
+			}
 			event.setCancelled(true);
-			return;
+			player.getPersistentDataContainer().set(USED, PersistentDataType.INTEGER, used + 1);
+			player.setHealth(Math.max(1.0, player.getHealth()));
+			BlackGodRevive revive = new BlackGodRevive(player);
+			ACTIVE.put(player.getUniqueId(), revive);
+			revive.open();
+			player.sendMessage(Component.text(Messages.get(player, "blackgod.revive", REVIVES - used - 1), NamedTextColor.GOLD));
 		}
-		if (!BlackGod.active(player) || event.getCause() == EntityDamageEvent.DamageCause.KILL
-				|| event.getCause() == EntityDamageEvent.DamageCause.VOID
-				|| event.getFinalDamage() < player.getHealth() + player.getAbsorptionAmount()) {
-			return;
-		}
-		int used = player.getPersistentDataContainer().getOrDefault(USED, PersistentDataType.INTEGER, 0);
-		if (used >= REVIVES) {
-			return;
-		}
-		event.setCancelled(true);
-		player.getPersistentDataContainer().set(USED, PersistentDataType.INTEGER, used + 1);
-		player.setHealth(Math.max(1.0, player.getHealth()));
-		BlackGodRevive revive = new BlackGodRevive(player);
-		ACTIVE.put(player.getUniqueId(), revive);
-		revive.open();
-		player.sendMessage(Component.text(Messages.get(player, "blackgod.revive", REVIVES - used - 1), NamedTextColor.GOLD));
-	}
 
-	/** Watchers cannot leave the camera while the scene plays. */
-	@EventHandler(ignoreCancelled = true)
-	public void onStopSpectating(PlayerStopSpectatingEntityEvent event) {
-		if (WATCHING.containsKey(event.getPlayer().getUniqueId())) {
-			event.setCancelled(true);
+		/** Watchers cannot leave the camera while the scene plays. */
+		@EventHandler(ignoreCancelled = true)
+		public void onStopSpectating(PlayerStopSpectatingEntityEvent event) {
+			if (WATCHING.containsKey(event.getPlayer().getUniqueId())) {
+				event.setCancelled(true);
+			}
 		}
-	}
 
-	@EventHandler
-	public void onQuit(PlayerQuitEvent event) {
-		BlackGodRevive revive = ACTIVE.remove(event.getPlayer().getUniqueId());
-		if (revive != null) {
-			revive.finish();
-		}
-		BlackGodRevive watched = WATCHING.remove(event.getPlayer().getUniqueId());
-		if (watched != null) {
-			Player player = event.getPlayer();
-			player.setSpectatorTarget(null);
-			Cinematic.restoreMode(player);
-			Location back = watched.watchers.remove(player);
-			if (back != null) {
-				player.teleport(back);
+		@EventHandler
+		public void onQuit(PlayerQuitEvent event) {
+			BlackGodRevive revive = ACTIVE.remove(event.getPlayer().getUniqueId());
+			if (revive != null) {
+				revive.finish();
+			}
+			BlackGodRevive watched = WATCHING.remove(event.getPlayer().getUniqueId());
+			if (watched != null) {
+				Player player = event.getPlayer();
+				player.setSpectatorTarget(null);
+				Cinematic.restoreMode(player);
+				Location back = watched.watchers.remove(player);
+				if (back != null) {
+					player.teleport(back);
+				}
 			}
 		}
 	}
