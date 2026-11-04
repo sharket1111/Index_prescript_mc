@@ -35,6 +35,16 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemRarity;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.entity.Display;
+import org.bukkit.entity.ItemDisplay;
+import org.bukkit.util.Transformation;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
+
+import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.DyedItemColor;
+import io.papermc.paper.datacomponent.item.Equippable;
+import net.kyori.adventure.key.Key;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -54,7 +64,8 @@ import net.kyori.adventure.title.Title;
  * "leave" in slot 9. Right-clicking "use skills" lays the nine skills along
  * the hotbar; switching to a slot then (number key, scroll, a tap on
  * Bedrock) uses that slot's skill instead of moving, right-click uses the
- * one in hand, and the hotbar goes back. Turning the mode off gives the
+ * one in hand, and the hotbar goes back. A Black God wears a black robe
+ * (a custom equipment look) and a sunburst halo rides behind their head. Turning the mode off gives the
  * saved inventory back, keeping anything picked up meanwhile.
  */
 final class BlackGod implements Listener {
@@ -92,6 +103,12 @@ final class BlackGod implements Listener {
 	private static final NamespacedKey SAVED = new NamespacedKey(Items.NAMESPACE, "black_god_saved_inventory");
 	/** Players choosing a skill, until when. */
 	private static final Map<UUID, Long> CHOOSING = new ConcurrentHashMap<>();
+	/** Each Black God's halo, riding them. */
+	private static final Map<UUID, ItemDisplay> HALOS = new ConcurrentHashMap<>();
+	private static final String ROBE = "robe";
+	private static final float HALO_SIZE = 1.9F;
+	private static final float HALO_BEHIND = 0.42F;
+	private static final float HALO_DROP = 0.3F;
 
 	// --- items ---------------------------------------------------------------------
 
@@ -224,14 +241,90 @@ final class BlackGod implements Listener {
 		}
 		data.remove(SAVED);
 		data.remove(ACTIVE);
+		keepHalo(player);
 		Location at = player.getLocation().add(0, 1, 0);
 		player.getWorld().spawnParticle(Particle.DUST, at, 30, 0.5, 0.8, 0.5, 0.0, new Particle.DustOptions(GOLD, 1.2F));
 		player.getWorld().playSound(at, Sound.BLOCK_BEACON_DEACTIVATE, SoundCategory.PLAYERS, 1.0F, 0.7F);
 		player.sendActionBar(Component.text(Messages.get(player, "blackgod.off"), NamedTextColor.GRAY));
 	}
 
+	/** One piece of the black robe: a custom equipment look (Java), plain black leather (Bedrock). */
+	private static ItemStack robePiece(Player viewer, Material material, EquipmentSlot slot) {
+		ItemStack stack = tagged(material, 1, ROBE, Component.text(Messages.get(viewer, "blackgod.robe"), NamedTextColor.DARK_GRAY),
+				List.of(line(Messages.get(viewer, "blackgod.robe.desc"), NamedTextColor.GRAY)));
+		stack.setData(DataComponentTypes.EQUIPPABLE, Equippable.equippable(slot)
+				.assetId(Key.key(Items.NAMESPACE, "black_god_robe")).build());
+		stack.setData(DataComponentTypes.DYED_COLOR, DyedItemColor.dyedItemColor(Color.fromRGB(0x1A1A1E)));
+		stack.editMeta(meta -> meta.setUnbreakable(true));
+		return stack;
+	}
+
+	/** The robe on the chest, legs and feet; whatever armour was worn meanwhile goes into the inventory. */
+	private static void giveRobe(Player player) {
+		PlayerInventory inventory = player.getInventory();
+		List<ItemStack> displaced = new ArrayList<>();
+		for (ItemStack worn : new ItemStack[] {inventory.getChestplate(), inventory.getLeggings(), inventory.getBoots()}) {
+			if (worn != null && !worn.isEmpty() && !modeItem(worn)) {
+				displaced.add(worn);
+			}
+		}
+		inventory.setChestplate(robePiece(player, Material.LEATHER_CHESTPLATE, EquipmentSlot.CHEST));
+		inventory.setLeggings(robePiece(player, Material.LEATHER_LEGGINGS, EquipmentSlot.LEGS));
+		inventory.setBoots(robePiece(player, Material.LEATHER_BOOTS, EquipmentSlot.FEET));
+		stash(player, displaced);
+	}
+
+	private static ItemStack haloModel() {
+		ItemStack stack = ItemStack.of(Material.PAPER);
+		stack.editMeta(meta -> meta.setItemModel(new NamespacedKey(Items.NAMESPACE, "black_god_halo")));
+		return stack;
+	}
+
+	/**
+	 * Keeps the halo behind the Black God's head: it rides them, and its
+	 * transformation turns it to their body's facing every tick (a rider's own
+	 * rotation is not sent), smoothed over a tick.
+	 */
+	private static void keepHalo(Player player) {
+		ItemDisplay halo = HALOS.get(player.getUniqueId());
+		boolean wanted = active(player) && !player.isDead() && player.getGameMode() != org.bukkit.GameMode.SPECTATOR;
+		if (!wanted) {
+			if (halo != null) {
+				halo.remove();
+				HALOS.remove(player.getUniqueId());
+			}
+			return;
+		}
+		if (halo == null || !halo.isValid() || halo.getVehicle() != player) {
+			if (halo != null) {
+				halo.remove();
+			}
+			halo = player.getWorld().spawn(player.getLocation().add(0, player.getHeight(), 0), ItemDisplay.class, display -> {
+				display.setPersistent(false);
+				display.setItemStack(haloModel());
+				display.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
+				display.setBrightness(new Display.Brightness(15, 15));
+				display.setInterpolationDuration(1);
+			});
+			player.addPassenger(halo);
+			HALOS.put(player.getUniqueId(), halo);
+		}
+		double yaw = Math.toRadians(player.getBodyYaw());
+		Vector3f facing = new Vector3f((float) -Math.sin(yaw), 0, (float) Math.cos(yaw));
+		Vector3f offset = new Vector3f(facing).mul(-HALO_BEHIND).add(0, -HALO_DROP, 0);
+		Quaternionf turn = new Quaternionf().rotateY((float) -yaw);
+		halo.setInterpolationDelay(0);
+		halo.setTransformation(new Transformation(offset, turn, new Vector3f(HALO_SIZE, HALO_SIZE, HALO_SIZE), new Quaternionf()));
+	}
+
+	static void removeHalos() {
+		HALOS.values().forEach(ItemDisplay::remove);
+		HALOS.clear();
+	}
+
 	/** The mode's hotbar: "use skills" first, "leave" last. */
 	private static void giveHotbar(Player player) {
+		giveRobe(player);
 		PlayerInventory inventory = player.getInventory();
 		for (int slot = 0; slot < 9; slot++) {
 			if (modeItem(inventory.getItem(slot))) {
@@ -300,6 +393,21 @@ final class BlackGod implements Listener {
 	/** Called every tick: a skill not chosen in 10 seconds is let go. */
 	static void tick() {
 		long now = CaduceusListener.now();
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			if (active(player) || HALOS.containsKey(player.getUniqueId())) {
+				keepHalo(player);
+			}
+		}
+		HALOS.keySet().removeIf(id -> {
+			if (Bukkit.getPlayer(id) == null) {
+				ItemDisplay halo = HALOS.get(id);
+				if (halo != null) {
+					halo.remove();
+				}
+				return true;
+			}
+			return false;
+		});
 		for (Map.Entry<UUID, Long> entry : Map.copyOf(CHOOSING).entrySet()) {
 			Player player = Bukkit.getPlayer(entry.getKey());
 			if (player == null) {
@@ -319,6 +427,7 @@ final class BlackGod implements Listener {
 			}
 		}
 		CHOOSING.clear();
+		removeHalos();
 	}
 
 	// --- events ----------------------------------------------------------------------

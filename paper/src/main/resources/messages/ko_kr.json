@@ -53,5 +53,7 @@
 	"blackgod.title": "검은 신",
 	"blackgod.on": "인벤토리를 보관했다. '검은 신 해제'로 돌아갈 수 있다.",
 	"blackgod.off": "검은 신을 해제했다. 인벤토리를 돌려받았다.",
-	"blackgod.choose": "숫자키(1~9)로 스킬을 고른다. 손에 든 스킬은 우클릭."
+	"blackgod.choose": "숫자키(1~9)로 스킬을 고른다. 손에 든 스킬은 우클릭.",
+	"blackgod.robe": "검은 신의 망토",
+	"blackgod.robe.desc": "검은 신 상태에서만 입는다"
 }

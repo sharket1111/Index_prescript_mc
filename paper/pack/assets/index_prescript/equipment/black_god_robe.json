@@ -1,0 +1,14 @@
+{
+	"layers": {
+		"humanoid": [
+			{
+				"texture": "index_prescript:black_god_robe"
+			}
+		],
+		"humanoid_leggings": [
+			{
+				"texture": "index_prescript:black_god_robe"
+			}
+		]
+	}
+}

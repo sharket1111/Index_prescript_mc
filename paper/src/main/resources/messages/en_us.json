@@ -53,5 +53,7 @@
 	"blackgod.title": "Black God",
 	"blackgod.on": "Inventory kept. 'Leave Black God' turns you back.",
 	"blackgod.off": "Left Black God mode. Inventory returned.",
-	"blackgod.choose": "Pick a skill with a number key (1-9); right-click uses the one in hand."
+	"blackgod.choose": "Pick a skill with a number key (1-9); right-click uses the one in hand.",
+	"blackgod.robe": "Black God's Robe",
+	"blackgod.robe.desc": "Worn only as the Black God"
 }

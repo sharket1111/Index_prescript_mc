@@ -1,0 +1,42 @@
+{
+	"textures": {
+		"0": "index_prescript:item/black_god_halo",
+		"particle": "index_prescript:item/black_god_halo"
+	},
+	"elements": [
+		{
+			"from": [
+				0,
+				0,
+				8
+			],
+			"to": [
+				16,
+				16,
+				8
+			],
+			"shade": false,
+			"light_emission": 15,
+			"faces": {
+				"north": {
+					"uv": [
+						16,
+						0,
+						0,
+						16
+					],
+					"texture": "#0"
+				},
+				"south": {
+					"uv": [
+						0,
+						0,
+						16,
+						16
+					],
+					"texture": "#0"
+				}
+			}
+		}
+	]
+}
