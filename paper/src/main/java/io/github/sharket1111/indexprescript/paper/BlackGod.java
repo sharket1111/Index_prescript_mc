@@ -210,6 +210,7 @@ final class BlackGod implements Listener {
 		data.set(SAVED, PersistentDataType.BYTE_ARRAY, ItemStack.serializeItemsAsBytes(saved));
 		data.set(ACTIVE, PersistentDataType.BYTE, (byte) 1);
 		BlackGodRevive.reset(player);
+		BlackGodState.enter(player);
 		inventory.clear();
 		giveHotbar(player);
 		inventory.setHeldItemSlot(USE_SLOT);
@@ -227,6 +228,7 @@ final class BlackGod implements Listener {
 			return;
 		}
 		CHOOSING.remove(player.getUniqueId());
+		BlackGodState.leave(player);
 		PlayerInventory inventory = player.getInventory();
 		List<ItemStack> picked = new ArrayList<>();
 		for (ItemStack stack : inventory.getContents()) {

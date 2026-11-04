@@ -55,5 +55,16 @@
 	"blackgod.off": "Left Black God mode. Inventory returned.",
 	"blackgod.choose": "Pick a skill with a number key (1-9); right-click uses the one in hand.",
 	"blackgod.revive": "The Black God refuses death. (%s revival(s) left)",
-	"blackgod.cooldown": "This skill is ready again in %s s."
+	"blackgod.cooldown": "This skill is ready again in %s s.",
+	"blackgod.voice": "Black God's Voice",
+	"blackgod.authority": "Black God's Authority",
+	"blackgod.bride": "Bride",
+	"blackgod.system": "System Preservation",
+	"blackgod.to_authority": "The Black God's Voice became the Authority.",
+	"blackgod.to_voice": "The Black God's Authority became the Voice again.",
+	"blackgod.got_stop": "This turn you hold [Stop]. (+25% damage to the Black God)",
+	"blackgod.got_pulse": "This turn you hold [Pulse]. (-50% damage from the Black God)",
+	"blackgod.bride_steps_in": "The Bride stepped into the system: health and ailments restored.",
+	"blackgod.shield": "Time to clock out. System Preservation became a shield.",
+	"blackgod.need_authority": "This skill needs the Black God's Authority."
 }

@@ -41,6 +41,7 @@ import io.papermc.paper.entity.TeleportFlag;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 
 /**
  * The Black God's great skills (fan-made, after Limbus Company; see
@@ -113,6 +114,8 @@ final class BlackGodSkill {
 	private ItemDisplay halo;
 	private GameMode mode;
 	private int tick;
+	/** This use's own damage bonus (Authority or Preservation spent on use). */
+	private double bonus = 1.0;
 
 	private BlackGodSkill(Player god, Kind kind, LivingEntity target, List<LivingEntity> foes) {
 		this.god = god;
@@ -155,6 +158,11 @@ final class BlackGodSkill {
 		long ready = READY_AT.getOrDefault(key, 0L);
 		if (now < ready) {
 			god.sendActionBar(Component.text(Messages.get(god, "blackgod.cooldown", (ready - now + 19) / 20), NamedTextColor.GRAY));
+			return true;
+		}
+		if (kind.great() && !BlackGodState.authorityForm(god)) {
+			// '심판의 날': the great skills come only with the Black God's Authority.
+			god.sendActionBar(Component.text(Messages.get(god, "blackgod.need_authority"), TextColor.color(0xF0C860)));
 			return true;
 		}
 		LivingEntity target = lookedAt(god);
@@ -252,7 +260,52 @@ final class BlackGodSkill {
 		return display;
 	}
 
+	/** What each skill does on use (docs/black_god.md): Preservation, Poise, Authority. */
+	private void onUse() {
+		long now = CaduceusListener.now();
+		switch (kind) {
+			case SIGH -> {
+				RenoirHammer.addPreservation(god, 3);
+				CombatState.of(god).addPoise(2, 1, now);
+			}
+			case CLOCK_OUT -> {
+				RenoirHammer.addPreservation(god, 5);
+				CombatState.of(god).addPoise(2, 2, now);
+			}
+			case JUDGMENT -> {
+				if (RenoirHammer.preservation(god) > 0) {
+					RenoirHammer.spendPreservation(god, RenoirHammer.preservation(god));
+					bonus += 0.15;
+				}
+			}
+			case ATONE -> {
+				if (BlackGodState.spendAuthority(god, 15) > 0) {
+					bonus += 0.15;
+				}
+			}
+			case PUNISH -> {
+				if (BlackGodState.spendAuthority(god, 15) > 0) {
+					bonus += 0.30;
+				}
+				RenoirHammer.addPreservation(god, 6);
+			}
+			case SISYPHUS -> {
+				if (BlackGodState.spendAuthority(god, 40) > 0) {
+					bonus += 0.50;
+				}
+				bonus += BlackGodState.authority(god) / 100.0;
+				BlackGodState.spendAuthority(god, BlackGodState.MAX);
+				if (RenoirHammer.preservation(god) > 0) {
+					RenoirHammer.spendPreservation(god, RenoirHammer.preservation(god));
+					bonus += 0.30;
+				}
+			}
+			case FORCED_EXIT, SHIFT_DELETE -> BlackGodState.spendAuthority(god, BlackGodState.MAX);
+		}
+	}
+
 	private void open() {
+		onUse();
 		for (LivingEntity foe : held.keySet()) {
 			if (!(foe instanceof Player)) {
 				hadAi.put(foe, foe.hasAI());
@@ -452,6 +505,10 @@ final class BlackGodSkill {
 						pillar(foe.getLocation(), 7, false);
 					}
 					hit(foe, 4.0);
+					if (i == 3) {
+						// Coin IV: sets off every ~ in the foe.
+						BlackGodState.trigger(god, foe);
+					}
 				}
 			}
 		}
@@ -469,6 +526,7 @@ final class BlackGodSkill {
 			pillar(target.getLocation(), 10, true);
 			whiteBurst(target.getLocation(), 1.6);
 			hit(target, 9.0);
+			BlackGodState.inflict(god, target, BlackGodState.Nail.EXCEPTION, 9);
 		}
 		if (tick > SISYPHUS_LAST && tick < 216 && tick % 3 == 0) {
 			sparkle(target.getLocation(), 2.5);
@@ -672,6 +730,7 @@ final class BlackGodSkill {
 			beamSlash(targetMid());
 			starburst(targetMid());
 			hit(target, 5.0);
+			BlackGodState.inflict(god, target, BlackGodState.Nail.CONSOLE, 1);
 		}
 		if (tick >= 36 && tick <= 54) {
 			clockFace(targetMid(), 2.2, (tick - 36) / 16.0);
@@ -683,6 +742,7 @@ final class BlackGodSkill {
 			starburst(targetMid());
 			spot.getWorld().playSound(target.getLocation(), Sound.BLOCK_BELL_USE, SoundCategory.PLAYERS, 1.5F, 0.6F);
 			hit(target, 6.0);
+			BlackGodState.inflict(god, target, BlackGodState.Nail.CONSOLE, 2);
 		}
 	}
 
@@ -741,6 +801,7 @@ final class BlackGodSkill {
 			goldenNail(target.getLocation());
 			double lost = 1.0 - god.getHealth() / maxHealth(god);
 			hit(target, 7.0 * (1.0 + Math.max(0.0, Math.min(1.0, lost))));
+			BlackGodState.inflict(god, target, BlackGodState.Nail.BREAKPOINT, 4);
 		}
 	}
 
@@ -770,6 +831,7 @@ final class BlackGodSkill {
 			goldPillar(target.getLocation());
 			starburst(targetMid());
 			hit(target, 4.0);
+			BlackGodState.inflict(god, target, BlackGodState.Nail.CONSOLE, 1);
 		}
 		if (tick == 80 || tick == 210) {
 			crescent(targetMid(), 2.6, tick == 80 ? -1 : 1, PALE);
@@ -782,12 +844,14 @@ final class BlackGodSkill {
 			beamSlash(targetMid());
 			starburst(targetMid());
 			hit(target, 4.0);
+			BlackGodState.inflict(god, target, BlackGodState.Nail.CONSOLE, 1);
 		}
 		if (tick == ATONE_COINS[2]) {
 			overlay(FLASH);
 			whiteBurst(target.getLocation(), 1.4);
 			spot.getWorld().playSound(target.getLocation(), Sound.ITEM_MACE_SMASH_GROUND_HEAVY, SoundCategory.PLAYERS, 1.4F, 0.6F);
 			hit(target, 6.0);
+			BlackGodState.inflict(god, target, BlackGodState.Nail.CONSOLE, 1);
 		}
 		if (tick == ATONE_COINS[2] + 8) {
 			clearOverlay();
@@ -832,11 +896,13 @@ final class BlackGodSkill {
 			pillar(target.getLocation(), 7, false);
 			whiteBurst(target.getLocation(), 0.7);
 			hit(target, 4.0);
+			BlackGodState.inflict(god, target, BlackGodState.Nail.CONSOLE, 1);
 		}
 		if (tick == PUNISH_COINS[1]) {
 			beamSlash(targetMid());
 			starburst(targetMid());
 			hit(target, 4.0);
+			BlackGodState.inflict(god, target, BlackGodState.Nail.CONSOLE, 1);
 		}
 		if (tick == PUNISH_COINS[2] - 2) {
 			beamSlash(targetMid());
@@ -845,6 +911,7 @@ final class BlackGodSkill {
 			beamSlash(targetMid());
 			whiteBurst(target.getLocation(), 1.2);
 			hit(target, 6.0);
+			BlackGodState.inflict(god, target, BlackGodState.Nail.CONSOLE, 1);
 		}
 		if (tick == PUNISH_FLOURISH) {
 			whiteBurst(target.getLocation(), 1.6);
@@ -873,6 +940,7 @@ final class BlackGodSkill {
 		READY_AT.put(key, now + GUARD_COOLDOWN);
 		GUARD_UNTIL.put(god.getUniqueId(), now + GUARD_TICKS);
 		announce(god, GUARD_SLOT);
+		BlackGodState.guardFill(god);
 		Location at = god.getLocation();
 		for (int i = 0; i < 24; i++) {
 			double a = i * Math.PI / 12;
@@ -1012,7 +1080,9 @@ final class BlackGodSkill {
 
 	private void hit(LivingEntity foe, double damage) {
 		if (foe.isValid() && !foe.isDead()) {
-			Damage.deal(foe, damage, god, true);
+			// Attack levels, System Preservation and the ~ in the foe; Pulse halves what it takes.
+			double multiplier = bonus * BlackGodState.attackMultiplier(god, foe) * (BlackGodState.pulse(foe) ? 0.5 : 1.0);
+			Damage.deal(foe, damage * multiplier, god, true);
 		}
 	}
 
@@ -1020,6 +1090,9 @@ final class BlackGodSkill {
 	private void fixed(LivingEntity foe, double amount) {
 		if (!foe.isValid() || foe.isDead()) {
 			return;
+		}
+		if (BlackGodState.pulse(foe)) {
+			amount *= 0.5;
 		}
 		double before = foe.getHealth() + foe.getAbsorptionAmount();
 		if (amount >= before) {

@@ -55,5 +55,16 @@
 	"blackgod.off": "검은 신을 해제했다. 인벤토리를 돌려받았다.",
 	"blackgod.choose": "숫자키(1~9)로 스킬을 고른다. 손에 든 스킬은 우클릭.",
 	"blackgod.revive": "검은 신은 죽음을 거부한다. (남은 부활 %s회)",
-	"blackgod.cooldown": "이 스킬은 %s초 뒤에 다시 쓸 수 있습니다."
+	"blackgod.cooldown": "이 스킬은 %s초 뒤에 다시 쓸 수 있습니다.",
+	"blackgod.voice": "검은 신의 목소리",
+	"blackgod.authority": "검은 신의 권능",
+	"blackgod.bride": "시지프 형벌의 신부",
+	"blackgod.system": "시지프 시스템 보존",
+	"blackgod.to_authority": "검은 신의 목소리가 권능이 되었다.",
+	"blackgod.to_voice": "검은 신의 권능이 다시 목소리가 되었다.",
+	"blackgod.got_stop": "이번 턴, 당신에게 [정지]가 걸렸다. (검은 신에게 주는 피해 +25%)",
+	"blackgod.got_pulse": "이번 턴, 당신에게 [박동]이 걸렸다. (검은 신에게 받는 피해 -50%)",
+	"blackgod.bride_steps_in": "신부가 시스템에 개입했다. 체력과 상태가 모두 회복된다.",
+	"blackgod.shield": "자, 이제 퇴근해 볼까. 시지프 시스템 보존을 보호막으로 바꿨다.",
+	"blackgod.need_authority": "이 스킬은 검은 신의 권능이 있을 때만 쓸 수 있다."
 }

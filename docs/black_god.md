@@ -192,3 +192,31 @@ mobs), "간수" = the Black God (here: the player in Black God mode),
 - Death: twice per time the mode is taken up, a killing blow plays the
   revival instead (BlackGodRevive): nearby players watch one camera, health
   comes back in full.
+- Keywords and passives (BlackGodState), on a 7 s turn (140 ticks):
+  - Boss bar: Voice or Authority (0-100), Bride (1-5), System Preservation (0-25).
+  - Voice: +10 at each turn's end; rises by the Preservation the skills gain or
+    spend (max 40 a turn); the guard (slot 4) fills it to 100 at that turn's
+    end. At 100 it becomes the Authority (100) at the turn's end; Authority at 0
+    turns back to Voice. Every switch: Bride +1 and 45% of max health back.
+  - Skills 7-9 can only be used with the Authority (still on their cooldowns).
+    5/6 spend up to 15 Authority (+15%/+30% damage), 7 spends up to 40 (+50%),
+    then the rest (+that %), and all Preservation (+30%); 8 and 9 spend all.
+  - Attack levels (Voice/Authority per 20, max 4; Bride x2) +3% damage each;
+    defense levels (Authority per 20 max 4; Bride x3) -2% damage taken each;
+    System Preservation +x% dealt, -x% taken (all reductions max 60%).
+  - ~ over foes (text over the head, one kind, max 9): 2 gives Console 1 then 2,
+    3's last coin Breakpoint 4, 5/6 Console 1 per coin, 7's coin IV sets them
+    all off (Breakpoint: count x 10% max health fixed; Console: Sinking and
+    stagger), coin V Exception 9 (bursts next turn: 50% current health fixed
+    and a stagger). Bride 3+: Console +1. Turn started at half health or less:
+    every ~ +1. Black God hits do +5% per ~ on the target (max 45%).
+  - Stop / Pulse: each turn's start, random foes within 16 blocks. Stop: +25%
+    damage to the Black God. Pulse: half of the Black God's damage, no stagger
+    from Exception.
+  - Burning, wither, poison and magic damage halved. First fall below half
+    health: full health, ailments cleared (the Bride). First fall to a third:
+    all System Preservation into a lasting Absorption of (25 + it)% max health.
+  - Preservation shows while in the mode; skill 1 +3 (Poise 2/1), 2 +5 (Poise
+    2/2), 6 +6, 3 spends all (+15%). Potency goes to 20 in the mode; past 10
+    it turns into System Preservation at the turn's end. Potency 10 and count
+    under 10 at a turn's start: count +5. Count cap +5/+10 at potency 5/10.

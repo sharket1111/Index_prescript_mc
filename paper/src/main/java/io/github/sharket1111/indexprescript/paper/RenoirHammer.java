@@ -114,7 +114,19 @@ final class RenoirHammer implements Listener {
 	}
 
 	static void addPreservation(Player player, int amount) {
-		write(player, PRESERVATION, Math.max(0, Math.min(MAX_PRESERVATION, preservation(player) + amount)));
+		int before = preservation(player);
+		int after = Math.max(0, Math.min(BlackGodState.preservationCap(player), before + amount));
+		write(player, PRESERVATION, after);
+		BlackGodState.preservationChanged(player, after - before);
+	}
+
+	static void setPotency(Player player, int value) {
+		write(player, POTENCY, Math.max(1, value));
+	}
+
+	/** The potency's cap: 10, or 20 for the Black God (the excess becomes System Preservation at a turn's end). */
+	private static int potencyCap(Player player) {
+		return BlackGod.active(player) ? MAX_POTENCY + 10 : MAX_POTENCY;
 	}
 
 	/** Spends Preservation; every 10 spent in all raises the potency by 1. */
@@ -124,9 +136,10 @@ final class RenoirHammer implements Listener {
 			return;
 		}
 		write(player, PRESERVATION, preservation(player) - spent);
+		BlackGodState.preservationChanged(player, -spent);
 		int total = read(player, SPENT, 0) + spent;
 		int potency = potency(player);
-		while (total >= 10 && potency < MAX_POTENCY) {
+		while (total >= 10 && potency < potencyCap(player)) {
 			total -= 10;
 			potency++;
 			RenoirSkill.potencyUp(Cinematic.body(player));
@@ -242,7 +255,7 @@ final class RenoirHammer implements Listener {
 	private static void showPreservation(Player player) {
 		PotionEffect shown = player.getPotionEffect(PotionEffectType.UNLUCK);
 		int count = preservation(player);
-		if (!holding(player) || count <= 0) {
+		if (!(holding(player) || BlackGod.active(player)) || count <= 0) {
 			if (shown != null && !shown.hasParticles() && !shown.isAmbient()) {
 				player.removePotionEffect(PotionEffectType.UNLUCK);
 			}
@@ -444,6 +457,6 @@ final class RenoirHammer implements Listener {
 	static void set(Player player, int voice, int preservation) {
 		setVoice(player, voice);
 		PersistentDataContainer data = player.getPersistentDataContainer();
-		data.set(PRESERVATION, PersistentDataType.INTEGER, Math.max(0, Math.min(MAX_PRESERVATION, preservation)));
+		data.set(PRESERVATION, PersistentDataType.INTEGER, Math.max(0, Math.min(BlackGodState.preservationCap(player), preservation)));
 	}
 }
