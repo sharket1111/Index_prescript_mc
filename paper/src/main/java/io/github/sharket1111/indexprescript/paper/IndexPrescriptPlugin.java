@@ -50,6 +50,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		getServer().getPluginManager().registerEvents(new MangRing.Events(), this);
 		getServer().getPluginManager().registerEvents(new Stagger(), this);
 		getServer().getPluginManager().registerEvents(new RenoirHammer(), this);
+		getServer().getPluginManager().registerEvents(new BlackGod(), this);
 		Bukkit.getScheduler().runTaskTimer(this, PrescriptTracker::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Laevatein::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Matthias::tick, 1L, 1L);
@@ -60,6 +61,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Bukkit.getScheduler().runTaskTimer(this, SkillOverlay::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, MangRing::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, RenoirHammer::tick, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, BlackGod::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, () -> CombatState.prune(CaduceusListener.now()), 1200L, 1200L);
 
 		var command = getCommand("indexprescript");
@@ -72,6 +74,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 	@Override
 	public void onDisable() {
 		RenoirSkill.endAll();
+		BlackGod.stopAll();
 		PromisedNails.clearAll();
 		Cinematic.endAll();
 		SkillOverlay.hideAll();
@@ -97,6 +100,14 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		if (args.length >= 1 && args[0].equalsIgnoreCase("renoir")) {
 			return renoir(sender, args);
 		}
+		if (args.length >= 1 && args[0].equalsIgnoreCase("blackgod")) {
+			if (!(sender instanceof Player player)) {
+				sender.sendMessage(Messages.get(sender, "command.players_only"));
+				return true;
+			}
+			BlackGod.toggle(player);
+			return true;
+		}
 		if (args.length >= 1 && args[0].equalsIgnoreCase("pack")) {
 			if (!(sender instanceof Player player)) {
 				sender.sendMessage(Messages.get(sender, "command.players_only"));
@@ -120,6 +131,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			case "terminal", "rien_terminal" -> Items.terminal(target);
 			case "laevatein" -> Items.laevatein(target);
 			case "hammer", "renoir_hammer" -> Items.renoirHammer(target);
+			case "blackgod", "black_god" -> BlackGod.toggleItem(target);
 			default -> null;
 		};
 		if (item == null) {
@@ -232,9 +244,9 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 	@Override
 	public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
 		return switch (args.length) {
-			case 1 -> List.of("give", "pack", "laevatein", "sanity", "mang", "renoir");
+			case 1 -> List.of("give", "pack", "laevatein", "sanity", "mang", "renoir", "blackgod");
 			case 2 -> switch (args[0].toLowerCase(Locale.ROOT)) {
-				case "give" -> List.of("caduceus", "terminal", "laevatein", "hammer");
+				case "give" -> List.of("caduceus", "terminal", "laevatein", "hammer", "blackgod");
 				case "laevatein" -> List.of("0", "1", "2", "3");
 				case "mang" -> List.of("1", "2", "3", "4", "5", "6");
 				case "renoir" -> List.of("0", "50", "100");

@@ -24,7 +24,7 @@
 	"prescript.sink_twice": "Stab an enemy %s times with the stiletto",
 	"prescript.untouched": "Strike an enemy %s times without taking damage",
 	"message.prescript_reveal": "%s",
-	"command.usage": "Usage: /indexprescript give <caduceus|terminal|laevatein|hammer> [player], /indexprescript laevatein <0-3>, /indexprescript pack, /indexprescript sanity [value], /indexprescript mang [1-6]",
+	"command.usage": "Usage: /indexprescript give <caduceus|terminal|laevatein|hammer|blackgod> [player], /indexprescript laevatein <0-3>, /indexprescript pack, /indexprescript sanity [value], /indexprescript mang [1-6], /indexprescript blackgod",
 	"command.given": "Gave %2$s to %1$s.",
 	"command.no_player": "Player not found: %s",
 	"command.pack_sent": "Resource pack sent again.",
@@ -43,5 +43,15 @@
 	"renoir.sever": "Sever Birth!",
 	"renoir.again": "Strike Again and Again, Sever Birth!",
 	"renoir.no_target": "No enemy where you are looking.",
-	"renoir.need_voice": "Needs at least 50 Black God's Voice (now %s)."
+	"renoir.need_voice": "Needs at least 50 Black God's Voice (now %s).",
+	"blackgod.item": "Black God",
+	"blackgod.item.desc": "Right-click: become the Black God (your inventory is kept and comes back when you leave)",
+	"blackgod.use": "Use Skills",
+	"blackgod.use.desc": "Right-click: lay the 9 skills along the hotbar; a number key (hotbar slot) uses one",
+	"blackgod.leave": "Leave Black God",
+	"blackgod.leave.desc": "Right-click: turn back and get your inventory back",
+	"blackgod.title": "Black God",
+	"blackgod.on": "Inventory kept. 'Leave Black God' turns you back.",
+	"blackgod.off": "Left Black God mode. Inventory returned.",
+	"blackgod.choose": "Pick a skill with a number key (1-9); right-click uses the one in hand."
 }
