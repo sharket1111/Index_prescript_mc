@@ -209,7 +209,7 @@ final class RenoirSkill {
 			case 2 -> {
 				// Two nails fall: one drives into the foe, the other strikes beside it.
 				RenoirHammer.driveNail(player, target);
-				PromisedNails.rain(target.getLocation(), 1.2, 1.2F);
+				PromisedNails.rain(target.getLocation(), 1.2, 2.4F);
 			}
 			case 8 -> coin(4.0, () -> pillar(target.getLocation()));
 			case 13 -> stepIn(1.6);
@@ -245,7 +245,7 @@ final class RenoirSkill {
 		if (tick >= 4 && tick <= 34 && tick % 2 == 0) {
 			int drops = tick < 12 ? 2 : 3;
 			for (int i = 0; i < drops; i++) {
-				PromisedNails.rain(center, AGAIN_RADIUS, 2.2F);
+				PromisedNails.rain(center, AGAIN_RADIUS, 3.6F);
 			}
 		}
 		switch (tick) {

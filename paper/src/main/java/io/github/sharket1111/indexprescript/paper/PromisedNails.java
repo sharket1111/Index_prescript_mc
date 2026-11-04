@@ -36,7 +36,7 @@ final class PromisedNails {
 	private static final int FALL_TICKS = 5;
 	private static final double FALL_HEIGHT = 6.0;
 	private static final int LINGER_TICKS = 60 * 20;
-	private static final float STUCK_SCALE = 0.55F;
+	private static final float STUCK_SCALE = 1.0F;
 	static final Particle.DustOptions GOLD = new Particle.DustOptions(Color.fromRGB(0xFFD54A), 1.3F);
 	private static final Particle.DustOptions PALE = new Particle.DustOptions(Color.fromRGB(0xFFF4C0), 1.0F);
 	private static final Map<UUID, Driven> DRIVEN = new ConcurrentHashMap<>();
@@ -110,7 +110,7 @@ final class PromisedNails {
 			return;
 		}
 		Location start = top(foe).add(0, FALL_HEIGHT, 0);
-		FALLING.add(new Falling(spawnFalling(start, 1.4F), foe, null, amount));
+		FALLING.add(new Falling(spawnFalling(start, 2.4F), foe, null, amount));
 		foe.getWorld().playSound(start, Sound.ITEM_TRIDENT_RIPTIDE_1, SoundCategory.PLAYERS, 0.7F, 1.6F);
 	}
 
@@ -164,7 +164,7 @@ final class PromisedNails {
 			double radius = foe.getWidth() * 0.35 + (index % 2) * 0.08;
 			float tilt = 0.25F;
 			Quaternionf lean = new Quaternionf().rotateY((float) -angle).rotateZ(tilt);
-			Vector3f offset = new Vector3f((float) (Math.cos(angle) * radius), (float) (STUCK_SCALE * 0.5 - 0.12),
+			Vector3f offset = new Vector3f((float) (Math.cos(angle) * radius), (float) (STUCK_SCALE * 0.5 - 0.25),
 					(float) (Math.sin(angle) * radius));
 			ItemDisplay nail = foe.getWorld().spawn(top(foe), ItemDisplay.class, display -> {
 				display.setPersistent(false);
