@@ -51,7 +51,9 @@ final class LaevateinSkill {
 
 	private static final Map<UUID, LaevateinSkill> ACTIVE = new ConcurrentHashMap<>();
 	private static final int TURN = CombatState.TURN_TICKS;
-	private static final int[] EXECUTION_IMPACTS = {6, 16, 27, 40, 52};
+	/** Summary Execution's blows (ticks), from the in-game scene: the slash, the kick, the thrown blade, the drop kick, the white crescent. */
+	private static final int[] EXECUTION_IMPACTS = {11, 44, 72, 147, 199};
+	private static final int RULE_LENGTH = 52;
 
 	private final Player player;
 	private final LivingEntity target;
@@ -128,12 +130,13 @@ final class LaevateinSkill {
 
 	private int endTick() {
 		return switch (kind) {
-			case STOMP -> 18;
-			case HEATED -> 26;
-			case MELT -> 28;
-			case STAB -> 34;
-			case RULE_VIOLATION -> repeat ? 24 : 12;
-			case EXECUTION -> 64;
+			// Lengths after the in-game scenes: 2.4 s, 5.5 s, 5.75 s, 8 s, 2.6 s (each time), 12.5 s.
+			case STOMP -> 48;
+			case HEATED -> 110;
+			case MELT -> 115;
+			case STAB -> 160;
+			case RULE_VIOLATION -> repeat ? 2 * RULE_LENGTH : RULE_LENGTH;
+			case EXECUTION -> 250;
 		};
 	}
 
@@ -153,7 +156,7 @@ final class LaevateinSkill {
 			case HEATED -> heated();
 			case MELT -> melt();
 			case STAB -> stab();
-			case RULE_VIOLATION -> ruleViolation(tick % 12);
+			case RULE_VIOLATION -> ruleViolation(tick % RULE_LENGTH);
 			case EXECUTION -> execution();
 		}
 		if (tick >= endTick()) {
@@ -168,9 +171,9 @@ final class LaevateinSkill {
 	private void stomp() {
 		double bonus = target.hasPotionEffect(PotionEffectType.WITHER) ? 1.15 : 1.0;
 		switch (tick) {
-			case 4 -> dashToTarget();
-			case 6 -> coin(4.0 * bonus, 0, () -> LaevateinEffects.stomp(target, 1.2), () -> bleed(3));
-			case 12 -> coin(4.0 * bonus, 0, () -> {
+			case 5 -> dashToTarget();
+			case 9 -> coin(4.0 * bonus, 0, () -> LaevateinEffects.stomp(target, 1.2), () -> bleed(3));
+			case 31 -> coin(4.0 * bonus, 0, () -> {
 				LaevateinEffects.stomp(target, 2.0);
 				LaevateinEffects.smoke(target);
 			}, () -> {
@@ -188,12 +191,17 @@ final class LaevateinSkill {
 	private void heated() {
 		switch (tick) {
 			case 2 -> LaevateinEffects.lightningStrike(actor());
-			case 6 -> coin(4.5, 1.0, () -> LaevateinEffects.flameArc(actor(), target, -90, 20), () -> {
+			case 16 -> coin(4.5, 1.0, () -> LaevateinEffects.flameArc(actor(), target, -90, 20), () -> {
 				burn(2);
 				bind(2);
 			});
-			case 12 -> coin(4.5 + 1.5, 1.0, () -> LaevateinEffects.thrust(actor(), target), () -> burn(2));
-			case 18 -> coin(4.5, 1.0, () -> {
+			case 41 -> coin(4.5 + 1.5, 1.0, () -> LaevateinEffects.thrust(actor(), target), () -> burn(2));
+			// The follow-through: a burning slash off the thrust (no coin of its own).
+			case 60 -> {
+				actor().swingMainHand();
+				LaevateinEffects.flameArc(actor(), target, 60, -20);
+			}
+			case 88 -> coin(4.5, 1.0, () -> {
 				LaevateinEffects.flameArc(actor(), target, 70, -35);
 				LaevateinEffects.explosion(target, 1.0);
 			}, () -> {
@@ -208,16 +216,16 @@ final class LaevateinSkill {
 	/** "Time to Melt and Die": a pink streak, a burning sweep with a thrust, then a huge flame crescent. */
 	private void melt() {
 		switch (tick) {
-			case 2 -> LaevateinEffects.aura(actor(), 8);
-			case 6 -> coin(5.5, 1.0, () -> LaevateinEffects.pinkArc(actor(), target, -100, 15), () -> {
+			case 4 -> LaevateinEffects.aura(actor(), 8);
+			case 16 -> coin(5.5, 1.0, () -> LaevateinEffects.pinkArc(actor(), target, -100, 15), () -> {
 				burn(2);
 				bind(2);
 			});
-			case 12 -> coin(5.5 + 1.5, 1.0, () -> {
+			case 42 -> coin(5.5 + 1.5, 1.0, () -> {
 				LaevateinEffects.flameArc(actor(), target, 80, -20);
 				LaevateinEffects.thrust(actor(), target);
 			}, () -> burn(2));
-			case 20 -> coin(5.5, 1.0, () -> {
+			case 92 -> coin(5.5, 1.0, () -> {
 				LaevateinEffects.flameArc(actor(), target, -110, 40);
 				LaevateinEffects.explosion(target, 1.6);
 			}, () -> {
@@ -232,11 +240,11 @@ final class LaevateinSkill {
 	/** Stab [Laevatein]: five burning strikes ending in a wide crescent. */
 	private void stab() {
 		switch (tick) {
-			case 6 -> coin(5.0 + 1.0, 0, () -> LaevateinEffects.pinkArc(actor(), target, -90, 20), null);
-			case 10 -> coin(5.0 + 1.0, 0, () -> LaevateinEffects.flameArc(actor(), target, 80, -25), null);
-			case 14 -> coin(5.0, 0, () -> LaevateinEffects.shatter(target), () -> burn(10));
-			case 18 -> coin(5.0, 0, () -> LaevateinEffects.explosion(target, 1.4), () -> burnCount(4));
-			case 26 -> coin(5.0, 0, () -> {
+			case 9 -> coin(5.0 + 1.0, 0, () -> LaevateinEffects.pinkArc(actor(), target, -90, 20), null);
+			case 21 -> coin(5.0 + 1.0, 0, () -> LaevateinEffects.flameArc(actor(), target, 80, -25), null);
+			case 47 -> coin(5.0, 0, () -> LaevateinEffects.shatter(target), () -> burn(10));
+			case 68 -> coin(5.0, 0, () -> LaevateinEffects.explosion(target, 1.4), () -> burnCount(4));
+			case 126 -> coin(5.0, 0, () -> {
 				LaevateinEffects.flameArc(actor(), target, -120, 45);
 				LaevateinEffects.pinkArc(actor(), target, 60, -30);
 				LaevateinEffects.explosion(target, 2.0);
@@ -249,7 +257,7 @@ final class LaevateinSkill {
 	/** Rule Violation: two grey counter sweeps; Bleed, then stagger recovery. Plays twice when repeating. */
 	private void ruleViolation(int phase) {
 		switch (phase) {
-			case 3 -> coin(4.0, 0, () -> {
+			case 15 -> coin(4.0, 0, () -> {
 				LaevateinEffects.greyArc(actor(), target, -100, 20);
 				LaevateinEffects.pinkArc(actor(), target, 60, -15);
 			}, () -> {
@@ -258,7 +266,7 @@ final class LaevateinSkill {
 					bleedCount(1);
 				}
 			});
-			case 8 -> coin(4.0, 0, () -> {
+			case 36 -> coin(4.0, 0, () -> {
 				LaevateinEffects.greyArc(actor(), target, 80, -25);
 				LaevateinEffects.smoke(target);
 			}, () -> {
@@ -277,42 +285,42 @@ final class LaevateinSkill {
 	 * Summary Execution, after the in-game motion: a rising burning slash and a
 	 * chained sweep, a kick, the blade hurled into the target, a drop kick that
 	 * drives it deeper, the blade pulled back on its chains, and a final white
-	 * crescent. Ticks: coins at 6, 16, 27, 40 and 52.
+	 * crescent. Ticks (from the in-game scene, 12.5 s): coins at 11, 44, 72, 147 and 199.
 	 */
 	private void execution() {
 		switch (tick) {
-			case 2 -> {
+			case 4 -> {
 				LaevateinEffects.lightningStrike(target);
 				dashToTarget();
 			}
-			case 6 -> coin(6.0, 0, () -> LaevateinEffects.flameArc(actor(), target, -90, 60), () -> burn(5));
-			case 10 -> {
+			case 11 -> coin(6.0, 0, () -> LaevateinEffects.flameArc(actor(), target, -90, 60), () -> burn(5));
+			case 26 -> {
 				actor().swingMainHand();
 				LaevateinEffects.pinkArc(actor(), target, -150, -5);
 				LaevateinEffects.chain(actor(), target);
 			}
 			// Kick: chamber the leg, then plant the foot in the target.
-			case 13 -> pose(Pose.SNEAKING);
-			case 16 -> {
+			case 38 -> pose(Pose.SNEAKING);
+			case 44 -> {
 				pose(Pose.STANDING);
 				stepToward(0.6);
 				hit(6.0 + 1.0, 0, () -> LaevateinEffects.kick(target), () -> burnCount(3));
 			}
 			// The blade is raised and hurled into the target.
-			case 20 -> {
+			case 56 -> {
 				actor().swingMainHand();
 				LaevateinEffects.wings(actor());
 			}
-			case 24 -> throwBlade();
-			case 27 -> hit(6.0 + 1.0, 0, () -> {
+			case 68 -> throwBlade();
+			case 72 -> hit(6.0 + 1.0, 0, () -> {
 				LaevateinEffects.thrust(actor(), target);
 				LaevateinEffects.explosion(target, 2.0);
 			}, () -> burn(10));
 			// Backstep for a run-up, then a drop kick into the hilt.
-			case 29 -> stepBack();
-			case 32 -> pose(Pose.SNEAKING);
-			case 34, 35, 36, 37, 38, 39 -> dropKickFrame(tick - 33);
-			case 40 -> {
+			case 90 -> stepBack();
+			case 128 -> pose(Pose.SNEAKING);
+			case 140, 141, 142, 143, 144, 145 -> dropKickFrame(tick - 139);
+			case 147 -> {
 				hit(6.0, 0, () -> {
 					LaevateinEffects.dropKick(target);
 					driveBlade();
@@ -321,9 +329,9 @@ final class LaevateinSkill {
 				stepBackFrom(1.6);
 			}
 			// The chains pull the blade back to the hand.
-			case 46 -> recallBlade();
-			case 49 -> catchBlade();
-			case 52 -> coin(6.0 + 2.0, 0, () -> {
+			case 192 -> recallBlade();
+			case 196 -> catchBlade();
+			case 199 -> coin(6.0 + 2.0, 0, () -> {
 				LaevateinEffects.whiteCrescent(actor(), target);
 				LaevateinEffects.shatter(target);
 			}, () -> {
@@ -334,10 +342,14 @@ final class LaevateinSkill {
 			default -> {
 			}
 		}
-		if (tick >= 44 && tick <= 47) {
+		if (tick >= 186 && tick <= 195 && tick % 2 == 0) {
 			LaevateinEffects.chain(actor(), thrown != null ? thrown : target);
 		}
-		if (thrown != null && tick > 24 && tick < 46) {
+		if (tick == 219) {
+			// The crescent's after-blast.
+			LaevateinEffects.explosion(target, 1.6);
+		}
+		if (thrown != null && tick > 68 && tick < 186 && tick % 2 == 0) {
 			LaevateinEffects.embers(thrown);
 		}
 	}
@@ -597,7 +609,7 @@ final class LaevateinSkill {
 			// Fixed once, square to the line between the two, so the view never turns.
 			cameraSide = Math.atan2(from.getZ() - to.getZ(), from.getX() - to.getX()) + Math.PI / 2;
 		}
-		boolean impact = kind == Kind.STAB ? tick >= 26 && tick < 30 : executionImpact();
+		boolean impact = kind == Kind.STAB ? tick >= 126 && tick < 130 || tick >= 47 && tick < 50 : executionImpact();
 		camera.frame(Cinematic.orbit(focus, cameraSide, 3.2, 1.3), focus, impact ? 0.7 : 0.0);
 	}
 

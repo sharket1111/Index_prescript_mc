@@ -490,10 +490,11 @@ final class Laevatein implements Listener {
 		}
 
 		private int releaseTick() {
+			// From the in-game scenes: the casing breaks at 2.95 s, the fire bursts at 6.6 s and 6.75 s.
 			return switch (stage) {
-				case 1 -> 20;
-				case 2 -> 32;
-				default -> 38;
+				case 1 -> 59;
+				case 2 -> 132;
+				default -> 135;
 			};
 		}
 
@@ -515,10 +516,11 @@ final class Laevatein implements Listener {
 		}
 
 		private int endTick() {
+			// The scenes run 5.5 s, 8.6 s and 8.75 s.
 			return switch (stage) {
-				case 1 -> 36;
-				case 2 -> 44;
-				default -> 54;
+				case 1 -> 110;
+				case 2 -> 172;
+				default -> 175;
 			};
 		}
 
@@ -549,13 +551,13 @@ final class Laevatein implements Listener {
 		/** "Unwrapping one package": grey sweeps, the casing shatters, then a burning slash. */
 		private void stageOne() {
 			switch (tick) {
-				case 6 -> strike(4.0, 0, () -> LaevateinEffects.greyArc(actor(), target, -100, 15));
-				case 12 -> strike(4.0, 0, () -> LaevateinEffects.greyArc(actor(), target, 80, -20));
-				case 20 -> {
+				case 20 -> strike(4.0, 0, () -> LaevateinEffects.greyArc(actor(), target, -100, 15));
+				case 36 -> strike(4.0, 0, () -> LaevateinEffects.greyArc(actor(), target, 80, -20));
+				case 59 -> {
 					release();
 					strike(6.0, 0, () -> LaevateinEffects.shatter(target));
 				}
-				case 28 -> strike(5.0, 60, () -> LaevateinEffects.flameArc(actor(), target, -90, 25));
+				case 90 -> strike(5.0, 60, () -> LaevateinEffects.flameArc(actor(), target, -90, 25));
 				default -> {
 				}
 			}
@@ -564,13 +566,18 @@ final class Laevatein implements Listener {
 		/** "The second wrapping": three burning crescents, then a great explosion. */
 		private void stageTwo() {
 			switch (tick) {
-				case 8 -> strike(5.0, 60, () -> LaevateinEffects.flameArc(actor(), target, -100, 20));
-				case 16 -> strike(5.0, 60, () -> {
+				case 18 -> strike(5.0, 60, () -> LaevateinEffects.flameArc(actor(), target, -100, 20));
+				// A burning slash between the blows (no damage of its own).
+				case 60 -> {
+					actor().swingMainHand();
+					LaevateinEffects.flameArc(actor(), target, -80, 30);
+				}
+				case 45 -> strike(5.0, 60, () -> {
 					LaevateinEffects.flameArc(actor(), target, 70, -25);
 					LaevateinEffects.explosion(target, 1.0);
 				});
-				case 24 -> strike(5.0, 60, () -> LaevateinEffects.flameArc(actor(), target, -60, 40));
-				case 32 -> {
+				case 88 -> strike(5.0, 60, () -> LaevateinEffects.flameArc(actor(), target, -60, 40));
+				case 132 -> {
 					release();
 					strike(9.0, 100, () -> LaevateinEffects.explosion(target, 2.5));
 				}
@@ -582,10 +589,10 @@ final class Laevatein implements Listener {
 		/** "Brought out this far": lightning falls, two burning slashes, then an inferno. */
 		private void stageThree() {
 			switch (tick) {
-				case 6, 14 -> strike(4.0, 0, () -> LaevateinEffects.lightningStrike(target));
-				case 22 -> strike(6.0, 80, () -> LaevateinEffects.flameArc(actor(), target, -100, 20));
-				case 30 -> strike(6.0, 80, () -> LaevateinEffects.flameArc(actor(), target, 80, -30));
-				case 38 -> {
+				case 8, 70 -> strike(4.0, 0, () -> LaevateinEffects.lightningStrike(target));
+				case 29 -> strike(6.0, 80, () -> LaevateinEffects.flameArc(actor(), target, -100, 20));
+				case 80 -> strike(6.0, 80, () -> LaevateinEffects.flameArc(actor(), target, 80, -30));
+				case 135 -> {
 					release();
 					strike(14.0, 160, () -> LaevateinEffects.inferno(target));
 				}
