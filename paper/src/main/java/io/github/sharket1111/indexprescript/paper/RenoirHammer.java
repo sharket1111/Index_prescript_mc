@@ -51,7 +51,8 @@ import net.kyori.adventure.text.format.NamedTextColor;
  *   spending all Voice); otherwise "Sever Birth", once a turn (see {@link RenoirSkill}).
  * - [Preservation]: a count (up to 20) and a potency, shown as the Unluck
  *   effect renamed by the resource pack: its level is the potency and its
- *   time the count in seconds, held still while the hammer is in hand.
+ *   time reads 10:SS with SS the count (10 minutes in front so the icon
+ *   never blinks), held still while the hammer is in hand.
  *   Skills add to the count. After [Malleus Promissionis], driving a nail
  *   spends Preservation: with 12 or more it drives one more nail and spends 4,
  *   otherwise 2 (none if there is not enough; the nail still goes in). Every
@@ -68,6 +69,7 @@ final class RenoirHammer implements Listener {
 	private static final int TARGET_RANGE = 8;
 	private static final int ICON_INTERVAL = 2;
 	private static final int STATUS_INTERVAL = 5;
+	private static final int DISPLAY_OFFSET_SECONDS = 600;
 	private static final NamespacedKey VOICE = new NamespacedKey(Items.NAMESPACE, "renoir_voice");
 	private static final NamespacedKey PRESERVATION = new NamespacedKey(Items.NAMESPACE, "renoir_preservation");
 	private static final NamespacedKey POTENCY = new NamespacedKey(Items.NAMESPACE, "renoir_preservation_potency");
@@ -231,7 +233,10 @@ final class RenoirHammer implements Listener {
 			}
 			return;
 		}
-		int ticks = count * 20;
+		// The client blinks an effect icon in its last 10 seconds, so 10 minutes go in front:
+		// the time reads 10:SS, where SS is the count.
+		// Plus most of a second, so the seconds shown never slip below the count between refreshes.
+		int ticks = (DISPLAY_OFFSET_SECONDS + count) * 20 + 15;
 		int amplifier = potency(player) - 1;
 		if (shown != null && shown.getAmplifier() == amplifier && Math.abs(shown.getDuration() - ticks) <= STATUS_INTERVAL) {
 			return;
