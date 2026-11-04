@@ -62,9 +62,14 @@ import net.kyori.adventure.text.format.NamedTextColor;
 final class BlackGodRevive {
 	static final int REVIVES = 2;
 	private static final double WATCH_RADIUS = 32.0;
-	private static final int END = 170;
+	// Timings measured from the in-game scene (ticks): the glitch, the robe from 23, the halo from
+	// 55, the flash at 96, the wide shot with the great halo (and the healing) from 108, the end at 180.
+	private static final int END = 180;
+	private static final int CLOSE_AT = 23;
+	private static final int HALO_AT = 55;
 	private static final int FLASH_AT = 96;
-	private static final int HEAL_AT = 104;
+	private static final int WIDE_AT = 108;
+	private static final int HEAL_AT = 108;
 	private static final String FLOODGATE_PREFIX = "00000000-0000-0000-";
 	private static final NamespacedKey USED = new NamespacedKey(Items.NAMESPACE, "black_god_revives_used");
 	private static final Map<UUID, BlackGodRevive> ACTIVE = new ConcurrentHashMap<>();
@@ -201,15 +206,15 @@ final class BlackGodRevive {
 		Vector look;
 		Vector base = spot.toVector();
 		Vector side = new Vector(-facing.getZ(), 0, facing.getX());
-		if (t < 24) {
+		if (t < CLOSE_AT) {
 			at = base.clone().add(facing.clone().multiply(4.0)).add(new Vector(0, 1.6, 0));
 			look = base.clone().add(new Vector(0, 1.4, 0));
-		} else if (t < 60) {
-			double push = 1.9 - 0.4 * (t - 24) / 36.0;
+		} else if (t < HALO_AT) {
+			double push = 1.9 - 0.4 * (t - CLOSE_AT) / (double) (HALO_AT - CLOSE_AT);
 			at = base.clone().add(facing.clone().multiply(push)).add(side.clone().multiply(0.3)).add(new Vector(0, 1.05, 0));
 			look = base.clone().add(new Vector(0, 1.05, 0));
-		} else if (t < FLASH_AT + 4) {
-			double pull = 3.0 + 0.8 * (t - 60) / 40.0;
+		} else if (t < WIDE_AT) {
+			double pull = 3.0 + 0.8 * (t - HALO_AT) / (double) (WIDE_AT - HALO_AT);
 			at = base.clone().add(facing.clone().multiply(pull)).add(new Vector(0, 1.6, 0));
 			look = base.clone().add(new Vector(0, 1.7, 0));
 		} else {
@@ -228,9 +233,9 @@ final class BlackGodRevive {
 			return false;
 		}
 		Location shot = cameraSpot(tick);
-		if (tick < 24 || tick >= FLASH_AT && tick < FLASH_AT + 8) {
+		if (tick < CLOSE_AT || tick >= FLASH_AT && tick < FLASH_AT + 8) {
 			// Handheld shake for the glitch and the flash.
-			double s = tick < 24 ? 0.06 : 0.25;
+			double s = tick < CLOSE_AT ? 0.06 : 0.25;
 			ThreadLocalRandom r = ThreadLocalRandom.current();
 			shot.add((r.nextDouble() - 0.5) * s, (r.nextDouble() - 0.5) * s, (r.nextDouble() - 0.5) * s);
 		}
@@ -260,7 +265,7 @@ final class BlackGodRevive {
 
 	private void scene() {
 		World world = spot.getWorld();
-		if (tick < 24) {
+		if (tick < CLOSE_AT) {
 			// The screen breaks up.
 			if (tick % 3 == 0) {
 				overlayAll(GLITCH[(tick / 3) % GLITCH.length]);
@@ -268,28 +273,28 @@ final class BlackGodRevive {
 						0.5F + ThreadLocalRandom.current().nextFloat());
 			}
 			world.spawnParticle(Particle.DUST, spot.clone().add(0, 1.2, 0), 6, 0.7, 0.9, 0.7, 0.0, GOLD);
-		} else if (tick == 24) {
+		} else if (tick == CLOSE_AT) {
 			clearOverlays();
 			world.playSound(spot, Sound.BLOCK_BELL_RESONATE, SoundCategory.PLAYERS, 1.5F, 0.5F);
 		}
-		if (tick >= 24 && tick < 60 && tick % 8 == 0) {
+		if (tick >= CLOSE_AT && tick < HALO_AT && tick % 8 == 0) {
 			// Rings spreading over the chest.
 			Location chest = spot.clone().add(0, 1.05, 0).add(facing.clone().multiply(0.6));
-			ring(chest, 0.25 + (tick - 24) / 36.0 * 0.4, (tick / 8) % 2 == 0 ? PALE : GOLD);
+			ring(chest, 0.25 + (tick - CLOSE_AT) / (double) (HALO_AT - CLOSE_AT) * 0.4, (tick / 8) % 2 == 0 ? PALE : GOLD);
 			world.playSound(chest, Sound.BLOCK_BEACON_AMBIENT, SoundCategory.PLAYERS, 1.2F, 1.4F);
 		}
-		if (tick >= 24 && tick < 60) {
+		if (tick >= CLOSE_AT && tick < HALO_AT) {
 			Location chest = spot.clone().add(0, 1.05, 0).add(facing.clone().multiply(0.6));
 			for (int i = 0; i < 2; i++) {
-				double r = 0.25 + ((tick - 24) % 8) / 8.0 * 0.6;
+				double r = 0.25 + ((tick - CLOSE_AT) % 8) / 8.0 * 0.6;
 				ring(chest, r, PALE);
 			}
 		}
-		if (tick >= 60 && tick < FLASH_AT) {
+		if (tick >= HALO_AT && tick < FLASH_AT) {
 			// The halo flares, light streaking across it.
-			float size = 1.9F + 1.6F * (tick - 60) / (FLASH_AT - 60F);
+			float size = 1.9F + 1.6F * (tick - HALO_AT) / (float) (FLASH_AT - HALO_AT);
 			halo.setInterpolationDelay(0);
-			halo.setTransformation(new Transformation(new Vector3f(), new Quaternionf().rotateZ((tick - 60) * 0.01F),
+			halo.setTransformation(new Transformation(new Vector3f(), new Quaternionf().rotateZ((tick - HALO_AT) * 0.01F),
 					new Vector3f(size, size, size), new Quaternionf()));
 			Location head = headSpot();
 			Vector side = new Vector(-facing.getZ(), 0, facing.getX());
@@ -302,7 +307,7 @@ final class BlackGodRevive {
 				world.playSound(head, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, SoundCategory.PLAYERS, 0.4F, 1.6F);
 			}
 			world.spawnParticle(Particle.ELECTRIC_SPARK, head, 6, 0.7, 0.7, 0.7, 0.2);
-			if (tick == 60) {
+			if (tick == HALO_AT) {
 				world.playSound(head, Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.5F, 0.5F);
 			}
 		}
@@ -313,7 +318,7 @@ final class BlackGodRevive {
 			world.playSound(spot, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, SoundCategory.PLAYERS, 1.5F, 0.6F);
 			world.playSound(spot, Sound.ITEM_TOTEM_USE, SoundCategory.PLAYERS, 1.0F, 0.6F);
 		}
-		if (tick == FLASH_AT + 6) {
+		if (tick == WIDE_AT) {
 			clearOverlays();
 			halo.remove();
 			skyHalo = world.spawn(spot.clone().add(0, 9, 0), ItemDisplay.class, d -> {
@@ -327,7 +332,7 @@ final class BlackGodRevive {
 			});
 		}
 		if (skyHalo != null && skyHalo.isValid()) {
-			int since = tick - (FLASH_AT + 6);
+			int since = tick - WIDE_AT;
 			float size = since < 12 ? 2 + 10 * since / 12F : tick > END - 20 ? Math.max(0.1F, 12 * (END - tick) / 20F) : 12F;
 			skyHalo.setInterpolationDelay(0);
 			skyHalo.setTransformation(new Transformation(new Vector3f(), new Quaternionf().rotateZ(since * 0.004F),

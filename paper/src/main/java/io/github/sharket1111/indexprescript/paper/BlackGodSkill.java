@@ -63,8 +63,13 @@ import net.kyori.adventure.text.format.NamedTextColor;
  */
 final class BlackGodSkill {
 	enum Kind {
-		SIGH(0, 56, 5), CLOCK_OUT(1, 66, 6), JUDGMENT(2, 84, 8), ATONE(4, 84, 8), PUNISH(5, 92, 8),
-		SISYPHUS(6, 140, 30), FORCED_EXIT(7, 112, 60), SHIFT_DELETE(8, 162, 60);
+		SIGH(0, 96, 5), CLOCK_OUT(1, 66, 6), JUDGMENT(2, 216, 8), ATONE(4, 245, 8), PUNISH(5, 225, 8),
+		SISYPHUS(6, 233, 30), FORCED_EXIT(7, 260, 60), SHIFT_DELETE(8, 340, 60);
+
+		/** The great skills: the big skill screen with the TOTAL count. */
+		boolean great() {
+			return this == SISYPHUS || this == FORCED_EXIT || this == SHIFT_DELETE;
+		}
 
 		final int slot;
 		final int length;
@@ -268,8 +273,11 @@ final class BlackGodSkill {
 			head.setDirection(facing());
 			halo = prop(head, "black_god_halo", 1.9F, true);
 		}
-		TotalDamage.start(god);
-		SkillOverlay.show(god, SkillOverlay.Size.BIG);
+		// The screen-edge skill UI: big with the TOTAL count for the great skills, small for the rest.
+		if (kind.great()) {
+			TotalDamage.start(god);
+		}
+		SkillOverlay.show(god, kind.great() ? SkillOverlay.Size.BIG : SkillOverlay.Size.SMALL);
 		announce(god, kind.slot);
 		World world = spot.getWorld();
 		world.playSound(spot, Sound.BLOCK_BEACON_ACTIVATE, SoundCategory.PLAYERS, 1.5F, 0.5F);
@@ -385,59 +393,84 @@ final class BlackGodSkill {
 		}
 	}
 
-	// --- 시지프 시스템을 진짜 망가트리려고? ------------------------------------------
+	// The timings below (in ticks, 20 a second) are measured from the in-game scenes: the
+	// bright frames of each video mark where its blows land.
 
-	private static final int[] SISYPHUS_COINS = {22, 44, 66, 88, 110};
+	/** Whether {@code tick} is within {@code length} ticks after any of {@code at}. */
+	private boolean near(int[] at, int length) {
+		for (int t : at) {
+			if (tick >= t && tick < t + length) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private Location targetMid() {
+		return target.getLocation().add(0, target.getHeight() * 0.6, 0);
+	}
+
+	// --- 시지프 시스템을 진짜 망가트리려고? (11.7 s) -------------------------------------
+
+	private static final int[] SISYPHUS_COINS = {44, 71, 100, 131};
+	private static final int SISYPHUS_FLOURISH = 156;
+	private static final int SISYPHUS_LAST = 182;
 
 	private void sisyphus() {
-		boolean impact = false;
-		for (int at : SISYPHUS_COINS) {
-			impact |= tick >= at + 3 && tick < at + 7;
-		}
-		double shake = impact ? 0.35 : 0.0;
-		if (tick < 18) {
+		double shake = near(SISYPHUS_COINS, 6) || near(new int[] {SISYPHUS_FLOURISH, SISYPHUS_LAST}, 8) ? 0.35 : 0.0;
+		if (tick < 27) {
 			onGod(4.2, 1.7, 1.6, 0.0);
-			flareHalo(1.9F + tick * 0.05F);
+			flareHalo(1.9F + tick * 0.04F);
 			rays(spot.clone().add(0, 1.6, 0), 2);
-		} else if (tick < 44) {
+		} else if (tick < 60) {
 			wide(5.0, 3.5, shake);
-		} else if (tick < 62) {
+		} else if (tick < 73) {
 			onGod(2.0, 1.1, 1.1, shake);
-		} else if (tick < 86) {
+		} else if (tick < 120) {
 			wide(6.0, 4.5, shake);
-		} else if (tick < 106) {
+		} else if (tick < 140) {
 			onGod(3.4, 1.8, 1.8, shake);
-		} else if (tick < 124) {
+		} else if (tick < 150) {
+			wide(6.5, 4.0, shake);
+		} else if (tick < 196) {
 			onTarget(4.5, 2.2, shake);
 		} else {
 			wide(9.0, 6.0, 0.0);
 		}
 		for (int i = 0; i < SISYPHUS_COINS.length; i++) {
 			int at = SISYPHUS_COINS[i];
-			if (tick == at) {
+			if (tick == at - 4) {
 				Location center = centroid();
 				crescent(center, 3.5 + held.size() * 0.4, i % 2 == 0 ? -1 : 1, PALE);
 				spot.getWorld().playSound(center, Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1.5F, 0.5F);
 				spot.getWorld().playSound(center, Sound.ITEM_TRIDENT_RIPTIDE_3, SoundCategory.PLAYERS, 1.0F, 1.4F);
 			}
-			if (tick == at + 3) {
-				boolean last = i == SISYPHUS_COINS.length - 1;
-				if (last) {
-					pillar(target.getLocation(), 9, true);
-					whiteBurst(target.getLocation(), 1.5);
-					hit(target, 9.0);
-				} else {
-					for (LivingEntity foe : List.copyOf(held.keySet())) {
-						starburst(foe.getLocation().add(0, foe.getHeight() * 0.6, 0));
-						if (i % 2 == 1) {
-							pillar(foe.getLocation(), 7, false);
-						}
-						hit(foe, 4.0);
+			if (tick == at) {
+				for (LivingEntity foe : List.copyOf(held.keySet())) {
+					starburst(foe.getLocation().add(0, foe.getHeight() * 0.6, 0));
+					if (i % 2 == 1) {
+						pillar(foe.getLocation(), 7, false);
 					}
+					hit(foe, 4.0);
 				}
 			}
 		}
-		if (tick > 112 && tick % 3 == 0) {
+		if (tick == SISYPHUS_FLOURISH - 4) {
+			crescent(centroid(), 4.0 + held.size() * 0.4, 1, GOLD_WHITE);
+		}
+		if (tick == SISYPHUS_FLOURISH) {
+			for (LivingEntity foe : held.keySet()) {
+				starburst(foe.getLocation().add(0, foe.getHeight() * 0.6, 0));
+			}
+			whiteBurst(target.getLocation(), 0.8);
+		}
+		if (tick == SISYPHUS_LAST) {
+			// Coin V, on the main target alone: a great column of white light.
+			pillar(target.getLocation(), 10, true);
+			whiteBurst(target.getLocation(), 1.6);
+			hit(target, 9.0);
+		}
+		if (tick > SISYPHUS_LAST && tick < 216 && tick % 3 == 0) {
 			sparkle(target.getLocation(), 2.5);
 		}
 	}
@@ -450,39 +483,43 @@ final class BlackGodSkill {
 		return sum.multiply(1.0 / Math.max(1, held.size())).toLocation(spot.getWorld()).add(0, 1.0, 0);
 	}
 
-	// --- 강제 퇴장 -------------------------------------------------------------------
+	// --- 강제 퇴장 (13 s) ------------------------------------------------------------------
+
+	private static final int EXIT_CUT = 112;
+	private static final int EXIT_DISC = 200;
+	private static final int EXIT_HIT = 218;
 
 	private void forcedExit() {
-		if (tick < 30) {
-			onGod(3.0 - tick * 0.02, 1.7, 1.6, 0.0);
-			flareHalo(1.9F + tick * 0.04F);
-			if (tick % 4 == 0) {
-				panels(tick / 4);
+		if (tick < EXIT_CUT) {
+			onGod(3.2 - tick * 0.007, 1.7, 1.6, 0.0);
+			flareHalo(1.9F + tick * 0.012F);
+			if (tick % 6 == 0) {
+				panels(tick / 6);
 			}
 			if (tick == 0) {
 				spot.getWorld().playSound(spot, Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.5F, 0.6F);
 			}
-		} else if (tick < 74) {
-			onTarget(4.0, 1.6, tick >= 70 ? 0.5 : 0.0);
+		} else if (tick < EXIT_HIT + 4) {
+			onTarget(4.0, 1.6, tick >= EXIT_HIT ? 0.5 : 0.0);
 		} else {
-			onTarget(6.5 + (tick - 74) * 0.05, 3.0, tick < 82 ? 0.3 : 0.0);
+			onTarget(6.5 + (tick - EXIT_HIT) * 0.05, 3.0, tick < EXIT_HIT + 10 ? 0.3 : 0.0);
 		}
-		if (tick == 30) {
+		if (tick == EXIT_CUT + 4) {
 			Effects.staggered(target);
 			spot.getWorld().playSound(target.getLocation(), Sound.BLOCK_GLASS_BREAK, SoundCategory.PLAYERS, 1.2F, 0.5F);
 		}
-		if (tick >= 34 && tick < 62 && tick % 2 == 0) {
+		if (tick >= 140 && tick < EXIT_DISC && tick % 2 == 0) {
 			diagonalBeam(target.getLocation().add(0, 1.0, 0));
 		}
-		if (tick == 56) {
+		if (tick == EXIT_DISC) {
 			disc(target.getLocation().add(0, 6, 0), 3.5F);
 		}
-		if (tick == 70) {
+		if (tick == EXIT_HIT) {
 			pillar(target.getLocation(), 6, true);
 			whiteBurst(target.getLocation(), 1.2);
 			fixed(target, maxHealth(target) * 2.0);
 		}
-		if (tick > 70 && tick < 100 && tick % 3 == 0) {
+		if (tick > EXIT_HIT && tick < 255 && tick % 3 == 0) {
 			sparkle(target.getLocation(), 2.0);
 		}
 	}
@@ -490,7 +527,7 @@ final class BlackGodSkill {
 	/** Golden panels of light (like an error window) closing round the Black God. */
 	private void panels(int step) {
 		World world = spot.getWorld();
-		double radius = 2.2 - step * 0.12;
+		double radius = Math.max(1.0, 2.2 - step * 0.07);
 		for (int k = 0; k < 4; k++) {
 			double a = step * 0.35 + k * Math.PI / 2;
 			Vector center = godAt(1.3).add(new Vector(Math.cos(a) * radius, 0, Math.sin(a) * radius));
@@ -511,29 +548,31 @@ final class BlackGodSkill {
 		world.playSound(spot, Sound.BLOCK_AMETHYST_BLOCK_HIT, SoundCategory.PLAYERS, 1.0F, 0.5F + step * 0.1F);
 	}
 
-	// --- Shift+Delete ----------------------------------------------------------------
+	// --- Shift+Delete (17 s) ----------------------------------------------------------------
 
-	private static final int[] DELETE_COINS = {62, 88};
-	private static final int DELETE_LAST = 118;
+	private static final int[] DELETE_COINS = {190, 245};
+	private static final int DELETE_LAST = 272;
 
 	private void shiftDelete() {
-		if (tick < 28) {
+		if (tick < 32) {
 			onGod(5.0, 2.2, 1.8, 0.0);
 			rays(spot.clone().add(0, 1.6, 0), 3);
-		} else if (tick < 50) {
-			onGod(2.6 - (tick - 28) * 0.03, 1.7, 1.7, 0.0);
-			flareHalo(1.9F + (tick - 28) * 0.08F);
-			if (tick == 28) {
+		} else if (tick < 112) {
+			onGod(2.6 - (tick - 32) * 0.01, 1.7, 1.7, 0.0);
+			flareHalo(1.9F + (tick - 32) * 0.019F);
+			if (tick == 32) {
 				spot.getWorld().playSound(spot, Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.5F, 0.5F);
 			}
-		} else if (tick < DELETE_LAST + 12) {
-			boolean impact = tick >= DELETE_COINS[0] && tick < DELETE_COINS[0] + 4 || tick >= DELETE_COINS[1] && tick < DELETE_COINS[1] + 4
-					|| tick >= DELETE_LAST && tick < DELETE_LAST + 10;
+			if (tick % 5 == 0) {
+				rays(spot.clone().add(0, 1.6, 0), 2);
+			}
+		} else if (tick < 318) {
+			boolean impact = near(DELETE_COINS, 4) || tick >= DELETE_LAST && tick < DELETE_LAST + 12;
 			onTarget(4.2, 1.5, impact ? 0.5 : 0.0);
 		} else {
 			wide(8.0, 4.0, 0.0);
 		}
-		if (tick >= 50 && tick < 60 && tick % 2 == 0) {
+		if (tick >= 120 && tick < 176 && tick % 4 == 0) {
 			horizontalStreak(target.getLocation().add(0, 1.0 + (ThreadLocalRandom.current().nextDouble() - 0.5), 0));
 		}
 		for (int at : DELETE_COINS) {
@@ -550,7 +589,7 @@ final class BlackGodSkill {
 			disc(target.getLocation().add(0, 7, 0), 5.0F);
 		}
 		if (tick == DELETE_LAST) {
-			// The whole screen burns white.
+			// The whole screen burns white, for over two seconds.
 			overlay(FLASH);
 			pillar(target.getLocation(), 9, true);
 			whiteBurst(target.getLocation(), 2.5);
@@ -558,7 +597,11 @@ final class BlackGodSkill {
 			spot.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, target.getLocation().add(-2, 1, 0), 1);
 			fixed(target, maxHealth(target) * 2.0);
 		}
-		if (tick == DELETE_LAST + 16) {
+		if (tick > DELETE_LAST && tick < 318 && tick % 10 == 0) {
+			// Keep the white overlay up (the skill screen re-sends its own now and then).
+			overlay(FLASH);
+		}
+		if (tick == 318) {
 			clearOverlay();
 		}
 		if (tick > DELETE_LAST && tick < kind.length - 6 && tick % 3 == 0) {
@@ -566,42 +609,33 @@ final class BlackGodSkill {
 		}
 	}
 
-	// --- the lesser skills ----------------------------------------------------------------
+	// --- 하아…이제 좀 돌아가 주지? (4.8 s) ----------------------------------------------
 
-	/** The usual camera: on the Black God as it starts, over the shoulder for the coins, on the target for the last, then wide. */
-	private void usualCamera(int[] coins) {
-		boolean impact = false;
-		for (int at : coins) {
-			impact |= tick >= at && tick < at + 4;
-		}
-		double shake = impact ? 0.35 : 0.0;
-		int last = coins[coins.length - 1];
-		if (tick < 14) {
+	private static final int[] SIGH_COINS = {17, 66};
+
+	/** A white-gold crescent, a close look at the robe, then a pale crescent; each blow bursts on the target. */
+	private void sigh() {
+		double shake = near(SIGH_COINS, 4) ? 0.35 : 0.0;
+		if (tick < 12) {
 			onGod(3.0, 1.7, 1.6, 0.0);
 			flareHalo(1.9F + tick * 0.04F);
-		} else if (tick < last - 6) {
+		} else if (tick < 40) {
 			wide(5.5, 3.2, shake);
-		} else if (tick < last + 10) {
+		} else if (tick < 52) {
+			onGod(2.0, 1.1, 1.1, 0.0);
+		} else if (tick < 76) {
 			onTarget(4.0, 1.6, shake);
 		} else {
 			wide(7.5, 4.5, 0.0);
 		}
-	}
-
-	private Location targetMid() {
-		return target.getLocation().add(0, target.getHeight() * 0.6, 0);
-	}
-
-	private static final int[] SIGH_COINS = {18, 34};
-
-	/** 하아…이제 좀 돌아가 주지?: a white-gold crescent, then a pale one, each with a burst on the target. */
-	private void sigh() {
-		usualCamera(SIGH_COINS);
 		if (tick == SIGH_COINS[0] - 3) {
 			crescent(targetMid(), 2.4, 1, GOLD_WHITE);
 			swoosh();
 		}
-		if (tick == SIGH_COINS[1] - 3) {
+		if (tick == 45) {
+			rays(spot.clone().add(0, 1.6, 0), 4);
+		}
+		if (tick == SIGH_COINS[1] - 4) {
 			crescent(targetMid(), 2.6, -1, PALE);
 			swoosh();
 		}
@@ -613,12 +647,24 @@ final class BlackGodSkill {
 		}
 	}
 
-	private static final int[] CLOCK_COINS = {20, 44};
+	// --- 퇴근 좀 하자고. (3.3 s) ------------------------------------------------------------
 
-	/** 퇴근 좀 하자고.: a pale crescent and a great diagonal beam, then a clock face whose hand sweeps round. */
+	private static final int[] CLOCK_COINS = {30, 50};
+
+	/** A pale crescent and a great diagonal beam, then a clock face whose hand sweeps round. */
 	private void clockOut() {
-		usualCamera(CLOCK_COINS);
-		if (tick == CLOCK_COINS[0] - 4) {
+		double shake = near(CLOCK_COINS, 4) ? 0.35 : 0.0;
+		if (tick < 14) {
+			onGod(3.0, 1.7, 1.6, 0.0);
+			flareHalo(1.9F + tick * 0.04F);
+		} else if (tick < 36) {
+			wide(5.5, 3.2, shake);
+		} else if (tick < 58) {
+			onTarget(4.0, 1.6, shake);
+		} else {
+			wide(7.5, 4.5, 0.0);
+		}
+		if (tick == 24) {
 			crescent(targetMid(), 2.8, 1, PALE);
 			swoosh();
 		}
@@ -627,10 +673,10 @@ final class BlackGodSkill {
 			starburst(targetMid());
 			hit(target, 5.0);
 		}
-		if (tick >= CLOCK_COINS[1] - 12 && tick <= CLOCK_COINS[1] + 4) {
-			clockFace(targetMid(), 2.2, (tick - (CLOCK_COINS[1] - 12)) / 16.0);
+		if (tick >= 36 && tick <= 54) {
+			clockFace(targetMid(), 2.2, (tick - 36) / 16.0);
 		}
-		if (tick == CLOCK_COINS[1] - 12) {
+		if (tick == 36) {
 			spot.getWorld().playSound(target.getLocation(), Sound.BLOCK_BELL_RESONATE, SoundCategory.PLAYERS, 1.2F, 1.4F);
 		}
 		if (tick == CLOCK_COINS[1]) {
@@ -640,25 +686,40 @@ final class BlackGodSkill {
 		}
 	}
 
-	private static final int[] JUDGMENT_COINS = {26, 42, 64};
+	// --- '심판' (10.8 s) -------------------------------------------------------------------
+
+	private static final int[] JUDGMENT_COINS = {85, 100, 176};
 
 	/**
-	 * '심판': the Black God spreads its arms (close, from below), a pale
-	 * crescent, a white flash with golden bursts, then a red glitch pillar and a
-	 * great golden nail on the target, dealing more the more health the Black
-	 * God has lost (up to double).
+	 * A crescent as it opens, the Black God spreading its arms (close, from
+	 * below), a crescent and a burst, a white flash, a close look at the robe,
+	 * then a red glitch pillar and a great golden nail, dealing more the more
+	 * health the Black God has lost (up to double).
 	 */
 	private void judgment() {
-		if (tick < 22) {
+		double shake = near(JUDGMENT_COINS, 5) ? 0.35 : 0.0;
+		if (tick < 40) {
+			onGod(3.2, 1.7, 1.6, 0.0);
+		} else if (tick < 64) {
 			onGod(2.4, 0.6, 1.9, 0.0);
-			flareHalo(1.9F + tick * 0.06F);
+			flareHalo(1.9F + (tick - 40) * 0.05F);
 			if (tick % 3 == 0) {
 				rays(spot.clone().add(0, 1.6, 0), 3);
 			}
+		} else if (tick < 116) {
+			wide(5.5, 3.2, shake);
+		} else if (tick < 150) {
+			onGod(2.0, 1.1, 1.1, 0.0);
+		} else if (tick < 186) {
+			onTarget(4.0, 1.6, shake);
 		} else {
-			usualCamera(JUDGMENT_COINS);
+			wide(7.5, 4.5, 0.0);
 		}
-		if (tick == JUDGMENT_COINS[0] - 3) {
+		if (tick == 16) {
+			crescent(targetMid(), 2.6, -1, PALE);
+			swoosh();
+		}
+		if (tick == JUDGMENT_COINS[0] - 5) {
 			crescent(targetMid(), 2.8, 1, PALE);
 			swoosh();
 		}
@@ -670,7 +731,10 @@ final class BlackGodSkill {
 			whiteBurst(target.getLocation(), 0.8);
 			hit(target, 4.0);
 		}
-		if (tick >= JUDGMENT_COINS[2] - 6 && tick < JUDGMENT_COINS[2] + 10) {
+		if (tick == 104) {
+			goldenNail(target.getLocation());
+		}
+		if (tick >= 158 && tick < 172) {
 			glitchPillar(target.getLocation());
 		}
 		if (tick == JUDGMENT_COINS[2]) {
@@ -680,21 +744,42 @@ final class BlackGodSkill {
 		}
 	}
 
-	private static final int[] ATONE_COINS = {24, 44, 66};
+	// --- '속죄하라' (12.3 s) ---------------------------------------------------------------
 
-	/** '속죄하라': a pillar of golden light, a pale crescent, then a white tremor burst. */
+	private static final int[] ATONE_COINS = {47, 109, 218};
+
+	/** The halo blazing, a pillar of golden light, a great beam, the halo again, then a white tremor burst. */
 	private void atone() {
-		usualCamera(ATONE_COINS);
+		double shake = near(ATONE_COINS, 5) ? 0.35 : 0.0;
+		if (tick < 16) {
+			onGod(2.6, 1.7, 1.7, 0.0);
+		} else if (tick < 40) {
+			onGod(2.2, 1.8, 1.8, 0.0);
+			flareHalo(1.9F + (tick - 16) * 0.045F);
+		} else if (tick < 150) {
+			wide(5.5, 3.2, shake);
+		} else if (tick < 176) {
+			onGod(2.4, 1.8, 1.8, 0.0);
+			flareHalo(1.9F + (tick - 150) * 0.04F);
+		} else if (tick < 228) {
+			onTarget(4.0, 1.6, shake);
+		} else {
+			wide(7.5, 4.5, 0.0);
+		}
 		if (tick == ATONE_COINS[0]) {
 			goldPillar(target.getLocation());
 			starburst(targetMid());
 			hit(target, 4.0);
 		}
-		if (tick == ATONE_COINS[1] - 3) {
-			crescent(targetMid(), 2.6, -1, PALE);
+		if (tick == 80 || tick == 210) {
+			crescent(targetMid(), 2.6, tick == 80 ? -1 : 1, PALE);
 			swoosh();
 		}
+		if (tick == 98) {
+			whiteBurst(target.getLocation(), 0.6);
+		}
 		if (tick == ATONE_COINS[1]) {
+			beamSlash(targetMid());
 			starburst(targetMid());
 			hit(target, 4.0);
 		}
@@ -704,25 +789,37 @@ final class BlackGodSkill {
 			spot.getWorld().playSound(target.getLocation(), Sound.ITEM_MACE_SMASH_GROUND_HEAVY, SoundCategory.PLAYERS, 1.4F, 0.6F);
 			hit(target, 6.0);
 		}
-		if (tick == ATONE_COINS[2] + 5) {
+		if (tick == ATONE_COINS[2] + 8) {
 			clearOverlay();
 		}
 	}
 
-	private static final int[] PUNISH_COINS = {30, 50, 72};
+	// --- '형벌받으라' (11.3 s) -------------------------------------------------------------
+
+	private static final int[] PUNISH_COINS = {66, 110, 154};
+	private static final int PUNISH_FLOURISH = 190;
 	private ItemDisplay greatHalo;
 
-	/** '형벌받으라': a great halo blazes up over the field, a white flash, then a great diagonal beam comes down. */
+	/** A great halo blazes up over the field, a white flash, a great beam, the Black God close, then another beam and a burst. */
 	private void punish() {
-		if (tick < 26) {
-			wide(8.0, 4.0, 0.0);
+		double shake = near(PUNISH_COINS, 5) || tick >= PUNISH_FLOURISH && tick < PUNISH_FLOURISH + 8 ? 0.35 : 0.0;
+		if (tick < 20) {
+			onGod(2.6, 1.7, 1.7, 0.0);
+		} else if (tick < 106) {
+			wide(8.0, 4.0, shake);
+		} else if (tick < 122) {
+			onTarget(4.0, 1.6, shake);
+		} else if (tick < 140) {
+			onGod(2.4, 1.7, 1.7, 0.0);
+		} else if (tick < 205) {
+			onTarget(4.2, 1.8, shake);
 		} else {
-			usualCamera(PUNISH_COINS);
+			wide(8.0, 4.5, 0.0);
 		}
-		if (tick == 4) {
+		if (tick == 20) {
 			greatHalo = prop(spot.clone().add(0, 7, 0), "black_god_halo", 0.5F, true);
 			greatHalo.setBillboard(Display.Billboard.CENTER);
-			greatHalo.setInterpolationDuration(14);
+			greatHalo.setInterpolationDuration(40);
 			greatHalo.setInterpolationDelay(1);
 			greatHalo.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(9, 9, 9), new Quaternionf()));
 			spot.getWorld().playSound(spot, Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.5F, 0.5F);
@@ -733,10 +830,12 @@ final class BlackGodSkill {
 		if (tick == PUNISH_COINS[0]) {
 			starburst(targetMid());
 			pillar(target.getLocation(), 7, false);
+			whiteBurst(target.getLocation(), 0.7);
 			hit(target, 4.0);
 		}
 		if (tick == PUNISH_COINS[1]) {
-			whiteBurst(target.getLocation(), 0.9);
+			beamSlash(targetMid());
+			starburst(targetMid());
 			hit(target, 4.0);
 		}
 		if (tick == PUNISH_COINS[2] - 2) {
@@ -746,6 +845,12 @@ final class BlackGodSkill {
 			beamSlash(targetMid());
 			whiteBurst(target.getLocation(), 1.2);
 			hit(target, 6.0);
+		}
+		if (tick == PUNISH_FLOURISH) {
+			whiteBurst(target.getLocation(), 1.6);
+		}
+		if (tick > PUNISH_FLOURISH && tick < 215 && tick % 3 == 0) {
+			sparkle(target.getLocation(), 2.5);
 		}
 	}
 
@@ -1048,7 +1153,11 @@ final class BlackGodSkill {
 
 	private void finish() {
 		clearOverlay();
-		TotalDamage.finish(god);
+		if (kind.great()) {
+			TotalDamage.finish(god);
+		} else {
+			SkillOverlay.hide(god);
+		}
 		props.forEach(Entity::remove);
 		props.clear();
 		if (camera != null) {
