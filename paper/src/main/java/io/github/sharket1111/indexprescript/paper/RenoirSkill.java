@@ -16,12 +16,18 @@ import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Pose;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
 import io.papermc.paper.entity.TeleportFlag;
 import net.kyori.adventure.text.Component;
@@ -67,6 +73,7 @@ final class RenoirSkill {
 	private Cinematic camera;
 	private double cameraSide = Double.NaN;
 	private Vector leapFrom;
+	private ItemDisplay hammer;
 	private int tick;
 
 	private RenoirSkill(Player player, LivingEntity target, Kind kind) {
@@ -170,7 +177,7 @@ final class RenoirSkill {
 	}
 
 	private int endTick() {
-		return kind == Kind.SEVER ? 58 : 120;
+		return kind == Kind.SEVER ? SEVER_END : AGAIN_END;
 	}
 
 	private boolean tick() {
@@ -202,103 +209,154 @@ final class RenoirSkill {
 
 	// --- Sever Birth -------------------------------------------------------------
 
+	/*
+	 * Timings (ticks) measured from the in-game scene: the nails fall at 0.5 s, the
+	 * pillar of light at 1.35 s, the golden sweep at 2.65 s, the leap (cut-in) from
+	 * 3.9 s, the hammer overhead at 4.55 s and down at 5.1 s, the dome until 6.85 s.
+	 */
+	private static final int SEVER_NAILS = 10;
+	private static final int SEVER_COIN_1 = 27;
+	private static final int SEVER_STEP = 46;
+	private static final int SEVER_COIN_2 = 53;
+	private static final int SEVER_CROUCH = 76;
+	private static final int SEVER_LEAP = 78;
+	private static final int SEVER_SLAM = 102;
+	private static final int SEVER_END = 137;
+
 	private void sever() {
 		shootSide(3.4, severShake());
-		switch (tick) {
-			case 0 -> face();
-			case 2 -> {
-				// Two nails fall: one drives into the foe, the other strikes beside it.
-				RenoirHammer.driveNail(player, target);
-				PromisedNails.rain(target.getLocation(), 1.2, 2.4F, false);
-			}
-			case 8 -> coin(4.0, () -> pillar(target.getLocation()));
-			case 13 -> stepIn(1.6);
-			case 18 -> coin(4.0, () -> sweep(actor(), target, -30, 0));
-			case 24 -> pose(Pose.SNEAKING);
-			case 26 -> startLeap();
-			case 27, 28, 29, 30, 31, 32, 33, 34, 35 -> leap(tick - 26, 9, 2.6, 1.4);
-			case 36 -> {
+		if (tick == 0) {
+			face();
+		} else if (tick == SEVER_NAILS) {
+			// Two nails fall: one drives into the foe, the other strikes beside it.
+			RenoirHammer.driveNail(player, target);
+			PromisedNails.rain(target.getLocation(), 1.2, 2.4F, false);
+		} else if (tick == SEVER_COIN_1) {
+			coin(4.0, () -> pillar(target.getLocation()));
+		} else if (tick == SEVER_STEP) {
+			stepIn(1.6);
+		} else if (tick == SEVER_COIN_2) {
+			coin(4.0, () -> sweep(actor(), target, -30, 0));
+		} else if (tick == SEVER_CROUCH) {
+			pose(Pose.SNEAKING);
+		} else if (tick == SEVER_LEAP) {
+			startLeap();
+		} else if (tick > SEVER_LEAP && tick < SEVER_SLAM) {
+			if (tick == SEVER_LEAP + 3) {
 				pose(Pose.STANDING);
-				land(1.4);
-				coin(7.0, () -> {
-					sweep(actor(), target, 90, 80);
-					dome(target.getLocation(), 2.6);
-				});
-				RenoirHammer.addPreservation(player, 4);
 			}
-			default -> {
-				if (tick > 36 && tick < 52 && tick % 3 == 0) {
-					settle(target.getLocation(), 2.4);
-				}
-			}
+			leap(tick - SEVER_LEAP, SEVER_SLAM - SEVER_LEAP, 2.8, 1.4);
+		} else if (tick == SEVER_SLAM) {
+			land(1.4);
+			coin(7.0, () -> {
+				sweep(actor(), target, 90, 80);
+				dome(target.getLocation(), 2.6);
+			});
+			RenoirHammer.addPreservation(player, 4);
+		} else if (tick > SEVER_SLAM && tick < SEVER_END - 8 && tick % 3 == 0) {
+			settle(target.getLocation(), 2.4);
 		}
+		// The hammer: raised through the leap, overhead from 4.55 s, brought down onto the foe.
+		swingHammer(SEVER_LEAP + 4, SEVER_SLAM);
 	}
 
 	private double severShake() {
-		return tick >= 8 && tick < 11 || tick >= 36 && tick < 41 ? 0.6 : 0.0;
+		return tick >= SEVER_COIN_1 && tick < SEVER_COIN_1 + 3 || tick >= SEVER_SLAM && tick < SEVER_SLAM + 6 ? 0.6 : 0.0;
 	}
 
 	// --- Strike Again and Again --------------------------------------------------
 
+	/*
+	 * Timings (ticks) measured from the in-game scene: the field flashes and the
+	 * nails rain from 0.95 s, coin I at 2.2 s, the second nails and coin II at
+	 * 3.75 s, the leap (cut-in) from 4.95 s, the close-up from 5.5 s with the
+	 * hammer raised, the hammer brought down from 6.85 s, the slam at 7 s, the
+	 * field white until 7.85 s, the end at 9 s.
+	 */
+	private static final int AGAIN_FLASH = 19;
+	private static final int AGAIN_NAIL_1 = 24;
+	private static final int AGAIN_COIN_1 = 44;
+	private static final int AGAIN_NAIL_2 = 60;
+	private static final int AGAIN_STEP = 70;
+	private static final int AGAIN_COIN_2 = 75;
+	private static final int AGAIN_CROUCH = 92;
+	private static final int AGAIN_LEAP = 99;
+	private static final int AGAIN_CLOSE = 110;
+	private static final int AGAIN_DOWN = 137;
+	private static final int AGAIN_SLAM = 140;
+	private static final int AGAIN_END = 180;
+
 	private void again() {
 		framesAgain();
-		if (tick >= 4 && tick <= 34 && tick % 2 == 0) {
-			int drops = tick < 12 ? 2 : 3;
+		if (tick >= AGAIN_FLASH && tick <= AGAIN_COIN_2 && tick % 2 == 0) {
+			int drops = tick < AGAIN_FLASH + 10 ? 2 : 3;
 			for (int i = 0; i < drops; i++) {
 				PromisedNails.rain(center, AGAIN_RADIUS, 3.6F, true);
 			}
 		}
-		switch (tick) {
-			case 0 -> face();
-			case 2 -> flash(center);
-			case 10, 24 -> {
-				for (LivingEntity foe : List.copyOf(held.keySet())) {
-					if (PromisedNails.count(foe) < PromisedNails.MAX) {
-						RenoirHammer.driveNail(player, foe);
-					}
+		if (tick == 0) {
+			face();
+		} else if (tick == AGAIN_FLASH) {
+			flash(center);
+		} else if (tick == AGAIN_NAIL_1 || tick == AGAIN_NAIL_2) {
+			for (LivingEntity foe : List.copyOf(held.keySet())) {
+				if (PromisedNails.count(foe) < PromisedNails.MAX) {
+					RenoirHammer.driveNail(player, foe);
 				}
 			}
-			case 16 -> {
-				for (LivingEntity foe : List.copyOf(held.keySet())) {
-					hit(foe, 4.0, () -> pillar(foe.getLocation()));
-				}
-				shockRing(center, 4.0);
-				actor().swingMainHand();
+		} else if (tick == AGAIN_COIN_1) {
+			for (LivingEntity foe : List.copyOf(held.keySet())) {
+				hit(foe, 4.0, () -> pillar(foe.getLocation()));
 			}
-			case 30 -> {
-				// The second nails strike; coin II lands with the hammer's sweep after them.
-				for (LivingEntity foe : held.keySet()) {
-					pillar(foe.getLocation());
-				}
-				shockRing(center, 7.0);
+			shockRing(center, 4.0);
+			actor().swingMainHand();
+		} else if (tick == AGAIN_STEP) {
+			// The second nails strike; coin II lands with the hammer's sweep after them.
+			for (LivingEntity foe : held.keySet()) {
+				pillar(foe.getLocation());
 			}
-			case 32 -> stepIn(1.8);
-			case 33, 34, 35 -> spin(tick - 33);
-			case 36 -> {
-				face();
-				actor().swingMainHand();
-				sweep(actor(), target, -100, 0);
-				sweep(actor(), target, -100, 20);
-				whirl(actor());
-				for (LivingEntity foe : List.copyOf(held.keySet())) {
-					hit(foe, 4.0, null);
-				}
+			shockRing(center, 7.0);
+			stepIn(1.8);
+		} else if (tick > AGAIN_STEP + 1 && tick < AGAIN_COIN_2) {
+			spin(tick - AGAIN_STEP - 2);
+		} else if (tick == AGAIN_COIN_2) {
+			face();
+			actor().swingMainHand();
+			sweep(actor(), target, -100, 0);
+			sweep(actor(), target, -100, 20);
+			whirl(actor());
+			for (LivingEntity foe : List.copyOf(held.keySet())) {
+				hit(foe, 4.0, null);
 			}
-			case 40 -> pose(Pose.SNEAKING);
-			case 42 -> startLeap();
-			case 66 -> {
-				pose(Pose.STANDING);
-				land(1.5);
-			}
-			case 68 -> slam();
-			default -> {
-				if (tick > 42 && tick < 66) {
-					rise(tick - 42);
-				} else if (tick > 68 && tick < 104 && tick % 4 == 0) {
-					settle(center, AGAIN_RADIUS * 0.6);
-				}
-			}
+		} else if (tick == AGAIN_CROUCH) {
+			pose(Pose.SNEAKING);
+		} else if (tick == AGAIN_LEAP) {
+			pose(Pose.STANDING);
+			startLeap();
+		} else if (tick > AGAIN_LEAP && tick < AGAIN_DOWN) {
+			rise(tick - AGAIN_LEAP);
+		} else if (tick >= AGAIN_DOWN && tick < AGAIN_SLAM) {
+			// Coming down out of the air with the hammer.
+			fall(tick - AGAIN_DOWN, AGAIN_SLAM - AGAIN_DOWN);
+		} else if (tick == AGAIN_SLAM) {
+			land(1.5);
+			slam();
+		} else if (tick > AGAIN_SLAM && tick < AGAIN_END - 4 && tick % 4 == 0) {
+			settle(center, AGAIN_RADIUS * 0.6);
 		}
+		// The hammer: raised behind the head in the close-up, then brought down for the slam.
+		swingHammer(AGAIN_CLOSE + 8, AGAIN_SLAM);
+	}
+
+	/** Strike Again's descent from the top of the leap, onto the ground before the target. */
+	private void fall(int frame, int frames) {
+		double t = (frame + 1) / (double) (frames + 1);
+		Location here = actor().getLocation();
+		Location ground = held.getOrDefault(target, target.getLocation());
+		Vector goal = target.getLocation().toVector().subtract(towardTarget().multiply(1.5));
+		Vector spot = here.toVector().multiply(1 - t).add(goal.multiply(t));
+		place(spot, Math.max(0.0, (here.getY() - ground.getY()) * (1 - t)));
+		PromisedNails.glow(actor().getLocation().add(0, 1, 0), 3, 0.3);
 	}
 
 	/** Coin III: the white burst. Foes with 3+ nails take 3% more per nail (up to 90%) and lose them all. */
@@ -332,7 +390,7 @@ final class RenoirSkill {
 			Vector to = target.getLocation().toVector();
 			cameraSide = Math.atan2(from.getZ() - to.getZ(), from.getX() - to.getX()) + Math.PI / 2;
 		}
-		if (tick >= 46 && tick < 66) {
+		if (tick >= AGAIN_CLOSE && tick < AGAIN_DOWN) {
 			// Close-up: in front of the wielder's face, a little below, looking up at it.
 			Location eye = actor.getEyeLocation();
 			Vector facing = eye.getDirection().setY(0);
@@ -345,10 +403,115 @@ final class RenoirSkill {
 			camera.frame(at, eye.toVector(), 0.0);
 			return;
 		}
-		boolean impact = tick >= 16 && tick < 19 || tick >= 30 && tick < 32 || tick >= 36 && tick < 40 || tick >= 68 && tick < 76;
-		// Closer in for the hammer's sweep, wide for the rain and the slam.
-		double distance = tick >= 31 && tick < 42 ? 4.8 : tick < 46 ? 7.5 : 6.0;
+		boolean impact = tick >= AGAIN_FLASH && tick < AGAIN_FLASH + 3 || tick >= AGAIN_COIN_1 && tick < AGAIN_COIN_1 + 4
+				|| tick >= AGAIN_STEP && tick < AGAIN_STEP + 2 || tick >= AGAIN_COIN_2 && tick < AGAIN_COIN_2 + 4
+				|| tick >= AGAIN_SLAM && tick < AGAIN_SLAM + 10;
+		// Closer in for the hammer's sweep and the swing down, wide for the rain and the slam.
+		double distance = tick >= AGAIN_STEP && tick < AGAIN_CROUCH ? 4.8 : tick >= AGAIN_DOWN && tick < AGAIN_SLAM ? 5.0
+				: tick < AGAIN_CLOSE ? 7.5 : 6.5;
 		camera.frame(Cinematic.orbit(focus, cameraSide, distance, 3.0), focus, impact ? 0.8 : 0.0);
+	}
+
+	// --- the hammer swing --------------------------------------------------------
+
+	private static final float HAMMER_SCALE = 1.3F;
+	/** The grip on the hammer model (blocks from its centre, before scaling): low on the handle. */
+	private static final float HAMMER_GRIP = -0.7F;
+	private static final float HAMMER_RAISED = 60F;
+	private static final float[] HAMMER_DOWN = {20F, -40F, -95F, -130F};
+
+	/**
+	 * The great hammer, seen swung: from {@code raiseFrom} it comes up behind the
+	 * head (8 ticks) and is held there, then in the last 3 ticks before
+	 * {@code slamAt} it comes down over the shoulder, its head on the ground
+	 * before the wielder at {@code slamAt}; it stays there a moment after.
+	 * Angles are from upright, positive tilting back; it pivots at the right shoulder.
+	 */
+	private void swingHammer(int raiseFrom, int slamAt) {
+		int down = slamAt - (HAMMER_DOWN.length - 1);
+		if (tick < raiseFrom || tick > slamAt + 6) {
+			dropHammer();
+			return;
+		}
+		float angle;
+		if (tick >= down) {
+			angle = HAMMER_DOWN[Math.min(HAMMER_DOWN.length - 1, tick - down)];
+		} else {
+			double t = Math.min(1.0, (tick - raiseFrom) / 8.0);
+			double eased = 1 - (1 - t) * (1 - t);
+			angle = (float) (-100 + (HAMMER_RAISED + 100) * eased + (t >= 1 ? Math.sin(tick * 0.4) * 3 : 0));
+		}
+		showHammer(angle);
+		if (tick == down) {
+			Location at = actor().getLocation().add(0, 2, 0);
+			at.getWorld().playSound(at, Sound.ITEM_MACE_SMASH_AIR, SoundCategory.PLAYERS, 1.2F, 0.6F);
+			at.getWorld().playSound(at, Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1.0F, 0.5F);
+		}
+		if (tick > down && tick <= slamAt) {
+			// A golden trail along the hammer head's arc.
+			Location head = hammerHead(angle);
+			head.getWorld().spawnParticle(Particle.DUST, head, 8, 0.25, 0.25, 0.25, 0.0, GOLD);
+			head.getWorld().spawnParticle(Particle.END_ROD, head, 2, 0.2, 0.2, 0.2, 0.01);
+		}
+	}
+
+	private Location shoulder() {
+		LivingEntity actor = actor();
+		Vector forward = towardTarget();
+		Vector right = new Vector(-forward.getZ(), 0, forward.getX());
+		return actor.getLocation().add(0, actor.getHeight() * 0.8, 0).add(right.multiply(0.35));
+	}
+
+	private Quaternionf hammerRotation(float angle) {
+		Vector forward = towardTarget();
+		// The model's head lies along its X axis: turned so X points at the target, then tilted round the side axis.
+		return new Quaternionf().rotateY((float) Math.atan2(-forward.getZ(), forward.getX())).rotateZ((float) Math.toRadians(angle));
+	}
+
+	/** Where the hammer's head is at {@code angle}. */
+	private Location hammerHead(float angle) {
+		Vector3f head = hammerRotation(angle).transform(new Vector3f(0, (0.94F - HAMMER_GRIP) * HAMMER_SCALE, 0));
+		return shoulder().add(head.x, head.y, head.z);
+	}
+
+	private void showHammer(float angle) {
+		Location at = shoulder();
+		at.setYaw(0);
+		at.setPitch(0);
+		if (hammer == null || !hammer.isValid()) {
+			ItemStack held = player.getInventory().getItemInMainHand().clone();
+			hammer = at.getWorld().spawn(at, ItemDisplay.class, d -> {
+				d.setPersistent(false);
+				d.setItemStack(held);
+				d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
+				d.setTeleportDuration(1);
+				d.setBrightness(new Display.Brightness(15, 15));
+			});
+			LivingEntity actor = actor();
+			if (actor != player) {
+				// The stand-in's own hammer is put away while the great one swings.
+				actor.getEquipment().setItemInMainHand(null);
+			}
+		} else {
+			hammer.teleport(at);
+		}
+		Quaternionf rotation = hammerRotation(angle);
+		Vector3f grip = rotation.transform(new Vector3f(0, HAMMER_GRIP * HAMMER_SCALE, 0)).negate();
+		hammer.setInterpolationDelay(0);
+		hammer.setInterpolationDuration(1);
+		hammer.setTransformation(new Transformation(grip, rotation, new Vector3f(HAMMER_SCALE, HAMMER_SCALE, HAMMER_SCALE), new Quaternionf()));
+	}
+
+	private void dropHammer() {
+		if (hammer == null) {
+			return;
+		}
+		hammer.remove();
+		hammer = null;
+		LivingEntity actor = actor();
+		if (actor != player && actor.isValid()) {
+			actor.getEquipment().setItemInMainHand(player.getInventory().getItemInMainHand().clone());
+		}
 	}
 
 	// --- moves -------------------------------------------------------------------
@@ -530,6 +693,7 @@ final class RenoirSkill {
 	}
 
 	private void finish() {
+		dropHammer();
 		if (kind == Kind.AGAIN) {
 			TotalDamage.finish(player);
 		} else {
