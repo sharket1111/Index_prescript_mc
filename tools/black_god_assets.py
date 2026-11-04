@@ -4,7 +4,7 @@
 - the halo: a sunburst behind the head (a black disc in a white-gold glow,
   a stepped golden burst, dark spikes and long pale rays), drawn on one flat,
   glowing, two-sided element so an item display can carry it;
-- the robe: a 3D long black coat with wide drooping sleeves, a tall collar,
+- the robe: a 3D long black coat with wide drooping sleeves, a flared collar,
   pale and gold stripes, studs and black ribbons trailing to the ground,
   carried by an item display round the hidden body.
 
@@ -154,15 +154,16 @@ def robe_model():
     tiers = [(0, 5, 0.0, 1.0), (5, 10, 1.0, 2.0), (10, 15, 2.0, 3.0), (15, 22, 3.2, 3.8)]
     for y0, y1, inset_x, inset_z in tiers:
         m.box(0 + inset_x, y0, 1.2 + inset_z, 16 - inset_x, y1, 14.8 - inset_z, "black")
-    # The tall collar where the head would be: thin plates round an open middle, flaring out.
-    m.box(4.6, 22, 4.2, 11.4, 23.2, 11.8, "dark")
-    m.box(4.0, 22, 4.4, 4.9, 28.0, 11.6, "dark", {"angle": -22.5, "axis": "z", "origin": [4.5, 22, 8]})
-    m.box(11.1, 22, 4.4, 12.0, 28.0, 11.6, "dark", {"angle": 22.5, "axis": "z", "origin": [11.5, 22, 8]})
-    m.box(4.6, 22, 3.6, 11.4, 29.0, 4.5, "dark", {"angle": -22.5, "axis": "x", "origin": [8, 22, 4.0]})
-    m.box(4.6, 22, 11.5, 7.6, 27.0, 12.4, "dark", {"angle": 22.5, "axis": "x", "origin": [8, 22, 12.0]})
-    m.box(8.4, 22, 11.5, 11.4, 27.0, 12.4, "dark", {"angle": 22.5, "axis": "x", "origin": [8, 22, 12.0]})
-    m.box(7.6, 22, 11.6, 7.9, 26.8, 12.5, "pale", {"angle": 22.5, "axis": "x", "origin": [8, 22, 12.0]})
-    m.box(8.1, 22, 11.6, 8.4, 26.8, 12.5, "pale", {"angle": 22.5, "axis": "x", "origin": [8, 22, 12.0]})
+    # The collar: flaring plates round an open middle, kept below the eyes (1.62 blocks = 26 units)
+    # so that, worn, it never closes over the first-person view.
+    m.box(4.6, 22, 4.2, 11.4, 23.0, 11.8, "dark")
+    m.box(3.6, 22, 4.4, 4.5, 24.8, 11.6, "dark", {"angle": -22.5, "axis": "z", "origin": [4.1, 22, 8]})
+    m.box(11.5, 22, 4.4, 12.4, 24.8, 11.6, "dark", {"angle": 22.5, "axis": "z", "origin": [11.9, 22, 8]})
+    m.box(4.6, 22, 3.2, 11.4, 25.2, 4.1, "dark", {"angle": -22.5, "axis": "x", "origin": [8, 22, 3.6]})
+    m.box(4.6, 22, 11.9, 7.6, 24.6, 12.8, "dark", {"angle": 22.5, "axis": "x", "origin": [8, 22, 12.4]})
+    m.box(8.4, 22, 11.9, 11.4, 24.6, 12.8, "dark", {"angle": 22.5, "axis": "x", "origin": [8, 22, 12.4]})
+    m.box(7.6, 22, 12.0, 7.9, 24.4, 12.9, "pale", {"angle": 22.5, "axis": "x", "origin": [8, 22, 12.4]})
+    m.box(8.1, 22, 12.0, 8.4, 24.4, 12.9, "pale", {"angle": 22.5, "axis": "x", "origin": [8, 22, 12.4]})
     # Pale and gold stripes down the front and back of every tier, studs down the middle.
     for y0, y1, inset_x, inset_z in tiers:
         front, back = 14.8 - inset_z, 1.2 + inset_z

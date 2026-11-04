@@ -287,7 +287,11 @@ final class BlackGod implements Listener {
 		if (display != null) {
 			display.remove();
 		}
-		display = player.getWorld().spawn(player.getLocation().add(0, player.getHeight(), 0), ItemDisplay.class, d -> {
+		// Spawned unturned and level: the transformation alone turns it (a rider keeps the rotation it was spawned with).
+		Location at = player.getLocation().add(0, player.getHeight(), 0);
+		at.setYaw(0);
+		at.setPitch(0);
+		display = player.getWorld().spawn(at, ItemDisplay.class, d -> {
 			d.setPersistent(false);
 			d.setItemStack(model(name));
 			d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
@@ -338,9 +342,11 @@ final class BlackGod implements Listener {
 		halo.setInterpolationDelay(0);
 		halo.setTransformation(new Transformation(haloAt, turn, new Vector3f(HALO_SIZE, HALO_SIZE, HALO_SIZE), new Quaternionf()));
 		// The robe model's feet are its bottom; the rider sits at the top of the player.
-		Vector3f robeAt = new Vector3f(0, (float) (-player.getHeight() + 0.5 * ROBE_SIZE), 0);
+		// Squashed with the body when sneaking, so the eyes stay above the collar.
+		float tall = (float) (ROBE_SIZE * player.getHeight() / 1.8);
+		Vector3f robeAt = new Vector3f(0, (float) (-player.getHeight() + 0.5 * tall), 0);
 		robe.setInterpolationDelay(0);
-		robe.setTransformation(new Transformation(robeAt, new Quaternionf(turn), new Vector3f(ROBE_SIZE, ROBE_SIZE, ROBE_SIZE),
+		robe.setTransformation(new Transformation(robeAt, new Quaternionf(turn), new Vector3f(ROBE_SIZE, tall, ROBE_SIZE),
 				new Quaternionf()));
 	}
 
