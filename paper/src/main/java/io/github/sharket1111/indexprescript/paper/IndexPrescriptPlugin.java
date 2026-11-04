@@ -112,6 +112,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			case "caduceus" -> Items.caduceus(target);
 			case "terminal", "rien_terminal" -> Items.terminal(target);
 			case "laevatein" -> Items.laevatein(target);
+			case "hammer", "renoir_hammer" -> Items.renoirHammer(target);
 			default -> null;
 		};
 		if (item == null) {
@@ -205,7 +206,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		return switch (args.length) {
 			case 1 -> List.of("give", "pack", "laevatein", "sanity", "mang");
 			case 2 -> switch (args[0].toLowerCase(Locale.ROOT)) {
-				case "give" -> List.of("caduceus", "terminal", "laevatein");
+				case "give" -> List.of("caduceus", "terminal", "laevatein", "hammer");
 				case "laevatein" -> List.of("0", "1", "2", "3");
 				case "mang" -> List.of("1", "2", "3", "4", "5", "6");
 				default -> List.of();

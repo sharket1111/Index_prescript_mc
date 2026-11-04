@@ -27,6 +27,7 @@ final class Items {
 	static final String TERMINAL = "rien_terminal";
 	static final String LAEVATEIN = "laevatein";
 	static final String LAEVATEIN_ICON = "laevatein_icon";
+	static final String RENOIR_HAMMER = "renoir_hammer";
 	/** Laevatein release stages after the sealed state; the index is the stage number. */
 	static final List<String> LAEVATEIN_STAGES = List.of("sealed", "release_1", "release_2", "release_3");
 	static final int MAX_HERMES = 9;
@@ -68,6 +69,22 @@ final class Items {
 			meta.setRarity(ItemRarity.EPIC);
 		});
 		return stack;
+	}
+
+	/** The Brand Manager's hammer: a mace drawn as a great two-block hammer (no skills yet). */
+	static ItemStack renoirHammer(CommandSender viewer) {
+		ItemStack stack = ItemStack.of(Material.MACE);
+		stack.editMeta(meta -> {
+			tag(meta, RENOIR_HAMMER);
+			meta.itemName(Component.text(Messages.get(viewer, "item.renoir_hammer")));
+			meta.setRarity(ItemRarity.EPIC);
+			meta.setUnbreakable(true);
+		});
+		return stack;
+	}
+
+	static boolean isRenoirHammer(ItemStack stack) {
+		return is(stack, RENOIR_HAMMER);
 	}
 
 	/** Off-hand [Seal Release] icon whose stack size shows Laevatein's hits toward the next release. */
@@ -148,7 +165,7 @@ final class Items {
 	}
 
 	static boolean isWeapon(ItemStack stack) {
-		return isCaduceus(stack) || isLaevatein(stack);
+		return isCaduceus(stack) || isLaevatein(stack) || isRenoirHammer(stack);
 	}
 
 	/** The form or stage string first, then the Mang string; an empty first string stands for none. */

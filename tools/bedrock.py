@@ -33,6 +33,7 @@ ITEMS = [
     ("minecraft:iron_sword", "caduceus", ["hatchet", "stiletto", "bastard_sword", "rapier", "hammer", "greatsword",
                                          "lance", "whip", "scythe"], "카두케우스"),
     ("minecraft:netherite_sword", "laevatein", ["release_1", "release_2", "release_3"], "레바테인"),
+    ("minecraft:mace", "renoir_hammer", [], "르누아르의 망치"),
     ("minecraft:paper", "rien_terminal", [], "뤼엔의 단말기"),
     ("minecraft:paper", "laevatein_icon", [], "봉인 해제"),
 ]

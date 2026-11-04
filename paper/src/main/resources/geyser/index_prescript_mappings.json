@@ -213,6 +213,22 @@
 				]
 			}
 		],
+		"minecraft:mace": [
+			{
+				"type": "group",
+				"model": "index_prescript:renoir_hammer",
+				"definitions": [
+					{
+						"bedrock_identifier": "index_prescript:renoir_hammer",
+						"display_name": "르누아르의 망치",
+						"bedrock_options": {
+							"icon": "index_prescript.renoir_hammer",
+							"display_handheld": true
+						}
+					}
+				]
+			}
+		],
 		"minecraft:paper": [
 			{
 				"type": "group",

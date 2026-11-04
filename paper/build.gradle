@@ -57,7 +57,7 @@ def resourcePack = tasks.register('resourcePack', Zip) {
 		into 'assets'
 		exclude '**/lang/**', '**/icon.png'
 		// Replaced by the versions in pack/ that add Mang's ringed models (tools/mang_models.py).
-		exclude 'index_prescript/items/caduceus.json', 'index_prescript/items/laevatein.json'
+		exclude 'index_prescript/items/caduceus.json', 'index_prescript/items/laevatein.json', 'index_prescript/items/renoir_hammer.json'
 	}
 	// Plugin-only assets such as voice lines.
 	from('pack')

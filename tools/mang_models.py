@@ -32,7 +32,7 @@ ROOT = Path(__file__).resolve().parent.parent
 JAVA = ROOT / "src/main/resources/assets/index_prescript"
 PACK = ROOT / "paper/pack/assets/index_prescript"
 NS = "index_prescript"
-ITEMS = ["caduceus", "laevatein"]
+ITEMS = ["caduceus", "laevatein", "renoir_hammer"]
 MAX_RINGS = 6
 AXIS = 8.0
 # Where the rings may sit: above the guard, below the tip, and where the blade is slim enough.

@@ -1,0 +1,72 @@
+{
+	"model": {
+		"type": "minecraft:select",
+		"property": "minecraft:display_context",
+		"cases": [
+			{
+				"when": [
+					"gui",
+					"ground",
+					"fixed"
+				],
+				"model": {
+					"type": "minecraft:model",
+					"model": "index_prescript:item/renoir_hammer"
+				}
+			}
+		],
+		"fallback": {
+			"type": "minecraft:select",
+			"property": "minecraft:custom_model_data",
+			"index": 1,
+			"cases": [
+				{
+					"when": "mang1",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/renoir_hammer_3d_mang1"
+					}
+				},
+				{
+					"when": "mang2",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/renoir_hammer_3d_mang2"
+					}
+				},
+				{
+					"when": "mang3",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/renoir_hammer_3d_mang3"
+					}
+				},
+				{
+					"when": "mang4",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/renoir_hammer_3d_mang4"
+					}
+				},
+				{
+					"when": "mang5",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/renoir_hammer_3d_mang5"
+					}
+				},
+				{
+					"when": "mang6",
+					"model": {
+						"type": "minecraft:model",
+						"model": "index_prescript:item/renoir_hammer_3d_mang6"
+					}
+				}
+			],
+			"fallback": {
+				"type": "minecraft:model",
+				"model": "index_prescript:item/renoir_hammer_3d"
+			}
+		}
+	}
+}

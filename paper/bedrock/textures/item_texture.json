@@ -44,6 +44,9 @@
 		"index_prescript.laevatein_release_3": {
 			"textures": "textures/items/laevatein_release_3"
 		},
+		"index_prescript.renoir_hammer": {
+			"textures": "textures/items/renoir_hammer"
+		},
 		"index_prescript.rien_terminal": {
 			"textures": "textures/items/rien_terminal"
 		},
