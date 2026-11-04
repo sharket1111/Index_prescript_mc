@@ -54,6 +54,20 @@ def nail():
     write(PACK / NS / "models/item/promised_nail.json", {"textures": {"0": tex, "particle": tex}, "elements": elements})
     write(PACK / NS / "items/promised_nail.json", {"model": {"type": "minecraft:model", "model": f"{NS}:item/promised_nail"}})
 
+    # A half-see-through copy for Strike Again's rain of nails: the same shimmer at about 55% opacity.
+    glow = PACK / NS / "textures/item/mang_glow.png"
+    ghost = Image.open(glow).convert("RGBA")
+    alpha = ghost.getchannel("A").point(lambda a: int(a * 0.55))
+    ghost.putalpha(alpha)
+    ghost.save(PACK / NS / "textures/item/promised_nail_ghost.png")
+    (PACK / NS / "textures/item/promised_nail_ghost.png.mcmeta").write_text(
+        (PACK / NS / "textures/item/mang_glow.png.mcmeta").read_text())
+    ghost_tex = f"{NS}:item/promised_nail_ghost"
+    write(PACK / NS / "models/item/promised_nail_ghost.json",
+          {"textures": {"0": ghost_tex, "particle": ghost_tex}, "elements": elements})
+    write(PACK / NS / "items/promised_nail_ghost.json",
+          {"model": {"type": "minecraft:model", "model": f"{NS}:item/promised_nail_ghost"}})
+
 
 # --- the Black God's Voice icon ---------------------------------------------
 

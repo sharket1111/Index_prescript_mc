@@ -221,7 +221,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 				RenoirHammer.set(player, voice, preservation);
 			}
 		} catch (NumberFormatException e) {
-			sender.sendMessage(Component.text("/ip renoir [voice 0-50] [preservation 0-20]", NamedTextColor.RED));
+			sender.sendMessage(Component.text("/ip renoir [voice 0-100] [preservation 0-20]", NamedTextColor.RED));
 			return true;
 		}
 		sender.sendMessage(Component.text("Voice " + RenoirHammer.voice(player) + "/" + RenoirHammer.MAX_VOICE
@@ -237,7 +237,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 				case "give" -> List.of("caduceus", "terminal", "laevatein", "hammer");
 				case "laevatein" -> List.of("0", "1", "2", "3");
 				case "mang" -> List.of("1", "2", "3", "4", "5", "6");
-				case "renoir" -> List.of("0", "25", "50");
+				case "renoir" -> List.of("0", "50", "100");
 				default -> List.of();
 			};
 			default -> List.of();

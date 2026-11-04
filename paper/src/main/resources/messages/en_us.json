@@ -42,6 +42,6 @@
 	"item.black_god_voice": "Black God's Voice",
 	"renoir.sever": "Sever Birth!",
 	"renoir.again": "Strike Again and Again, Sever Birth!",
-	"renoir.cooldown": "Sever Birth is ready again in %s s.",
-	"renoir.no_target": "No enemy where you are looking."
+	"renoir.no_target": "No enemy where you are looking.",
+	"renoir.need_voice": "Needs at least 50 Black God's Voice (now %s)."
 }

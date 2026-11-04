@@ -95,7 +95,7 @@ final class Items {
 			tag(meta, BLACK_GOD_VOICE);
 			meta.itemName(Component.text(Messages.get(viewer, "item.black_god_voice")));
 			meta.setRarity(ItemRarity.RARE);
-			meta.setMaxStackSize(RenoirHammer.MAX_VOICE);
+			meta.setMaxStackSize(RenoirHammer.ICON_MAX_STACK);
 		});
 		return stack;
 	}

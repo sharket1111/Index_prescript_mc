@@ -41,7 +41,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
  * (coins I and II, a nail each), the wielder leaps high (close-up), then
  * slams down in a white burst (coin III, Preservation +4); foes with 3+ nails
  * take extra damage (3% of the hit per nail, up to 90%) and lose their nails.
- * It spends all of the Black God's Voice.
+ * Using either spends all of the Black God's Voice (Strike Again needs 100, Sever Birth 50).
  *
  * Coin power is +15% damage per point, as elsewhere in the plugin.
  */
@@ -209,7 +209,7 @@ final class RenoirSkill {
 			case 2 -> {
 				// Two nails fall: one drives into the foe, the other strikes beside it.
 				RenoirHammer.driveNail(player, target);
-				PromisedNails.rain(target.getLocation(), 1.2, 2.4F);
+				PromisedNails.rain(target.getLocation(), 1.2, 2.4F, false);
 			}
 			case 8 -> coin(4.0, () -> pillar(target.getLocation()));
 			case 13 -> stepIn(1.6);
@@ -245,7 +245,7 @@ final class RenoirSkill {
 		if (tick >= 4 && tick <= 34 && tick % 2 == 0) {
 			int drops = tick < 12 ? 2 : 3;
 			for (int i = 0; i < drops; i++) {
-				PromisedNails.rain(center, AGAIN_RADIUS, 3.6F);
+				PromisedNails.rain(center, AGAIN_RADIUS, 3.6F, true);
 			}
 		}
 		switch (tick) {
@@ -478,7 +478,6 @@ final class RenoirSkill {
 
 	private void finish() {
 		if (kind == Kind.AGAIN) {
-			RenoirHammer.setVoice(player, 0);
 			TotalDamage.finish(player);
 		} else {
 			SkillOverlay.hide(player);

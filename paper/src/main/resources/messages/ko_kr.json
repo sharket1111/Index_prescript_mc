@@ -42,6 +42,6 @@
 	"item.black_god_voice": "검은 신의 목소리",
 	"renoir.sever": "탄생을 끊으리라!",
 	"renoir.again": "거듭 내리쳐, 탄생을 끊으리라!",
-	"renoir.cooldown": "'탄생을 끊으리라'는 %s초 뒤에 다시 쓸 수 있습니다.",
-	"renoir.no_target": "바라보는 곳에 적이 없습니다."
+	"renoir.no_target": "바라보는 곳에 적이 없습니다.",
+	"renoir.need_voice": "검은 신의 목소리가 50 이상이어야 합니다. (지금 %s)"
 }

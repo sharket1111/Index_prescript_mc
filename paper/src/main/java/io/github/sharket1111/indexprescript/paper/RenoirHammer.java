@@ -44,11 +44,11 @@ import net.kyori.adventure.text.format.NamedTextColor;
  * - [Promised Nail]: three full normal hits in a row on the same foe drive a
  *   glowing nail into it from above (up to 10 per foe). A smash (the mace's
  *   falling attack) deals +1 damage per nail in the foe and spends them all.
- * - [Black God's Voice]: +5 for every hit on a foe, up to 50, shown as the
+ * - [Black God's Voice]: +5 for every hit on a foe, up to 100, shown as the
  *   stack size of an icon in the off hand while the hammer is held.
- * - Right-click (or swap-hands on Java) looking at a foe: with 50 Voice,
- *   "Strike Again and Again, Sever Birth" (every foe within 8 blocks of it,
- *   spending all Voice); otherwise "Sever Birth", once a turn (see {@link RenoirSkill}).
+ * - Right-click (or swap-hands on Java) looking at a foe, spending all Voice:
+ *   at 100, "Strike Again and Again, Sever Birth" (every foe within 8 blocks
+ *   of it); at 50 or more, "Sever Birth" (see {@link RenoirSkill}).
  * - [Preservation]: a count (up to 20) and a potency, shown as the Unluck
  *   effect renamed by the resource pack: its level is the potency and its
  *   time reads 10:SS with SS the count (10 minutes in front so the icon
@@ -59,13 +59,16 @@ import net.kyori.adventure.text.format.NamedTextColor;
  *   10 spent in all raises the potency by 1.
  */
 final class RenoirHammer implements Listener {
-	static final int MAX_VOICE = 50;
+	static final int MAX_VOICE = 100;
+	/** Voice needed for Sever Birth; the strong skill needs all {@link #MAX_VOICE}. */
+	static final int SEVER_VOICE = 50;
+	/** A stack holds at most 99, so 100 shows as 99 (with the glint and the value in the name). */
+	static final int ICON_MAX_STACK = 99;
 	static final int VOICE_PER_HIT = 5;
 	static final int MAX_PRESERVATION = 20;
 	static final int MAX_POTENCY = 10;
 	private static final int HITS_PER_NAIL = 3;
 	private static final int STREAK_TICKS = 60;
-	private static final int SEVER_COOLDOWN = CombatState.TURN_TICKS;
 	private static final int TARGET_RANGE = 8;
 	private static final int ICON_INTERVAL = 2;
 	private static final int STATUS_INTERVAL = 5;
@@ -78,7 +81,6 @@ final class RenoirHammer implements Listener {
 	/** Damage a smash just earned from the nails it spent, added when its damage comes. */
 	private static final Map<UUID, Integer> SMASH_BONUS = new ConcurrentHashMap<>();
 	private static final Map<UUID, Streak> STREAKS = new ConcurrentHashMap<>();
-	private static final Map<UUID, Long> SEVER_READY_AT = new ConcurrentHashMap<>();
 	private static long lastError = Long.MIN_VALUE / 2;
 
 	private record Streak(UUID foe, int hits, long at) {
@@ -204,8 +206,13 @@ final class RenoirHammer implements Listener {
 		}
 		boolean full = voice >= MAX_VOICE;
 		ItemStack shown = off.clone();
-		shown.setAmount(voice);
-		shown.editMeta(meta -> meta.setEnchantmentGlintOverride(full ? Boolean.TRUE : null));
+		shown.setAmount(Math.min(ICON_MAX_STACK, voice));
+		Component name = Component.text(Messages.get(player, "item.black_god_voice") + " " + voice + "/" + MAX_VOICE,
+				voice >= SEVER_VOICE ? NamedTextColor.GOLD : NamedTextColor.WHITE);
+		shown.editMeta(meta -> {
+			meta.setEnchantmentGlintOverride(full ? Boolean.TRUE : null);
+			meta.itemName(name);
+		});
 		if (!shown.equals(inventory.getItemInOffHand())) {
 			inventory.setItemInOffHand(shown);
 		}
@@ -364,18 +371,14 @@ final class RenoirHammer implements Listener {
 			player.sendActionBar(Component.text(Messages.get(player, "renoir.no_target"), NamedTextColor.GRAY));
 			return;
 		}
-		if (voice(player) >= MAX_VOICE) {
-			RenoirSkill.start(player, target, RenoirSkill.Kind.AGAIN);
+		int voice = voice(player);
+		if (voice < SEVER_VOICE) {
+			player.sendActionBar(Component.text(Messages.get(player, "renoir.need_voice", voice), NamedTextColor.GRAY));
 			return;
 		}
-		long now = CaduceusListener.now();
-		long ready = SEVER_READY_AT.getOrDefault(player.getUniqueId(), 0L);
-		if (now < ready) {
-			player.sendActionBar(Component.text(Messages.get(player, "renoir.cooldown", (ready - now + 19) / 20), NamedTextColor.GRAY));
-			return;
-		}
-		SEVER_READY_AT.put(player.getUniqueId(), now + SEVER_COOLDOWN);
-		RenoirSkill.start(player, target, RenoirSkill.Kind.SEVER);
+		// Either skill spends all of the Voice.
+		setVoice(player, 0);
+		RenoirSkill.start(player, target, voice >= MAX_VOICE ? RenoirSkill.Kind.AGAIN : RenoirSkill.Kind.SEVER);
 	}
 
 	@EventHandler

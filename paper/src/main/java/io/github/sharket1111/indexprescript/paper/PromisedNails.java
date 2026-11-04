@@ -74,8 +74,13 @@ final class PromisedNails {
 	}
 
 	static ItemStack model() {
+		return model(false);
+	}
+
+	/** The nail, or (ghost) its half-see-through version for Strike Again's rain. */
+	static ItemStack model(boolean ghost) {
 		ItemStack stack = ItemStack.of(Material.PAPER);
-		stack.editMeta(meta -> meta.setItemModel(new NamespacedKey(Items.NAMESPACE, "promised_nail")));
+		stack.editMeta(meta -> meta.setItemModel(new NamespacedKey(Items.NAMESPACE, ghost ? "promised_nail_ghost" : "promised_nail")));
 		return stack;
 	}
 
@@ -110,24 +115,24 @@ final class PromisedNails {
 			return;
 		}
 		Location start = top(foe).add(0, FALL_HEIGHT, 0);
-		FALLING.add(new Falling(spawnFalling(start, 2.4F), foe, null, amount));
+		FALLING.add(new Falling(spawnFalling(start, 2.4F, false), foe, null, amount));
 		foe.getWorld().playSound(start, Sound.ITEM_TRIDENT_RIPTIDE_1, SoundCategory.PLAYERS, 0.7F, 1.6F);
 	}
 
 	/** A great nail striking the ground near {@code center}, for the skills' rain of nails. */
-	static void rain(Location center, double radius, float scale) {
+	static void rain(Location center, double radius, float scale, boolean ghost) {
 		ThreadLocalRandom random = ThreadLocalRandom.current();
 		double angle = random.nextDouble(Math.PI * 2);
 		double distance = Math.sqrt(random.nextDouble()) * radius;
 		Location ground = center.clone().add(Math.cos(angle) * distance, 0, Math.sin(angle) * distance);
 		Location start = ground.clone().add(0, FALL_HEIGHT + 2, 0);
-		FALLING.add(new Falling(spawnFalling(start, scale), null, ground, 0));
+		FALLING.add(new Falling(spawnFalling(start, scale, ghost), null, ground, 0));
 	}
 
-	private static ItemDisplay spawnFalling(Location at, float scale) {
+	private static ItemDisplay spawnFalling(Location at, float scale, boolean ghost) {
 		return at.getWorld().spawn(at, ItemDisplay.class, display -> {
 			display.setPersistent(false);
-			display.setItemStack(model());
+			display.setItemStack(model(ghost));
 			display.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
 			display.setBrightness(new Display.Brightness(15, 15));
 			display.setTeleportDuration(1);
