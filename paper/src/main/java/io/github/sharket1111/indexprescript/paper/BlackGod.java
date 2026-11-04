@@ -58,8 +58,8 @@ import net.kyori.adventure.title.Title;
  *
  * Toggled with /ip blackgod or the Black God item. Turning it on saves the
  * player's whole inventory on the player (so a restart or a crash loses
- * nothing) and clears it; the mode's hotbar is "use skills" in slot 1 and
- * "leave" in slot 9. Right-clicking "use skills" lays the nine skills along
+ * nothing) and clears it; the mode's hotbar is the Black God's weapon (a
+ * hammer of white light, "use skills") in slot 1 and "leave" in slot 9. Right-clicking "use skills" lays the nine skills along
  * the hotbar; switching to a slot then (number key, scroll, a tap on
  * Bedrock) uses that slot's skill instead of moving, right-click uses the
  * one in hand, and the hotbar goes back. A Black God's body is hidden in a
@@ -139,9 +139,15 @@ final class BlackGod implements Listener {
 		return stack;
 	}
 
+	/** The Black God's weapon in slot 1, a hammer of white light (a 3D model): right-click lays out the skills. */
 	private static ItemStack useItem(Player viewer) {
-		return tagged(Material.NETHER_STAR, 1, USE, Component.text(Messages.get(viewer, "blackgod.use"), NamedTextColor.GOLD),
+		ItemStack stack = tagged(Material.MACE, 1, USE, Component.text(Messages.get(viewer, "blackgod.use"), TextColor.color(0xFFF0C0)),
 				List.of(line(Messages.get(viewer, "blackgod.use.desc"), NamedTextColor.GRAY)));
+		stack.editMeta(meta -> {
+			meta.setItemModel(new NamespacedKey(Items.NAMESPACE, "black_god_hammer"));
+			meta.setUnbreakable(true);
+		});
+		return stack;
 	}
 
 	private static ItemStack leaveItem(Player viewer) {

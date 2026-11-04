@@ -1,0 +1,23 @@
+{
+	"model": {
+		"type": "minecraft:select",
+		"property": "minecraft:display_context",
+		"cases": [
+			{
+				"when": [
+					"gui",
+					"ground",
+					"fixed"
+				],
+				"model": {
+					"type": "minecraft:model",
+					"model": "index_prescript:item/black_god_hammer"
+				}
+			}
+		],
+		"fallback": {
+			"type": "minecraft:model",
+			"model": "index_prescript:item/black_god_hammer_3d"
+		}
+	}
+}

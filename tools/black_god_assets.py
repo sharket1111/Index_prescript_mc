@@ -242,10 +242,62 @@ def glitch_frames(count=4, w=256, h=144):
     flash.save(PACK / "textures/misc/white_flash.png")
 
 
+# --- the weapon -------------------------------------------------------------------
+
+LIGHT_SWATCH = {
+    "black": (0, 0, (250, 246, 230)),
+    "dark": (4, 0, (236, 228, 198)),
+    "steel": (8, 0, (255, 250, 238)),
+    "steel_light": (12, 0, (255, 255, 255)),
+    "gold_light": (0, 4, (255, 238, 176)),
+    "gold": (4, 4, (242, 208, 124)),
+    "gold_dark": (8, 4, (218, 180, 100)),
+    "bronze": (12, 4, (232, 216, 172)),
+}
+
+
+def weapon():
+    """The Black God's weapon: the Brand Manager's two-block hammer made of white light."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import gen3d
+    import renoir_hammer
+    name = "black_god_hammer"
+    gen3d.make_texture(str(PACK / "textures/item" / f"{name}_3d.png"), LIGHT_SWATCH)
+    model = gen3d.to_json(renoir_hammer.model(), f"{name}_3d", LIGHT_SWATCH)
+    for element in model["elements"]:
+        element["light_emission"] = 15
+        element["shade"] = False
+    write(PACK / "models/item" / f"{name}_3d.json", model)
+    # The inventory sprite: the hammer's, turned to light (dark parts pale, gold kept warm).
+    sprite = Image.open(ROOT / "src/main/resources/assets/index_prescript/textures/item/renoir_hammer.png").convert("RGBA")
+    px = sprite.load()
+    for y in range(16):
+        for x in range(16):
+            r, g, b, a = px[x, y]
+            if a == 0:
+                continue
+            if max(r, g, b) < 70:
+                edge = (r, g, b) == (12, 12, 14)
+                px[x, y] = (150, 132, 90, 255) if edge else (250, 244, 224, 255)
+            else:
+                px[x, y] = (min(255, r + 30), min(255, g + 30), min(255, b + 20), 255)
+    sprite.save(PACK / "textures/item" / f"{name}.png")
+    write(PACK / "models/item" / f"{name}.json",
+          {"parent": "minecraft:item/handheld", "textures": {"layer0": f"{NS}:item/{name}"}})
+
+    def ref(model_name):
+        return {"type": "minecraft:model", "model": f"{NS}:item/{model_name}"}
+
+    write(PACK / "items" / f"{name}.json", {"model": {"type": "minecraft:select", "property": "minecraft:display_context",
+                                                      "cases": [{"when": ["gui", "ground", "fixed"], "model": ref(name)}],
+                                                      "fallback": ref(f"{name}_3d")}})
+
+
 if __name__ == "__main__":
     halo()
     robe3d()
     glitch_frames()
+    weapon()
     if len(sys.argv) > 1:
         sheet = Image.new("RGBA", (420, 200), (90, 96, 110, 255))
         h = Image.open(PACK / "textures/item/black_god_halo.png").resize((192, 192), Image.NEAREST)
