@@ -105,6 +105,16 @@ final class Cinematic {
 		return actor;
 	}
 
+	/** Whether {@code entity} is a running camera's stand-in (never a target). */
+	static boolean isActor(org.bukkit.entity.Entity entity) {
+		for (Cinematic cinematic : ACTIVE.values()) {
+			if (cinematic.actor == entity) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/** Where effects around {@code player} belong: their stand-in while a camera runs, else the player. */
 	static LivingEntity body(Player player) {
 		Cinematic cinematic = ACTIVE.get(player.getUniqueId());

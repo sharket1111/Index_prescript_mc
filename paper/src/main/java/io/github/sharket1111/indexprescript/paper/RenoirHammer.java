@@ -8,11 +8,9 @@ import java.util.logging.Level;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.NamespacedKey;
-import org.bukkit.damage.DamageType;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Mannequin;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -75,7 +73,8 @@ final class RenoirHammer implements Listener {
 	private static final NamespacedKey POTENCY = new NamespacedKey(Items.NAMESPACE, "renoir_preservation_potency");
 	private static final NamespacedKey SPENT = new NamespacedKey(Items.NAMESPACE, "renoir_preservation_spent");
 
-	private static final Map<UUID, Boolean> CHARGED = new ConcurrentHashMap<>();
+	/** Damage a smash just earned from the nails it spent, added when its damage comes. */
+	private static final Map<UUID, Integer> SMASH_BONUS = new ConcurrentHashMap<>();
 	private static final Map<UUID, Streak> STREAKS = new ConcurrentHashMap<>();
 	private static final Map<UUID, Long> SEVER_READY_AT = new ConcurrentHashMap<>();
 	private static long lastError = Long.MIN_VALUE / 2;
@@ -242,50 +241,40 @@ final class RenoirHammer implements Listener {
 
 	// --- hits ----------------------------------------------------------------
 
-	@EventHandler(ignoreCancelled = true)
+	/** No attacking mid-skill. */
+	@EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
 	public void onPreAttack(PrePlayerAttackEntityEvent event) {
-		Player player = event.getPlayer();
-		if (!holding(player)) {
-			return;
-		}
-		if (RenoirSkill.active(player)) {
+		if (holding(event.getPlayer()) && RenoirSkill.active(event.getPlayer())) {
 			event.setCancelled(true);
-			return;
 		}
-		CHARGED.put(player.getUniqueId(), Swings.accept(player));
 	}
 
-	private static boolean smash(EntityDamageByEntityEvent event) {
-		try {
-			if (event.getDamageSource().getDamageType() == DamageType.MACE_SMASH) {
-				return true;
-			}
-		} catch (RuntimeException ignored) {
-			// fall back on the fall distance below
-		}
-		return event.getDamager() instanceof Player player && player.getFallDistance() > 1.5F;
+	/** A smash: the mace's falling attack (falling more than 1.5 blocks, not gliding). */
+	private static boolean smashing(Player player) {
+		return player.getFallDistance() > 1.5F && !player.isGliding() && !player.isFlying();
 	}
 
-	/** Smashes spend the foe's nails for damage; full normal hits build toward the next nail; every hit gives Voice. */
-	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-	public void onHit(EntityDamageByEntityEvent event) {
-		if (Damage.dealing() || event.getCause() != EntityDamageEvent.DamageCause.ENTITY_ATTACK
-				&& event.getCause() != EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK) {
+	/**
+	 * Every attack on a foe, read when it is made rather than from the damage
+	 * (training dummies are often invulnerable or cancel the damage, so it
+	 * may never come): a smash spends the foe's nails (their damage is added
+	 * below); a full normal hit builds toward the next nail; full swings give Voice.
+	 */
+	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+	public void onAttack(PrePlayerAttackEntityEvent event) {
+		Player player = event.getPlayer();
+		if (!holding(player) || !(event.getAttacked() instanceof LivingEntity foe) || !foe(player, foe)) {
 			return;
 		}
-		if (!(event.getDamager() instanceof Player player) || !(event.getEntity() instanceof LivingEntity foe) || !holding(player)
-				|| !foe(player, foe)) {
-			return;
-		}
-		boolean charged = Boolean.TRUE.equals(CHARGED.remove(player.getUniqueId()));
-		if (smash(event)) {
+		boolean full = Swings.accept(player);
+		if (smashing(player)) {
 			int nails = PromisedNails.spend(foe);
 			if (nails > 0) {
-				event.setDamage(event.getDamage() + nails);
+				SMASH_BONUS.put(player.getUniqueId(), nails);
 				RenoirSkill.nailSmash(foe, nails);
 			}
 			STREAKS.remove(player.getUniqueId());
-		} else if (charged && event.getCause() == EntityDamageEvent.DamageCause.ENTITY_ATTACK) {
+		} else if (full) {
 			long now = CaduceusListener.now();
 			Streak streak = STREAKS.get(player.getUniqueId());
 			int hits = streak != null && streak.foe().equals(foe.getUniqueId()) && now - streak.at() <= STREAK_TICKS ? streak.hits() + 1 : 1;
@@ -296,12 +285,28 @@ final class RenoirHammer implements Listener {
 				}
 			} else {
 				STREAKS.put(player.getUniqueId(), new Streak(foe.getUniqueId(), hits, now));
+				foe.getWorld().spawnParticle(org.bukkit.Particle.DUST, foe.getLocation().add(0, foe.getHeight() + 0.3, 0),
+						3 * hits, 0.2, 0.1, 0.2, 0.0, PromisedNails.GOLD);
 			}
 		}
-		int before = voice(player);
-		setVoice(player, before + VOICE_PER_HIT);
-		if (before < MAX_VOICE && voice(player) >= MAX_VOICE) {
-			RenoirSkill.voiceFull(player);
+		if (full || smashing(player)) {
+			int before = voice(player);
+			setVoice(player, before + VOICE_PER_HIT);
+			if (before < MAX_VOICE && voice(player) >= MAX_VOICE) {
+				RenoirSkill.voiceFull(player);
+			}
+		}
+	}
+
+	/** The smash's damage: +1 per nail it spent. */
+	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+	public void onHit(EntityDamageByEntityEvent event) {
+		if (Damage.dealing() || !(event.getDamager() instanceof Player player)) {
+			return;
+		}
+		Integer nails = SMASH_BONUS.remove(player.getUniqueId());
+		if (nails != null && event.getCause() == EntityDamageEvent.DamageCause.ENTITY_ATTACK) {
+			event.setDamage(event.getDamage() + nails);
 		}
 	}
 
@@ -309,11 +314,11 @@ final class RenoirHammer implements Listener {
 
 	/** Something the skills may strike: alive, not the wielder or a stand-in, not a spectator. */
 	static boolean foe(Player player, Entity entity) {
-		if (!(entity instanceof LivingEntity living) || entity == player || entity == Cinematic.body(player)
-				|| entity instanceof ArmorStand || entity instanceof Mannequin || !living.isValid() || living.isDead()
-				|| living.isInvulnerable()) {
+		if (!(entity instanceof LivingEntity living) || entity == player || Cinematic.isActor(entity)
+				|| entity instanceof ArmorStand stand && stand.isMarker() || !living.isValid() || living.isDead()) {
 			return false;
 		}
+		// Training dummies count (armour stands, mannequins, invulnerable mobs); spectators and creative players do not.
 		return !(living instanceof Player other)
 				|| other.getGameMode() != GameMode.CREATIVE && other.getGameMode() != GameMode.SPECTATOR;
 	}
