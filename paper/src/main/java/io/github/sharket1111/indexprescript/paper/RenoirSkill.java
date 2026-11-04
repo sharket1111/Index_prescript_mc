@@ -258,12 +258,31 @@ final class RenoirSkill {
 					}
 				}
 			}
-			case 16, 30 -> {
+			case 16 -> {
 				for (LivingEntity foe : List.copyOf(held.keySet())) {
 					hit(foe, 4.0, () -> pillar(foe.getLocation()));
 				}
-				shockRing(center, tick == 16 ? 4.0 : 7.0);
+				shockRing(center, 4.0);
 				actor().swingMainHand();
+			}
+			case 30 -> {
+				// The second nails strike; coin II lands with the hammer's sweep after them.
+				for (LivingEntity foe : held.keySet()) {
+					pillar(foe.getLocation());
+				}
+				shockRing(center, 7.0);
+			}
+			case 32 -> stepIn(1.8);
+			case 33, 34, 35 -> spin(tick - 33);
+			case 36 -> {
+				face();
+				actor().swingMainHand();
+				sweep(actor(), target, -100, 0);
+				sweep(actor(), target, -100, 20);
+				whirl(actor());
+				for (LivingEntity foe : List.copyOf(held.keySet())) {
+					hit(foe, 4.0, null);
+				}
 			}
 			case 40 -> pose(Pose.SNEAKING);
 			case 42 -> startLeap();
@@ -326,8 +345,9 @@ final class RenoirSkill {
 			camera.frame(at, eye.toVector(), 0.0);
 			return;
 		}
-		boolean impact = tick >= 16 && tick < 19 || tick >= 30 && tick < 33 || tick >= 68 && tick < 76;
-		double distance = tick < 46 ? 7.5 : 6.0;
+		boolean impact = tick >= 16 && tick < 19 || tick >= 30 && tick < 32 || tick >= 36 && tick < 40 || tick >= 68 && tick < 76;
+		// Closer in for the hammer's sweep, wide for the rain and the slam.
+		double distance = tick >= 31 && tick < 42 ? 4.8 : tick < 46 ? 7.5 : 6.0;
 		camera.frame(Cinematic.orbit(focus, cameraSide, distance, 3.0), focus, impact ? 0.8 : 0.0);
 	}
 
@@ -416,6 +436,39 @@ final class RenoirSkill {
 			world.spawnParticle(Particle.END_ROD, at, 4, 0.5, 0.6, 0.5, 0.02);
 			world.playSound(at, Sound.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.PLAYERS, 0.8F, 0.5F + frame * 0.03F);
 		}
+	}
+
+	/**
+	 * Winding up the sweep: the body turns away and round (a quarter turn a
+	 * frame) with the hammer swung back, golden sparks trailing it.
+	 */
+	private void spin(int frame) {
+		LivingEntity actor = actor();
+		Location at = actor.getLocation();
+		Vector toward = towardTarget();
+		double base = Math.toDegrees(Math.atan2(-toward.getX(), toward.getZ()));
+		at.setYaw((float) (base + 90 * (frame + 1)));
+		at.setPitch(0);
+		actor.teleport(at);
+		if (frame == 0) {
+			actor.swingMainHand();
+		}
+		Location hammer = at.clone().add(0, 1.2, 0).add(at.getDirection().multiply(-1.2));
+		actor.getWorld().spawnParticle(Particle.DUST, hammer, 6, 0.2, 0.2, 0.2, 0.0, GOLD);
+		actor.getWorld().playSound(at, Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 0.5F, 0.5F + frame * 0.15F);
+	}
+
+	/** The sweep's wake: sweep marks all round the wielder and a ring of golden dust. */
+	private static void whirl(LivingEntity actor) {
+		Location at = actor.getLocation().add(0, 1.0, 0);
+		World world = actor.getWorld();
+		for (int i = 0; i < 8; i++) {
+			double a = i * Math.PI / 4;
+			world.spawnParticle(Particle.SWEEP_ATTACK, at.clone().add(Math.cos(a) * 2.0, 0, Math.sin(a) * 2.0), 1, 0, 0, 0, 0.0);
+		}
+		ringAt(actor.getLocation(), 2.6, PALE_GOLD);
+		world.playSound(at, Sound.ITEM_MACE_SMASH_AIR, SoundCategory.PLAYERS, 1.0F, 0.8F);
+		world.playSound(at, Sound.BLOCK_ANVIL_LAND, SoundCategory.PLAYERS, 0.6F, 0.9F);
 	}
 
 	/** Comes down to the ground {@code distance} blocks before the target. */

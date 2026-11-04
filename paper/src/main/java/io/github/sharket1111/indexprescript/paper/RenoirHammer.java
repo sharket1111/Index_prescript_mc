@@ -39,7 +39,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
- * The Brand Manager's hammer (fan-made, after Limbus Company), on a mace.
+ * The Brand Manager's hammer (fan-made, after Limbus Company), on a mace
+ * with a sword's attack speed.
  *
  * - [Promised Nail]: three full normal hits in a row on the same foe drive a
  *   glowing nail into it from above (up to 10 per foe). A smash (the mace's
@@ -168,6 +169,13 @@ final class RenoirHammer implements Listener {
 				}
 				if (now % STATUS_INTERVAL == 0) {
 					showPreservation(player);
+				}
+				if (now % 20 == 0) {
+					// Hammers made before they had a sword's attack speed get it in hand.
+					ItemStack held = player.getInventory().getItemInMainHand();
+					if (Items.isRenoirHammer(held) && Items.hammerStats(held)) {
+						player.getInventory().setItemInMainHand(held);
+					}
 				}
 			} catch (RuntimeException e) {
 				if (now - lastError > 200) {

@@ -3,6 +3,9 @@ package io.github.sharket1111.indexprescript.paper;
 import java.util.List;
 
 import org.bukkit.Material;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.CommandSender;
 import org.bukkit.inventory.ItemRarity;
@@ -81,7 +84,31 @@ final class Items {
 			meta.setRarity(ItemRarity.EPIC);
 			meta.setUnbreakable(true);
 		});
+		hammerStats(stack);
 		return stack;
+	}
+
+	/** A mace's damage (6) at a sword's attack speed (1.6) instead of the mace's slow 0.6. */
+	private static final double HAMMER_DAMAGE = 5.0;
+	private static final double HAMMER_SPEED = -2.4;
+
+	/** Gives the hammer a sword's attack speed; returns false if it already had it. */
+	static boolean hammerStats(ItemStack stack) {
+		ItemMeta current = stack.getItemMeta();
+		if (current.hasAttributeModifiers() && current.getAttributeModifiers(Attribute.ATTACK_SPEED) != null
+				&& current.getAttributeModifiers(Attribute.ATTACK_SPEED).stream().anyMatch(m -> m.getAmount() == HAMMER_SPEED)) {
+			return false;
+		}
+		stack.editMeta(meta -> {
+			meta.removeAttributeModifier(Attribute.ATTACK_DAMAGE);
+			meta.removeAttributeModifier(Attribute.ATTACK_SPEED);
+			// The vanilla keys, so the tooltip shows them like any weapon's own stats.
+			meta.addAttributeModifier(Attribute.ATTACK_DAMAGE, new AttributeModifier(NamespacedKey.minecraft("base_attack_damage"),
+					HAMMER_DAMAGE, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.MAINHAND));
+			meta.addAttributeModifier(Attribute.ATTACK_SPEED, new AttributeModifier(NamespacedKey.minecraft("base_attack_speed"),
+					HAMMER_SPEED, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.MAINHAND));
+		});
+		return true;
 	}
 
 	static boolean isRenoirHammer(ItemStack stack) {
