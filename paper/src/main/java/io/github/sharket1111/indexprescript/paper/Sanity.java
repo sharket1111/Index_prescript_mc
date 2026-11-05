@@ -19,6 +19,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
  * Sanity (SP, -45 to 45), as in Limbus Company, kept for every player:
  * - landing a hit on a creature: +{@link #HIT_GAIN}; being hit by one: -{@link #HURT_LOSS}
  * - winning or losing a clash: up or down by how many rounds it took (see {@link Clash})
+ * - slaying a creature: +{@link #KILL_GAIN}
  * - after {@link #CALM_TICKS} out of combat it drifts back to 0, a point a second
  * - a coin lands heads with a chance of 50% + SP%
  * Shown at the bottom left of the screen (see {@link Hud}). Creatures other
@@ -29,6 +30,7 @@ final class Sanity implements Listener {
 	static final int MAX = 45;
 	static final int HIT_GAIN = 2;
 	static final int HURT_LOSS = 2;
+	static final int KILL_GAIN = 10;
 	static final int CALM_TICKS = 30 * 20;
 	private static final Map<UUID, Integer> VALUES = new ConcurrentHashMap<>();
 	private static final Map<UUID, Long> LAST_FIGHT = new ConcurrentHashMap<>();
@@ -103,6 +105,16 @@ final class Sanity implements Listener {
 		fought(victim);
 		add(attacker, HIT_GAIN);
 		lose(victim, HURT_LOSS);
+	}
+
+	/** The original: slaying a foe gives 10. */
+	@EventHandler(priority = EventPriority.MONITOR)
+	public void onKill(org.bukkit.event.entity.EntityDeathEvent event) {
+		Player killer = event.getEntity().getKiller();
+		if (killer != null && killer != event.getEntity()) {
+			add(killer, KILL_GAIN);
+			fought(killer);
+		}
 	}
 
 	@EventHandler

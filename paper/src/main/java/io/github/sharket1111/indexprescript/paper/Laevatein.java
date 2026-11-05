@@ -613,7 +613,8 @@ final class Laevatein implements Listener {
 
 		private void strike(double damage, int fireTicks, Runnable effect) {
 			// Each strike is a coin: flipped as it lands, skipped if destroyed in a clash.
-			if (!Clash.coin(player, coinIndex++)) {
+			SkillCard card = stage == 1 ? SkillCard.RELEASE_1 : stage == 2 ? SkillCard.RELEASE_2 : SkillCard.RELEASE_3;
+			if (!Clash.coin(player, Math.min(coinIndex++, card.coins() - 1))) {
 				return;
 			}
 			if (camera != null) {

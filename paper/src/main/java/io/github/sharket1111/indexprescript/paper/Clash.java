@@ -47,6 +47,8 @@ import net.kyori.adventure.title.Title;
  * Every round both flip their unbroken coins (heads 50% + Sanity%), power =
  * base + heads x coin power, and the lower side loses its last unbroken coin
  * (a tie loses none), until one side has none left.
+ * Sanity: the winner gains 10 (+20% per round from the second), the loser
+ * loses 2 (+5% per round from the second).
  * - A plain coin lost is destroyed (it cracks, splits and shatters).
  * - An unbreakable coin (red, or green for executions) is only broken: it
  *   leaves the clash but still strikes, with half the coin power. A green
@@ -486,8 +488,13 @@ final class Clash {
 
 	private static void win(Duel duel, Side winner, Side loser) {
 		int rounds = Math.max(1, duel.rounds);
-		int gain = Math.min(25, 3 + 3 * rounds);
-		int loss = Math.min(20, 2 + 2 * rounds);
+		// The original: a win gives 10, 20% more per round from the second; a loss takes 2, 5% more per round.
+		int gain = (int) Math.round(10 * (1 + 0.2 * (rounds - 1)));
+		int loss = (int) Math.round(2 * (1 + 0.05 * (rounds - 1)));
+		if (Matthias.superGrit(winner.player)) {
+			// [Super Grit]: rounds x 5 more (up to 15).
+			gain += Math.min(15, rounds * 5);
+		}
 		Sanity.add(winner.player, gain);
 		Sanity.lose(loser.player, loss);
 		Sanity.fought(winner.player);
