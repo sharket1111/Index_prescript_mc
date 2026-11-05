@@ -161,6 +161,28 @@ def banner(part):
     return img
 
 
+DIGITS3x5 = {
+    "0": ["111", "101", "101", "101", "111"], "1": ["010", "110", "010", "010", "111"],
+    "2": ["111", "001", "111", "100", "111"], "3": ["111", "001", "111", "001", "111"],
+    "4": ["101", "101", "111", "001", "001"], "5": ["111", "100", "111", "001", "111"],
+    "6": ["111", "100", "111", "101", "111"], "7": ["111", "001", "010", "010", "010"],
+    "8": ["111", "101", "111", "101", "111"], "9": ["111", "101", "111", "001", "111"],
+    "-": ["000", "000", "111", "000", "000"],
+}
+
+
+def small_pixels(s):
+    pixels = []
+    x = 0
+    for ch in s:
+        for cy, row in enumerate(DIGITS3x5[ch]):
+            for cx, bit in enumerate(row):
+                if bit == "1":
+                    pixels.append((x + cx, cy))
+        x += 4
+    return pixels, x - 1
+
+
 def sp_circle(value, size):
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
@@ -168,8 +190,12 @@ def sp_circle(value, size):
     ring = (170, 210, 255) if value >= 0 else (255, 150, 150)
     d.ellipse([0, 0, size - 1, size - 1], fill=(15, 15, 25, 255))
     d.ellipse([1, 1, size - 2, size - 2], fill=fill + (255,), outline=ring + (255,))
-    pixels, width = digits_pixels(str(value), scale=1, gap=1)
-    outlined(img, pixels, (size - width) // 2, (size - 7) // 2, (255, 255, 255, 255), (10, 10, 30, 255))
+    if size < 20:
+        pixels, width = small_pixels(str(value))
+        outlined(img, pixels, (size - width) // 2, (size - 5) // 2, (255, 255, 255, 255), (10, 10, 30, 255))
+    else:
+        pixels, width = digits_pixels(str(value), scale=1, gap=1)
+        outlined(img, pixels, (size - width) // 2, (size - 7) // 2, (255, 255, 255, 255), (10, 10, 30, 255))
     return img
 
 
