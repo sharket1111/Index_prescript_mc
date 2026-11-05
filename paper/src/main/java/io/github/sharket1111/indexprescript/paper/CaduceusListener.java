@@ -13,6 +13,9 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 import io.papermc.paper.event.player.PrePlayerAttackEntityEvent;
@@ -57,6 +60,31 @@ final class CaduceusListener implements Listener {
 			}
 		}
 		REVERT_AT.remove(player.getUniqueId());
+	}
+
+	private static final Map<UUID, Long> RIGHT_CLICKED = new ConcurrentHashMap<>();
+
+	/** Right-click with Caduceus (not sneaking): the skill [Hermes] picks (RienSkill). */
+	@EventHandler
+	public void onRightClick(PlayerInteractEvent event) {
+		if (event.getHand() != EquipmentSlot.HAND
+				|| event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
+			return;
+		}
+		Player player = event.getPlayer();
+		if (player.isSneaking() || !Items.isCaduceus(player.getInventory().getItemInMainHand())) {
+			return;
+		}
+		if (event.getAction() == Action.RIGHT_CLICK_BLOCK && event.getClickedBlock() != null && event.getClickedBlock().getType().isInteractable()) {
+			return;
+		}
+		long now = now();
+		Long last = RIGHT_CLICKED.put(player.getUniqueId(), now);
+		if (last != null && now - last < 10) {
+			return;
+		}
+		event.setCancelled(true);
+		RienSkill.use(player);
 	}
 
 	@EventHandler(ignoreCancelled = true)

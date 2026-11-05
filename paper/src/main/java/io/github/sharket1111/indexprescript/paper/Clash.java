@@ -294,6 +294,7 @@ final class Clash {
 			return false;
 		}
 		if (LaevateinSkill.active(player) || RenoirSkill.active(player) || Furioso.active(player) || BlackGodSkill.active(player)
+				|| RienSkill.active(player)
 				|| Laevatein.busy(player) || BlackGodRevive.reviving(player)) {
 			return false;
 		}

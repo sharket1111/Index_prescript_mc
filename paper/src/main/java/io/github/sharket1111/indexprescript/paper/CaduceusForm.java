@@ -68,6 +68,10 @@ enum CaduceusForm {
 		this.coinBonus = coinBonus;
 	}
 
+	DamageKind kind() {
+		return kind;
+	}
+
 	String id() {
 		return id;
 	}

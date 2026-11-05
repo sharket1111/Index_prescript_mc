@@ -97,6 +97,16 @@ final class PrescriptTracker implements Listener {
 		tracker.hermesBlockedUntil = Math.max(tracker.hermesBlockedUntil, blockedUntil);
 	}
 
+	/** Spends {@code amount} [Hermes] (Caduceus's right-click skills); returns false if there are not that many. */
+	static boolean spendHermes(Player player, int amount) {
+		PrescriptTracker tracker = of(player);
+		if (tracker.hermes < amount) {
+			return false;
+		}
+		tracker.hermes -= amount;
+		return true;
+	}
+
 	static void blockHermes(Player player, long until) {
 		PrescriptTracker tracker = of(player);
 		tracker.hermesBlockedUntil = Math.max(tracker.hermesBlockedUntil, until);

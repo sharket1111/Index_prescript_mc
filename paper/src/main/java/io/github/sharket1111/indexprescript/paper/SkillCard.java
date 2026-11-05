@@ -42,8 +42,21 @@ record SkillCard(String name, TextColor colour, int base, int coinPower, int coi
 	}
 
 	// --- Caduceus ---------------------------------------------------------------------
-	static final SkillCard FURIOSO = new SkillCard("Furioso-Replica", GLOOM, 3, 2, 9,
-			"매 타격마다 새 무기를 형성해 8번 베고, 마지막에 대낫으로 대각선 일격. 침잠과 호흡을 번갈아 쌓는다.", 250, true, "RRRRRRRRR");
+	static final SkillCard FURIOSO = new SkillCard("Furioso-Replica", WRATH, 10, 1, 2,
+			"합 위력 +5. 매 타격마다 새 무기를 형성하고, 두 번째 코인이 7번 더 쏟아진다(모두 9타). 마지막은 대낫의 대각선 일격.", 250, true, "RR");
+
+	// --- Rien's right-click skills, by [Hermes] (RienSkill) -------------------------------
+	static final SkillCard[] RIEN = {
+		new SkillCard("무게를 실어 내려쳐, 몸을 무너뜨리고", GLUTTONY, 2, 2, 2, "타격 무기면 피해 +20%, 아니면 -10%. 호흡.", 80, true, "NN"),
+		new SkillCard("끝을 세워, 심지까지 밀어 넣고", GLUTTONY, 2, 2, 2, "관통 무기면 피해 +20%, 아니면 -10%. 호흡.", 60, true, "NN"),
+		new SkillCard("날을 눕혀, 숨결이 갈라지듯 잘라내고", GLUTTONY, 2, 2, 2, "참격 무기면 피해 +20%, 아니면 -10%. 호흡.", 80, true, "NN"),
+		new SkillCard("휘둘러 떨어트려, 땅과 하나로 만들어", PRIDE, 2, 2, 3, "타격 무기면 피해 +30%, 아니면 -15%. 호흡 2, 침잠.", 95, true, "NNN"),
+		new SkillCard("점 하나를 겨눠, 안쪽에서 울리며", PRIDE, 2, 2, 3, "관통 무기면 피해 +30%, 아니면 -15%. 호흡 2, 침잠.", 85, true, "NNN"),
+		new SkillCard("결을 낮게 깔아, 남은 것을 벗겨내고", PRIDE, 2, 2, 3, "참격 무기면 피해 +30%, 아니면 -15%. 호흡 2, 침잠.", 85, true, "NNN"),
+		new SkillCard("소리를 부수고, 생각을 납작하게 짓이겨라", GLOOM, 3, 3, 4, "타격 무기면 피해 +50%, 아니면 -25%. 호흡 2·횟수 2, 침잠.", 120, true, "NNNN"),
+		new SkillCard("고요의 중심을 찌르고, 기억을 꿰뚫어라", GLOOM, 3, 3, 4, "관통 무기면 피해 +50%, 아니면 -25%. 호흡 2·횟수 2, 침잠.", 135, true, "NNNN"),
+		new SkillCard("날카롭게 벼린 비밀로, 형태를 베어내라", GLOOM, 3, 3, 4, "참격 무기면 피해 +50%, 아니면 -25%. 호흡 2·횟수 2, 침잠.", 135, true, "NNNN"),
+	};
 
 	// --- Laevatein ----------------------------------------------------------------------
 	static final SkillCard RELEASE_1 = new SkillCard("포장 하나 뜯는다!", ENVY, 15, 1, 3,
