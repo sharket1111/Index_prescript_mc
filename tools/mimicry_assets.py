@@ -44,11 +44,13 @@ GRIP_ROWS = 22
 THICK = {"grip": 0.9, "steel": 0.55, "flesh": 1.25, "bone": 0.85}
 TILT = -45.0
 ORIGIN = [8.0, 8.0, 8.0]
+# Held 1.5x the vanilla handheld size, shifted so the grip stays in the hand
+# (the shift is the grip's offset from the model centre, scaled and rotated).
 DISPLAY = {
-    "thirdperson_righthand": {"rotation": [0, -90, 55], "translation": [0, 4.0, 0.5], "scale": [0.85, 0.85, 0.85]},
-    "thirdperson_lefthand": {"rotation": [0, 90, -55], "translation": [0, 4.0, 0.5], "scale": [0.85, 0.85, 0.85]},
-    "firstperson_righthand": {"rotation": [0, -90, 25], "translation": [1.13, 3.2, 1.13], "scale": [0.68, 0.68, 0.68]},
-    "firstperson_lefthand": {"rotation": [0, 90, -25], "translation": [1.13, 3.2, 1.13], "scale": [0.68, 0.68, 0.68]},
+    "thirdperson_righthand": {"rotation": [0, -90, 55], "translation": [0, 7.31, -0.08], "scale": [1.275, 1.275, 1.275]},
+    "thirdperson_lefthand": {"rotation": [0, 90, -55], "translation": [0, 7.31, -0.08], "scale": [1.275, 1.275, 1.275]},
+    "firstperson_righthand": {"rotation": [0, -90, 25], "translation": [1.13, 5.73, 2.05], "scale": [1.02, 1.02, 1.02]},
+    "firstperson_lefthand": {"rotation": [0, 90, -25], "translation": [1.13, 5.73, 2.05], "scale": [1.02, 1.02, 1.02]},
     "head": {"rotation": [0, 180, 0], "translation": [0, 13, 7], "scale": [1, 1, 1]},
 }
 

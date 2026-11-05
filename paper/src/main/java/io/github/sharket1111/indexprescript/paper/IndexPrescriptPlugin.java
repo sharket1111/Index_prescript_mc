@@ -57,6 +57,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		getServer().getPluginManager().registerEvents(new Sanity(), this);
 		getServer().getPluginManager().registerEvents(new ClashDummy(), this);
 		getServer().getPluginManager().registerEvents(new MimicryWeapon(), this);
+		getServer().getPluginManager().registerEvents(new Bleed(), this);
 		getServer().getPluginManager().registerEvents(new MimicrySkill.Events(), this);
 		Bukkit.getScheduler().runTask(this, ClashDummy::scan);
 		Bukkit.getScheduler().runTaskTimer(this, PrescriptTracker::tick, 1L, 1L);

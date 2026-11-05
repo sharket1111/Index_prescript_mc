@@ -75,7 +75,7 @@ import net.kyori.adventure.text.format.TextDecoration;
  * - 기합: the first coin guards (Resistance II); the slash gives Strength 3 for
  *   the next scene on hit (+3 power to these skills, shown as attack up).
  * - 돌진: a kill or a stagger uses it again on a random foe nearby (up to 5 times).
- * - 대절단-세로: on hit, destroys one of the target's combat pages: a player or
+ * - 대절단-세로: E.G.O only; on hit, destroys one of the target's combat pages: a player or
  *   a dummy cannot use skills for a scene, a creature is weakened.
  * - 대절단-가로: E.G.O only; strikes every foe within 6 blocks, Bleed 5.
  */
@@ -90,9 +90,9 @@ final class MimicrySkill {
 		ROAR("기합", DamageKind.SLASH, 5, 3, new double[] {10.0, 6.0}, new int[] {6, 20}, 34, 60, "minecraft:goat_horn", false,
 				"첫 코인은 방어(저항 II). 적중 시 다음 장면 힘 3(위력 +3)."),
 		CHARGE("돌진", DamageKind.SLASH, 14, 12, new double[] {20.0}, new int[] {14}, 30, 160, "minecraft:wind_charge", false,
-				"처치하거나 흐트러뜨리면 무작위 적에게 이 스킬을 다시 사용(최대 5번)."),
-		GREAT_VERTICAL("대절단-세로", DamageKind.SLASH, 20, 19, new double[] {29.5}, new int[] {24}, 46, 240, "index_prescript:mimicry", false,
-				"적중 시 대상의 전투 책장 하나를 파괴: 1장면 동안 스킬을 쓸 수 없다."),
+				"적중 시 흐트러짐 기준의 절반만큼 흐트러짐 피해. 처치하거나 흐트러뜨리면 무작위 적에게 이 스킬을 다시 사용(최대 5번)."),
+		GREAT_VERTICAL("대절단-세로", DamageKind.SLASH, 20, 19, new double[] {29.5}, new int[] {24}, 46, 240, "index_prescript:mimicry", true,
+				"적중 시 대상의 전투 책장 하나를 파괴: 1장면 동안 스킬을 쓸 수 없다. E.G.O 발현 중에만."),
 		GREAT_HORIZONTAL("대절단-가로", DamageKind.SLASH, 28, 14, new double[] {35.0}, new int[] {28}, 50, 320, "index_prescript:mimicry", true,
 				"광역 6블록. 적중 시 출혈 5. E.G.O 발현 중에만.");
 
@@ -737,7 +737,7 @@ final class MimicrySkill {
 				}
 				for (LivingEntity living : hit) {
 					if (!living.isDead() && hit(living, damage) > 0) {
-						bleed(living, 5);
+						Bleed.inflict(living, 5, 0);
 					}
 				}
 			}
@@ -752,16 +752,36 @@ final class MimicrySkill {
 		}
 	}
 
-	/** Deals a coin's damage with its stagger; returns the health taken. */
+	/** Each coin's stagger damage, as a share of the target's stagger threshold. */
+	private double staggerShare() {
+		return switch (kind) {
+			case VERTICAL, HORIZONTAL -> 0.15;
+			case STAB -> 0.1;
+			case ROAR -> 0.2;
+			case CHARGE -> 0.5;
+			case GREAT_VERTICAL -> 0.4;
+			case GREAT_HORIZONTAL -> 0.3;
+		};
+	}
+
+	/**
+	 * Deals a coin's damage; the Bleed already on the target triggers (extra
+	 * damage by its potency), new Bleed goes on, and the stagger damage is a
+	 * share of the target's threshold. Returns the health taken.
+	 */
 	private double hit(LivingEntity victim, double damage) {
 		double before = victim.getHealth() + victim.getAbsorptionAmount();
 		Damage.deal(victim, damage, player, true);
 		double dealt = before - (victim.isDead() ? 0.0 : victim.getHealth() + victim.getAbsorptionAmount());
 		if (dealt > 0 && !victim.isDead()) {
+			dealt += Bleed.trigger(victim, player);
+		}
+		if (dealt > 0 && !victim.isDead()) {
+			MimicryWeapon.bleedOnHit(player, victim);
 			long now = CaduceusListener.now();
 			float threshold = (float) Math.max(10.0, maxHealth(victim) * 0.5);
 			CombatState state = CombatState.of(victim);
-			if (state.addStagger((float) dealt, threshold, now)) {
+			if (state.addStagger((float) (threshold * staggerShare()), threshold, now)) {
 				Stagger.apply(victim, now);
 				Effects.staggered(victim);
 				if (victim == target && kind == Kind.CHARGE) {
@@ -790,7 +810,7 @@ final class MimicrySkill {
 			}
 			case HORIZONTAL -> {
 				if (dealt > 0) {
-					bleed(target, 3);
+					Bleed.inflict(target, 3, 0);
 				}
 				if (dealt >= DRAW_DAMAGE && !drew) {
 					drew = true;
@@ -822,12 +842,6 @@ final class MimicrySkill {
 					new Particle.DustOptions(MimicryWeapon.RED, 1.5F));
 		}
 		world.spawnParticle(Particle.SONIC_BOOM, at.clone().add(toTarget().multiply(1.2)), 1);
-	}
-
-	private static void bleed(LivingEntity victim, int potency) {
-		PotionEffect current = victim.getPotionEffect(PotionEffectType.WITHER);
-		int duration = Math.max(current == null ? 0 : current.getDuration(), potency * 20);
-		victim.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, duration, 0));
 	}
 
 	/** 대절단-세로: one of the target's combat pages destroyed. */

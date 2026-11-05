@@ -74,7 +74,7 @@ final class MimicryWeapon implements Listener {
 	private static final double SCENE_DAMAGE_NEEDED = 4.0;
 	private static final float SELF_STAGGER = 0.4F;
 	private static final double ENDURED = 0.5;
-	private static final double DIE_DAMAGE = 0.45;
+	private static final double DIE_DAMAGE = 0.7;
 	static final Color RED = Color.fromRGB(0xC81E1E);
 	static final Color DARK_RED = Color.fromRGB(0x6E0A0E);
 	static final TextColor RED_TEXT = TextColor.color(0xE02828);
@@ -122,6 +122,15 @@ final class MimicryWeapon implements Listener {
 	/** Health damage of a die of average {@code value} (the original's dice, here coins). */
 	static double dieDamage(double value) {
 		return value * DIE_DAMAGE;
+	}
+
+	/** Every Mimicry blow that lands: Bleed 2 and count 2, or Bleed 5 and count 3 in E.G.O. */
+	static void bleedOnHit(Player player, LivingEntity victim) {
+		if (ego(player)) {
+			Bleed.inflict(victim, 5, 3);
+		} else {
+			Bleed.inflict(victim, 2, 2);
+		}
 	}
 
 	static void fought(Player player) {
@@ -396,8 +405,18 @@ final class MimicryWeapon implements Listener {
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
 	public void onDamage(EntityDamageByEntityEvent event) {
 		Player attacker = attackerOf(event.getDamager());
-		if (attacker != null && event.getEntity() instanceof LivingEntity && attacker != event.getEntity()) {
+		if (attacker != null && event.getEntity() instanceof LivingEntity victim && attacker != event.getEntity()) {
 			LAST_FIGHT.put(attacker.getUniqueId(), CaduceusListener.now());
+			if (event.getDamager() == attacker && event.getCause() == EntityDamageEvent.DamageCause.ENTITY_ATTACK && !Damage.dealing()
+					&& holding(attacker)) {
+				// A normal Mimicry blow: the target's Bleed triggers, then new Bleed goes on.
+				Bukkit.getScheduler().runTask(IndexPrescriptPlugin.instance(), () -> {
+					if (victim.isValid() && !victim.isDead() && attacker.isOnline()) {
+						Bleed.trigger(victim, attacker);
+						bleedOnHit(attacker, victim);
+					}
+				});
+			}
 			Ego ego = EGO.get(attacker.getUniqueId());
 			if (ego != null) {
 				ego.dealt += event.getFinalDamage();

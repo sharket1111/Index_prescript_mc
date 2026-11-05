@@ -30,6 +30,10 @@ final class CombatState {
 	private int sinkingCount;
 	private long sinkingUntil;
 
+	private int bleedPotency;
+	private int bleedCount;
+	private long bleedUntil;
+
 	private int tremorPotency;
 	private int tremorCount;
 	private long tremorDecayAt;
@@ -121,6 +125,43 @@ final class CombatState {
 
 	int sinkingPotency(long now) {
 		return sinkingCount > 0 && now < sinkingUntil ? sinkingPotency : 0;
+	}
+
+	// --- Bleed: each time it triggers, fixed damage by potency and one count used up (see Bleed).
+	// It wears off BLEED_TICKS after it was last given or triggered.
+
+	private static final int BLEED_TICKS = 600;
+
+	void addBleed(int potency, int count, long now) {
+		if (now >= bleedUntil) {
+			bleedPotency = 0;
+			bleedCount = 0;
+		}
+		bleedPotency = Math.min(MAX_COUNT, bleedPotency + potency);
+		bleedCount = Math.min(MAX_COUNT, Math.max(bleedCount + count, bleedPotency > 0 ? 1 : 0));
+		bleedUntil = now + BLEED_TICKS;
+	}
+
+	int bleedPotency(long now) {
+		return bleedCount > 0 && now < bleedUntil ? bleedPotency : 0;
+	}
+
+	int bleedCount(long now) {
+		return now < bleedUntil ? bleedCount : 0;
+	}
+
+	/** Triggers Bleed: returns the potency, using up one count (0 when none). */
+	int consumeBleed(long now) {
+		int potency = bleedPotency(now);
+		if (potency <= 0) {
+			return 0;
+		}
+		if (--bleedCount <= 0) {
+			bleedCount = 0;
+			bleedPotency = 0;
+		}
+		bleedUntil = now + BLEED_TICKS;
+		return potency;
 	}
 
 	// --- Tremor: does nothing by itself; a Tremor Burst deals stagger damage equal to its potency
@@ -239,7 +280,7 @@ final class CombatState {
 	}
 
 	private boolean idle(long now) {
-		if (poiseCount(now) > 0 || tremorCount(now) > 0 || (sinkingCount > 0 && now < sinkingUntil) || now < staggerResetAt || staggered(now)
+		if (poiseCount(now) > 0 || tremorCount(now) > 0 || bleedPotency(now) > 0 || (sinkingCount > 0 && now < sinkingUntil) || now < staggerResetAt || staggered(now)
 				|| attackLevel(now) > 0 || defenseDown(now) > 0) {
 			return false;
 		}
