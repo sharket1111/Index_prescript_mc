@@ -72,7 +72,7 @@ import net.kyori.adventure.text.format.TextDecoration;
  * - 종베기, 찌르기: a coin dealing 30 or more draws a page: every cooldown -1 s,
  *   종베기 and 찌르기 a second more.
  * - 횡베기: Bleed 3 on hit; dealing 30 or more recovers 2 light (every cooldown -2 s).
- * - 기합: the first coin guards (Resistance II); the slash gives Strength 3 for
+ * - 기합: Sanity +30 on use; the first coin guards (Resistance II); the slash gives Strength 3 for
  *   the next scene on hit (+3 power to these skills, shown as attack up).
  * - 돌진: a kill or a stagger uses it again on a random foe nearby (up to 5 times).
  * - 대절단-세로: E.G.O only; on hit, destroys one of the target's combat pages: a player or
@@ -88,7 +88,7 @@ final class MimicrySkill {
 		HORIZONTAL("횡베기", DamageKind.SLASH, 5, 2, new double[] {7.0, 6.5}, new int[] {12, 26}, 40, 60, "minecraft:golden_sword", false,
 				"적중 시 출혈 3. 피해 30 이상: 빛 2 회복 — 모든 스킬 대기 -2초."),
 		ROAR("기합", DamageKind.SLASH, 5, 3, new double[] {10.0, 6.0}, new int[] {6, 20}, 34, 60, "minecraft:goat_horn", false,
-				"첫 코인은 방어(저항 II). 적중 시 다음 장면 힘 3(위력 +3)."),
+				"사용 시 정신력 +30. 첫 코인은 방어(저항 II). 적중 시 다음 장면 힘 3(위력 +3)."),
 		CHARGE("돌진", DamageKind.SLASH, 14, 12, new double[] {20.0}, new int[] {14}, 30, 160, "minecraft:wind_charge", false,
 				"적중 시 흐트러짐 기준의 절반만큼 흐트러짐 피해. 처치하거나 흐트러뜨리면 무작위 적에게 이 스킬을 다시 사용(최대 5번)."),
 		GREAT_VERTICAL("대절단-세로", DamageKind.SLASH, 20, 19, new double[] {29.5}, new int[] {24}, 46, 240, "index_prescript:mimicry", true,
@@ -142,6 +142,7 @@ final class MimicrySkill {
 	private static final int INFO_SLOT = 7;
 	private static final int CANCEL_SLOT = 8;
 	private static final int MAX_CHAIN = 5;
+	private static final int ROAR_SANITY = 30;
 	private static final double RANGE = 8.0;
 	private static final double CHARGE_RANGE = 12.0;
 	private static final double SWEEP_RADIUS = 6.0;
@@ -431,6 +432,11 @@ final class MimicrySkill {
 		if (Clash.request(player, target, kind.card(player), outcome -> launch(player, outcome.target(), kind, 0))) {
 			startCooldown(player, kind);
 			MimicryWeapon.fought(player);
+			if (kind == Kind.ROAR) {
+				// 기합: Sanity +30 on use (it never goes past 45).
+				Sanity.add(player, ROAR_SANITY);
+				Hud.message(player, Component.text("기합 — 정신력 +" + ROAR_SANITY, MimicryWeapon.RED_TEXT));
+			}
 		}
 	}
 
