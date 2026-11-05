@@ -345,6 +345,12 @@ def main(assets):
         json.dump({"providers": [{"type": "bitmap", "file": "index_prescript:font/clash_count.png", "height": 48, "ascent": 40,
                                   "chars": chars_grid(COUNT_FIRST, 20, 5, count_rows)}]}, f, indent="\t")
 
+    # The pink boss bar drawn see-through: its name alone shows (the TOTAL taken, top right).
+    sprites = os.path.join(assets, "..", "minecraft", "textures", "gui", "sprites", "boss_bar")
+    os.makedirs(sprites, exist_ok=True)
+    for name in ("pink_background.png", "pink_progress.png"):
+        Image.new("RGBA", (182, 5), (0, 0, 0, 0)).save(os.path.join(sprites, name))
+
     # The HUD readout at the bottom left: the original's Sanity circle.
     hud = [sp_circle(v, 22) for v in values]
     for im in hud:

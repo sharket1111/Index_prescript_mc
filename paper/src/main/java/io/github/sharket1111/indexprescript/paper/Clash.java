@@ -98,6 +98,8 @@ final class Clash {
 		boolean spinning;
 		Boolean won;
 		TextDisplay panel;
+		/** The side view while clashing (Java players). */
+		Cinematic camera;
 		boolean retired;
 		int shattering = -1;
 		long shatteredAt = Long.MIN_VALUE / 2;
@@ -269,7 +271,7 @@ final class Clash {
 			side.runExpected += coinPower * 0.5;
 			side.power = side.runPower;
 			side.scale = Math.max(0.5, Math.min(1.8, side.runPower / Math.max(1.0, side.runExpected)));
-			Location at = player.getLocation().add(0, 1.6, 0);
+			Location at = Cinematic.body(player).getLocation().add(0, 1.6, 0);
 			at.getWorld().playSound(at, heads ? Sound.BLOCK_NOTE_BLOCK_CHIME : Sound.BLOCK_NOTE_BLOCK_BASS, SoundCategory.PLAYERS, 0.7F,
 					heads ? 1.6F : 0.8F);
 			draw(side);
@@ -352,8 +354,10 @@ final class Clash {
 			} else {
 				end(duel);
 				retire(a);
+				endCamera(a);
 				if (duel.answer != null) {
 					retire(duel.answer);
+					endCamera(duel.answer);
 				}
 			}
 			return;
@@ -382,6 +386,7 @@ final class Clash {
 		follow(b);
 		hold(a);
 		hold(b);
+		frame(a, b);
 		round(duel, a, b);
 		for (Side side : new Side[] {a, b}) {
 			if (side.shatteringNow()) {
@@ -406,6 +411,35 @@ final class Clash {
 		Location mid = midpoint(a, b);
 		mid.getWorld().playSound(mid, Sound.ITEM_TRIDENT_HIT, SoundCategory.PLAYERS, 1.2F, 0.8F);
 		mid.getWorld().playSound(mid, Sound.BLOCK_BELL_USE, SoundCategory.PLAYERS, 1.0F, 1.2F);
+		// Both watch the clash from the side, with the skill screen's edges.
+		for (Side side : new Side[] {a, b}) {
+			side.camera = Cinematic.start(side.player, mid.clone().add(0, 1, 0));
+			SkillOverlay.show(side.player, SkillOverlay.Size.SMALL);
+		}
+		frame(a, b);
+	}
+
+	/** The clash's camera: square to the line between the two, both in view, shaking as coins break. */
+	private static void frame(Side a, Side b) {
+		Vector from = Cinematic.body(a.player).getLocation().toVector();
+		Vector to = Cinematic.body(b.player).getLocation().toVector();
+		Vector focus = from.clone().midpoint(to).add(new Vector(0, 1.1, 0));
+		double angle = Math.atan2(to.getZ() - from.getZ(), to.getX() - from.getX()) + Math.PI / 2;
+		double distance = Math.max(4.5, from.distance(to) * 0.9 + 2.5);
+		Vector position = Cinematic.orbit(focus, angle, distance, 1.4);
+		double shake = a.shatteringNow() || b.shatteringNow() ? 0.25 : 0.0;
+		for (Side side : new Side[] {a, b}) {
+			if (side.camera != null) {
+				side.camera.frame(position, focus, shake);
+			}
+		}
+	}
+
+	private static void endCamera(Side side) {
+		if (side.camera != null) {
+			side.camera.end();
+			side.camera = null;
+		}
 	}
 
 	private static void round(Duel duel, Side a, Side b) {
@@ -467,7 +501,7 @@ final class Clash {
 			return;
 		}
 		char type = loser.card.type(index);
-		Location at = loser.player.getLocation().add(0, 1.2, 0);
+		Location at = Cinematic.body(loser.player).getLocation().add(0, 1.2, 0);
 		boolean destroyed = type == SkillCard.COIN_PLAIN || type == SkillCard.COIN_UNBREAKABLE && winner.hasUnbrokenGreen();
 		if (destroyed) {
 			loser.state[index] = DESTROYED;
@@ -502,10 +536,15 @@ final class Clash {
 		Sanity.fought(loser.player);
 		Hud.message(winner.player, Component.text("합 승리! (" + rounds + "합) 정신력 +" + gain, NamedTextColor.GOLD));
 		Hud.message(loser.player, Component.text("합 패배 (" + rounds + "합) 정신력 -" + loss, NamedTextColor.RED));
-		Location at = loser.player.getLocation().add(0, 1, 0);
+		Location at = Cinematic.body(loser.player).getLocation().add(0, 1, 0);
 		at.getWorld().playSound(at, Sound.ITEM_SHIELD_BREAK, SoundCategory.PLAYERS, 1.2F, 0.8F);
 		at.getWorld().spawnParticle(Particle.EXPLOSION, at, 1);
 		end(duel);
+		endCamera(winner);
+		endCamera(loser);
+		if (!loser.hasBroken()) {
+			SkillOverlay.hide(loser.player);
+		}
 		if (loser.player.isOnline()) {
 			launch(winner, loser.player);
 		} else {
@@ -565,6 +604,7 @@ final class Clash {
 	}
 
 	private static void retire(Side side) {
+		endCamera(side);
 		if (side.retired) {
 			return;
 		}
@@ -596,7 +636,7 @@ final class Clash {
 	// --- the panel ---------------------------------------------------------------------------
 
 	private static TextDisplay panel(Player player) {
-		return player.getWorld().spawn(sideOf(player), TextDisplay.class, d -> {
+		return player.getWorld().spawn(sideOf(Cinematic.body(player)), TextDisplay.class, d -> {
 			d.setPersistent(false);
 			d.setBillboard(Display.Billboard.CENTER);
 			d.setLineWidth(240);
@@ -610,8 +650,8 @@ final class Clash {
 	}
 
 	/** Beside the player, on their right, about head height. */
-	private static Location sideOf(Player player) {
-		Location at = player.getLocation();
+	private static Location sideOf(LivingEntity body) {
+		Location at = body.getLocation();
 		Vector forward = at.getDirection().setY(0);
 		if (forward.lengthSquared() < 1.0E-4) {
 			forward = new Vector(0, 0, 1);
@@ -626,7 +666,7 @@ final class Clash {
 
 	private static void follow(Side side) {
 		if (side.panel != null && side.panel.isValid()) {
-			Location want = sideOf(side.player);
+			Location want = sideOf(Cinematic.body(side.player));
 			if (want.getWorld() == side.panel.getWorld() && want.distanceSquared(side.panel.getLocation()) > 0.0025) {
 				side.panel.teleport(want);
 			}
@@ -789,12 +829,13 @@ final class Clash {
 	}
 
 	private static Location midpoint(Side a, Side b) {
-		Vector mid = a.player.getLocation().toVector().midpoint(b.player.getLocation().toVector()).add(new Vector(0, 1.2, 0));
+		Vector mid = Cinematic.body(a.player).getLocation().toVector().midpoint(Cinematic.body(b.player).getLocation().toVector())
+				.add(new Vector(0, 1.2, 0));
 		return mid.toLocation(a.player.getWorld());
 	}
 
 	private static void hold(Side side) {
-		if (side.anchor == null || side.anchor.getWorld() != side.player.getWorld()) {
+		if (side.camera != null || side.anchor == null || side.anchor.getWorld() != side.player.getWorld()) {
 			return;
 		}
 		Location here = side.player.getLocation();

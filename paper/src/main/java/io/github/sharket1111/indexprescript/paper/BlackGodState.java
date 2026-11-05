@@ -386,6 +386,9 @@ final class BlackGodState {
 		}
 		double after = foe.isDead() ? 0.0 : foe.getHealth() + foe.getAbsorptionAmount();
 		TotalDamage.add(god, before - after);
+		if (foe instanceof Player victim) {
+			TotalDamage.received(victim, before - after);
+		}
 	}
 
 	// --- turns -------------------------------------------------------------------------------

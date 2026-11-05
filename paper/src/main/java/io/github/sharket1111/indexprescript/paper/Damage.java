@@ -33,6 +33,9 @@ final class Damage {
 		if (source instanceof Player player) {
 			double after = target.isDead() ? 0.0 : target.getHealth() + target.getAbsorptionAmount();
 			TotalDamage.add(player, before - after);
+			if (target instanceof Player victim) {
+				TotalDamage.received(victim, before - after);
+			}
 		}
 	}
 }
