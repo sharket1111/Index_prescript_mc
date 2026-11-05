@@ -79,6 +79,10 @@ record SkillCard(String name, TextColor colour, int base, int coinPower, int coi
 			"반격: 베기, 발차기, 칼 던지기, 드롭킥, 사슬로 회수해 흰 초승달.", 250, false, "RRRRR");
 
 	// --- the Renoir hammer --------------------------------------------------------------
+	static final SkillCard NAIL = new SkillCard("못박히라", PRIDE, 3, 4, 2,
+			"대상의 못 4개당 최종 위력 +1(최대 3). 보존 위력 3 이상이면 코인 위력 +1, 피해 +40%. 2타 적중 시 보존 횟수 +6.", 56, true, "NN");
+	static final SkillCard BORN = new SkillCard("못생기라", ENVY, 6, 5, 2,
+			"대상의 못 4개당 최종 위력 +1(최대 3). 보존 위력 3 이상이면 코인 위력 +1, 피해 +30%. 1타 약속된 못 1, 2타 보존 횟수 +8.", 72, true, "NN");
 	static final SkillCard SEVER = new SkillCard("탄생을 끊으리라", SLOTH, 4, 3, 3,
 			"못 두 개를 떨어뜨리고 빛기둥, 금빛 휘두르기, 도약해 내려찍기. 보존 +4.", 137, true, "NNN");
 	static final SkillCard AGAIN = new SkillCard("거듭 내리쳐, 탄생을 끊으리라", SLOTH, 5, 4, 3,

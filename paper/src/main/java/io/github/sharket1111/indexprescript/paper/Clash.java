@@ -112,6 +112,8 @@ final class Clash {
 		double runExpected;
 		double scale = 1.0;
 		final boolean[] struck;
+		/** Coins re-used while attacking (Furioso's second coin), shown after the others: {coin index, face}. */
+		final java.util.List<int[]> reused = new java.util.ArrayList<>();
 
 		Side(LivingEntity player, SkillCard card, LivingEntity target, Consumer<Outcome> start) {
 			this.player = player;
@@ -314,6 +316,33 @@ final class Clash {
 	static boolean destroyed(LivingEntity player, int index) {
 		Side side = RUNS.get(player.getUniqueId());
 		return side != null && index >= 0 && index < side.state.length && side.state[index] == DESTROYED;
+	}
+
+	/**
+	 * Re-uses coin {@code index} (e.g. Furioso's second coin, up to seven
+	 * times): it is flipped again, its power added again, and one more coin
+	 * shows on the panel. False if that coin was destroyed in a clash.
+	 */
+	static boolean reuse(LivingEntity player, int index) {
+		Side side = RUNS.get(player.getUniqueId());
+		if (side == null || index < 0 || index >= side.state.length) {
+			return true;
+		}
+		if (side.state[index] == DESTROYED) {
+			return false;
+		}
+		boolean heads = ThreadLocalRandom.current().nextDouble() < Sanity.headsChance(player);
+		int coinPower = side.coinPower(index);
+		side.runPower += heads ? coinPower : 0;
+		side.runExpected += coinPower * 0.5;
+		side.power = side.runPower;
+		side.scale = Math.max(0.5, Math.min(1.8, side.runPower / Math.max(1.0, side.runExpected)));
+		side.reused.add(new int[] {index, heads ? 1 : 2});
+		Location at = body(player).getLocation().add(0, 1.6, 0);
+		at.getWorld().playSound(at, heads ? Sound.BLOCK_NOTE_BLOCK_CHIME : Sound.BLOCK_NOTE_BLOCK_BASS, SoundCategory.PLAYERS, 0.7F,
+				heads ? 1.6F + side.reused.size() * 0.05F : 0.8F);
+		draw(side);
+		return true;
 	}
 
 	/** The damage scale of the coin the player's skill is striking with (1 when none). */
@@ -619,6 +648,7 @@ final class Clash {
 	private static void reset(Side side) {
 		java.util.Arrays.fill(side.faces, 0);
 		java.util.Arrays.fill(side.struck, false);
+		side.reused.clear();
 		side.power = -1;
 		side.spinning = false;
 		side.won = null;
@@ -797,6 +827,13 @@ final class Clash {
 				colour = TextColor.color(colour.red() * 6 / 10, colour.green() * 6 / 10, colour.blue() * 6 / 10);
 			}
 			coins = coins.append(glyph(shape, colour));
+		}
+		// Re-used coins line up after the others, as they come.
+		for (int[] reuse : side.reused) {
+			boolean octagon = card.type(reuse[0]) != SkillCard.COIN_PLAIN;
+			boolean broken = side.state[reuse[0]] == BROKEN;
+			char shape = broken ? (octagon ? COIN_OCTAGON_CRACKED : COIN_ROUND_CRACKED) : octagon ? COIN_OCTAGON : COIN_ROUND;
+			coins = coins.append(glyph(shape, reuse[1] == 1 ? HEADS_COLOUR : TAILS_COLOUR));
 		}
 		// The badge and the power over it, centred.
 		String digits = side.power < 0 || side.spinning ? String.valueOf(DIGIT_UNKNOWN) : bigDigits(side.power);

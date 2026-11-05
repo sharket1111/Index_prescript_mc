@@ -53,7 +53,8 @@ import net.kyori.adventure.text.format.NamedTextColor;
  */
 final class RenoirSkill {
 	enum Kind {
-		SEVER, AGAIN
+		/** 못박히라 (Voice under 30), 못생기라 (30-59), 탄생을 끊으리라 (60-99), 거듭 내리쳐 (100). */
+		NAIL, BORN, SEVER, AGAIN
 	}
 
 	private static final Map<UUID, RenoirSkill> ACTIVE = new ConcurrentHashMap<>();
@@ -95,7 +96,13 @@ final class RenoirSkill {
 		if (ACTIVE.containsKey(player.getUniqueId())) {
 			return;
 		}
-		Clash.request(player, target, kind == Kind.AGAIN ? SkillCard.AGAIN : SkillCard.SEVER,
+		SkillCard card = switch (kind) {
+			case NAIL -> SkillCard.NAIL;
+			case BORN -> SkillCard.BORN;
+			case SEVER -> SkillCard.SEVER;
+			case AGAIN -> SkillCard.AGAIN;
+		};
+		Clash.request(player, target, card,
 				outcome -> launch(player, outcome.target(), kind));
 	}
 
@@ -147,13 +154,17 @@ final class RenoirSkill {
 		for (LivingEntity foe : held.keySet()) {
 			nails += PromisedNails.count(foe);
 		}
-		int power = Math.min(2, nails / 6);
+		// 못박히라 and 못생기라: per 4 nails +1 final power (max 3); the others per 6, max 2.
+		boolean small = kind == Kind.NAIL || kind == Kind.BORN;
+		int power = small ? Math.min(3, nails / 4) : Math.min(2, nails / 6);
 		double multiplier = 1.0;
 		if (RenoirHammer.potency(player) >= 3) {
 			power++;
-			if (kind == Kind.SEVER) {
-				multiplier *= 1.4;
-			}
+			multiplier *= switch (kind) {
+				case SEVER, NAIL -> 1.4;
+				case BORN -> 1.3;
+				default -> 1.0;
+			};
 		}
 		multiplier *= 1.0 + power * COIN_POWER;
 		if (kind == Kind.AGAIN && held.size() < 3) {
@@ -175,7 +186,12 @@ final class RenoirSkill {
 			TotalDamage.start(player);
 		}
 		SkillOverlay.show(player, big ? SkillOverlay.Size.BIG : SkillOverlay.Size.SMALL);
-		Hud.message(player, Component.text(Messages.get(player, big ? "renoir.again" : "renoir.sever"), NamedTextColor.GOLD));
+		String line = switch (kind) {
+			case NAIL -> "못박히라!";
+			case BORN -> "못생기라!";
+			default -> Messages.get(player, big ? "renoir.again" : "renoir.sever");
+		};
+		Hud.message(player, Component.text(line, NamedTextColor.GOLD));
 		World world = actor().getWorld();
 		Location at = actor().getLocation().add(0, 1, 0);
 		world.spawnParticle(Particle.DUST, at, big ? 60 : 25, 0.6, 0.8, 0.6, 0.0, GOLD);
@@ -185,7 +201,12 @@ final class RenoirSkill {
 	}
 
 	private int endTick() {
-		return kind == Kind.SEVER ? SEVER_END : AGAIN_END;
+		return switch (kind) {
+			case NAIL -> NAIL_END;
+			case BORN -> BORN_END;
+			case SEVER -> SEVER_END;
+			case AGAIN -> AGAIN_END;
+		};
 	}
 
 	private boolean tick() {
@@ -195,17 +216,18 @@ final class RenoirSkill {
 		}
 		held.keySet().removeIf(foe -> !foe.isValid() || foe.isDead());
 		if (!target.isValid() || target.isDead()) {
-			if (kind == Kind.SEVER || held.isEmpty()) {
+			if (kind != Kind.AGAIN || held.isEmpty()) {
 				finish();
 				return false;
 			}
 			target = held.keySet().iterator().next();
 		}
 		hold();
-		if (kind == Kind.SEVER) {
-			sever();
-		} else {
-			again();
+		switch (kind) {
+			case NAIL -> nail();
+			case BORN -> born();
+			case SEVER -> sever();
+			case AGAIN -> again();
 		}
 		if (tick >= endTick()) {
 			finish();
@@ -213,6 +235,76 @@ final class RenoirSkill {
 		}
 		tick++;
 		return true;
+	}
+
+	// --- 못박히라 / 못생기라 ------------------------------------------------------
+	// No scene of these was sent; they are paced like the others' lesser coins.
+
+	private static final int NAIL_COIN_1 = 14;
+	private static final int NAIL_COIN_2 = 34;
+	private static final int NAIL_END = 56;
+
+	/** 못박히라: a golden sweep under falling nails, then an overhead blow; Preservation +6. */
+	private void nail() {
+		shootSide(3.2, tick >= NAIL_COIN_2 && tick < NAIL_COIN_2 + 5 ? 0.5 : 0.0);
+		if (tick == 0) {
+			face();
+		} else if (tick == 6) {
+			stepIn(1.6);
+		} else if (tick == NAIL_COIN_1 - 4) {
+			PromisedNails.rain(target.getLocation(), 1.4, 2.0F, false);
+		} else if (tick == NAIL_COIN_1 && Clash.coin(player, 0)) {
+			coin(4.0, () -> sweep(actor(), target, -40, 0));
+		} else if (tick == NAIL_COIN_2) {
+			if (Clash.coin(player, 1)) {
+				coin(5.0, () -> {
+					sweep(actor(), target, 90, 80);
+					pillar(target.getLocation());
+				});
+				RenoirHammer.addPreservation(player, 6);
+			}
+		} else if (tick > NAIL_COIN_2 && tick < NAIL_END - 6 && tick % 4 == 0) {
+			settle(target.getLocation(), 1.8);
+		}
+		// The great hammer comes over the shoulder for the second blow.
+		swingHammer(NAIL_COIN_2 - 10, NAIL_COIN_2);
+	}
+
+	private static final int BORN_COIN_1 = 18;
+	private static final int BORN_LEAP = 30;
+	private static final int BORN_COIN_2 = 46;
+	private static final int BORN_END = 72;
+
+	/** 못생기라: a [Promised Nail] driven in with a pillar of light, then a leap and a slam in golden dust; Preservation +8. */
+	private void born() {
+		shootSide(3.4, tick >= BORN_COIN_2 && tick < BORN_COIN_2 + 6 ? 0.6 : 0.0);
+		if (tick == 0) {
+			face();
+		} else if (tick == 8) {
+			stepIn(1.6);
+		} else if (tick == BORN_COIN_1 && Clash.coin(player, 0)) {
+			RenoirHammer.driveNail(player, target);
+			coin(5.0, () -> pillar(target.getLocation()));
+		} else if (tick == BORN_LEAP - 2) {
+			pose(Pose.SNEAKING);
+		} else if (tick == BORN_LEAP) {
+			pose(Pose.STANDING);
+			startLeap();
+		} else if (tick > BORN_LEAP && tick < BORN_COIN_2) {
+			leap(tick - BORN_LEAP, BORN_COIN_2 - BORN_LEAP, 2.4, 1.4);
+		} else if (tick == BORN_COIN_2) {
+			land(1.4);
+			if (Clash.coin(player, 1)) {
+				coin(7.0, () -> {
+					sweep(actor(), target, 90, 80);
+					dome(target.getLocation(), 2.4);
+				});
+				RenoirHammer.addPreservation(player, 8);
+			}
+		} else if (tick > BORN_COIN_2 && tick < BORN_END - 8 && tick % 3 == 0) {
+			settle(target.getLocation(), 2.2);
+		}
+		swingHammer(BORN_LEAP + 4, BORN_COIN_2);
 	}
 
 	// --- Sever Birth -------------------------------------------------------------

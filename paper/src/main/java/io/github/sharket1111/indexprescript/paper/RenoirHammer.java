@@ -62,7 +62,12 @@ import net.kyori.adventure.text.format.NamedTextColor;
 final class RenoirHammer implements Listener {
 	static final int MAX_VOICE = 100;
 	/** Voice needed for Sever Birth; the strong skill needs all {@link #MAX_VOICE}. */
-	static final int SEVER_VOICE = 50;
+	static final int SEVER_VOICE = 60;
+	/** Voice from which 못생기라 is used instead of 못박히라. */
+	static final int BORN_VOICE = 30;
+	/** 못박히라 and 못생기라 need no Voice, so they wait this long between uses. */
+	private static final int LESSER_COOLDOWN = 5 * 20;
+	private static final Map<UUID, Long> LESSER_READY = new ConcurrentHashMap<>();
 	/** A stack holds at most 99, so 100 shows as 99 (with the glint and the value in the name). */
 	static final int ICON_MAX_STACK = 99;
 	static final int VOICE_PER_HIT = 5;
@@ -393,13 +398,20 @@ final class RenoirHammer implements Listener {
 			return;
 		}
 		int voice = voice(player);
-		if (voice < SEVER_VOICE) {
-			Hud.message(player, Component.text(Messages.get(player, "renoir.need_voice", voice), NamedTextColor.GRAY));
-			return;
+		RenoirSkill.Kind kind = voice >= MAX_VOICE ? RenoirSkill.Kind.AGAIN : voice >= SEVER_VOICE ? RenoirSkill.Kind.SEVER
+				: voice >= BORN_VOICE ? RenoirSkill.Kind.BORN : RenoirSkill.Kind.NAIL;
+		if (kind == RenoirSkill.Kind.NAIL || kind == RenoirSkill.Kind.BORN) {
+			long now = CaduceusListener.now();
+			long ready = LESSER_READY.getOrDefault(player.getUniqueId(), 0L);
+			if (now < ready) {
+				Hud.message(player, Component.text(Messages.get(player, "blackgod.cooldown", (ready - now + 19) / 20), NamedTextColor.GRAY));
+				return;
+			}
+			LESSER_READY.put(player.getUniqueId(), now + LESSER_COOLDOWN);
 		}
-		// Either skill spends all of the Voice.
+		// Every skill spends all of the Voice.
 		setVoice(player, 0);
-		RenoirSkill.start(player, target, voice >= MAX_VOICE ? RenoirSkill.Kind.AGAIN : RenoirSkill.Kind.SEVER);
+		RenoirSkill.start(player, target, kind);
 	}
 
 	@EventHandler

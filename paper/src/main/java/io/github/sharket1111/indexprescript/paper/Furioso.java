@@ -371,8 +371,8 @@ final class Furioso {
 
 	private void strike(int coin) {
 		// Each coin is flipped as it strikes; one destroyed in a clash is skipped.
-		// Two coins: the first strike, then the second coin re-used for the other eight.
-		if (!Clash.coin(player, Math.min(coin, 1))) {
+		// Two coins: the first strike, the second, then the second re-used for the other seven.
+		if (!(coin < 2 ? Clash.coin(player, coin) : Clash.reuse(player, 1))) {
 			return;
 		}
 		long now = CaduceusListener.now();
