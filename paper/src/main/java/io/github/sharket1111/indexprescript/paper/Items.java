@@ -32,6 +32,9 @@ final class Items {
 	static final String LAEVATEIN_ICON = "laevatein_icon";
 	static final String RENOIR_HAMMER = "renoir_hammer";
 	static final String BLACK_GOD_VOICE = "black_god_voice";
+	static final String MIMICRY = "mimicry";
+	/** Mimicry's first custom model data string while E.G.O is manifested (tools/mimicry_assets.py). */
+	static final String MIMICRY_EGO = "ego";
 	/** Laevatein release stages after the sealed state; the index is the stage number. */
 	static final List<String> LAEVATEIN_STAGES = List.of("sealed", "release_1", "release_2", "release_3");
 	static final int MAX_HERMES = 9;
@@ -73,6 +76,31 @@ final class Items {
 			meta.setRarity(ItemRarity.EPIC);
 		});
 		return stack;
+	}
+
+	/** Gebura's E.G.O, Mimicry: a netherite sword drawn as the great flesh blade (MimicryWeapon, MimicrySkill). */
+	static ItemStack mimicry(CommandSender viewer) {
+		ItemStack stack = ItemStack.of(Material.NETHERITE_SWORD);
+		stack.editMeta(meta -> {
+			tag(meta, MIMICRY);
+			meta.itemName(Component.text(Messages.get(viewer, "item.mimicry"), NamedTextColor.RED));
+			meta.lore(List.of(Component.text(Messages.get(viewer, "item.mimicry.desc"), NamedTextColor.GRAY)
+					.decoration(TextDecoration.ITALIC, false)));
+			meta.setRarity(ItemRarity.EPIC);
+			meta.setUnbreakable(true);
+		});
+		return stack;
+	}
+
+	static boolean isMimicry(ItemStack stack) {
+		return is(stack, MIMICRY);
+	}
+
+	/** Shows Mimicry manifested (E.G.O) or not. */
+	static void setMimicryEgo(ItemStack stack, boolean ego) {
+		if (MIMICRY_EGO.equals(modelString(stack)) != ego) {
+			setModelStrings(stack, ego ? MIMICRY_EGO : null, mangString(stack));
+		}
 	}
 
 	/** The Brand Manager's hammer: a mace drawn as a great two-block hammer (no skills yet). */
@@ -209,7 +237,7 @@ final class Items {
 	}
 
 	static boolean isWeapon(ItemStack stack) {
-		return isCaduceus(stack) || isLaevatein(stack) || isRenoirHammer(stack);
+		return isCaduceus(stack) || isLaevatein(stack) || isRenoirHammer(stack) || isMimicry(stack);
 	}
 
 	/** The form or stage string first, then the Mang string; an empty first string stands for none. */

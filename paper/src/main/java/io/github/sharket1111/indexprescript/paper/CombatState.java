@@ -151,6 +151,11 @@ final class CombatState {
 		attackLevel.add(now);
 	}
 
+	/** Attack level raised to at least {@code value} (beyond the per-turn cap) for {@code ticks}: Mimicry's Strength. */
+	void raiseAttackLevel(int value, long now, int ticks) {
+		attackLevel.raise(value, now, ticks);
+	}
+
 	int attackLevel(long now) {
 		return attackLevel.get(now);
 	}

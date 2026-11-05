@@ -56,6 +56,8 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		getServer().getPluginManager().registerEvents(new BlackGodState.Events(), this);
 		getServer().getPluginManager().registerEvents(new Sanity(), this);
 		getServer().getPluginManager().registerEvents(new ClashDummy(), this);
+		getServer().getPluginManager().registerEvents(new MimicryWeapon(), this);
+		getServer().getPluginManager().registerEvents(new MimicrySkill.Events(), this);
 		Bukkit.getScheduler().runTask(this, ClashDummy::scan);
 		Bukkit.getScheduler().runTaskTimer(this, PrescriptTracker::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Laevatein::tick, 1L, 1L);
@@ -73,6 +75,8 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Bukkit.getScheduler().runTaskTimer(this, BlackGodState::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Clash::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, RienSkill::tickAll, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, MimicrySkill::tickAll, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, MimicryWeapon::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Sanity::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Hud::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, UnitHud::tick, 1L, 1L);
@@ -93,6 +97,8 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		BlackGodState.clearAll();
 		Clash.endAll();
 		RienSkill.endAll();
+		MimicrySkill.endAll();
+		MimicryWeapon.endAll();
 		UnitHud.clearAll();
 		BlackGod.stopAll();
 		PromisedNails.clearAll();
@@ -154,6 +160,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			case "terminal", "rien_terminal" -> Items.terminal(target);
 			case "laevatein" -> Items.laevatein(target);
 			case "hammer", "renoir_hammer" -> Items.renoirHammer(target);
+			case "mimicry", "미미크리" -> Items.mimicry(target);
 			case "blackgod", "black_god" -> BlackGod.toggleItem(target);
 			default -> null;
 		};
@@ -340,7 +347,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		return switch (args.length) {
 			case 1 -> List.of("give", "pack", "laevatein", "sanity", "mang", "renoir", "blackgod", "dummy");
 			case 2 -> switch (args[0].toLowerCase(Locale.ROOT)) {
-				case "give" -> List.of("caduceus", "terminal", "laevatein", "hammer", "blackgod");
+				case "give" -> List.of("caduceus", "terminal", "laevatein", "hammer", "mimicry", "blackgod");
 				case "laevatein" -> List.of("0", "1", "2", "3");
 				case "mang" -> List.of("1", "2", "3", "4", "5", "6");
 				case "renoir" -> List.of("0", "50", "100");

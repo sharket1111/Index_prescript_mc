@@ -218,6 +218,11 @@ final class Clash {
 	 * coins), with its target. Returns false if the user is busy clashing.
 	 */
 	static boolean request(Player user, LivingEntity target, SkillCard card, Consumer<Outcome> start) {
+		if (MimicrySkill.sealed(user)) {
+			// 대절단-세로 destroyed a combat page: no skills this scene.
+			Hud.message(user, Component.text("전투 책장이 파괴되어 스킬을 쓸 수 없습니다.", NamedTextColor.RED));
+			return false;
+		}
 		Duel asked = DUELS.get(user.getUniqueId());
 		if (asked != null && asked.waiting && asked.defender == user) {
 			if (!card.clashes()) {
@@ -239,7 +244,7 @@ final class Clash {
 		Side side = new Side(user, card, target, start);
 		side.panel = panel(user);
 		Player defender = card.clashes() && target instanceof Player player && canAnswer(player) ? player : null;
-		if (defender == null && card.clashes() && ClashDummy.is(target) && !DUELS.containsKey(target.getUniqueId())
+		if (defender == null && card.clashes() && ClashDummy.is(target) && !MimicrySkill.sealed(target) && !DUELS.containsKey(target.getUniqueId())
 				&& !RUNS.containsKey(target.getUniqueId())) {
 			// A clash dummy answers with its fixed skill a moment later.
 			Duel duel = new Duel(side, null);
@@ -356,7 +361,7 @@ final class Clash {
 			return false;
 		}
 		if (LaevateinSkill.active(player) || RenoirSkill.active(player) || Furioso.active(player) || BlackGodSkill.active(player)
-				|| RienSkill.active(player)
+				|| RienSkill.active(player) || MimicrySkill.active(player) || MimicrySkill.sealed(player)
 				|| Laevatein.busy(player) || BlackGodRevive.reviving(player)) {
 			return false;
 		}
