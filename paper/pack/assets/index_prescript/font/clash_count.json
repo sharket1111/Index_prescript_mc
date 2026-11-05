@@ -1,0 +1,16 @@
+{
+	"providers": [
+		{
+			"type": "bitmap",
+			"file": "index_prescript:font/clash_count.png",
+			"height": 48,
+			"ascent": 40,
+			"chars": [
+				"\ue600\ue601\ue602\ue603\ue604",
+				"\ue605\ue606\ue607\ue608\ue609",
+				"\ue60a\ue60b\ue60c\ue60d\ue60e",
+				"\ue60f\ue610\ue611\ue612\ue613"
+			]
+		}
+	]
+}

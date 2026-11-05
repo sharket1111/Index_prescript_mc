@@ -1,0 +1,100 @@
+{
+	"providers": [
+		{
+			"type": "space",
+			"advances": {
+				"\ue4a0": 1,
+				"\ue4b0": -1,
+				"\ue4a1": 2,
+				"\ue4b1": -2,
+				"\ue4a2": 4,
+				"\ue4b2": -4,
+				"\ue4a3": 8,
+				"\ue4b3": -8,
+				"\ue4a4": 16,
+				"\ue4b4": -16,
+				"\ue4a5": 32,
+				"\ue4b5": -32,
+				"\ue4a6": 64,
+				"\ue4b6": -64,
+				"\ue4a7": 128,
+				"\ue4b7": -128,
+				"\ue4a8": 256,
+				"\ue4b8": -256,
+				"\ue4a9": 512,
+				"\ue4b9": -512,
+				"\ue4aa": 1024,
+				"\ue4ba": -1024
+			}
+		},
+		{
+			"type": "bitmap",
+			"file": "index_prescript:font/clash_coins.png",
+			"height": 12,
+			"ascent": 12,
+			"chars": [
+				"\ue401\ue402\ue403\ue404\ue405\ue406"
+			]
+		},
+		{
+			"type": "bitmap",
+			"file": "index_prescript:font/clash_badge.png",
+			"height": 32,
+			"ascent": 20,
+			"chars": [
+				"\ue410"
+			]
+		},
+		{
+			"type": "bitmap",
+			"file": "index_prescript:font/clash_digits.png",
+			"height": 16,
+			"ascent": 12,
+			"chars": [
+				"\ue420\ue421\ue422\ue423\ue424\ue425\ue426\ue427\ue428\ue429\ue42a"
+			]
+		},
+		{
+			"type": "bitmap",
+			"file": "index_prescript:font/clash_banner_l.png",
+			"height": 14,
+			"ascent": 10,
+			"chars": [
+				"\ue430"
+			]
+		},
+		{
+			"type": "bitmap",
+			"file": "index_prescript:font/clash_banner_m.png",
+			"height": 14,
+			"ascent": 10,
+			"chars": [
+				"\ue431"
+			]
+		},
+		{
+			"type": "bitmap",
+			"file": "index_prescript:font/clash_banner_r.png",
+			"height": 14,
+			"ascent": 10,
+			"chars": [
+				"\ue432"
+			]
+		},
+		{
+			"type": "bitmap",
+			"file": "index_prescript:font/clash_sp.png",
+			"height": 14,
+			"ascent": 10,
+			"chars": [
+				"\ue500\ue501\ue502\ue503\ue504\ue505\ue506\ue507\ue508\ue509\ue50a\ue50b\ue50c",
+				"\ue50d\ue50e\ue50f\ue510\ue511\ue512\ue513\ue514\ue515\ue516\ue517\ue518\ue519",
+				"\ue51a\ue51b\ue51c\ue51d\ue51e\ue51f\ue520\ue521\ue522\ue523\ue524\ue525\ue526",
+				"\ue527\ue528\ue529\ue52a\ue52b\ue52c\ue52d\ue52e\ue52f\ue530\ue531\ue532\ue533",
+				"\ue534\ue535\ue536\ue537\ue538\ue539\ue53a\ue53b\ue53c\ue53d\ue53e\ue53f\ue540",
+				"\ue541\ue542\ue543\ue544\ue545\ue546\ue547\ue548\ue549\ue54a\ue54b\ue54c\ue54d",
+				"\ue54e\ue54f\ue550\ue551\ue552\ue553\ue554\ue555\ue556\ue557\ue558\ue559\ue55a"
+			]
+		}
+	]
+}

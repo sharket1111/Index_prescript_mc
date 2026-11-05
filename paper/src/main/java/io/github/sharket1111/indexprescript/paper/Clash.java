@@ -26,6 +26,7 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import io.papermc.paper.entity.TeleportFlag;
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -119,6 +120,7 @@ final class Clash {
 		boolean waiting;
 		int tick;
 		int rounds;
+		TextDisplay counter;
 
 		Duel(Side attacker, Player defender) {
 			this.attacker = attacker;
@@ -338,6 +340,7 @@ final class Clash {
 			b.flip();
 			duel.rounds++;
 			Location mid = midpoint(a, b);
+			showCount(duel, mid.clone().add(0, 1.6, 0));
 			mid.getWorld().spawnParticle(Particle.CRIT, mid, 20, 0.3, 0.3, 0.3, 0.4);
 			mid.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, mid, 12, 0.2, 0.2, 0.2, 0.2);
 			mid.getWorld().playSound(mid, Sound.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS, 1.2F, 0.7F + ThreadLocalRandom.current().nextFloat() * 0.4F);
@@ -401,6 +404,11 @@ final class Clash {
 
 	private static void end(Duel duel) {
 		DUELS.values().removeIf(d -> d == duel);
+		if (duel.counter != null) {
+			synchronized (LINGERING) {
+				LINGERING.add(new Lingering(duel.counter, CaduceusListener.now() + LINGER));
+			}
+		}
 		retire(duel.attacker);
 		if (duel.answer != null) {
 			retire(duel.answer);
@@ -433,11 +441,13 @@ final class Clash {
 		return player.getWorld().spawn(sideOf(player), TextDisplay.class, d -> {
 			d.setPersistent(false);
 			d.setBillboard(Display.Billboard.CENTER);
-			d.setLineWidth(170);
+			d.setLineWidth(240);
+			d.setAlignment(TextDisplay.TextAlignment.LEFT);
+			d.setShadowed(true);
 			d.setTeleportDuration(2);
-			d.setBackgroundColor(Color.fromARGB(150, 10, 8, 8));
+			d.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
 			d.setBrightness(new Display.Brightness(15, 15));
-			d.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(0.55F, 0.55F, 0.55F), new Quaternionf()));
+			d.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(0.6F, 0.6F, 0.6F), new Quaternionf()));
 		});
 	}
 
@@ -465,40 +475,135 @@ final class Clash {
 		}
 	}
 
+	// The pack's "clash" font (tools/clash_font.py): coins, the badge, big digits, the banner, Sanity circles, spaces.
+	private static final Key FONT = Key.key(Items.NAMESPACE, "clash");
+	private static final Key COUNT_FONT = Key.key(Items.NAMESPACE, "clash_count");
+	private static final char COIN_FRESH = '\ue401';
+	private static final char COIN_HEADS = '\ue402';
+	private static final char COIN_TAILS = '\ue403';
+	private static final char COIN_BROKEN = '\ue404';
+	private static final char COIN_SPIN = '\ue405';
+	private static final char BADGE = '\ue410';
+	private static final char DIGIT_ZERO = '\ue420';
+	private static final char DIGIT_UNKNOWN = '\ue42a';
+	private static final char BANNER_LEFT = '\ue430';
+	private static final char BANNER_MIDDLE = '\ue431';
+	private static final char BANNER_RIGHT = '\ue432';
+	private static final char SP_FIRST = '\ue500';
+	private static final char COUNT_FIRST = '\ue600';
+	private static final char SPACE_PLUS = '\ue4a0';
+	private static final char SPACE_MINUS = '\ue4b0';
+	/** Advances (pixels with the gap): badge 33, a big digit 12; banner pieces drawn 6, 8 and 10 wide. */
+	private static final int BADGE_ADVANCE = 33;
+	private static final int DIGIT_ADVANCE = 12;
+	private static final int BANNER_START = BADGE_ADVANCE + 3;
+
+	private static String space(int pixels) {
+		return Hud.shift(pixels, SPACE_PLUS, SPACE_MINUS);
+	}
+
+	/**
+	 * The panel, after the original's clash UI: the coins over the banner;
+	 * the jagged badge in the skill's sin colour with the clash power in big
+	 * digits; the banner, in the sin colour, with the skill's name on it, and
+	 * the user's Sanity circle after it; then the numbers and the description.
+	 */
 	private static void draw(Side side) {
 		if (side.panel == null || !side.panel.isValid()) {
 			return;
 		}
 		SkillCard card = side.card;
 		boolean frame = (CaduceusListener.now() / 2) % 2 == 0;
-		Component coins = Component.empty();
+		// Coins, above the banner.
+		StringBuilder coins = new StringBuilder(space(BANNER_START));
 		for (int i = 0; i < card.coins(); i++) {
-			Component coin;
+			char coin;
 			if (i >= side.coins) {
-				coin = Component.text("✕", NamedTextColor.DARK_RED);
+				coin = COIN_BROKEN;
 			} else if (side.spinning) {
-				coin = Component.text(frame ? "◐" : "◑", NamedTextColor.YELLOW);
+				coin = (char) (COIN_SPIN + ((frame ? 0 : 1) + i) % 2);
 			} else if (side.faces[i] == 1) {
-				coin = Component.text("●", NamedTextColor.GOLD);
+				coin = COIN_HEADS;
 			} else if (side.faces[i] == 2) {
-				coin = Component.text("○", NamedTextColor.GRAY);
+				coin = COIN_TAILS;
 			} else {
-				coin = Component.text("●", NamedTextColor.WHITE);
+				coin = COIN_FRESH;
 			}
-			coins = coins.append(coin);
+			coins.append(coin);
 		}
+		// The badge and the power over it, centred.
+		String digits = side.power < 0 || side.spinning ? String.valueOf(DIGIT_UNKNOWN) : bigDigits(side.power);
+		int digitsWidth = digits.length() * DIGIT_ADVANCE;
+		int back = BADGE_ADVANCE / 2 + digitsWidth / 2 + 1;
 		TextColor powerColour = side.won == null ? NamedTextColor.WHITE : side.won ? NamedTextColor.GOLD : NamedTextColor.RED;
-		Component power = Component.text("합 위력 ", NamedTextColor.GRAY).append(side.power < 0 || side.spinning
-				? Component.text("?", NamedTextColor.WHITE).decorate(TextDecoration.BOLD)
-				: Component.text(side.power, powerColour).decorate(TextDecoration.BOLD));
+		Component badge = Component.text(String.valueOf(BADGE), card.colour()).font(FONT)
+				.append(Component.text(space(-back), NamedTextColor.WHITE).font(FONT))
+				.append(Component.text(digits, powerColour).font(FONT))
+				.append(Component.text(space(BANNER_START - (BADGE_ADVANCE - back + digitsWidth)), NamedTextColor.WHITE).font(FONT));
+		// The banner, long enough for the name, and the name on it.
+		Component name = Component.text(card.name(), NamedTextColor.WHITE).decorate(TextDecoration.BOLD);
+		int nameWidth = Hud.width(name);
+		int segments = Math.max(2, (nameWidth + 7) / 8);
+		StringBuilder banner = new StringBuilder().append(BANNER_LEFT).append(space(-1));
+		for (int i = 0; i < segments; i++) {
+			banner.append(BANNER_MIDDLE).append(space(-1));
+		}
+		banner.append(BANNER_RIGHT);
+		int bannerWidth = 6 + 8 * segments + 11;
+		int nameStart = 6 + (8 * segments - nameWidth) / 2;
+		int sanity = Sanity.of(side.player);
+		Component bannerLine = Component.text(banner.toString(), card.colour()).font(FONT)
+				.append(Component.text(space(nameStart - bannerWidth), NamedTextColor.WHITE).font(FONT))
+				.append(name)
+				.append(Component.text(space(bannerWidth - nameStart - nameWidth + 3)
+						+ (char) (SP_FIRST + sanity - Sanity.MIN), NamedTextColor.WHITE).font(FONT));
 		int chance = (int) Math.round(Sanity.headsChance(side.player) * 100);
 		Component stats = Component.text("기본 " + card.base() + "  코인 +" + card.coinPower() + " ×" + card.coins() + "  앞면 " + chance + "%",
-				NamedTextColor.DARK_GRAY);
-		Component text = Component.empty().append(coins).appendNewline().append(power).appendNewline()
-				.append(Component.text(card.name(), card.colour()).decorate(TextDecoration.BOLD)).appendNewline()
+				TextColor.color(0xC8C8C8));
+		Component text = Component.empty()
+				.append(Component.text(coins.toString(), NamedTextColor.WHITE).font(FONT)).appendNewline()
+				.appendNewline()
+				.append(badge).append(bannerLine).appendNewline()
+				.appendNewline()
 				.append(stats).appendNewline()
 				.append(Component.text(card.description(), NamedTextColor.GRAY));
 		side.panel.text(text);
+	}
+
+	private static String bigDigits(int value) {
+		StringBuilder out = new StringBuilder();
+		for (char c : String.valueOf(Math.max(0, value)).toCharArray()) {
+			out.append((char) (DIGIT_ZERO + (c - '0')));
+		}
+		return out.toString();
+	}
+
+	/** The clash count between the two, after the original: a glowing brush numeral and 합, popping in each round. */
+	private static void showCount(Duel duel, Location at) {
+		int shown = Math.min(20, Math.max(1, duel.rounds));
+		Component glyph = Component.text(String.valueOf((char) (COUNT_FIRST + shown - 1)), NamedTextColor.WHITE).font(COUNT_FONT);
+		if (duel.counter == null || !duel.counter.isValid()) {
+			duel.counter = at.getWorld().spawn(at, TextDisplay.class, d -> {
+				d.setPersistent(false);
+				d.setBillboard(Display.Billboard.CENTER);
+				d.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
+				d.setBrightness(new Display.Brightness(15, 15));
+			});
+		} else {
+			duel.counter.teleport(at);
+		}
+		duel.counter.text(glyph);
+		// Pop: big at once, then settling over 4 ticks.
+		duel.counter.setInterpolationDuration(0);
+		duel.counter.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(1.0F, 1.0F, 1.0F), new Quaternionf()));
+		TextDisplay counter = duel.counter;
+		org.bukkit.Bukkit.getScheduler().runTaskLater(IndexPrescriptPlugin.instance(), () -> {
+			if (counter.isValid()) {
+				counter.setInterpolationDelay(0);
+				counter.setInterpolationDuration(4);
+				counter.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(0.7F, 0.7F, 0.7F), new Quaternionf()));
+			}
+		}, 1L);
 	}
 
 	private static void coinSound(Player player) {

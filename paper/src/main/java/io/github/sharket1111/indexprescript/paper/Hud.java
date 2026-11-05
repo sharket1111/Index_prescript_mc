@@ -18,7 +18,8 @@ import net.kyori.adventure.text.format.TextDecoration;
  * {@link #message}, and Sanity rides along at the bottom left of the screen.
  *
  * The action bar is centred as a whole, so the Sanity readout (one glyph of
- * the pack's "sanity" font per value, a face and the number, fixed width)
+ * the pack's "sanity" font per value: the original's blue or red circle with
+ * the number, fixed width)
  * is wrapped in negative and positive spaces that add up to nothing, and
  * the left shift is reckoned from the message's width so it always lands
  * just left of the off-hand slot, at the hotbar's height. Message widths
@@ -30,9 +31,9 @@ final class Hud {
 	private static final Key TOTAL_FONT = Key.key(Items.NAMESPACE, "total");
 	private static final String FLOODGATE_PREFIX = "00000000-0000-0000-";
 	/** From the screen centre to the readout's left edge, in GUI pixels. */
-	private static final int LEFT = 182;
-	/** The readout glyph's advance: 58 pixels and the gap after it. */
-	private static final int GLYPH_ADVANCE = 59;
+	private static final int LEFT = 146;
+	/** The readout glyph's advance: the 22-pixel circle and the gap after it. */
+	private static final int GLYPH_ADVANCE = 23;
 	private static final char FIRST_GLYPH = '';
 	private static final char PLUS = '';
 	private static final char MINUS = '';
@@ -106,15 +107,15 @@ final class Hud {
 		// Net width zero: shift left, the glyph, shift back; the message stays centred.
 		int left = LEFT - width / 2;
 		String glyph = String.valueOf((char) (FIRST_GLYPH + sanity - Sanity.MIN));
-		Component readout = Component.text(shift(-left) + glyph + shift(left - GLYPH_ADVANCE)).font(FONT);
+		Component readout = Component.text(shift(-left, PLUS, MINUS) + glyph + shift(left - GLYPH_ADVANCE, PLUS, MINUS)).font(FONT);
 		return Component.empty().append(readout).append(message);
 	}
 
 	/** Spaces of the "sanity" font adding up to {@code pixels} (powers of two, either way). */
-	private static String shift(int pixels) {
+	static String shift(int pixels, char plus, char minus) {
 		StringBuilder out = new StringBuilder();
 		int left = Math.abs(pixels);
-		char base = pixels < 0 ? MINUS : PLUS;
+		char base = pixels < 0 ? minus : plus;
 		for (int bit = 10; bit >= 0; bit--) {
 			if ((left & (1 << bit)) != 0) {
 				out.append((char) (base + bit));
@@ -125,7 +126,7 @@ final class Hud {
 
 	// --- estimating widths -------------------------------------------------------------
 
-	private static int width(Component component) {
+	static int width(Component component) {
 		int total = 0;
 		if (component instanceof TextComponent text) {
 			Key font = component.style().font();

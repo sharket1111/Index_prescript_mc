@@ -30,8 +30,8 @@
 		{
 			"type": "bitmap",
 			"file": "index_prescript:font/sanity.png",
-			"height": 16,
-			"ascent": -45,
+			"height": 22,
+			"ascent": -43,
 			"chars": [
 				"\ue300\ue301\ue302\ue303\ue304\ue305\ue306\ue307\ue308\ue309\ue30a\ue30b\ue30c",
 				"\ue30d\ue30e\ue30f\ue310\ue311\ue312\ue313\ue314\ue315\ue316\ue317\ue318\ue319",
