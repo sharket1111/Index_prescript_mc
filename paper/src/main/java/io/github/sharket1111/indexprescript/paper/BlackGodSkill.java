@@ -332,6 +332,8 @@ final class BlackGodSkill {
 			mode = god.getGameMode();
 			Cinematic.saveMode(god);
 			god.setGameMode(GameMode.SPECTATOR);
+			// A spectator does not keep mobs from despawning: hold the ones round here.
+			pinned = Cinematic.pinAround(spot);
 			camera = spot.getWorld().spawn(spot.clone().add(0, 2, 0), ItemDisplay.class, d -> {
 				d.setPersistent(false);
 				d.setTeleportDuration(2);
@@ -1250,7 +1252,11 @@ final class BlackGodSkill {
 		}
 	}
 
+	private java.util.List<LivingEntity> pinned = java.util.List.of();
+
 	private void finish() {
+		Cinematic.unpin(pinned);
+		pinned = java.util.List.of();
 		clearOverlay();
 		if (kind.great()) {
 			TotalDamage.finish(god);

@@ -45,6 +45,16 @@ final class Cinematic {
 	private static final double JOLT_DECAY = 0.62;
 	private static final NamespacedKey SAVED_MODE = new NamespacedKey(Items.NAMESPACE, "cinematic_mode");
 	private static final Map<UUID, Cinematic> ACTIVE = new ConcurrentHashMap<>();
+	/**
+	 * Creatures kept from despawning while someone near them watches from a
+	 * camera: Minecraft does not count spectators as players when it decides
+	 * whether a mob is far from everyone, so with another player elsewhere in
+	 * the world the skill's target would vanish the moment the camera starts.
+	 * Counted, so overlapping cameras restore a creature only once all end.
+	 */
+	private static final Map<UUID, Integer> PINS = new ConcurrentHashMap<>();
+	private static final Map<UUID, Boolean> PIN_WAS = new ConcurrentHashMap<>();
+	private static final double PIN_RADIUS = 48.0;
 
 	private final Player viewer;
 	private final ItemDisplay camera;
@@ -52,6 +62,7 @@ final class Cinematic {
 	private int age;
 	private double jolt;
 	private boolean ended;
+	private java.util.List<LivingEntity> pinned = java.util.List.of();
 
 	private Cinematic(Player viewer, ItemDisplay camera, Mannequin actor) {
 		this.viewer = viewer;
@@ -81,6 +92,7 @@ final class Cinematic {
 		});
 		Cinematic cinematic = new Cinematic(viewer, camera, actor);
 		ACTIVE.put(viewer.getUniqueId(), cinematic);
+		cinematic.pinned = pinAround(viewer.getLocation());
 
 		viewer.getPersistentDataContainer().set(SAVED_MODE, PersistentDataType.STRING, viewer.getGameMode().name());
 		viewer.setGameMode(GameMode.SPECTATOR);
@@ -167,6 +179,35 @@ final class Cinematic {
 		}
 		actor.remove();
 		camera.remove();
+		unpin(pinned);
+		pinned = java.util.List.of();
+	}
+
+	/** Keeps every creature near {@code at} from despawning (see {@link #PINS}); returns them for {@link #unpin}. */
+	static java.util.List<LivingEntity> pinAround(Location at) {
+		java.util.List<LivingEntity> out = new java.util.ArrayList<>();
+		for (org.bukkit.entity.Entity entity : at.getWorld().getNearbyEntities(at, PIN_RADIUS, PIN_RADIUS, PIN_RADIUS)) {
+			if (entity instanceof LivingEntity living && !(entity instanceof Player) && living.isValid()) {
+				if (PINS.merge(living.getUniqueId(), 1, Integer::sum) == 1) {
+					PIN_WAS.put(living.getUniqueId(), living.getRemoveWhenFarAway());
+					living.setRemoveWhenFarAway(false);
+				}
+				out.add(living);
+			}
+		}
+		return out;
+	}
+
+	static void unpin(java.util.List<LivingEntity> creatures) {
+		for (LivingEntity living : creatures) {
+			Integer left = PINS.computeIfPresent(living.getUniqueId(), (id, count) -> count > 1 ? count - 1 : null);
+			if (left == null) {
+				Boolean was = PIN_WAS.remove(living.getUniqueId());
+				if (was != null && living.isValid()) {
+					living.setRemoveWhenFarAway(was);
+				}
+			}
+		}
 	}
 
 	static void endAll() {

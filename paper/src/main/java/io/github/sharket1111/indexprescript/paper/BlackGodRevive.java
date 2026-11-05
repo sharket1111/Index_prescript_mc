@@ -180,6 +180,8 @@ final class BlackGodRevive {
 			player.setGameMode(GameMode.SPECTATOR);
 			WATCHING.put(player.getUniqueId(), this);
 		}
+		// Spectators do not keep mobs from despawning: hold the ones round here while everyone watches.
+		pinned = Cinematic.pinAround(spot);
 		world.playSound(spot, Sound.BLOCK_BEACON_DEACTIVATE, SoundCategory.PLAYERS, 2.0F, 0.5F);
 		world.playSound(spot, Sound.BLOCK_SCULK_SHRIEKER_SHRIEK, SoundCategory.PLAYERS, 1.0F, 1.8F);
 	}
@@ -390,7 +392,11 @@ final class BlackGodRevive {
 		}
 	}
 
+	private java.util.List<org.bukkit.entity.LivingEntity> pinned = java.util.List.of();
+
 	private void finish() {
+		Cinematic.unpin(pinned);
+		pinned = java.util.List.of();
 		clearOverlays();
 		for (Map.Entry<Player, Location> entry : watchers.entrySet()) {
 			Player watcher = entry.getKey();
