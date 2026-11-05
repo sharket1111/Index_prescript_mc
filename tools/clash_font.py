@@ -306,6 +306,35 @@ def hp_ring(fraction):
     return out
 
 
+FLOOR_FIRST = 0xE740
+
+
+def floor_ring(fraction):
+    """The health ring laid flat under a player's feet, as the original draws it on the floor."""
+    s = 64
+    big = 4
+    img = Image.new("RGBA", (s * big, s * big), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    c = s * big / 2
+    def circle(r, **kw):
+        d.ellipse([c - r, c - r, c + r, c + r], **kw)
+    circle(31 * big, outline=(20, 10, 10, 200), width=2 * big)
+    circle(29 * big, outline=(70, 25, 25, 170), width=6 * big)
+    if fraction > 0:
+        colour = (235, 45, 35, 235) if fraction > 0.3 else (255, 130, 40, 235)
+        r = 29 * big
+        d.arc([c - r, c - r, c + r, c + r], -90, -90 + 360 * fraction, fill=colour, width=6 * big)
+    circle(22 * big, outline=(230, 200, 150, 110), width=1 * big)
+    # Ticks every 30 degrees, like a dial.
+    for k in range(12):
+        a = math.radians(30 * k - 90)
+        d.line([(c + math.cos(a) * 23 * big, c + math.sin(a) * 23 * big), (c + math.cos(a) * 26 * big, c + math.sin(a) * 26 * big)],
+               fill=(240, 220, 180, 150), width=big)
+    out = img.resize((s, s), Image.LANCZOS)
+    out.putpixel((s - 1, s - 1), (0, 0, 0, 1))
+    return out
+
+
 def status_icon(kind):
     s = 12
     img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
@@ -401,6 +430,9 @@ def main(assets):
     ]}
     strip([hp_ring(i / 20) for i in range(21)]).save(os.path.join(tex, "clash_hp.png"))
     strip([status_icon(k) for k in STATUS]).save(os.path.join(tex, "clash_status.png"))
+    strip([floor_ring(i / 20) for i in range(21)]).save(os.path.join(tex, "clash_floor.png"))
+    clash["providers"].append({"type": "bitmap", "file": "index_prescript:font/clash_floor.png", "height": 64, "ascent": 34,
+                               "chars": ["".join(chr(FLOOR_FIRST + i) for i in range(21))]})
     clash["providers"].append({"type": "bitmap", "file": "index_prescript:font/clash_hp.png", "height": 20, "ascent": 15,
                                "chars": ["".join(chr(HP_FIRST + i) for i in range(21))]})
     clash["providers"].append({"type": "bitmap", "file": "index_prescript:font/clash_status.png", "height": 10, "ascent": 8,

@@ -34,9 +34,9 @@ final class Hud {
 	private static final int LEFT = 146;
 	/** The readout glyph's advance: the 22-pixel circle and the gap after it. */
 	private static final int GLYPH_ADVANCE = 23;
-	private static final char FIRST_GLYPH = '';
-	private static final char PLUS = '';
-	private static final char MINUS = '';
+	private static final char FIRST_GLYPH = '\ue300';
+	private static final char PLUS = '\ue3a0';
+	private static final char MINUS = '\ue3b0';
 	private static final int MESSAGE_TICKS = 60;
 	private static final int REFRESH_TICKS = 10;
 	private static final Map<UUID, Shown> SHOWN = new ConcurrentHashMap<>();

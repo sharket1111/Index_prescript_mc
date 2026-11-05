@@ -28,9 +28,10 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 
 /**
- * The original's unit UI, under each player's feet (seen through the ground):
- * a ring gauge of health with the health in the original's scale (a heart
- * point is {@link TotalDamage#SCALE} HP), the Sanity circle, and below them
+ * The original's unit UI under each player. On the ground, laid flat like a
+ * tile round their feet, the ring gauge of health. Below the feet (seen
+ * through the ground) the health in the original's scale (a heart point is
+ * {@link TotalDamage#SCALE} HP), the Sanity circle, and below them
  * the statuses with their potency: Burn, Bleed, Poise, Sinking, Bind,
  * Paralysis, Fragile, Mang, Stagger, attack up, defense down. Shown while the
  * player is fighting, holds one of the plugin's weapons, has Sanity off 0,
@@ -38,9 +39,13 @@ import net.kyori.adventure.text.format.TextDecoration;
  */
 final class UnitHud {
 	private static final Key FONT = Key.key(Items.NAMESPACE, "clash");
-	private static final char HP_FIRST = '';
-	private static final char SP_FIRST = '';
-	private static final char STATUS_FIRST = '';
+	private static final char FLOOR_FIRST = '\ue740';
+	/** The floor ring's size: its 64-pixel glyph is 1.6 blocks across at 1. */
+	private static final float FLOOR_SCALE = 0.8F;
+	private static final Map<UUID, TextDisplay> FLOOR = new ConcurrentHashMap<>();
+	private static final Map<UUID, Integer> FLOOR_SHOWN = new ConcurrentHashMap<>();
+	private static final char SP_FIRST = '\ue500';
+	private static final char STATUS_FIRST = '\ue720';
 	private static final int BURN = 0;
 	private static final int BLEED = 1;
 	private static final int POISE = 2;
@@ -68,9 +73,11 @@ final class UnitHud {
 					display.remove();
 					SHOWN.remove(player.getUniqueId());
 				}
+				removeFloor(player.getUniqueId());
 				continue;
 			}
 			LivingEntity body = Cinematic.body(player);
+			floor(player, body);
 			Location at = body.getLocation().add(0, -BELOW, 0);
 			at.setYaw(0);
 			at.setPitch(0);
@@ -98,11 +105,63 @@ final class UnitHud {
 				it.remove();
 			}
 		}
+		for (UUID id : java.util.List.copyOf(FLOOR.keySet())) {
+			if (Bukkit.getPlayer(id) == null) {
+				removeFloor(id);
+			}
+		}
 	}
 
 	static void clearAll() {
 		SHOWN.values().forEach(TextDisplay::remove);
 		SHOWN.clear();
+		FLOOR.values().forEach(TextDisplay::remove);
+		FLOOR.clear();
+		FLOOR_SHOWN.clear();
+	}
+
+	/** The health ring, lying on the ground round the feet like a tile, filled as health is. */
+	private static void floor(Player player, LivingEntity body) {
+		AttributeInstance maxAttribute = player.getAttribute(Attribute.MAX_HEALTH);
+		double max = maxAttribute == null ? 20.0 : maxAttribute.getValue();
+		int step = (int) Math.round(Math.max(0.0, Math.min(1.0, player.getHealth() / max)) * 20);
+		Location at = body.getLocation().add(0, 0.03, 0);
+		at.setYaw(0);
+		at.setPitch(0);
+		TextDisplay ring = FLOOR.get(player.getUniqueId());
+		if (ring == null || !ring.isValid() || ring.getWorld() != at.getWorld()) {
+			if (ring != null) {
+				ring.remove();
+			}
+			ring = at.getWorld().spawn(at, TextDisplay.class, d -> {
+				d.setPersistent(false);
+				d.setBillboard(Display.Billboard.FIXED);
+				d.setTeleportDuration(1);
+				d.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
+				d.setBrightness(new Display.Brightness(15, 15));
+				// Turned face up; the glyph's centre (5 text pixels above the line's foot) moved onto the feet.
+				float centre = 5 * 0.025F * FLOOR_SCALE;
+				d.setTransformation(new Transformation(new Vector3f(0, 0, centre), new Quaternionf().rotateX((float) (-Math.PI / 2)),
+						new Vector3f(FLOOR_SCALE, FLOOR_SCALE, FLOOR_SCALE), new Quaternionf()));
+			});
+			FLOOR.put(player.getUniqueId(), ring);
+			FLOOR_SHOWN.remove(player.getUniqueId());
+		} else if (ring.getLocation().distanceSquared(at) > 0.0004) {
+			ring.teleport(at);
+		}
+		Integer shown = FLOOR_SHOWN.get(player.getUniqueId());
+		if (shown == null || shown != step) {
+			FLOOR_SHOWN.put(player.getUniqueId(), step);
+			ring.text(glyph((char) (FLOOR_FIRST + step)));
+		}
+	}
+
+	private static void removeFloor(UUID id) {
+		TextDisplay ring = FLOOR.remove(id);
+		FLOOR_SHOWN.remove(id);
+		if (ring != null) {
+			ring.remove();
+		}
 	}
 
 	private static TextDisplay spawn(Location at) {
@@ -126,11 +185,9 @@ final class UnitHud {
 		AttributeInstance maxAttribute = player.getAttribute(Attribute.MAX_HEALTH);
 		double max = maxAttribute == null ? 20.0 : maxAttribute.getValue();
 		double health = player.getHealth() + player.getAbsorptionAmount();
-		int ring = (int) Math.round(Math.max(0.0, Math.min(1.0, player.getHealth() / max)) * 20);
 		int sanity = Sanity.of(player);
 		Component top = Component.empty()
-				.append(glyph((char) (HP_FIRST + ring)))
-				.append(Component.text(" " + Math.round(health * TotalDamage.SCALE), NamedTextColor.WHITE).decorate(TextDecoration.BOLD))
+				.append(Component.text(String.valueOf(Math.round(health * TotalDamage.SCALE)), NamedTextColor.WHITE).decorate(TextDecoration.BOLD))
 				.append(Component.text("/" + Math.round(max * TotalDamage.SCALE) + " ", NamedTextColor.GRAY))
 				.append(glyph((char) (SP_FIRST + sanity - Sanity.MIN)));
 		Component statuses = statuses(player, now);

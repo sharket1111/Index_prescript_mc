@@ -98,6 +98,15 @@
 		},
 		{
 			"type": "bitmap",
+			"file": "index_prescript:font/clash_floor.png",
+			"height": 64,
+			"ascent": 34,
+			"chars": [
+				"\ue740\ue741\ue742\ue743\ue744\ue745\ue746\ue747\ue748\ue749\ue74a\ue74b\ue74c\ue74d\ue74e\ue74f\ue750\ue751\ue752\ue753\ue754"
+			]
+		},
+		{
+			"type": "bitmap",
 			"file": "index_prescript:font/clash_hp.png",
 			"height": 20,
 			"ascent": 15,
