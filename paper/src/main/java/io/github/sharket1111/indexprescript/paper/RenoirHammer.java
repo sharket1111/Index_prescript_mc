@@ -384,17 +384,17 @@ final class RenoirHammer implements Listener {
 	}
 
 	private static void act(Player player) {
-		if (!holding(player) || RenoirSkill.active(player)) {
+		if (!holding(player) || RenoirSkill.active(player) || Clash.blocked(player)) {
 			return;
 		}
-		LivingEntity target = lookedAt(player);
+		LivingEntity target = Clash.answering(player) != null ? Clash.answering(player) : lookedAt(player);
 		if (target == null) {
-			player.sendActionBar(Component.text(Messages.get(player, "renoir.no_target"), NamedTextColor.GRAY));
+			Hud.message(player, Component.text(Messages.get(player, "renoir.no_target"), NamedTextColor.GRAY));
 			return;
 		}
 		int voice = voice(player);
 		if (voice < SEVER_VOICE) {
-			player.sendActionBar(Component.text(Messages.get(player, "renoir.need_voice", voice), NamedTextColor.GRAY));
+			Hud.message(player, Component.text(Messages.get(player, "renoir.need_voice", voice), NamedTextColor.GRAY));
 			return;
 		}
 		// Either skill spends all of the Voice.

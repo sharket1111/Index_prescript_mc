@@ -481,7 +481,7 @@ final class BlackGodState {
 			Location at = god.getLocation().add(0, 1, 0);
 			god.getWorld().spawnParticle(Particle.END_ROD, at, 40, 0.6, 1.0, 0.6, 0.1);
 			god.getWorld().playSound(at, Sound.BLOCK_BELL_RESONATE, SoundCategory.PLAYERS, 1.5F, state.authorityForm ? 0.5F : 0.8F);
-			god.sendActionBar(Component.text(Messages.get(god, state.authorityForm ? "blackgod.to_authority" : "blackgod.to_voice"),
+			Hud.message(god, Component.text(Messages.get(god, state.authorityForm ? "blackgod.to_authority" : "blackgod.to_voice"),
 					TextColor.color(0xF0D070)));
 		}
 		state.voiceFromPreservation = 0;
@@ -521,10 +521,10 @@ final class BlackGodState {
 			STOP.put(stop.getUniqueId(), now + TURN);
 			PULSE.put(pulse.getUniqueId(), now + TURN);
 			if (stop instanceof Player player) {
-				player.sendActionBar(Component.text(Messages.get(player, "blackgod.got_stop"), NamedTextColor.GRAY));
+				Hud.message(player, Component.text(Messages.get(player, "blackgod.got_stop"), NamedTextColor.GRAY));
 			}
 			if (pulse instanceof Player player) {
-				player.sendActionBar(Component.text(Messages.get(player, "blackgod.got_pulse"), NamedTextColor.RED));
+				Hud.message(player, Component.text(Messages.get(player, "blackgod.got_pulse"), NamedTextColor.RED));
 			}
 		}
 	}
@@ -616,7 +616,7 @@ final class BlackGodState {
 					god.setFireTicks(0);
 					god.getWorld().spawnParticle(Particle.END_ROD, god.getLocation().add(0, 1, 0), 40, 0.5, 1.0, 0.5, 0.1);
 					god.getWorld().playSound(god.getLocation(), Sound.ITEM_TOTEM_USE, SoundCategory.PLAYERS, 0.8F, 1.4F);
-					god.sendActionBar(Component.text(Messages.get(god, "blackgod.bride_steps_in"), TextColor.color(0xF0D070)));
+					Hud.message(god, Component.text(Messages.get(god, "blackgod.bride_steps_in"), TextColor.color(0xF0D070)));
 				});
 			} else if (!state.shielded && after <= max / 3.0) {
 				state.shielded = true;
@@ -628,7 +628,7 @@ final class BlackGodState {
 					if (god.isOnline() && !god.isDead()) {
 						god.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, PotionEffect.INFINITE_DURATION, amplifier, false, false, true));
 						god.getWorld().playSound(god.getLocation(), Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.2F, 0.6F);
-						god.sendActionBar(Component.text(Messages.get(god, "blackgod.shield"), TextColor.color(0xF0D070)));
+						Hud.message(god, Component.text(Messages.get(god, "blackgod.shield"), TextColor.color(0xF0D070)));
 					}
 				});
 			}

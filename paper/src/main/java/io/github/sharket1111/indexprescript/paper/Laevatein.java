@@ -227,9 +227,16 @@ final class Laevatein implements Listener {
 	}
 
 	private static void startRelease(Player player, LivingEntity target) {
-		Release release = new Release(player, target, Items.laevateinStage(player.getInventory().getItemInMainHand()) + 1);
-		RELEASING.put(player.getUniqueId(), release);
-		release.start();
+		int stage = Items.laevateinStage(player.getInventory().getItemInMainHand()) + 1;
+		SkillCard card = stage == 1 ? SkillCard.RELEASE_1 : stage == 2 ? SkillCard.RELEASE_2 : SkillCard.RELEASE_3;
+		Clash.request(player, target, card, outcome -> {
+			if (busy(player) || !Items.isLaevatein(player.getInventory().getItemInMainHand())) {
+				return;
+			}
+			Release release = new Release(player, outcome.target(), stage);
+			RELEASING.put(player.getUniqueId(), release);
+			release.start();
+		});
 	}
 
 	@EventHandler(ignoreCancelled = true)
@@ -356,7 +363,7 @@ final class Laevatein implements Listener {
 	 */
 	private static void act(Player player) {
 		ItemStack held = player.getInventory().getItemInMainHand();
-		if (!Items.isLaevatein(held) || busy(player)) {
+		if (!Items.isLaevatein(held) || busy(player) || Clash.blocked(player)) {
 			return;
 		}
 		int stage = Items.laevateinStage(held);
@@ -364,7 +371,8 @@ final class Laevatein implements Listener {
 		if (!release && hits(held) < SKILL_HITS[stage]) {
 			return;
 		}
-		LivingEntity target = findTarget(player);
+		// Answering a skill aimed at us: the clash is with its user.
+		LivingEntity target = Clash.answering(player) != null ? Clash.answering(player) : findTarget(player);
 		if (target == null) {
 			return;
 		}

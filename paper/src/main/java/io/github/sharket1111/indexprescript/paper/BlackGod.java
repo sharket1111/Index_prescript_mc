@@ -257,7 +257,7 @@ final class BlackGod implements Listener {
 		Location at = player.getLocation().add(0, 1, 0);
 		player.getWorld().spawnParticle(Particle.DUST, at, 30, 0.5, 0.8, 0.5, 0.0, new Particle.DustOptions(GOLD, 1.2F));
 		player.getWorld().playSound(at, Sound.BLOCK_BEACON_DEACTIVATE, SoundCategory.PLAYERS, 1.0F, 0.7F);
-		player.sendActionBar(Component.text(Messages.get(player, "blackgod.off"), NamedTextColor.GRAY));
+		Hud.message(player, Component.text(Messages.get(player, "blackgod.off"), NamedTextColor.GRAY));
 	}
 
 	/** Takes off robe armour left over from before the robe was a 3D model. */
@@ -407,7 +407,7 @@ final class BlackGod implements Listener {
 		stash(player, displaced);
 		CHOOSING.put(player.getUniqueId(), CaduceusListener.now() + CHOOSE_TICKS);
 		player.playSound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.PLAYERS, 1.0F, 0.8F);
-		player.sendActionBar(Component.text(Messages.get(player, "blackgod.choose"), NamedTextColor.GOLD));
+		Hud.message(player, Component.text(Messages.get(player, "blackgod.choose"), NamedTextColor.GOLD));
 	}
 
 	/** Puts the mode's hotbar back after choosing. */

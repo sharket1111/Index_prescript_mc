@@ -150,25 +150,39 @@ final class BlackGodSkill {
 		if (kind == null) {
 			return false;
 		}
-		if (ACTIVE.containsKey(god.getUniqueId()) || BlackGodRevive.reviving(god)) {
+		if (ACTIVE.containsKey(god.getUniqueId()) || BlackGodRevive.reviving(god) || Clash.blocked(god)) {
 			return true;
 		}
 		String key = god.getUniqueId() + ":" + kind;
 		long now = CaduceusListener.now();
 		long ready = READY_AT.getOrDefault(key, 0L);
 		if (now < ready) {
-			god.sendActionBar(Component.text(Messages.get(god, "blackgod.cooldown", (ready - now + 19) / 20), NamedTextColor.GRAY));
+			Hud.message(god, Component.text(Messages.get(god, "blackgod.cooldown", (ready - now + 19) / 20), NamedTextColor.GRAY));
 			return true;
 		}
 		if (kind.great() && !BlackGodState.authorityForm(god)) {
 			// '심판의 날': the great skills come only with the Black God's Authority.
-			god.sendActionBar(Component.text(Messages.get(god, "blackgod.need_authority"), TextColor.color(0xF0C860)));
+			Hud.message(god, Component.text(Messages.get(god, "blackgod.need_authority"), TextColor.color(0xF0C860)));
 			return true;
 		}
-		LivingEntity target = lookedAt(god);
-		if (target == null) {
-			god.sendActionBar(Component.text(Messages.get(god, "renoir.no_target"), NamedTextColor.GRAY));
+		// Answering a skill aimed at the Black God: the clash is with its user.
+		LivingEntity aimed = Clash.answering(god) != null ? Clash.answering(god) : lookedAt(god);
+		if (aimed == null) {
+			Hud.message(god, Component.text(Messages.get(god, "renoir.no_target"), NamedTextColor.GRAY));
 			return true;
+		}
+		READY_AT.put(key, now + kind.cooldownSeconds * 20L);
+		Clash.request(god, aimed, cardOf(kind), outcome -> launch(god, kind, outcome.target()));
+		return true;
+	}
+
+	private static SkillCard cardOf(Kind kind) {
+		return SkillCard.BLACK_GOD[kind.slot];
+	}
+
+	private static void launch(Player god, Kind kind, LivingEntity target) {
+		if (ACTIVE.containsKey(god.getUniqueId()) || !god.isOnline() || !BlackGod.active(god) || BlackGodRevive.reviving(god)) {
+			return;
 		}
 		List<LivingEntity> foes = new ArrayList<>();
 		foes.add(target);
@@ -182,12 +196,11 @@ final class BlackGodSkill {
 			near.sort(Comparator.comparingDouble(e -> e.getLocation().distanceSquared(target.getLocation())));
 			foes.addAll(near.subList(0, Math.min(MAX_TARGETS - 1, near.size())));
 		}
-		READY_AT.put(key, now + kind.cooldownSeconds * 20L);
 		BlackGodSkill skill = new BlackGodSkill(god, kind, target, foes);
 		ACTIVE.put(god.getUniqueId(), skill);
 		skill.open();
-		return true;
 	}
+
 
 	private static LivingEntity lookedAt(Player god) {
 		if (god.getTargetEntity((int) RANGE) instanceof LivingEntity living && RenoirHammer.foe(god, living)) {
@@ -934,7 +947,7 @@ final class BlackGodSkill {
 		long now = CaduceusListener.now();
 		long ready = READY_AT.getOrDefault(key, 0L);
 		if (now < ready) {
-			god.sendActionBar(Component.text(Messages.get(god, "blackgod.cooldown", (ready - now + 19) / 20), NamedTextColor.GRAY));
+			Hud.message(god, Component.text(Messages.get(god, "blackgod.cooldown", (ready - now + 19) / 20), NamedTextColor.GRAY));
 			return;
 		}
 		READY_AT.put(key, now + GUARD_COOLDOWN);

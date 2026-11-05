@@ -95,6 +95,14 @@ final class RenoirSkill {
 		if (ACTIVE.containsKey(player.getUniqueId())) {
 			return;
 		}
+		Clash.request(player, target, kind == Kind.AGAIN ? SkillCard.AGAIN : SkillCard.SEVER,
+				outcome -> launch(player, outcome.target(), kind));
+	}
+
+	private static void launch(Player player, LivingEntity target, Kind kind) {
+		if (ACTIVE.containsKey(player.getUniqueId()) || !player.isOnline() || !RenoirHammer.holding(player)) {
+			return;
+		}
 		RenoirSkill skill = new RenoirSkill(player, target, kind);
 		ACTIVE.put(player.getUniqueId(), skill);
 		skill.open();
@@ -167,7 +175,7 @@ final class RenoirSkill {
 			TotalDamage.start(player);
 		}
 		SkillOverlay.show(player, big ? SkillOverlay.Size.BIG : SkillOverlay.Size.SMALL);
-		player.sendActionBar(Component.text(Messages.get(player, big ? "renoir.again" : "renoir.sever"), NamedTextColor.GOLD));
+		Hud.message(player, Component.text(Messages.get(player, big ? "renoir.again" : "renoir.sever"), NamedTextColor.GOLD));
 		World world = actor().getWorld();
 		Location at = actor().getLocation().add(0, 1, 0);
 		world.spawnParticle(Particle.DUST, at, big ? 60 : 25, 0.6, 0.8, 0.6, 0.0, GOLD);

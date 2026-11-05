@@ -129,9 +129,9 @@ final class PrescriptTracker implements Listener {
 			if (TotalDamage.showing(player)) {
 				// The TOTAL counter has the line during big skills.
 			} else if (tracker.revealing(now)) {
-				player.sendActionBar(tracker.revealFrame(now));
+				Hud.message(player, tracker.revealFrame(now));
 			} else if (now % OVERLAY_INTERVAL == 0) {
-				player.sendActionBar(tracker.line(player));
+				Hud.message(player, tracker.line(player));
 			}
 			if (now % AURA_INTERVAL == 0 && ready(player) && !Furioso.active(player)) {
 				Effects.aura(Cinematic.body(player));

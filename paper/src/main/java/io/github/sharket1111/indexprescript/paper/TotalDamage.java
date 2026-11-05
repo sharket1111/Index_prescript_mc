@@ -85,16 +85,16 @@ final class TotalDamage {
 					SkillOverlay.hide(player);
 				}
 				if (++tally.leaving >= SkillOverlay.FRAMES - 1) {
-					player.sendActionBar(Component.empty());
+					Hud.message(player, Component.empty());
 					it.remove();
 				} else {
-					player.sendActionBar(line(player, Math.round(tally.total), tally.leaving));
+					Hud.message(player, line(player, Math.round(tally.total), tally.leaving));
 				}
 				continue;
 			}
 			long shown = Math.round(tally.total);
 			if (shown != tally.shownTotal || now - tally.shownAt >= REFRESH_TICKS) {
-				player.sendActionBar(line(player, shown, 0));
+				Hud.message(player, line(player, shown, 0));
 				tally.shownTotal = shown;
 				tally.shownAt = now;
 			}

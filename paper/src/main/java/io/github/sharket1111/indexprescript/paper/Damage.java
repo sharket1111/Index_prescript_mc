@@ -19,6 +19,10 @@ final class Damage {
 		if (ignoreHurtCooldown) {
 			target.setNoDamageTicks(0);
 		}
+		if (source instanceof Player player) {
+			// The coins of the skill being used (Clash) scale its damage.
+			amount *= Clash.scale(player);
+		}
 		double before = target.getHealth() + target.getAbsorptionAmount();
 		dealing = true;
 		try {

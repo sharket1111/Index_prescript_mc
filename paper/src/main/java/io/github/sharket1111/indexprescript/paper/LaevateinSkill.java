@@ -86,6 +86,26 @@ final class LaevateinSkill {
 		if (ACTIVE.containsKey(player.getUniqueId())) {
 			return;
 		}
+		// The coins first (and a clash, if the target can answer).
+		Clash.request(player, target, card(kind), outcome -> launch(player, outcome.target(), kind, stage));
+	}
+
+	private static SkillCard card(Kind kind) {
+		return switch (kind) {
+			case STOMP -> SkillCard.STOMP;
+			case HEATED -> SkillCard.HEATED;
+			case MELT -> SkillCard.MELT;
+			case STAB -> SkillCard.STAB;
+			case RULE_VIOLATION -> SkillCard.RULE_VIOLATION;
+			case EXECUTION -> SkillCard.EXECUTION;
+		};
+	}
+
+	private static void launch(Player player, LivingEntity target, Kind kind, int stage) {
+		if (ACTIVE.containsKey(player.getUniqueId()) || !player.isOnline()
+				|| !Items.isLaevatein(player.getInventory().getItemInMainHand())) {
+			return;
+		}
 		// Rule Violation repeats once if the wielder already had [Big Brother] when struck.
 		boolean repeat = kind == Kind.RULE_VIOLATION && Matthias.hasTattoo(player);
 		LaevateinSkill skill = new LaevateinSkill(player, target, kind, repeat);

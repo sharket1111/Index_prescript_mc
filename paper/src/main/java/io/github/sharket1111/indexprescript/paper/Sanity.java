@@ -1,61 +1,113 @@
 package io.github.sharket1111.indexprescript.paper;
 
-import org.bukkit.attribute.Attribute;
-import org.bukkit.attribute.AttributeInstance;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 /**
- * Sanity (SP, -45 to 45) is read from health: 5 hearts (10 health) is 0, full
- * health is 45 and no health is -45, linear in between on each side. For
- * creatures with 10 health or less, half their health is 0 instead. Changing
- * Sanity changes health to match.
+ * Sanity (SP, -45 to 45), as in Limbus Company, kept for every player:
+ * - landing a hit on a creature: +{@link #HIT_GAIN}; being hit by one: -{@link #HURT_LOSS}
+ * - winning or losing a clash: up or down by how many rounds it took (see {@link Clash})
+ * - after {@link #CALM_TICKS} out of combat it drifts back to 0, a point a second
+ * - a coin lands heads with a chance of 50% + SP%
+ * Shown at the bottom left of the screen (see {@link Hud}). Creatures other
+ * than players stay at 0.
  */
-final class Sanity {
+final class Sanity implements Listener {
 	static final int MIN = -45;
 	static final int MAX = 45;
-	private static final double ZERO_HEALTH = 10.0;
-
-	private Sanity() {
-	}
-
-	private static double maxHealth(LivingEntity entity) {
-		AttributeInstance attribute = entity.getAttribute(Attribute.MAX_HEALTH);
-		return attribute == null ? 20.0 : attribute.getValue();
-	}
-
-	/** The health at which Sanity is 0: 5 hearts, or half of a smaller maximum. */
-	private static double pivot(double max) {
-		return max > ZERO_HEALTH * 2 ? ZERO_HEALTH : max / 2.0;
-	}
+	static final int HIT_GAIN = 2;
+	static final int HURT_LOSS = 2;
+	static final int CALM_TICKS = 30 * 20;
+	private static final Map<UUID, Integer> VALUES = new ConcurrentHashMap<>();
+	private static final Map<UUID, Long> LAST_FIGHT = new ConcurrentHashMap<>();
 
 	static int of(Entity entity) {
-		if (!(entity instanceof LivingEntity living)) {
-			return 0;
+		return entity == null ? 0 : VALUES.getOrDefault(entity.getUniqueId(), 0);
+	}
+
+	static void set(LivingEntity entity, int value) {
+		if (!(entity instanceof Player)) {
+			return;
 		}
-		double max = maxHealth(living);
-		double pivot = pivot(max);
-		double health = living.getHealth();
-		double sanity = health >= pivot ? (health - pivot) / (max - pivot) * MAX : (health - pivot) / pivot * -MIN;
-		return (int) Math.round(Math.max(MIN, Math.min(MAX, sanity)));
+		int clamped = Math.max(MIN, Math.min(MAX, value));
+		if (clamped == 0) {
+			VALUES.remove(entity.getUniqueId());
+		} else {
+			VALUES.put(entity.getUniqueId(), clamped);
+		}
 	}
 
-	/** The health that matches {@code sanity} for this creature. */
-	static double healthFor(LivingEntity entity, int sanity) {
-		double max = maxHealth(entity);
-		double pivot = pivot(max);
-		int clamped = Math.max(MIN, Math.min(MAX, sanity));
-		return clamped >= 0 ? pivot + clamped / (double) MAX * (max - pivot) : pivot + clamped / (double) -MIN * pivot;
+	static void add(LivingEntity entity, int amount) {
+		set(entity, of(entity) + amount);
 	}
 
-	/** Sets health to match {@code sanity}, leaving at least half a heart. */
-	static void set(LivingEntity entity, int sanity) {
-		entity.setHealth(Math.max(1.0, Math.min(maxHealth(entity), healthFor(entity, sanity))));
-	}
-
-	/** Lowers Sanity, and so health, by {@code amount}; never below half a heart. */
 	static void lose(LivingEntity entity, int amount) {
-		double health = healthFor(entity, of(entity) - amount);
-		entity.setHealth(Math.max(1.0, Math.min(entity.getHealth(), health)));
+		add(entity, -amount);
+	}
+
+	/** The chance (0-1) that one of this creature's coins lands heads: 50% + SP%. */
+	static double headsChance(Entity entity) {
+		return Math.max(0.05, Math.min(0.95, (50 + of(entity)) / 100.0));
+	}
+
+	static void fought(Entity entity) {
+		if (entity instanceof Player) {
+			LAST_FIGHT.put(entity.getUniqueId(), CaduceusListener.now());
+		}
+	}
+
+	static boolean inCombat(Player player) {
+		Long at = LAST_FIGHT.get(player.getUniqueId());
+		return at != null && CaduceusListener.now() - at < CALM_TICKS;
+	}
+
+	/** Every tick: out of combat for 30 s, SP drifts to 0 by a point a second. */
+	static void tick() {
+		long now = CaduceusListener.now();
+		if (now % 20 != 0) {
+			return;
+		}
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			int value = of(player);
+			if (value != 0 && !inCombat(player)) {
+				set(player, value - Integer.signum(value));
+			}
+		}
+	}
+
+	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+	public void onHit(EntityDamageByEntityEvent event) {
+		if (!(event.getEntity() instanceof LivingEntity victim) || event.getFinalDamage() <= 0) {
+			return;
+		}
+		Entity damager = event.getDamager();
+		if (damager instanceof Projectile projectile && projectile.getShooter() instanceof Entity shooter) {
+			damager = shooter;
+		}
+		if (damager == victim || !(damager instanceof LivingEntity attacker)) {
+			return;
+		}
+		fought(attacker);
+		fought(victim);
+		add(attacker, HIT_GAIN);
+		lose(victim, HURT_LOSS);
+	}
+
+	@EventHandler
+	public void onQuit(PlayerQuitEvent event) {
+		LAST_FIGHT.remove(event.getPlayer().getUniqueId());
+		Hud.forget(event.getPlayer());
 	}
 }

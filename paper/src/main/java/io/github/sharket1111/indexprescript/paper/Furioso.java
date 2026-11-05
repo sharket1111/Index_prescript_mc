@@ -61,8 +61,7 @@ import io.papermc.paper.entity.TeleportFlag;
  * - Sanity above the target's: damage +1% per 2 points of difference (max 30%)
  * [Mang] forms if the wielder's Sanity is 0 or more, shown as a glowing golden
  * ring wound round the weapon: damage +40% and final power +4 (each +10%);
- * at attack end it costs 20 Sanity. Sanity is read from health (see {@link Sanity}),
- * so [Mang] forms at 5 hearts or more and its cost is taken from health.
+ * at attack end it costs 20 Sanity (see {@link Sanity}).
  */
 final class Furioso {
 	// Timed to Furioso [Lacrimosa-Crescendo] at its own speed (measured from the video,
@@ -141,6 +140,16 @@ final class Furioso {
 	}
 
 	static void start(Player player, LivingEntity target) {
+		if (ACTIVE.containsKey(player.getUniqueId())) {
+			return;
+		}
+		Clash.request(player, target, SkillCard.FURIOSO, outcome -> launch(player, outcome.target()));
+	}
+
+	private static void launch(Player player, LivingEntity target) {
+		if (!player.isOnline() || !PrescriptTracker.ready(player)) {
+			return;
+		}
 		Furioso furioso = new Furioso(player, target);
 		if (ACTIVE.putIfAbsent(player.getUniqueId(), furioso) == null) {
 			furioso.open();

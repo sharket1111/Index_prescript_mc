@@ -1,0 +1,46 @@
+{
+	"providers": [
+		{
+			"type": "space",
+			"advances": {
+				"\ue3a0": 1,
+				"\ue3b0": -1,
+				"\ue3a1": 2,
+				"\ue3b1": -2,
+				"\ue3a2": 4,
+				"\ue3b2": -4,
+				"\ue3a3": 8,
+				"\ue3b3": -8,
+				"\ue3a4": 16,
+				"\ue3b4": -16,
+				"\ue3a5": 32,
+				"\ue3b5": -32,
+				"\ue3a6": 64,
+				"\ue3b6": -64,
+				"\ue3a7": 128,
+				"\ue3b7": -128,
+				"\ue3a8": 256,
+				"\ue3b8": -256,
+				"\ue3a9": 512,
+				"\ue3b9": -512,
+				"\ue3aa": 1024,
+				"\ue3ba": -1024
+			}
+		},
+		{
+			"type": "bitmap",
+			"file": "index_prescript:font/sanity.png",
+			"height": 16,
+			"ascent": -45,
+			"chars": [
+				"\ue300\ue301\ue302\ue303\ue304\ue305\ue306\ue307\ue308\ue309\ue30a\ue30b\ue30c",
+				"\ue30d\ue30e\ue30f\ue310\ue311\ue312\ue313\ue314\ue315\ue316\ue317\ue318\ue319",
+				"\ue31a\ue31b\ue31c\ue31d\ue31e\ue31f\ue320\ue321\ue322\ue323\ue324\ue325\ue326",
+				"\ue327\ue328\ue329\ue32a\ue32b\ue32c\ue32d\ue32e\ue32f\ue330\ue331\ue332\ue333",
+				"\ue334\ue335\ue336\ue337\ue338\ue339\ue33a\ue33b\ue33c\ue33d\ue33e\ue33f\ue340",
+				"\ue341\ue342\ue343\ue344\ue345\ue346\ue347\ue348\ue349\ue34a\ue34b\ue34c\ue34d",
+				"\ue34e\ue34f\ue350\ue351\ue352\ue353\ue354\ue355\ue356\ue357\ue358\ue359\ue35a"
+			]
+		}
+	]
+}
