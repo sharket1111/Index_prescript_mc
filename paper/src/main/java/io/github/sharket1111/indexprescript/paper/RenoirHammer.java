@@ -296,7 +296,8 @@ final class RenoirHammer implements Listener {
 	 * Every attack on a foe, read when it is made rather than from the damage
 	 * (training dummies are often invulnerable or cancel the damage, so it
 	 * may never come): a smash spends the foe's nails (their damage is added
-	 * below); a full normal hit builds toward the next nail; full swings give Voice.
+	 * below); a full normal hit builds toward the next nail; full swings give Voice
+	 * and Tremor 1, and a smash sets off a Tremor Burst.
 	 */
 	@EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
 	public void onAttack(PrePlayerAttackEntityEvent event) {
@@ -328,6 +329,11 @@ final class RenoirHammer implements Listener {
 			}
 		}
 		if (full || smashing(player)) {
+			// Every normal hit: Tremor 1; a smash also sets off a Tremor Burst.
+			Tremor.inflict(foe, 1);
+			if (smashing(player)) {
+				Tremor.burst(foe);
+			}
 			int before = voice(player);
 			setVoice(player, before + VOICE_PER_HIT);
 			if (before < MAX_VOICE && voice(player) >= MAX_VOICE) {
