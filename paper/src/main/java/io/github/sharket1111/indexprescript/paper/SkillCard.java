@@ -14,18 +14,18 @@ record SkillCard(String name, TextColor colour, int base, int coinPower, int coi
 		boolean clashes, String types) {
 
 	/** Coin types, one letter per coin in {@code types}: plain, unbreakable (red), execution (green, unbreakable, and destroys red). */
-	static final char PLAIN = 'N';
-	static final char UNBREAKABLE = 'R';
-	static final char EXECUTION = 'G';
+	static final char COIN_PLAIN = 'N';
+	static final char COIN_UNBREAKABLE = 'R';
+	static final char COIN_EXECUTION = 'G';
 
 	char type(int index) {
-		return index < types.length() ? types.charAt(index) : PLAIN;
+		return index < types.length() ? types.charAt(index) : COIN_PLAIN;
 	}
 
 	/** The same skill with every plain coin made unbreakable (the Black God's Authority). */
 	SkillCard unbreakable() {
-		return new SkillCard(name, colour, base, coinPower, coins, description, ticks, clashes, types.replace(PLAIN, UNBREAKABLE)
-				+ String.valueOf(UNBREAKABLE).repeat(Math.max(0, coins - types.length())));
+		return new SkillCard(name, colour, base, coinPower, coins, description, ticks, clashes, types.replace(COIN_PLAIN, COIN_UNBREAKABLE)
+				+ String.valueOf(COIN_UNBREAKABLE).repeat(Math.max(0, coins - types.length())));
 	}
 
 	private static final TextColor WRATH = TextColor.color(0xE03C28);

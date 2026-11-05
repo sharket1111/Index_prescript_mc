@@ -135,7 +135,7 @@ final class Clash {
 
 		boolean hasUnbrokenGreen() {
 			for (int i = 0; i < state.length; i++) {
-				if (state[i] == UNBROKEN && card.type(i) == SkillCard.EXECUTION) {
+				if (state[i] == UNBROKEN && card.type(i) == SkillCard.COIN_EXECUTION) {
 					return true;
 				}
 			}
@@ -465,14 +465,14 @@ final class Clash {
 		}
 		char type = loser.card.type(index);
 		Location at = loser.player.getLocation().add(0, 1.2, 0);
-		boolean destroyed = type == SkillCard.PLAIN || type == SkillCard.UNBREAKABLE && winner.hasUnbrokenGreen();
+		boolean destroyed = type == SkillCard.COIN_PLAIN || type == SkillCard.COIN_UNBREAKABLE && winner.hasUnbrokenGreen();
 		if (destroyed) {
 			loser.state[index] = DESTROYED;
 			loser.shattering = index;
 			loser.shatteredAt = CaduceusListener.now();
 			at.getWorld().spawnParticle(Particle.DUST, at, 10, 0.2, 0.2, 0.2, 0.0, new Particle.DustOptions(Color.fromRGB(0xC02020), 1.2F));
 			at.getWorld().playSound(at, Sound.ENTITY_ITEM_BREAK, SoundCategory.PLAYERS, 1.0F, 1.2F);
-			if (type == SkillCard.UNBREAKABLE) {
+			if (type == SkillCard.COIN_UNBREAKABLE) {
 				Hud.message(loser.player, Component.text("초록 코인에 파괴 불가 코인이 완전히 파괴되었다!", NamedTextColor.RED));
 			}
 		} else {
@@ -480,7 +480,7 @@ final class Clash {
 			loser.state[index] = BROKEN;
 			at.getWorld().playSound(at, Sound.BLOCK_ANVIL_LAND, SoundCategory.PLAYERS, 0.8F, 1.4F);
 			at.getWorld().spawnParticle(Particle.DUST, at, 8, 0.2, 0.2, 0.2, 0.0,
-					new Particle.DustOptions(type == SkillCard.EXECUTION ? Color.fromRGB(0x70D030) : Color.fromRGB(0xD82020), 1.2F));
+					new Particle.DustOptions(type == SkillCard.COIN_EXECUTION ? Color.fromRGB(0x70D030) : Color.fromRGB(0xD82020), 1.2F));
 		}
 	}
 
@@ -680,8 +680,8 @@ final class Clash {
 		long sinceShatter = CaduceusListener.now() - side.shatteredAt;
 		for (int i = 0; i < card.coins(); i++) {
 			char type = card.type(i);
-			boolean octagon = type != SkillCard.PLAIN;
-			TextColor base = type == SkillCard.EXECUTION ? GREEN_COLOUR : type == SkillCard.UNBREAKABLE ? RED_COLOUR : PLAIN_COLOUR;
+			boolean octagon = type != SkillCard.COIN_PLAIN;
+			TextColor base = type == SkillCard.COIN_EXECUTION ? GREEN_COLOUR : type == SkillCard.COIN_UNBREAKABLE ? RED_COLOUR : PLAIN_COLOUR;
 			int state = side.state[i];
 			if (state == DESTROYED) {
 				// A destroyed coin cracks, splits, flies apart and fades, then is gone.
