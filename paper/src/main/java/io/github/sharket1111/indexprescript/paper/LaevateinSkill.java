@@ -68,6 +68,8 @@ final class LaevateinSkill {
 	private Vector kickFrom;
 	private int selfBurn;
 	private int tick;
+	/** The coins struck so far (Clash flips each as it strikes and skips destroyed ones). */
+	private int coinIndex;
 
 	private LaevateinSkill(Player player, LivingEntity target, Kind kind, boolean repeat) {
 		this.player = player;
@@ -536,12 +538,27 @@ final class LaevateinSkill {
 	 * damage when given), then apply the on-hit keywords.
 	 */
 	private void coin(double damage, double bigBrotherExtra, Runnable effect, Runnable onHit) {
+		if (!nextCoin()) {
+			return;
+		}
 		actor().swingMainHand();
-		hit(damage, bigBrotherExtra, effect, onHit);
+		strike(damage, bigBrotherExtra, effect, onHit);
 	}
 
 	/** A coin without the arm swing, for kicks and the thrown blade. */
 	private void hit(double damage, double bigBrotherExtra, Runnable effect, Runnable onHit) {
+		if (nextCoin()) {
+			strike(damage, bigBrotherExtra, effect, onHit);
+		}
+	}
+
+	/** The next coin strikes: false if it was destroyed in a clash (its attack is skipped). Rule Violation's repeat reuses them. */
+	private boolean nextCoin() {
+		int coins = card(kind).coins();
+		return Clash.coin(player, coinIndex++ % coins);
+	}
+
+	private void strike(double damage, double bigBrotherExtra, Runnable effect, Runnable onHit) {
 		if (camera != null) {
 			camera.jolt(0.5);
 		}

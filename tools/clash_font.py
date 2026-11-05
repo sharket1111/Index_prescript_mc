@@ -89,7 +89,12 @@ def outlined(img, pixels, ox, oy, fill, outline):
 
 # --- the panel ------------------------------------------------------------------------------
 
+def octagon_points(cx, cy, r):
+    return [(cx + r * math.cos(math.radians(22.5 + 45 * k)), cy + r * math.sin(math.radians(22.5 + 45 * k))) for k in range(8)]
+
+
 def coin(kind):
+    """Coins drawn white (tinted by the text colour): round plain coins, octagonal unbreakable ones, cracked forms."""
     s = 14
     img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
@@ -101,15 +106,21 @@ def coin(kind):
         return img
     if kind in ("crack", "split", "shards", "dust"):
         return breaking(kind)
-    face = {"fresh": (215, 40, 40), "heads": (255, 196, 40), "tails": (70, 66, 66), "broken": (40, 30, 30)}[kind]
-    ring = {"fresh": (255, 120, 110), "heads": (255, 245, 170), "tails": (140, 135, 135), "broken": (90, 20, 20)}[kind]
-    d.ellipse([1, 1, 12, 12], fill=face + (255,), outline=(20, 10, 10, 255))
-    d.ellipse([3, 3, 10, 10], outline=ring + (255,))
-    if kind == "heads":
-        d.point([(5, 4), (4, 5)], fill=(255, 255, 230, 255))
-    if kind == "broken":
-        for (x0, y0, x1, y1) in [(3, 3, 10, 10), (10, 3, 3, 10)]:
-            d.line([x0, y0, x1, y1], fill=(220, 40, 40, 255), width=2)
+    dark = (20, 12, 12, 255)
+    body, inner = (255, 255, 255, 255), (200, 200, 200, 255)
+    if kind.startswith("round"):
+        d.ellipse([1, 1, 12, 12], fill=body, outline=dark)
+        d.ellipse([3, 3, 10, 10], outline=inner)
+    else:
+        d.polygon(octagon_points(6.5, 6.5, 6.6), fill=body, outline=dark)
+        d.polygon(octagon_points(6.5, 6.5, 4.0), outline=inner)
+        # The emblem the original's unbreakable coins carry.
+        d.line([(6, 4), (6, 9)], fill=inner)
+        d.line([(4, 6), (9, 6)], fill=inner)
+    if kind.endswith("cracked"):
+        d.line([(5, 1), (7, 5), (5, 8), (7, 12)], fill=dark, width=1)
+        d.line([(7, 5), (11, 6)], fill=dark)
+        d.line([(5, 8), (2, 9)], fill=dark)
     return img
 
 
@@ -305,7 +316,7 @@ def main(assets):
     os.makedirs(tex, exist_ok=True)
     os.makedirs(os.path.join(assets, "font"), exist_ok=True)
 
-    strip([coin(k) for k in ["fresh", "heads", "tails", "broken", "spin_a", "spin_b", "crack", "split", "shards", "dust"]]).save(os.path.join(tex, "clash_coins.png"))
+    strip([coin(k) for k in ["round", "octagon", "round_cracked", "octagon_cracked", "spin_a", "spin_b", "crack", "split", "shards", "dust"]]).save(os.path.join(tex, "clash_coins.png"))
     badge().save(os.path.join(tex, "clash_badge.png"))
     strip([big_digit(c) for c in "0123456789?"]).save(os.path.join(tex, "clash_digits.png"))
     for part in "lmr":

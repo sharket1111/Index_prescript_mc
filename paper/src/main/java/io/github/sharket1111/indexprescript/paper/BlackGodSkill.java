@@ -172,12 +172,14 @@ final class BlackGodSkill {
 			return true;
 		}
 		READY_AT.put(key, now + kind.cooldownSeconds * 20L);
-		Clash.request(god, aimed, cardOf(kind), outcome -> launch(god, kind, outcome.target()));
+		Clash.request(god, aimed, cardOf(god, kind), outcome -> launch(god, kind, outcome.target()));
 		return true;
 	}
 
-	private static SkillCard cardOf(Kind kind) {
-		return SkillCard.BLACK_GOD[kind.slot];
+	/** The skill's card; with the Authority every coin but an execution coin is unbreakable. */
+	private static SkillCard cardOf(Player god, Kind kind) {
+		SkillCard card = SkillCard.BLACK_GOD[kind.slot];
+		return BlackGodState.authorityForm(god) ? card.unbreakable() : card;
 	}
 
 	private static void launch(Player god, Kind kind, LivingEntity target) {
@@ -505,13 +507,13 @@ final class BlackGodSkill {
 		}
 		for (int i = 0; i < SISYPHUS_COINS.length; i++) {
 			int at = SISYPHUS_COINS[i];
-			if (tick == at - 4) {
+			if (tick == at - 4 && !Clash.destroyed(god, i)) {
 				Location center = centroid();
 				crescent(center, 3.5 + held.size() * 0.4, i % 2 == 0 ? -1 : 1, PALE);
 				spot.getWorld().playSound(center, Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1.5F, 0.5F);
 				spot.getWorld().playSound(center, Sound.ITEM_TRIDENT_RIPTIDE_3, SoundCategory.PLAYERS, 1.0F, 1.4F);
 			}
-			if (tick == at) {
+			if (tick == at && coin(i)) {
 				for (LivingEntity foe : List.copyOf(held.keySet())) {
 					starburst(foe.getLocation().add(0, foe.getHeight() * 0.6, 0));
 					if (i % 2 == 1) {
@@ -534,7 +536,7 @@ final class BlackGodSkill {
 			}
 			whiteBurst(target.getLocation(), 0.8);
 		}
-		if (tick == SISYPHUS_LAST) {
+		if (tick == SISYPHUS_LAST && coin(4)) {
 			// Coin V, on the main target alone: a great column of white light.
 			pillar(target.getLocation(), 10, true);
 			whiteBurst(target.getLocation(), 1.6);
@@ -585,7 +587,7 @@ final class BlackGodSkill {
 		if (tick == EXIT_DISC) {
 			disc(target.getLocation().add(0, 6, 0), 3.5F);
 		}
-		if (tick == EXIT_HIT) {
+		if (tick == EXIT_HIT && coin(0)) {
 			pillar(target.getLocation(), 6, true);
 			whiteBurst(target.getLocation(), 1.2);
 			fixed(target, maxHealth(target) * 2.0);
@@ -646,11 +648,12 @@ final class BlackGodSkill {
 		if (tick >= 120 && tick < 176 && tick % 4 == 0) {
 			horizontalStreak(target.getLocation().add(0, 1.0 + (ThreadLocalRandom.current().nextDouble() - 0.5), 0));
 		}
-		for (int at : DELETE_COINS) {
-			if (tick == at - 8) {
+		for (int k = 0; k < DELETE_COINS.length; k++) {
+			int at = DELETE_COINS[k];
+			if (tick == at - 8 && !Clash.destroyed(god, k)) {
 				disc(target.getLocation().add(0, 6, 0), 3.0F);
 			}
-			if (tick == at) {
+			if (tick == at && coin(k)) {
 				pillar(target.getLocation(), 6, true);
 				whiteBurst(target.getLocation(), 1.0);
 				fixed(target, maxHealth(target) * 0.5);
@@ -659,7 +662,7 @@ final class BlackGodSkill {
 		if (tick == DELETE_LAST - 10) {
 			disc(target.getLocation().add(0, 7, 0), 5.0F);
 		}
-		if (tick == DELETE_LAST) {
+		if (tick == DELETE_LAST && coin(2)) {
 			// The whole screen burns white, for over two seconds.
 			overlay(FLASH);
 			pillar(target.getLocation(), 9, true);
@@ -710,8 +713,8 @@ final class BlackGodSkill {
 			crescent(targetMid(), 2.6, -1, PALE);
 			swoosh();
 		}
-		for (int at : SIGH_COINS) {
-			if (tick == at) {
+		for (int k = 0; k < SIGH_COINS.length; k++) {
+			if (tick == SIGH_COINS[k] && coin(k)) {
 				starburst(targetMid());
 				hit(target, 4.0);
 			}
@@ -739,7 +742,7 @@ final class BlackGodSkill {
 			crescent(targetMid(), 2.8, 1, PALE);
 			swoosh();
 		}
-		if (tick == CLOCK_COINS[0]) {
+		if (tick == CLOCK_COINS[0] && coin(0)) {
 			beamSlash(targetMid());
 			starburst(targetMid());
 			hit(target, 5.0);
@@ -751,7 +754,7 @@ final class BlackGodSkill {
 		if (tick == 36) {
 			spot.getWorld().playSound(target.getLocation(), Sound.BLOCK_BELL_RESONATE, SoundCategory.PLAYERS, 1.2F, 1.4F);
 		}
-		if (tick == CLOCK_COINS[1]) {
+		if (tick == CLOCK_COINS[1] && coin(1)) {
 			starburst(targetMid());
 			spot.getWorld().playSound(target.getLocation(), Sound.BLOCK_BELL_USE, SoundCategory.PLAYERS, 1.5F, 0.6F);
 			hit(target, 6.0);
@@ -796,11 +799,11 @@ final class BlackGodSkill {
 			crescent(targetMid(), 2.8, 1, PALE);
 			swoosh();
 		}
-		if (tick == JUDGMENT_COINS[0]) {
+		if (tick == JUDGMENT_COINS[0] && coin(0)) {
 			starburst(targetMid());
 			hit(target, 4.0);
 		}
-		if (tick == JUDGMENT_COINS[1]) {
+		if (tick == JUDGMENT_COINS[1] && coin(1)) {
 			whiteBurst(target.getLocation(), 0.8);
 			hit(target, 4.0);
 		}
@@ -810,7 +813,7 @@ final class BlackGodSkill {
 		if (tick >= 158 && tick < 172) {
 			glitchPillar(target.getLocation());
 		}
-		if (tick == JUDGMENT_COINS[2]) {
+		if (tick == JUDGMENT_COINS[2] && coin(2)) {
 			goldenNail(target.getLocation());
 			double lost = 1.0 - god.getHealth() / maxHealth(god);
 			hit(target, 7.0 * (1.0 + Math.max(0.0, Math.min(1.0, lost))));
@@ -840,7 +843,7 @@ final class BlackGodSkill {
 		} else {
 			wide(7.5, 4.5, 0.0);
 		}
-		if (tick == ATONE_COINS[0]) {
+		if (tick == ATONE_COINS[0] && coin(0)) {
 			goldPillar(target.getLocation());
 			starburst(targetMid());
 			hit(target, 4.0);
@@ -853,13 +856,13 @@ final class BlackGodSkill {
 		if (tick == 98) {
 			whiteBurst(target.getLocation(), 0.6);
 		}
-		if (tick == ATONE_COINS[1]) {
+		if (tick == ATONE_COINS[1] && coin(1)) {
 			beamSlash(targetMid());
 			starburst(targetMid());
 			hit(target, 4.0);
 			BlackGodState.inflict(god, target, BlackGodState.Nail.CONSOLE, 1);
 		}
-		if (tick == ATONE_COINS[2]) {
+		if (tick == ATONE_COINS[2] && coin(2)) {
 			overlay(FLASH);
 			whiteBurst(target.getLocation(), 1.4);
 			spot.getWorld().playSound(target.getLocation(), Sound.ITEM_MACE_SMASH_GROUND_HEAVY, SoundCategory.PLAYERS, 1.4F, 0.6F);
@@ -904,14 +907,14 @@ final class BlackGodSkill {
 		if (greatHalo != null && tick % 4 == 0) {
 			rays(greatHalo.getLocation(), 3);
 		}
-		if (tick == PUNISH_COINS[0]) {
+		if (tick == PUNISH_COINS[0] && coin(0)) {
 			starburst(targetMid());
 			pillar(target.getLocation(), 7, false);
 			whiteBurst(target.getLocation(), 0.7);
 			hit(target, 4.0);
 			BlackGodState.inflict(god, target, BlackGodState.Nail.CONSOLE, 1);
 		}
-		if (tick == PUNISH_COINS[1]) {
+		if (tick == PUNISH_COINS[1] && coin(1)) {
 			beamSlash(targetMid());
 			starburst(targetMid());
 			hit(target, 4.0);
@@ -920,7 +923,7 @@ final class BlackGodSkill {
 		if (tick == PUNISH_COINS[2] - 2) {
 			beamSlash(targetMid());
 		}
-		if (tick == PUNISH_COINS[2]) {
+		if (tick == PUNISH_COINS[2] && coin(2)) {
 			beamSlash(targetMid());
 			whiteBurst(target.getLocation(), 1.2);
 			hit(target, 6.0);
@@ -1091,6 +1094,11 @@ final class BlackGodSkill {
 		return max == null ? 20.0 : max.getValue();
 	}
 
+	/** This skill reaches coin {@code index}: flipped now (Clash); false if it was destroyed in a clash. */
+	private boolean coin(int index) {
+		return Clash.coin(god, index);
+	}
+
 	private void hit(LivingEntity foe, double damage) {
 		if (foe.isValid() && !foe.isDead()) {
 			// Attack levels, System Preservation and the ~ in the foe; Pulse halves what it takes.
@@ -1107,6 +1115,8 @@ final class BlackGodSkill {
 		if (BlackGodState.pulse(foe)) {
 			amount *= 0.5;
 		}
+		// The coin's flip scales even fixed damage.
+		amount *= Clash.scale(god);
 		double before = foe.getHealth() + foe.getAbsorptionAmount();
 		if (amount >= before) {
 			foe.setNoDamageTicks(0);

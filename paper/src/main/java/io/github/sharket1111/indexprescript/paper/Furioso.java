@@ -370,6 +370,10 @@ final class Furioso {
 	}
 
 	private void strike(int coin) {
+		// Each coin is flipped as it strikes; one destroyed in a clash is skipped.
+		if (!Clash.coin(player, coin)) {
+			return;
+		}
 		long now = CaduceusListener.now();
 		boolean last = coin == LAST_COIN;
 		CaduceusForm form = last ? CaduceusForm.SCYTHE : CaduceusForm.random(lastForm);

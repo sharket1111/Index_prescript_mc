@@ -239,11 +239,11 @@ final class RenoirSkill {
 			// Two nails fall: one drives into the foe, the other strikes beside it.
 			RenoirHammer.driveNail(player, target);
 			PromisedNails.rain(target.getLocation(), 1.2, 2.4F, false);
-		} else if (tick == SEVER_COIN_1) {
+		} else if (tick == SEVER_COIN_1 && Clash.coin(player, 0)) {
 			coin(4.0, () -> pillar(target.getLocation()));
 		} else if (tick == SEVER_STEP) {
 			stepIn(1.6);
-		} else if (tick == SEVER_COIN_2) {
+		} else if (tick == SEVER_COIN_2 && Clash.coin(player, 1)) {
 			coin(4.0, () -> sweep(actor(), target, -30, 0));
 		} else if (tick == SEVER_CROUCH) {
 			pose(Pose.SNEAKING);
@@ -256,11 +256,13 @@ final class RenoirSkill {
 			leap(tick - SEVER_LEAP, SEVER_SLAM - SEVER_LEAP, 2.8, 1.4);
 		} else if (tick == SEVER_SLAM) {
 			land(1.4);
-			coin(7.0, () -> {
-				sweep(actor(), target, 90, 80);
-				dome(target.getLocation(), 2.6);
-			});
-			RenoirHammer.addPreservation(player, 4);
+			if (Clash.coin(player, 2)) {
+				coin(7.0, () -> {
+					sweep(actor(), target, 90, 80);
+					dome(target.getLocation(), 2.6);
+				});
+				RenoirHammer.addPreservation(player, 4);
+			}
 		} else if (tick > SEVER_SLAM && tick < SEVER_END - 8 && tick % 3 == 0) {
 			settle(target.getLocation(), 2.4);
 		}
@@ -312,7 +314,7 @@ final class RenoirSkill {
 					RenoirHammer.driveNail(player, foe);
 				}
 			}
-		} else if (tick == AGAIN_COIN_1) {
+		} else if (tick == AGAIN_COIN_1 && Clash.coin(player, 0)) {
 			for (LivingEntity foe : List.copyOf(held.keySet())) {
 				hit(foe, 4.0, () -> pillar(foe.getLocation()));
 			}
@@ -327,7 +329,7 @@ final class RenoirSkill {
 			stepIn(1.8);
 		} else if (tick > AGAIN_STEP + 1 && tick < AGAIN_COIN_2) {
 			spin(tick - AGAIN_STEP - 2);
-		} else if (tick == AGAIN_COIN_2) {
+		} else if (tick == AGAIN_COIN_2 && Clash.coin(player, 1)) {
 			face();
 			actor().swingMainHand();
 			sweep(actor(), target, -100, 0);
@@ -348,7 +350,9 @@ final class RenoirSkill {
 			fall(tick - AGAIN_DOWN, AGAIN_SLAM - AGAIN_DOWN);
 		} else if (tick == AGAIN_SLAM) {
 			land(1.5);
-			slam();
+			if (Clash.coin(player, 2)) {
+				slam();
+			}
 		} else if (tick > AGAIN_SLAM && tick < AGAIN_END - 4 && tick % 4 == 0) {
 			settle(center, AGAIN_RADIUS * 0.6);
 		}

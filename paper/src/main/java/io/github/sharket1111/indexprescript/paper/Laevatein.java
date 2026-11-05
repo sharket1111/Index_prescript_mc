@@ -475,6 +475,8 @@ final class Laevatein implements Listener {
 		private final Location anchor;
 		private final boolean hadAi;
 		private int tick;
+		/** The coins struck so far (see Clash.coin). */
+		private int coinIndex;
 		private Cinematic camera;
 		private double cameraSide = Double.NaN;
 
@@ -610,6 +612,10 @@ final class Laevatein implements Listener {
 		}
 
 		private void strike(double damage, int fireTicks, Runnable effect) {
+			// Each strike is a coin: flipped as it lands, skipped if destroyed in a clash.
+			if (!Clash.coin(player, coinIndex++)) {
+				return;
+			}
 			if (camera != null) {
 				camera.jolt(0.45);
 			}

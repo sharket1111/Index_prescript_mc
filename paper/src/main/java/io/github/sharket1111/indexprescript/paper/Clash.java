@@ -3,13 +3,16 @@ package io.github.sharket1111.indexprescript.paper;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
+import java.util.logging.Level;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -37,23 +40,25 @@ import net.kyori.adventure.title.Title;
  * Coins and clashes, as in Limbus Company.
  *
  * Every weapon skill goes through {@link #request}. Beside its user a panel
- * shows the skill's coins, its clash power, its name and description.
+ * shows the skill's coins, clash power, name and description.
  *
- * - If the target is a player holding one of the plugin's weapons (or the
- *   Black God), they get {@link #WINDOW} ticks (2 s) to answer with a skill
- *   of their own. If they do, the two clash: every round both flip their
- *   remaining coins (heads with a chance of 50% + Sanity%), power = base +
- *   heads x coin power, and the lower side loses a coin (a tie loses none).
- *   When one side has no coins left, the other's skill goes off at the
- *   loser with the coins it has left. The winner gains Sanity and the loser
- *   loses some, more the more rounds it took.
- * - Otherwise (or if no answer comes) the coins are flipped once and the
- *   skill goes off unopposed.
+ * Clash: if the target is a player holding one of the plugin's weapons (or
+ * the Black God), they get {@link #WINDOW} ticks (2 s) to answer with a skill.
+ * Every round both flip their unbroken coins (heads 50% + Sanity%), power =
+ * base + heads x coin power, and the lower side loses its last unbroken coin
+ * (a tie loses none), until one side has none left.
+ * - A plain coin lost is destroyed (it cracks, splits and shatters).
+ * - An unbreakable coin (red, or green for executions) is only broken: it
+ *   leaves the clash but still strikes, with half the coin power. A green
+ *   coin on the winning side destroys a red coin outright.
+ * The winner then attacks with its unbroken and broken coins; afterwards the
+ * loser strikes with its broken unbreakable coins, if it has any.
  *
- * The coins scale the skill's damage while it plays (see {@link #scale}):
- * its final power over the expected power (base + half the coins heads),
- * from 0.5x to 1.6x, times the share of its coins left after a clash.
- * Counters and guards never clash; their coins are only shown.
+ * Attacking: the skill plays its coins in order and calls {@link #coin} at
+ * each; a destroyed coin's attack is skipped. Each coin is flipped as it
+ * strikes, and the damage of its hits follows the power so far over the
+ * power expected so far (half the coins heads), 0.5x to 1.8x (see
+ * {@link #scale}). Counters and guards never clash.
  */
 final class Clash {
 	static final int WINDOW = 40;
@@ -63,12 +68,16 @@ final class Clash {
 	private static final int MAX_ROUNDS = 40;
 	/** The shattering: four frames of two ticks. */
 	private static final int BREAK_TICKS = 8;
+	private static final int UNBROKEN = 0;
+	private static final int BROKEN = 1;
+	private static final int DESTROYED = 2;
 	private static final Map<UUID, Duel> DUELS = new ConcurrentHashMap<>();
-	private static final Map<UUID, double[]> SCALES = new ConcurrentHashMap<>();
+	/** Each player's skill playing its coins now. */
+	private static final Map<UUID, Side> RUNS = new ConcurrentHashMap<>();
 	private static final List<Lingering> LINGERING = new ArrayList<>();
 
-	/** Where the skill goes and how hard its coins made it. */
-	record Outcome(LivingEntity target, double scale) {
+	/** Where the skill goes. */
+	record Outcome(LivingEntity target) {
 	}
 
 	private record Lingering(TextDisplay display, long removeAt, Side side) {
@@ -80,57 +89,79 @@ final class Clash {
 		final Consumer<Outcome> start;
 		LivingEntity target;
 		Location anchor;
-		int coins;
+		final int[] state;
 		/** Per coin: 0 not flipped, 1 heads, 2 tails. */
 		final int[] faces;
 		int power = -1;
 		boolean spinning;
-		/** Coins [brokenFrom, brokenTo) are shattering since brokenAt; broken coins are gone after. */
-		int brokenFrom;
-		int brokenTo;
-		long brokenAt = Long.MIN_VALUE / 2;
 		Boolean won;
 		TextDisplay panel;
+		boolean retired;
+		int shattering = -1;
+		long shatteredAt = Long.MIN_VALUE / 2;
+		// While attacking:
+		long until;
+		int runPower;
+		double runExpected;
+		double scale = 1.0;
+		final boolean[] struck;
 
 		Side(Player player, SkillCard card, LivingEntity target, Consumer<Outcome> start) {
 			this.player = player;
 			this.card = card;
 			this.target = target;
 			this.start = start;
-			this.coins = card.coins();
+			this.state = new int[card.coins()];
 			this.faces = new int[card.coins()];
+			this.struck = new boolean[card.coins()];
 		}
 
-		void flip() {
+		int unbroken() {
+			int count = 0;
+			for (int s : state) {
+				count += s == UNBROKEN ? 1 : 0;
+			}
+			return count;
+		}
+
+		boolean hasBroken() {
+			for (int s : state) {
+				if (s == BROKEN) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		boolean hasUnbrokenGreen() {
+			for (int i = 0; i < state.length; i++) {
+				if (state[i] == UNBROKEN && card.type(i) == SkillCard.EXECUTION) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		/** A clash round: every unbroken coin flipped at once. */
+		void flipUnbroken() {
 			double chance = Sanity.headsChance(player);
 			int heads = 0;
-			for (int i = 0; i < coins; i++) {
-				faces[i] = ThreadLocalRandom.current().nextDouble() < chance ? 1 : 2;
-				heads += faces[i] == 1 ? 1 : 0;
+			for (int i = 0; i < state.length; i++) {
+				if (state[i] == UNBROKEN) {
+					faces[i] = ThreadLocalRandom.current().nextDouble() < chance ? 1 : 2;
+					heads += faces[i] == 1 ? 1 : 0;
+				}
 			}
 			power = card.base() + heads * card.coinPower();
 			spinning = false;
 		}
 
-		/** Destroys the coins from {@code left} on, with the shattering motion. */
-		void breakTo(int left) {
-			if (left >= coins) {
-				return;
-			}
-			brokenFrom = left;
-			brokenTo = coins;
-			brokenAt = CaduceusListener.now();
-			coins = left;
+		boolean shatteringNow() {
+			return CaduceusListener.now() - shatteredAt < BREAK_TICKS;
 		}
 
-		boolean shattering() {
-			return CaduceusListener.now() - brokenAt < BREAK_TICKS;
-		}
-
-		double scale() {
-			double byPower = Math.max(0.5, Math.min(1.6, power / Math.max(1.0, card.expected())));
-			double byCoins = Math.max(0.3, coins / (double) card.coins());
-			return byPower * byCoins;
+		int coinPower(int index) {
+			return state[index] == BROKEN ? Math.max(1, card.coinPower() / 2) : card.coinPower();
 		}
 	}
 
@@ -153,13 +184,12 @@ final class Clash {
 	private Clash() {
 	}
 
-	// --- asking --------------------------------------------------------------------------
+	// --- asking ----------------------------------------------------------------------------
 
 	/**
-	 * A skill wants to go off. {@code start} runs when it does (now, after the
-	 * coins, or after a clash it won), with its target and damage scale; it
-	 * never runs if the skill loses a clash. Returns false if the user is
-	 * already busy clashing (nothing happens then).
+	 * A skill wants to go off. {@code start} runs when it does (at once, or
+	 * after a clash it won, or after a lost one if it kept broken unbreakable
+	 * coins), with its target. Returns false if the user is busy clashing.
 	 */
 	static boolean request(Player user, LivingEntity target, SkillCard card, Consumer<Outcome> start) {
 		Duel asked = DUELS.get(user.getUniqueId());
@@ -173,6 +203,7 @@ final class Clash {
 			asked.waiting = false;
 			asked.tick = 0;
 			beginClash(asked);
+			draw(asked.answer);
 			return true;
 		}
 		if (asked != null) {
@@ -182,17 +213,18 @@ final class Clash {
 		Side side = new Side(user, card, target, start);
 		side.panel = panel(user);
 		Player defender = card.clashes() && target instanceof Player player && canAnswer(player) ? player : null;
+		if (defender == null) {
+			// Unopposed: straight to the attack, the coins flipped as they strike.
+			launch(side, target);
+			return true;
+		}
 		Duel duel = new Duel(side, defender);
 		DUELS.put(user.getUniqueId(), duel);
-		if (defender != null) {
-			DUELS.put(defender.getUniqueId(), duel);
-			defender.showTitle(Title.title(Component.text("합!", NamedTextColor.GOLD).decorate(TextDecoration.BOLD),
-					Component.text(user.getName() + " — 2초 안에 스킬을 쓰면 합을 겨룹니다", NamedTextColor.YELLOW),
-					Title.Times.times(Duration.ZERO, Duration.ofMillis(1600), Duration.ofMillis(300))));
-			defender.playSound(defender.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.PLAYERS, 1.0F, 1.6F);
-		} else {
-			side.spinning = true;
-		}
+		DUELS.put(defender.getUniqueId(), duel);
+		defender.showTitle(Title.title(Component.text("합!", NamedTextColor.GOLD).decorate(TextDecoration.BOLD),
+				Component.text(user.getName() + " — 2초 안에 스킬을 쓰면 합을 겨룹니다", NamedTextColor.YELLOW),
+				Title.Times.times(Duration.ZERO, Duration.ofMillis(1600), Duration.ofMillis(300))));
+		defender.playSound(defender.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.PLAYERS, 1.0F, 1.6F);
 		draw(side);
 		return true;
 	}
@@ -213,17 +245,46 @@ final class Clash {
 		return duel != null && duel.waiting && duel.defender == player ? duel.attacker.player : null;
 	}
 
-	/** The damage scale a player's coins gave the skill they are using (1 when none). */
+	/**
+	 * The skill reaches coin {@code index} (0 = the first): flips it, if not
+	 * yet, and sets the damage scale for its hits. Returns false if that coin
+	 * was destroyed in a clash, and its attack must be skipped.
+	 */
+	static boolean coin(Player player, int index) {
+		Side side = RUNS.get(player.getUniqueId());
+		if (side == null || index < 0 || index >= side.state.length) {
+			return true;
+		}
+		if (side.state[index] == DESTROYED) {
+			return false;
+		}
+		if (!side.struck[index]) {
+			side.struck[index] = true;
+			boolean heads = ThreadLocalRandom.current().nextDouble() < Sanity.headsChance(player);
+			side.faces[index] = heads ? 1 : 2;
+			int coinPower = side.coinPower(index);
+			side.runPower += heads ? coinPower : 0;
+			side.runExpected += coinPower * 0.5;
+			side.power = side.runPower;
+			side.scale = Math.max(0.5, Math.min(1.8, side.runPower / Math.max(1.0, side.runExpected)));
+			Location at = player.getLocation().add(0, 1.6, 0);
+			at.getWorld().playSound(at, heads ? Sound.BLOCK_NOTE_BLOCK_CHIME : Sound.BLOCK_NOTE_BLOCK_BASS, SoundCategory.PLAYERS, 0.7F,
+					heads ? 1.6F : 0.8F);
+			draw(side);
+		}
+		return true;
+	}
+
+	/** Whether the player's skill lost coin {@code index} for good in a clash (it shows nothing of it). */
+	static boolean destroyed(Player player, int index) {
+		Side side = RUNS.get(player.getUniqueId());
+		return side != null && index >= 0 && index < side.state.length && side.state[index] == DESTROYED;
+	}
+
+	/** The damage scale of the coin the player's skill is striking with (1 when none). */
 	static double scale(Player player) {
-		double[] entry = SCALES.get(player.getUniqueId());
-		if (entry == null) {
-			return 1.0;
-		}
-		if (CaduceusListener.now() > entry[1]) {
-			SCALES.remove(player.getUniqueId());
-			return 1.0;
-		}
-		return entry[0];
+		Side side = RUNS.get(player.getUniqueId());
+		return side == null || CaduceusListener.now() > side.until ? 1.0 : side.scale;
 	}
 
 	private static boolean canAnswer(Player player) {
@@ -237,16 +298,33 @@ final class Clash {
 		return Items.isWeapon(player.getInventory().getItemInMainHand()) || BlackGod.active(player);
 	}
 
-	// --- every tick ----------------------------------------------------------------------
+	// --- every tick ------------------------------------------------------------------------
 
 	static void tick() {
 		long now = CaduceusListener.now();
-		for (Duel duel : List.copyOf(new java.util.LinkedHashSet<>(DUELS.values()))) {
+		for (Duel duel : List.copyOf(new LinkedHashSet<>(DUELS.values()))) {
 			try {
 				tick(duel);
 			} catch (RuntimeException e) {
-				IndexPrescriptPlugin.instance().getLogger().log(java.util.logging.Level.WARNING, "Clash failed", e);
+				IndexPrescriptPlugin.instance().getLogger().log(Level.WARNING, "Clash failed", e);
 				end(duel);
+				retire(duel.attacker);
+				if (duel.answer != null) {
+					retire(duel.answer);
+				}
+			}
+		}
+		Iterator<Map.Entry<UUID, Side>> runs = RUNS.entrySet().iterator();
+		while (runs.hasNext()) {
+			Side side = runs.next().getValue();
+			if (now >= side.until || !side.player.isOnline()) {
+				runs.remove();
+				retire(side);
+			} else {
+				follow(side);
+				if (side.shatteringNow()) {
+					draw(side);
+				}
 			}
 		}
 		synchronized (LINGERING) {
@@ -256,7 +334,7 @@ final class Clash {
 				if (now >= lingering.removeAt() || !lingering.display().isValid()) {
 					lingering.display().remove();
 					it.remove();
-				} else if (lingering.side() != null && lingering.side().shattering()) {
+				} else if (lingering.side() != null && lingering.side().shatteringNow()) {
 					draw(lingering.side());
 				}
 			}
@@ -270,6 +348,10 @@ final class Clash {
 				win(duel, duel.answer, a);
 			} else {
 				end(duel);
+				retire(a);
+				if (duel.answer != null) {
+					retire(duel.answer);
+				}
 			}
 			return;
 		}
@@ -284,16 +366,9 @@ final class Clash {
 			}
 			if (duel.tick >= WINDOW || !d.isOnline() || d.isDead()) {
 				// No answer: the skill goes off unopposed.
-				DUELS.remove(d.getUniqueId());
-				duel.waiting = false;
-				duel.tick = 0;
-				a.spinning = true;
-				draw(a);
+				end(duel);
+				launch(a, a.target);
 			}
-			return;
-		}
-		if (duel.answer == null) {
-			unopposed(duel);
 			return;
 		}
 		Side b = duel.answer;
@@ -306,30 +381,13 @@ final class Clash {
 		hold(b);
 		round(duel, a, b);
 		for (Side side : new Side[] {a, b}) {
-			if (side.shattering()) {
+			if (side.shatteringNow()) {
 				draw(side);
 			}
 		}
 	}
 
-	private static void unopposed(Duel duel) {
-		Side a = duel.attacker;
-		duel.tick++;
-		if (duel.tick < SPIN) {
-			if (duel.tick % 2 == 0) {
-				draw(a);
-				coinSound(a.player);
-			}
-			return;
-		}
-		a.flip();
-		draw(a);
-		a.player.getWorld().playSound(a.player.getLocation(), Sound.BLOCK_NOTE_BLOCK_CHIME, SoundCategory.PLAYERS, 0.8F, 1.4F);
-		launch(a, a.target);
-		end(duel);
-	}
-
-	// --- the clash -------------------------------------------------------------------------
+	// --- the clash ---------------------------------------------------------------------------
 
 	private static void beginClash(Duel duel) {
 		Side a = duel.attacker;
@@ -364,8 +422,8 @@ final class Clash {
 			return;
 		}
 		if (t == SPIN) {
-			a.flip();
-			b.flip();
+			a.flipUnbroken();
+			b.flipUnbroken();
 			duel.rounds++;
 			Location mid = midpoint(a, b);
 			showCount(duel, mid.clone().add(0, 1.6, 0));
@@ -377,18 +435,15 @@ final class Clash {
 				Side winner = loser == a ? b : a;
 				winner.won = true;
 				loser.won = false;
-				loser.breakTo(loser.coins - 1);
-				Location at = loser.player.getLocation().add(0, 1.2, 0);
-				at.getWorld().spawnParticle(Particle.DUST, at, 10, 0.2, 0.2, 0.2, 0.0, new Particle.DustOptions(Color.fromRGB(0xC02020), 1.2F));
-				at.getWorld().playSound(at, Sound.ENTITY_ITEM_BREAK, SoundCategory.PLAYERS, 1.0F, 1.2F);
+				loseCoin(loser, winner);
 			}
 			draw(a);
 			draw(b);
 			return;
 		}
 		if (t >= ROUND) {
-			if (a.coins <= 0 || b.coins <= 0 || duel.rounds >= MAX_ROUNDS) {
-				Side winner = a.coins == b.coins ? (a.power >= b.power ? a : b) : a.coins > b.coins ? a : b;
+			if (a.unbroken() == 0 || b.unbroken() == 0 || duel.rounds >= MAX_ROUNDS) {
+				Side winner = a.unbroken() == b.unbroken() ? (a.power >= b.power ? a : b) : a.unbroken() > b.unbroken() ? a : b;
 				win(duel, winner, winner == a ? b : a);
 				return;
 			}
@@ -396,38 +451,100 @@ final class Clash {
 		}
 	}
 
+	/** The loser of a round loses its last unbroken coin: destroyed, or only broken if unbreakable. */
+	private static void loseCoin(Side loser, Side winner) {
+		int index = -1;
+		for (int i = loser.state.length - 1; i >= 0; i--) {
+			if (loser.state[i] == UNBROKEN) {
+				index = i;
+				break;
+			}
+		}
+		if (index < 0) {
+			return;
+		}
+		char type = loser.card.type(index);
+		Location at = loser.player.getLocation().add(0, 1.2, 0);
+		boolean destroyed = type == SkillCard.PLAIN || type == SkillCard.UNBREAKABLE && winner.hasUnbrokenGreen();
+		if (destroyed) {
+			loser.state[index] = DESTROYED;
+			loser.shattering = index;
+			loser.shatteredAt = CaduceusListener.now();
+			at.getWorld().spawnParticle(Particle.DUST, at, 10, 0.2, 0.2, 0.2, 0.0, new Particle.DustOptions(Color.fromRGB(0xC02020), 1.2F));
+			at.getWorld().playSound(at, Sound.ENTITY_ITEM_BREAK, SoundCategory.PLAYERS, 1.0F, 1.2F);
+			if (type == SkillCard.UNBREAKABLE) {
+				Hud.message(loser.player, Component.text("초록 코인에 파괴 불가 코인이 완전히 파괴되었다!", NamedTextColor.RED));
+			}
+		} else {
+			// Unbreakable: out of the clash, but it will still strike, weaker.
+			loser.state[index] = BROKEN;
+			at.getWorld().playSound(at, Sound.BLOCK_ANVIL_LAND, SoundCategory.PLAYERS, 0.8F, 1.4F);
+			at.getWorld().spawnParticle(Particle.DUST, at, 8, 0.2, 0.2, 0.2, 0.0,
+					new Particle.DustOptions(type == SkillCard.EXECUTION ? Color.fromRGB(0x70D030) : Color.fromRGB(0xD82020), 1.2F));
+		}
+	}
+
 	private static void win(Duel duel, Side winner, Side loser) {
 		int rounds = Math.max(1, duel.rounds);
-		Sanity.add(winner.player, Math.min(25, 3 + 3 * rounds));
-		Sanity.lose(loser.player, Math.min(20, 2 + 2 * rounds));
+		int gain = Math.min(25, 3 + 3 * rounds);
+		int loss = Math.min(20, 2 + 2 * rounds);
+		Sanity.add(winner.player, gain);
+		Sanity.lose(loser.player, loss);
 		Sanity.fought(winner.player);
 		Sanity.fought(loser.player);
-		loser.breakTo(0);
-		winner.won = true;
-		loser.won = false;
-		if (winner.power < 0) {
-			winner.flip();
-		}
-		draw(winner);
-		draw(loser);
-		Hud.message(winner.player, Component.text("합 승리! (" + rounds + "합) 정신력 +" + Math.min(25, 3 + 3 * rounds), NamedTextColor.GOLD));
-		Hud.message(loser.player, Component.text("합 패배 (" + rounds + "합) 정신력 -" + Math.min(20, 2 + 2 * rounds), NamedTextColor.RED));
+		Hud.message(winner.player, Component.text("합 승리! (" + rounds + "합) 정신력 +" + gain, NamedTextColor.GOLD));
+		Hud.message(loser.player, Component.text("합 패배 (" + rounds + "합) 정신력 -" + loss, NamedTextColor.RED));
 		Location at = loser.player.getLocation().add(0, 1, 0);
 		at.getWorld().playSound(at, Sound.ITEM_SHIELD_BREAK, SoundCategory.PLAYERS, 1.2F, 0.8F);
 		at.getWorld().spawnParticle(Particle.EXPLOSION, at, 1);
+		end(duel);
 		if (loser.player.isOnline()) {
 			launch(winner, loser.player);
+		} else {
+			retire(winner);
 		}
-		end(duel);
+		// The loser's broken unbreakable coins strike after the winner's attack.
+		if (loser.hasBroken() && loser.player.isOnline()) {
+			reset(loser);
+			draw(loser);
+			Bukkit.getScheduler().runTaskLater(IndexPrescriptPlugin.instance(), () -> {
+				if (loser.player.isOnline() && !loser.player.isDead() && winner.player.isOnline() && !winner.player.isDead()
+						&& !busy(loser.player)) {
+					launch(loser, winner.player);
+				} else {
+					retire(loser);
+				}
+			}, winner.card.ticks() + 10L);
+		} else {
+			retire(loser);
+		}
+	}
+
+	/** Clears the clash's flips before the attack flips the coins one by one. */
+	private static void reset(Side side) {
+		java.util.Arrays.fill(side.faces, 0);
+		java.util.Arrays.fill(side.struck, false);
+		side.power = -1;
+		side.spinning = false;
+		side.won = null;
 	}
 
 	private static void launch(Side side, LivingEntity target) {
-		if (target == null || !target.isValid() || target.isDead()) {
+		if (target == null || !target.isValid() || target.isDead() || !side.player.isOnline()) {
+			retire(side);
 			return;
 		}
-		double scale = side.scale();
-		SCALES.put(side.player.getUniqueId(), new double[] {scale, CaduceusListener.now() + side.card.ticks() + 20});
-		side.start.accept(new Outcome(target, scale));
+		reset(side);
+		side.until = CaduceusListener.now() + side.card.ticks() + 10;
+		side.runPower = side.card.base();
+		side.runExpected = side.card.base();
+		side.scale = 1.0;
+		Side before = RUNS.put(side.player.getUniqueId(), side);
+		if (before != null && before != side) {
+			retire(before);
+		}
+		draw(side);
+		side.start.accept(new Outcome(target));
 	}
 
 	private static void end(Duel duel) {
@@ -437,13 +554,13 @@ final class Clash {
 				LINGERING.add(new Lingering(duel.counter, CaduceusListener.now() + LINGER, null));
 			}
 		}
-		retire(duel.attacker);
-		if (duel.answer != null) {
-			retire(duel.answer);
-		}
 	}
 
 	private static void retire(Side side) {
+		if (side.retired) {
+			return;
+		}
+		side.retired = true;
 		if (side.panel != null) {
 			synchronized (LINGERING) {
 				LINGERING.add(new Lingering(side.panel, CaduceusListener.now() + LINGER, side));
@@ -452,18 +569,23 @@ final class Clash {
 	}
 
 	static void endAll() {
-		for (Duel duel : new java.util.LinkedHashSet<>(DUELS.values())) {
+		for (Duel duel : new LinkedHashSet<>(DUELS.values())) {
 			end(duel);
+			retire(duel.attacker);
+			if (duel.answer != null) {
+				retire(duel.answer);
+			}
 		}
 		DUELS.clear();
+		RUNS.values().forEach(Clash::retire);
+		RUNS.clear();
 		synchronized (LINGERING) {
 			LINGERING.forEach(l -> l.display().remove());
 			LINGERING.clear();
 		}
-		SCALES.clear();
 	}
 
-	// --- the panel -------------------------------------------------------------------------
+	// --- the panel ---------------------------------------------------------------------------
 
 	private static TextDisplay panel(Player player) {
 		return player.getWorld().spawn(sideOf(player), TextDisplay.class, d -> {
@@ -506,21 +628,28 @@ final class Clash {
 	// The pack's "clash" font (tools/clash_font.py): coins, the badge, big digits, the banner, Sanity circles, spaces.
 	private static final Key FONT = Key.key(Items.NAMESPACE, "clash");
 	private static final Key COUNT_FONT = Key.key(Items.NAMESPACE, "clash_count");
-	private static final char COIN_FRESH = '\ue401';
-	private static final char COIN_HEADS = '\ue402';
-	private static final char COIN_TAILS = '\ue403';
-	private static final char COIN_SPIN = '\ue405';
-	private static final char COIN_CRACK = '\ue407';
-	private static final char BADGE = '\ue410';
-	private static final char DIGIT_ZERO = '\ue420';
-	private static final char DIGIT_UNKNOWN = '\ue42a';
-	private static final char BANNER_LEFT = '\ue430';
-	private static final char BANNER_MIDDLE = '\ue431';
-	private static final char BANNER_RIGHT = '\ue432';
-	private static final char SP_FIRST = '\ue500';
-	private static final char COUNT_FIRST = '\ue600';
-	private static final char SPACE_PLUS = '\ue4a0';
-	private static final char SPACE_MINUS = '\ue4b0';
+	/** Coin shapes, drawn white and tinted: round (plain), octagon (unbreakable), and their cracked forms. */
+	private static final char COIN_ROUND = '';
+	private static final char COIN_OCTAGON = '';
+	private static final char COIN_ROUND_CRACKED = '';
+	private static final char COIN_OCTAGON_CRACKED = '';
+	private static final char COIN_SPIN = '';
+	private static final char COIN_SHATTER = '';
+	private static final TextColor PLAIN_COLOUR = TextColor.color(0xE8B040);
+	private static final TextColor RED_COLOUR = TextColor.color(0xD82020);
+	private static final TextColor GREEN_COLOUR = TextColor.color(0x70D030);
+	private static final TextColor HEADS_COLOUR = TextColor.color(0xFFEC6A);
+	private static final TextColor TAILS_COLOUR = TextColor.color(0x4A4646);
+	private static final char BADGE = '';
+	private static final char DIGIT_ZERO = '';
+	private static final char DIGIT_UNKNOWN = '';
+	private static final char BANNER_LEFT = '';
+	private static final char BANNER_MIDDLE = '';
+	private static final char BANNER_RIGHT = '';
+	private static final char SP_FIRST = '';
+	private static final char COUNT_FIRST = '';
+	private static final char SPACE_PLUS = '';
+	private static final char SPACE_MINUS = '';
 	/** Advances (pixels with the gap): badge 33, a big digit 12; banner pieces drawn 6, 8 and 10 wide. */
 	private static final int BADGE_ADVANCE = 33;
 	private static final int DIGIT_ADVANCE = 12;
@@ -530,11 +659,16 @@ final class Clash {
 		return Hud.shift(pixels, SPACE_PLUS, SPACE_MINUS);
 	}
 
+	private static Component glyph(char c, TextColor colour) {
+		return Component.text(String.valueOf(c), colour).font(FONT);
+	}
+
 	/**
-	 * The panel, after the original's clash UI: the coins over the banner;
-	 * the jagged badge in the skill's sin colour with the clash power in big
-	 * digits; the banner, in the sin colour, with the skill's name on it, and
-	 * the user's Sanity circle after it; then the numbers and the description.
+	 * The panel, after the original's clash UI: the coins over the banner
+	 * (round plain coins, red and green octagons for unbreakable ones,
+	 * cracked when broken, shattering when destroyed); the jagged badge in the
+	 * skill's sin colour with the clash power in big digits; the banner with
+	 * the skill's name and the user's Sanity circle; the numbers and the description.
 	 */
 	private static void draw(Side side) {
 		if (side.panel == null || !side.panel.isValid()) {
@@ -542,27 +676,30 @@ final class Clash {
 		}
 		SkillCard card = side.card;
 		boolean frame = (CaduceusListener.now() / 2) % 2 == 0;
-		// Coins, above the banner.
-		StringBuilder coins = new StringBuilder(space(BANNER_START));
-		long sinceBreak = CaduceusListener.now() - side.brokenAt;
+		Component coins = Component.text(space(BANNER_START), NamedTextColor.WHITE).font(FONT);
+		long sinceShatter = CaduceusListener.now() - side.shatteredAt;
 		for (int i = 0; i < card.coins(); i++) {
-			char coin;
-			if (i >= side.coins) {
+			char type = card.type(i);
+			boolean octagon = type != SkillCard.PLAIN;
+			TextColor base = type == SkillCard.EXECUTION ? GREEN_COLOUR : type == SkillCard.UNBREAKABLE ? RED_COLOUR : PLAIN_COLOUR;
+			int state = side.state[i];
+			if (state == DESTROYED) {
 				// A destroyed coin cracks, splits, flies apart and fades, then is gone.
-				if (i < side.brokenFrom || i >= side.brokenTo || sinceBreak >= BREAK_TICKS) {
-					break;
+				if (i == side.shattering && sinceShatter < BREAK_TICKS) {
+					coins = coins.append(glyph((char) (COIN_SHATTER + sinceShatter / 2), NamedTextColor.WHITE));
 				}
-				coin = (char) (COIN_CRACK + sinceBreak / 2);
-			} else if (side.spinning) {
-				coin = (char) (COIN_SPIN + ((frame ? 0 : 1) + i) % 2);
-			} else if (side.faces[i] == 1) {
-				coin = COIN_HEADS;
-			} else if (side.faces[i] == 2) {
-				coin = COIN_TAILS;
-			} else {
-				coin = COIN_FRESH;
+				continue;
 			}
-			coins.append(coin);
+			if (side.spinning && state == UNBROKEN) {
+				coins = coins.append(glyph((char) (COIN_SPIN + ((frame ? 0 : 1) + i) % 2), NamedTextColor.WHITE));
+				continue;
+			}
+			char shape = state == BROKEN ? (octagon ? COIN_OCTAGON_CRACKED : COIN_ROUND_CRACKED) : octagon ? COIN_OCTAGON : COIN_ROUND;
+			TextColor colour = side.faces[i] == 1 ? HEADS_COLOUR : side.faces[i] == 2 ? TAILS_COLOUR : base;
+			if (state == BROKEN && side.faces[i] == 0) {
+				colour = TextColor.color(colour.red() * 6 / 10, colour.green() * 6 / 10, colour.blue() * 6 / 10);
+			}
+			coins = coins.append(glyph(shape, colour));
 		}
 		// The badge and the power over it, centred.
 		String digits = side.power < 0 || side.spinning ? String.valueOf(DIGIT_UNKNOWN) : bigDigits(side.power);
@@ -591,10 +728,10 @@ final class Clash {
 				.append(Component.text(space(bannerWidth - nameStart - nameWidth + 3)
 						+ (char) (SP_FIRST + sanity - Sanity.MIN), NamedTextColor.WHITE).font(FONT));
 		int chance = (int) Math.round(Sanity.headsChance(side.player) * 100);
-		Component stats = Component.text("기본 " + card.base() + "  코인 +" + card.coinPower() + " ×" + card.coins() + "  앞면 " + chance + "%",
-				TextColor.color(0xC8C8C8));
+		StringBuilder numbers = new StringBuilder("기본 " + card.base() + "  코인 +" + card.coinPower() + " ×" + card.coins() + "  앞면 " + chance + "%");
+		Component stats = Component.text(numbers.toString(), TextColor.color(0xC8C8C8));
 		Component text = Component.empty()
-				.append(Component.text(coins.toString(), NamedTextColor.WHITE).font(FONT)).appendNewline()
+				.append(coins).appendNewline()
 				.appendNewline()
 				.append(badge).append(bannerLine).appendNewline()
 				.appendNewline()
@@ -630,7 +767,7 @@ final class Clash {
 		duel.counter.setInterpolationDuration(0);
 		duel.counter.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(1.0F, 1.0F, 1.0F), new Quaternionf()));
 		TextDisplay counter = duel.counter;
-		org.bukkit.Bukkit.getScheduler().runTaskLater(IndexPrescriptPlugin.instance(), () -> {
+		Bukkit.getScheduler().runTaskLater(IndexPrescriptPlugin.instance(), () -> {
 			if (counter.isValid()) {
 				counter.setInterpolationDelay(0);
 				counter.setInterpolationDuration(4);
