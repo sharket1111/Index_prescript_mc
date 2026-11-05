@@ -281,6 +281,69 @@ def count_glyph(n):
     return img
 
 
+# --- the UI under each player ---------------------------------------------------------------
+
+HP_FIRST = 0xE700
+STATUS_FIRST = 0xE720
+STATUS = ["burn", "bleed", "poise", "sinking", "bind", "paralysis", "fragile", "mang", "stagger", "attack_up", "defense_down"]
+
+
+def hp_ring(fraction):
+    """A ring gauge of health: the lit arc runs clockwise from the top."""
+    s = 22
+    big = 4
+    img = Image.new("RGBA", (s * big, s * big), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    box = [2 * big, 2 * big, (s - 2) * big - 1, (s - 2) * big - 1]
+    d.ellipse([0, 0, s * big - 1, s * big - 1], fill=(15, 10, 10, 230))
+    d.arc(box, 0, 360, fill=(70, 30, 30, 255), width=4 * big)
+    if fraction > 0:
+        colour = (230, 50, 40, 255) if fraction > 0.3 else (255, 120, 40, 255)
+        d.arc(box, -90, -90 + 360 * fraction, fill=colour, width=4 * big)
+    d.ellipse([6 * big, 6 * big, (s - 6) * big - 1, (s - 6) * big - 1], fill=(25, 18, 18, 240))
+    out = img.resize((s, s), Image.LANCZOS)
+    out.putpixel((s - 1, s - 1), (0, 0, 0, 1))
+    return out
+
+
+def status_icon(kind):
+    s = 12
+    img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    dark = (20, 12, 12, 255)
+    if kind == "burn":
+        d.polygon([(6, 0), (10, 6), (9, 10), (6, 11), (3, 10), (2, 6)], fill=(255, 120, 30, 255), outline=dark)
+        d.polygon([(6, 4), (8, 8), (6, 10), (4, 8)], fill=(255, 220, 90, 255))
+    elif kind == "bleed":
+        d.polygon([(6, 0), (10, 7), (6, 11), (2, 7)], fill=(200, 20, 30, 255), outline=dark)
+        d.point([(4, 6), (4, 7)], fill=(255, 140, 140, 255))
+    elif kind == "poise":
+        d.ellipse([1, 3, 10, 8], fill=(255, 245, 200, 255), outline=dark)
+        d.ellipse([4, 4, 7, 7], fill=(60, 140, 220, 255))
+    elif kind == "sinking":
+        d.polygon([(6, 0), (10, 7), (6, 11), (2, 7)], fill=(50, 90, 200, 255), outline=dark)
+        d.line([(3, 8), (9, 8)], fill=(170, 200, 255, 255))
+    elif kind == "bind":
+        d.ellipse([0, 3, 6, 9], outline=(170, 170, 180, 255), width=2)
+        d.ellipse([5, 3, 11, 9], outline=(130, 130, 140, 255), width=2)
+    elif kind == "paralysis":
+        d.polygon([(7, 0), (2, 7), (6, 7), (4, 11), (10, 4), (6, 4)], fill=(255, 225, 60, 255), outline=dark)
+    elif kind == "fragile":
+        d.polygon([(1, 1), (10, 1), (10, 6), (6, 11), (1, 6)], fill=(150, 80, 200, 255), outline=dark)
+        d.line([(6, 1), (5, 5), (7, 7), (5, 10)], fill=dark)
+    elif kind == "mang":
+        d.ellipse([1, 1, 10, 10], outline=(255, 200, 60, 255), width=2)
+        d.ellipse([4, 4, 7, 7], outline=(255, 240, 160, 255))
+    elif kind == "stagger":
+        d.polygon([(6, 0), (7, 4), (11, 5), (7, 7), (8, 11), (5, 8), (1, 10), (3, 6), (0, 3), (4, 3)], fill=(240, 240, 255, 255), outline=dark)
+    elif kind == "attack_up":
+        d.polygon([(6, 0), (11, 6), (8, 6), (8, 11), (4, 11), (4, 6), (1, 6)], fill=(240, 70, 50, 255), outline=dark)
+    elif kind == "defense_down":
+        d.polygon([(6, 11), (11, 5), (8, 5), (8, 0), (4, 0), (4, 5), (1, 5)], fill=(90, 120, 240, 255), outline=dark)
+    img.putpixel((s - 1, s - 1), (0, 0, 0, 1))
+    return img
+
+
 # --- writing --------------------------------------------------------------------------------
 
 def strip(images):
@@ -336,6 +399,12 @@ def main(assets):
         {"type": "bitmap", "file": "index_prescript:font/clash_sp.png", "height": 14, "ascent": 10,
          "chars": chars_grid(SP_FIRST, len(values), 13, sp_rows)},
     ]}
+    strip([hp_ring(i / 20) for i in range(21)]).save(os.path.join(tex, "clash_hp.png"))
+    strip([status_icon(k) for k in STATUS]).save(os.path.join(tex, "clash_status.png"))
+    clash["providers"].append({"type": "bitmap", "file": "index_prescript:font/clash_hp.png", "height": 20, "ascent": 15,
+                               "chars": ["".join(chr(HP_FIRST + i) for i in range(21))]})
+    clash["providers"].append({"type": "bitmap", "file": "index_prescript:font/clash_status.png", "height": 10, "ascent": 8,
+                               "chars": ["".join(chr(STATUS_FIRST + i) for i in range(len(STATUS)))]})
     with open(os.path.join(assets, "font/clash.json"), "w", encoding="utf-8") as f:
         json.dump(clash, f, indent="\t")
 

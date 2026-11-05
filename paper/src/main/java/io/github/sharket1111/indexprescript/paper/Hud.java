@@ -83,7 +83,7 @@ final class Hud {
 		}
 	}
 
-	private static boolean showsSanity(Player player) {
+	static boolean showsSanity(Player player) {
 		return Sanity.of(player) != 0 || Sanity.inCombat(player) || Items.isWeapon(player.getInventory().getItemInMainHand())
 				|| BlackGod.active(player);
 	}

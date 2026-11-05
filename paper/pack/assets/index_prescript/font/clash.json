@@ -95,6 +95,24 @@
 				"\ue541\ue542\ue543\ue544\ue545\ue546\ue547\ue548\ue549\ue54a\ue54b\ue54c\ue54d",
 				"\ue54e\ue54f\ue550\ue551\ue552\ue553\ue554\ue555\ue556\ue557\ue558\ue559\ue55a"
 			]
+		},
+		{
+			"type": "bitmap",
+			"file": "index_prescript:font/clash_hp.png",
+			"height": 20,
+			"ascent": 15,
+			"chars": [
+				"\ue700\ue701\ue702\ue703\ue704\ue705\ue706\ue707\ue708\ue709\ue70a\ue70b\ue70c\ue70d\ue70e\ue70f\ue710\ue711\ue712\ue713\ue714"
+			]
+		},
+		{
+			"type": "bitmap",
+			"file": "index_prescript:font/clash_status.png",
+			"height": 10,
+			"ascent": 8,
+			"chars": [
+				"\ue720\ue721\ue722\ue723\ue724\ue725\ue726\ue727\ue728\ue729\ue72a"
+			]
 		}
 	]
 }
