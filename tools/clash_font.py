@@ -285,7 +285,7 @@ def count_glyph(n):
 
 HP_FIRST = 0xE700
 STATUS_FIRST = 0xE720
-STATUS = ["burn", "bleed", "poise", "sinking", "bind", "paralysis", "fragile", "mang", "stagger", "attack_up", "defense_down"]
+STATUS = ["burn", "bleed", "poise", "sinking", "bind", "paralysis", "fragile", "mang", "stagger", "attack_up", "defense_down", "tremor"]
 
 
 def hp_ring(fraction):
@@ -367,6 +367,13 @@ def status_icon(kind):
         d.polygon([(6, 0), (7, 4), (11, 5), (7, 7), (8, 11), (5, 8), (1, 10), (3, 6), (0, 3), (4, 3)], fill=(240, 240, 255, 255), outline=dark)
     elif kind == "attack_up":
         d.polygon([(6, 0), (11, 6), (8, 6), (8, 11), (4, 11), (4, 6), (1, 6)], fill=(240, 70, 50, 255), outline=dark)
+    elif kind == "tremor":
+        # The original's Tremor: a golden core with ripples on both sides.
+        d.ellipse([4, 4, 7, 7], fill=(255, 214, 80, 255), outline=dark)
+        d.arc([2, 2, 9, 9], 120, 240, fill=(255, 190, 60, 255))
+        d.arc([2, 2, 9, 9], -60, 60, fill=(255, 190, 60, 255))
+        d.arc([0, 0, 11, 11], 130, 230, fill=(230, 150, 40, 255))
+        d.arc([0, 0, 11, 11], -50, 50, fill=(230, 150, 40, 255))
     elif kind == "defense_down":
         d.polygon([(6, 11), (11, 5), (8, 5), (8, 0), (4, 0), (4, 5), (1, 5)], fill=(90, 120, 240, 255), outline=dark)
     img.putpixel((s - 1, s - 1), (0, 0, 0, 1))

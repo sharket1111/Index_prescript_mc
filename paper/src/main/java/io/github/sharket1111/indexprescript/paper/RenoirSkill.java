@@ -255,12 +255,15 @@ final class RenoirSkill {
 			PromisedNails.rain(target.getLocation(), 1.4, 2.0F, false);
 		} else if (tick == NAIL_COIN_1 && Clash.coin(player, 0)) {
 			coin(4.0, () -> sweep(actor(), target, -40, 0));
+			Tremor.inflict(target, 2);
 		} else if (tick == NAIL_COIN_2) {
 			if (Clash.coin(player, 1)) {
 				coin(5.0, () -> {
 					sweep(actor(), target, 90, 80);
 					pillar(target.getLocation());
 				});
+				Tremor.inflict(target, 2);
+				Tremor.addCount(target, 1);
 				RenoirHammer.addPreservation(player, 6);
 			}
 		} else if (tick > NAIL_COIN_2 && tick < NAIL_END - 6 && tick % 4 == 0) {
@@ -285,6 +288,7 @@ final class RenoirSkill {
 		} else if (tick == BORN_COIN_1 && Clash.coin(player, 0)) {
 			RenoirHammer.driveNail(player, target);
 			coin(5.0, () -> pillar(target.getLocation()));
+			Tremor.inflict(target, 3);
 		} else if (tick == BORN_LEAP - 2) {
 			pose(Pose.SNEAKING);
 		} else if (tick == BORN_LEAP) {
@@ -295,6 +299,7 @@ final class RenoirSkill {
 		} else if (tick == BORN_COIN_2) {
 			land(1.4);
 			if (Clash.coin(player, 1)) {
+				Tremor.burst(target);
 				coin(7.0, () -> {
 					sweep(actor(), target, 90, 80);
 					dome(target.getLocation(), 2.4);
@@ -333,10 +338,12 @@ final class RenoirSkill {
 			PromisedNails.rain(target.getLocation(), 1.2, 2.4F, false);
 		} else if (tick == SEVER_COIN_1 && Clash.coin(player, 0)) {
 			coin(4.0, () -> pillar(target.getLocation()));
+			Tremor.inflict(target, 3);
 		} else if (tick == SEVER_STEP) {
 			stepIn(1.6);
 		} else if (tick == SEVER_COIN_2 && Clash.coin(player, 1)) {
 			coin(4.0, () -> sweep(actor(), target, -30, 0));
+			Tremor.addCount(target, 2);
 		} else if (tick == SEVER_CROUCH) {
 			pose(Pose.SNEAKING);
 		} else if (tick == SEVER_LEAP) {
@@ -349,6 +356,7 @@ final class RenoirSkill {
 		} else if (tick == SEVER_SLAM) {
 			land(1.4);
 			if (Clash.coin(player, 2)) {
+				Tremor.burst(target);
 				coin(7.0, () -> {
 					sweep(actor(), target, 90, 80);
 					dome(target.getLocation(), 2.6);
@@ -409,6 +417,7 @@ final class RenoirSkill {
 		} else if (tick == AGAIN_COIN_1 && Clash.coin(player, 0)) {
 			for (LivingEntity foe : List.copyOf(held.keySet())) {
 				hit(foe, 4.0, () -> pillar(foe.getLocation()));
+				Tremor.inflict(foe, 4);
 			}
 			shockRing(center, 4.0);
 			actor().swingMainHand();
@@ -429,6 +438,7 @@ final class RenoirSkill {
 			whirl(actor());
 			for (LivingEntity foe : List.copyOf(held.keySet())) {
 				hit(foe, 4.0, null);
+				Tremor.addCount(foe, 3);
 			}
 		} else if (tick == AGAIN_CROUCH) {
 			pose(Pose.SNEAKING);
@@ -468,6 +478,7 @@ final class RenoirSkill {
 		whiteBurst(target.getLocation());
 		actor().swingMainHand();
 		for (LivingEntity foe : List.copyOf(held.keySet())) {
+			Tremor.burst(foe);
 			int nails = PromisedNails.count(foe);
 			double extra = nails >= 3 ? Math.min(0.9, nails * 0.03) : 0.0;
 			hit(foe, 9.0 * (1.0 + extra), null);

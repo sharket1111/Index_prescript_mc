@@ -30,6 +30,10 @@ final class CombatState {
 	private int sinkingCount;
 	private long sinkingUntil;
 
+	private int tremorPotency;
+	private int tremorCount;
+	private long tremorDecayAt;
+
 	private float stagger;
 	private long staggerResetAt;
 	private long staggeredUntil;
@@ -119,6 +123,57 @@ final class CombatState {
 		return sinkingCount > 0 && now < sinkingUntil ? sinkingPotency : 0;
 	}
 
+	// --- Tremor: does nothing by itself; a Tremor Burst deals stagger damage equal to its potency
+	// and uses up one count. The count drops by one each turn, as Poise's does.
+
+	/** Tremor {@code potency}: a unit without Tremor gets a count of 1 with it. */
+	void addTremor(int potency, long now) {
+		decayTremor(now);
+		if (tremorCount == 0) {
+			tremorCount = 1;
+			tremorDecayAt = now + TURN_TICKS;
+		}
+		tremorPotency = Math.min(MAX_COUNT, tremorPotency + potency);
+	}
+
+	/** Tremor count +{@code count}: a unit without Tremor gets a potency of 1 with it. */
+	void addTremorCount(int count, long now) {
+		decayTremor(now);
+		if (tremorCount == 0) {
+			tremorDecayAt = now + TURN_TICKS;
+			tremorPotency = Math.max(1, tremorPotency);
+		}
+		tremorCount = Math.min(MAX_COUNT, tremorCount + count);
+	}
+
+	int tremorPotency(long now) {
+		decayTremor(now);
+		return tremorPotency;
+	}
+
+	int tremorCount(long now) {
+		decayTremor(now);
+		return tremorCount;
+	}
+
+	/** One count used by a Tremor Burst. */
+	void consumeTremor(long now) {
+		decayTremor(now);
+		if (tremorCount > 0 && --tremorCount == 0) {
+			tremorPotency = 0;
+		}
+	}
+
+	private void decayTremor(long now) {
+		while (tremorCount > 0 && now >= tremorDecayAt) {
+			tremorCount--;
+			tremorDecayAt += TURN_TICKS;
+		}
+		if (tremorCount == 0) {
+			tremorPotency = 0;
+		}
+	}
+
 	// --- Stagger: accumulated stagger damage; reaching the threshold staggers for one turn.
 
 	/** Adds stagger damage; returns true if this pushed the entity into the staggered state. */
@@ -184,7 +239,7 @@ final class CombatState {
 	}
 
 	private boolean idle(long now) {
-		if (poiseCount(now) > 0 || (sinkingCount > 0 && now < sinkingUntil) || now < staggerResetAt || staggered(now)
+		if (poiseCount(now) > 0 || tremorCount(now) > 0 || (sinkingCount > 0 && now < sinkingUntil) || now < staggerResetAt || staggered(now)
 				|| attackLevel(now) > 0 || defenseDown(now) > 0) {
 			return false;
 		}

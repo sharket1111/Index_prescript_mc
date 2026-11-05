@@ -80,13 +80,13 @@ record SkillCard(String name, TextColor colour, int base, int coinPower, int coi
 
 	// --- the Renoir hammer --------------------------------------------------------------
 	static final SkillCard NAIL = new SkillCard("못박히라", PRIDE, 3, 4, 2,
-			"대상의 못 4개당 최종 위력 +1(최대 3). 보존 위력 3 이상이면 코인 위력 +1, 피해 +40%. 2타 적중 시 보존 횟수 +6.", 56, true, "NN");
+			"대상의 못 4개당 최종 위력 +1(최대 3). 보존 위력 3 이상이면 코인 위력 +1, 피해 +40%. 2타 적중 시 보존 횟수 +6. 진동 2, 진동 2·횟수 +1.", 56, true, "NN");
 	static final SkillCard BORN = new SkillCard("못생기라", ENVY, 6, 5, 2,
-			"대상의 못 4개당 최종 위력 +1(최대 3). 보존 위력 3 이상이면 코인 위력 +1, 피해 +30%. 1타 약속된 못 1, 2타 보존 횟수 +8.", 72, true, "NN");
+			"대상의 못 4개당 최종 위력 +1(최대 3). 보존 위력 3 이상이면 코인 위력 +1, 피해 +30%. 1타 약속된 못 1·진동 3, 2타 진동 폭발·보존 횟수 +8.", 72, true, "NN");
 	static final SkillCard SEVER = new SkillCard("탄생을 끊으리라", SLOTH, 4, 3, 3,
-			"못 두 개를 떨어뜨리고 빛기둥, 금빛 휘두르기, 도약해 내려찍기. 보존 +4.", 137, true, "NNN");
+			"못 두 개를 떨어뜨리고 빛기둥, 금빛 휘두르기, 도약해 내려찍기. 진동 3, 진동 횟수 +2, 진동 폭발. 보존 +4.", 137, true, "NNN");
 	static final SkillCard AGAIN = new SkillCard("거듭 내리쳐, 탄생을 끊으리라", SLOTH, 5, 4, 3,
-			"주변 8블록의 적에게 못비와 휘두르기, 높이 도약해 내려찍는다. 못 3개 이상이면 피해 증가.", 180, true, "NNN");
+			"주변 8블록의 적에게 못비와 휘두르기, 높이 도약해 내려찍는다. 못 3개 이상이면 피해 증가. 진동 4, 진동 횟수 +3, 진동 폭발.", 180, true, "NNN");
 
 	// --- the Black God (docs/black_god.md) ----------------------------------------------
 	static final SkillCard[] BLACK_GOD = {
