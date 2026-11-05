@@ -724,6 +724,7 @@ final class Clash {
 	// The pack's "clash" font (tools/clash_font.py): coins, the badge, big digits, the banner, Sanity circles, spaces.
 	private static final Key FONT = Key.key(Items.NAMESPACE, "clash");
 	private static final Key COUNT_FONT = Key.key(Items.NAMESPACE, "clash_count");
+	private static final Key DEFAULT_FONT = Key.key("minecraft", "default");
 	/** Coin shapes, drawn white and tinted: round (plain), octagon (unbreakable), and their cracked forms. */
 	private static final char COIN_ROUND = '\ue401';
 	private static final char COIN_OCTAGON = '\ue402';
@@ -818,9 +819,11 @@ final class Clash {
 		int bannerWidth = 6 + 8 * segments + 11;
 		int nameStart = 6 + (8 * segments - nameWidth) / 2;
 		int sanity = Sanity.of(side.player);
-		Component bannerLine = Component.text(banner.toString(), card.colour()).font(FONT)
+		// Siblings under an empty root: a child would inherit the glyph font, which has no Hangul.
+		Component bannerLine = Component.empty()
+				.append(Component.text(banner.toString(), card.colour()).font(FONT))
 				.append(Component.text(space(nameStart - bannerWidth), NamedTextColor.WHITE).font(FONT))
-				.append(name)
+				.append(name.font(DEFAULT_FONT))
 				.append(Component.text(space(bannerWidth - nameStart - nameWidth + 3)
 						+ (char) (SP_FIRST + sanity - Sanity.MIN), NamedTextColor.WHITE).font(FONT));
 		int chance = (int) Math.round(Sanity.headsChance(side.player) * 100);

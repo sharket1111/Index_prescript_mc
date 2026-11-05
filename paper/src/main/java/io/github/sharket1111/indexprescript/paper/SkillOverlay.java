@@ -75,6 +75,11 @@ final class SkillOverlay {
 	}
 
 	/** Slides the overlay out; the helmet shows again once it is off screen. */
+	/** Whether the skill screen's edges are up on the player's screen. */
+	static boolean showing(Player player) {
+		return SHOWING.containsKey(player.getUniqueId());
+	}
+
 	static void hide(Player player) {
 		Shown shown = SHOWING.get(player.getUniqueId());
 		if (shown != null) {
