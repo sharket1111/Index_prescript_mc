@@ -39,7 +39,7 @@ DIGITS5x7 = {
 }
 
 FONT_FIRST = 0xE400
-COIN_CHARS = [chr(0xE401 + i) for i in range(6)]
+COIN_CHARS = [chr(0xE401 + i) for i in range(10)]
 BADGE = chr(0xE410)
 BIG_DIGITS = [chr(0xE420 + i) for i in range(11)]  # 0-9 and ?
 BANNER_L, BANNER_M, BANNER_R = chr(0xE430), chr(0xE431), chr(0xE432)
@@ -99,6 +99,8 @@ def coin(kind):
     if kind == "spin_b":
         d.ellipse([2, 3, 11, 10], fill=(255, 200, 60, 255), outline=(90, 60, 10, 255))
         return img
+    if kind in ("crack", "split", "shards", "dust"):
+        return breaking(kind)
     face = {"fresh": (215, 40, 40), "heads": (255, 196, 40), "tails": (70, 66, 66), "broken": (40, 30, 30)}[kind]
     ring = {"fresh": (255, 120, 110), "heads": (255, 245, 170), "tails": (140, 135, 135), "broken": (90, 20, 20)}[kind]
     d.ellipse([1, 1, 12, 12], fill=face + (255,), outline=(20, 10, 10, 255))
@@ -108,6 +110,34 @@ def coin(kind):
     if kind == "broken":
         for (x0, y0, x1, y1) in [(3, 3, 10, 10), (10, 3, 3, 10)]:
             d.line([x0, y0, x1, y1], fill=(220, 40, 40, 255), width=2)
+    return img
+
+
+def breaking(kind):
+    """The frames of a coin being destroyed: it cracks, splits, flies apart and fades."""
+    s = 14
+    img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    red, rim, dark = (215, 40, 40, 255), (255, 200, 190, 255), (20, 10, 10, 255)
+    if kind == "crack":
+        d.ellipse([1, 1, 12, 12], fill=(240, 90, 80, 255), outline=dark)
+        d.line([(6, 1), (7, 5), (5, 8), (7, 12)], fill=(255, 255, 255, 255), width=1)
+        d.line([(7, 5), (10, 6)], fill=(255, 255, 255, 255))
+        d.line([(5, 8), (2, 9)], fill=(255, 255, 255, 255))
+    elif kind == "split":
+        # Two halves pulling apart, tilted.
+        d.pieslice([-1, 1, 10, 12], 90, 270, fill=red, outline=dark)
+        d.pieslice([3, 0, 14, 11], 270, 90, fill=red, outline=dark)
+        d.line([(4, 2), (4, 11)], fill=rim)
+        d.line([(9, 1), (9, 10)], fill=rim)
+    elif kind == "shards":
+        for (x, y, w, h) in [(0, 1, 3, 3), (10, 0, 3, 3), (1, 10, 3, 3), (10, 10, 3, 3), (5, 5, 3, 2), (6, 0, 2, 2), (0, 6, 2, 2), (12, 6, 2, 2)]:
+            d.rectangle([x, y, x + w - 1, y + h - 1], fill=red, outline=dark)
+        for x, y in [(3, 4), (9, 3), (4, 9), (9, 9)]:
+            img.putpixel((x, y), (255, 240, 200, 255))
+    else:
+        for (x, y) in [(0, 0), (13, 1), (1, 13), (12, 12), (6, 13), (13, 6), (0, 7), (7, 0)]:
+            img.putpixel((x, y), (255, 120, 100, 150))
     return img
 
 
@@ -275,7 +305,7 @@ def main(assets):
     os.makedirs(tex, exist_ok=True)
     os.makedirs(os.path.join(assets, "font"), exist_ok=True)
 
-    strip([coin(k) for k in ["fresh", "heads", "tails", "broken", "spin_a", "spin_b"]]).save(os.path.join(tex, "clash_coins.png"))
+    strip([coin(k) for k in ["fresh", "heads", "tails", "broken", "spin_a", "spin_b", "crack", "split", "shards", "dust"]]).save(os.path.join(tex, "clash_coins.png"))
     badge().save(os.path.join(tex, "clash_badge.png"))
     strip([big_digit(c) for c in "0123456789?"]).save(os.path.join(tex, "clash_digits.png"))
     for part in "lmr":

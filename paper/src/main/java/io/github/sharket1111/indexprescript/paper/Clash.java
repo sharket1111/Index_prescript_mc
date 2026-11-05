@@ -61,6 +61,8 @@ final class Clash {
 	private static final int ROUND = 16;
 	private static final int LINGER = 30;
 	private static final int MAX_ROUNDS = 40;
+	/** The shattering: four frames of two ticks. */
+	private static final int BREAK_TICKS = 8;
 	private static final Map<UUID, Duel> DUELS = new ConcurrentHashMap<>();
 	private static final Map<UUID, double[]> SCALES = new ConcurrentHashMap<>();
 	private static final List<Lingering> LINGERING = new ArrayList<>();
@@ -69,7 +71,7 @@ final class Clash {
 	record Outcome(LivingEntity target, double scale) {
 	}
 
-	private record Lingering(TextDisplay display, long removeAt) {
+	private record Lingering(TextDisplay display, long removeAt, Side side) {
 	}
 
 	private static final class Side {
@@ -83,6 +85,10 @@ final class Clash {
 		final int[] faces;
 		int power = -1;
 		boolean spinning;
+		/** Coins [brokenFrom, brokenTo) are shattering since brokenAt; broken coins are gone after. */
+		int brokenFrom;
+		int brokenTo;
+		long brokenAt = Long.MIN_VALUE / 2;
 		Boolean won;
 		TextDisplay panel;
 
@@ -104,6 +110,21 @@ final class Clash {
 			}
 			power = card.base() + heads * card.coinPower();
 			spinning = false;
+		}
+
+		/** Destroys the coins from {@code left} on, with the shattering motion. */
+		void breakTo(int left) {
+			if (left >= coins) {
+				return;
+			}
+			brokenFrom = left;
+			brokenTo = coins;
+			brokenAt = CaduceusListener.now();
+			coins = left;
+		}
+
+		boolean shattering() {
+			return CaduceusListener.now() - brokenAt < BREAK_TICKS;
 		}
 
 		double scale() {
@@ -235,6 +256,8 @@ final class Clash {
 				if (now >= lingering.removeAt() || !lingering.display().isValid()) {
 					lingering.display().remove();
 					it.remove();
+				} else if (lingering.side() != null && lingering.side().shattering()) {
+					draw(lingering.side());
 				}
 			}
 		}
@@ -282,6 +305,11 @@ final class Clash {
 		hold(a);
 		hold(b);
 		round(duel, a, b);
+		for (Side side : new Side[] {a, b}) {
+			if (side.shattering()) {
+				draw(side);
+			}
+		}
 	}
 
 	private static void unopposed(Duel duel) {
@@ -349,7 +377,7 @@ final class Clash {
 				Side winner = loser == a ? b : a;
 				winner.won = true;
 				loser.won = false;
-				loser.coins--;
+				loser.breakTo(loser.coins - 1);
 				Location at = loser.player.getLocation().add(0, 1.2, 0);
 				at.getWorld().spawnParticle(Particle.DUST, at, 10, 0.2, 0.2, 0.2, 0.0, new Particle.DustOptions(Color.fromRGB(0xC02020), 1.2F));
 				at.getWorld().playSound(at, Sound.ENTITY_ITEM_BREAK, SoundCategory.PLAYERS, 1.0F, 1.2F);
@@ -374,7 +402,7 @@ final class Clash {
 		Sanity.lose(loser.player, Math.min(20, 2 + 2 * rounds));
 		Sanity.fought(winner.player);
 		Sanity.fought(loser.player);
-		loser.coins = 0;
+		loser.breakTo(0);
 		winner.won = true;
 		loser.won = false;
 		if (winner.power < 0) {
@@ -406,7 +434,7 @@ final class Clash {
 		DUELS.values().removeIf(d -> d == duel);
 		if (duel.counter != null) {
 			synchronized (LINGERING) {
-				LINGERING.add(new Lingering(duel.counter, CaduceusListener.now() + LINGER));
+				LINGERING.add(new Lingering(duel.counter, CaduceusListener.now() + LINGER, null));
 			}
 		}
 		retire(duel.attacker);
@@ -418,7 +446,7 @@ final class Clash {
 	private static void retire(Side side) {
 		if (side.panel != null) {
 			synchronized (LINGERING) {
-				LINGERING.add(new Lingering(side.panel, CaduceusListener.now() + LINGER));
+				LINGERING.add(new Lingering(side.panel, CaduceusListener.now() + LINGER, side));
 			}
 		}
 	}
@@ -481,8 +509,8 @@ final class Clash {
 	private static final char COIN_FRESH = '\ue401';
 	private static final char COIN_HEADS = '\ue402';
 	private static final char COIN_TAILS = '\ue403';
-	private static final char COIN_BROKEN = '\ue404';
 	private static final char COIN_SPIN = '\ue405';
+	private static final char COIN_CRACK = '\ue407';
 	private static final char BADGE = '\ue410';
 	private static final char DIGIT_ZERO = '\ue420';
 	private static final char DIGIT_UNKNOWN = '\ue42a';
@@ -516,10 +544,15 @@ final class Clash {
 		boolean frame = (CaduceusListener.now() / 2) % 2 == 0;
 		// Coins, above the banner.
 		StringBuilder coins = new StringBuilder(space(BANNER_START));
+		long sinceBreak = CaduceusListener.now() - side.brokenAt;
 		for (int i = 0; i < card.coins(); i++) {
 			char coin;
 			if (i >= side.coins) {
-				coin = COIN_BROKEN;
+				// A destroyed coin cracks, splits, flies apart and fades, then is gone.
+				if (i < side.brokenFrom || i >= side.brokenTo || sinceBreak >= BREAK_TICKS) {
+					break;
+				}
+				coin = (char) (COIN_CRACK + sinceBreak / 2);
 			} else if (side.spinning) {
 				coin = (char) (COIN_SPIN + ((frame ? 0 : 1) + i) % 2);
 			} else if (side.faces[i] == 1) {
