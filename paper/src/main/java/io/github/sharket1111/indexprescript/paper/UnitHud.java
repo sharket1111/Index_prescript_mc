@@ -65,8 +65,14 @@ final class UnitHud {
 
 	static void tick() {
 		long now = CaduceusListener.now();
-		for (Player player : Bukkit.getOnlinePlayers()) {
-			boolean wanted = Hud.showsSanity(player) && player.getGameMode() != GameMode.SPECTATOR || Cinematic.body(player) != player;
+		java.util.List<LivingEntity> units = new java.util.ArrayList<>(Bukkit.getOnlinePlayers());
+		units.addAll(ClashDummy.all());
+		java.util.Set<UUID> present = new java.util.HashSet<>();
+		for (LivingEntity player : units) {
+			present.add(player.getUniqueId());
+			boolean wanted = player instanceof Player viewer
+					? Hud.showsSanity(viewer) && viewer.getGameMode() != GameMode.SPECTATOR || Cinematic.body(viewer) != viewer
+					: true;
 			TextDisplay display = SHOWN.get(player.getUniqueId());
 			if (!wanted || player.isDead()) {
 				if (display != null) {
@@ -76,7 +82,7 @@ final class UnitHud {
 				removeFloor(player.getUniqueId());
 				continue;
 			}
-			LivingEntity body = Cinematic.body(player);
+			LivingEntity body = player instanceof Player viewer ? Cinematic.body(viewer) : player;
 			floor(player, body);
 			Location at = body.getLocation().add(0, -BELOW, 0);
 			at.setYaw(0);
@@ -100,13 +106,13 @@ final class UnitHud {
 		Iterator<Map.Entry<UUID, TextDisplay>> it = SHOWN.entrySet().iterator();
 		while (it.hasNext()) {
 			Map.Entry<UUID, TextDisplay> entry = it.next();
-			if (Bukkit.getPlayer(entry.getKey()) == null) {
+			if (!present.contains(entry.getKey())) {
 				entry.getValue().remove();
 				it.remove();
 			}
 		}
 		for (UUID id : java.util.List.copyOf(FLOOR.keySet())) {
-			if (Bukkit.getPlayer(id) == null) {
+			if (!present.contains(id)) {
 				removeFloor(id);
 			}
 		}
@@ -121,7 +127,7 @@ final class UnitHud {
 	}
 
 	/** The health ring, lying on the ground round the feet like a tile, filled as health is. */
-	private static void floor(Player player, LivingEntity body) {
+	private static void floor(LivingEntity player, LivingEntity body) {
 		AttributeInstance maxAttribute = player.getAttribute(Attribute.MAX_HEALTH);
 		double max = maxAttribute == null ? 20.0 : maxAttribute.getValue();
 		int step = (int) Math.round(Math.max(0.0, Math.min(1.0, player.getHealth() / max)) * 20);
@@ -181,7 +187,7 @@ final class UnitHud {
 		return Component.text(String.valueOf(c), NamedTextColor.WHITE).font(FONT);
 	}
 
-	private static Component text(Player player, LivingEntity body, long now) {
+	private static Component text(LivingEntity player, LivingEntity body, long now) {
 		AttributeInstance maxAttribute = player.getAttribute(Attribute.MAX_HEALTH);
 		double max = maxAttribute == null ? 20.0 : maxAttribute.getValue();
 		double health = player.getHealth() + player.getAbsorptionAmount();
@@ -194,7 +200,7 @@ final class UnitHud {
 		return statuses == null ? top : top.appendNewline().append(statuses);
 	}
 
-	private static Component statuses(Player player, long now) {
+	private static Component statuses(LivingEntity player, long now) {
 		CombatState state = CombatState.of(player);
 		boolean staggered = state.staggered(now);
 		Component line = Component.empty();
@@ -226,7 +232,7 @@ final class UnitHud {
 		return shown == 0 ? null : line;
 	}
 
-	private static int level(Player player, PotionEffectType type) {
+	private static int level(LivingEntity player, PotionEffectType type) {
 		PotionEffect effect = player.getPotionEffect(type);
 		return effect == null ? 0 : effect.getAmplifier() + 1;
 	}

@@ -64,6 +64,8 @@ import net.kyori.adventure.title.Title;
  */
 final class Clash {
 	static final int WINDOW = 40;
+	/** A clash dummy answers this many ticks into the window. */
+	private static final int DUMMY_ANSWER = 12;
 	private static final int SPIN = 8;
 	private static final int ROUND = 16;
 	private static final int LINGER = 30;
@@ -86,7 +88,8 @@ final class Clash {
 	}
 
 	private static final class Side {
-		final Player player;
+		/** The one using the skill: a player, or a clash dummy. */
+		final LivingEntity player;
 		final SkillCard card;
 		final Consumer<Outcome> start;
 		LivingEntity target;
@@ -110,7 +113,7 @@ final class Clash {
 		double scale = 1.0;
 		final boolean[] struck;
 
-		Side(Player player, SkillCard card, LivingEntity target, Consumer<Outcome> start) {
+		Side(LivingEntity player, SkillCard card, LivingEntity target, Consumer<Outcome> start) {
 			this.player = player;
 			this.card = card;
 			this.target = target;
@@ -172,6 +175,8 @@ final class Clash {
 	private static final class Duel {
 		final Side attacker;
 		final Player defender;
+		/** A clash dummy that will answer on its own. */
+		LivingEntity dummy;
 		Side answer;
 		boolean waiting;
 		int tick;
@@ -186,6 +191,21 @@ final class Clash {
 	}
 
 	private Clash() {
+	}
+
+	private static boolean present(LivingEntity entity) {
+		return entity != null && entity.isValid() && !entity.isDead() && (!(entity instanceof Player player) || player.isOnline());
+	}
+
+	/** Where a unit's effects belong: a player's stand-in while a camera runs. */
+	private static LivingEntity body(LivingEntity entity) {
+		return entity instanceof Player player ? Cinematic.body(player) : entity;
+	}
+
+	private static void tell(LivingEntity entity, Component message) {
+		if (entity instanceof Player player) {
+			Hud.message(player, message);
+		}
 	}
 
 	// --- asking ----------------------------------------------------------------------------
@@ -217,6 +237,17 @@ final class Clash {
 		Side side = new Side(user, card, target, start);
 		side.panel = panel(user);
 		Player defender = card.clashes() && target instanceof Player player && canAnswer(player) ? player : null;
+		if (defender == null && card.clashes() && ClashDummy.is(target) && !DUELS.containsKey(target.getUniqueId())
+				&& !RUNS.containsKey(target.getUniqueId())) {
+			// A clash dummy answers with its fixed skill a moment later.
+			Duel duel = new Duel(side, null);
+			duel.dummy = target;
+			duel.waiting = true;
+			DUELS.put(user.getUniqueId(), duel);
+			DUELS.put(target.getUniqueId(), duel);
+			draw(side);
+			return true;
+		}
 		if (defender == null) {
 			// Unopposed: straight to the attack, the coins flipped as they strike.
 			launch(side, target);
@@ -234,8 +265,8 @@ final class Clash {
 	}
 
 	/** The player clashing or answering one now, or about to. */
-	static boolean busy(Player player) {
-		return DUELS.containsKey(player.getUniqueId());
+	static boolean busy(org.bukkit.entity.Entity unit) {
+		return DUELS.containsKey(unit.getUniqueId());
 	}
 
 	/** Busy with a clash in a way that keeps them from starting a skill (answering one is allowed). */
@@ -254,7 +285,7 @@ final class Clash {
 	 * yet, and sets the damage scale for its hits. Returns false if that coin
 	 * was destroyed in a clash, and its attack must be skipped.
 	 */
-	static boolean coin(Player player, int index) {
+	static boolean coin(LivingEntity player, int index) {
 		Side side = RUNS.get(player.getUniqueId());
 		if (side == null || index < 0 || index >= side.state.length) {
 			return true;
@@ -271,7 +302,7 @@ final class Clash {
 			side.runExpected += coinPower * 0.5;
 			side.power = side.runPower;
 			side.scale = Math.max(0.5, Math.min(1.8, side.runPower / Math.max(1.0, side.runExpected)));
-			Location at = Cinematic.body(player).getLocation().add(0, 1.6, 0);
+			Location at = body(player).getLocation().add(0, 1.6, 0);
 			at.getWorld().playSound(at, heads ? Sound.BLOCK_NOTE_BLOCK_CHIME : Sound.BLOCK_NOTE_BLOCK_BASS, SoundCategory.PLAYERS, 0.7F,
 					heads ? 1.6F : 0.8F);
 			draw(side);
@@ -280,13 +311,13 @@ final class Clash {
 	}
 
 	/** Whether the player's skill lost coin {@code index} for good in a clash (it shows nothing of it). */
-	static boolean destroyed(Player player, int index) {
+	static boolean destroyed(LivingEntity player, int index) {
 		Side side = RUNS.get(player.getUniqueId());
 		return side != null && index >= 0 && index < side.state.length && side.state[index] == DESTROYED;
 	}
 
 	/** The damage scale of the coin the player's skill is striking with (1 when none). */
-	static double scale(Player player) {
+	static double scale(org.bukkit.entity.Entity player) {
 		Side side = RUNS.get(player.getUniqueId());
 		return side == null || CaduceusListener.now() > side.until ? 1.0 : side.scale;
 	}
@@ -322,7 +353,7 @@ final class Clash {
 		Iterator<Map.Entry<UUID, Side>> runs = RUNS.entrySet().iterator();
 		while (runs.hasNext()) {
 			Side side = runs.next().getValue();
-			if (now >= side.until || !side.player.isOnline()) {
+			if (now >= side.until || !present(side.player)) {
 				runs.remove();
 				retire(side);
 			} else {
@@ -348,8 +379,8 @@ final class Clash {
 
 	private static void tick(Duel duel) {
 		Side a = duel.attacker;
-		if (!a.player.isOnline() || a.player.isDead()) {
-			if (duel.answer != null && duel.answer.player.isOnline()) {
+		if (!present(a.player)) {
+			if (duel.answer != null && present(duel.answer.player)) {
 				win(duel, duel.answer, a);
 			} else {
 				end(duel);
@@ -363,6 +394,22 @@ final class Clash {
 			return;
 		}
 		follow(a);
+		if (duel.waiting && duel.dummy != null) {
+			duel.tick++;
+			LivingEntity dummy = duel.dummy;
+			if (!present(dummy)) {
+				end(duel);
+				launch(a, a.target);
+			} else if (duel.tick >= DUMMY_ANSWER) {
+				duel.answer = new Side(dummy, ClashDummy.card(dummy), a.player, outcome -> ClashDummy.attack(dummy, outcome.target()));
+				duel.answer.panel = panel(dummy);
+				duel.waiting = false;
+				duel.tick = 0;
+				beginClash(duel);
+				draw(duel.answer);
+			}
+			return;
+		}
 		if (duel.waiting) {
 			duel.tick++;
 			Player d = duel.defender;
@@ -379,7 +426,7 @@ final class Clash {
 			return;
 		}
 		Side b = duel.answer;
-		if (!b.player.isOnline() || b.player.isDead()) {
+		if (!present(b.player)) {
 			win(duel, a, b);
 			return;
 		}
@@ -404,7 +451,7 @@ final class Clash {
 		a.anchor = a.player.getLocation();
 		b.anchor = b.player.getLocation();
 		for (Side side : new Side[] {a, b}) {
-			side.player.showTitle(Title.title(Component.text("합", NamedTextColor.GOLD).decorate(TextDecoration.BOLD),
+			if (side.player instanceof Player viewer) viewer.showTitle(Title.title(Component.text("합", NamedTextColor.GOLD).decorate(TextDecoration.BOLD),
 					Component.text(a.card.name() + "  vs  " + b.card.name(), NamedTextColor.GRAY),
 					Title.Times.times(Duration.ZERO, Duration.ofMillis(900), Duration.ofMillis(300))));
 		}
@@ -413,16 +460,18 @@ final class Clash {
 		mid.getWorld().playSound(mid, Sound.BLOCK_BELL_USE, SoundCategory.PLAYERS, 1.0F, 1.2F);
 		// Both watch the clash from the side, with the skill screen's edges.
 		for (Side side : new Side[] {a, b}) {
-			side.camera = Cinematic.start(side.player, mid.clone().add(0, 1, 0));
-			SkillOverlay.show(side.player, SkillOverlay.Size.SMALL);
+			if (side.player instanceof Player viewer) {
+				side.camera = Cinematic.start(viewer, mid.clone().add(0, 1, 0));
+				SkillOverlay.show(viewer, SkillOverlay.Size.SMALL);
+			}
 		}
 		frame(a, b);
 	}
 
 	/** The clash's camera: square to the line between the two, both in view, shaking as coins break. */
 	private static void frame(Side a, Side b) {
-		Vector from = Cinematic.body(a.player).getLocation().toVector();
-		Vector to = Cinematic.body(b.player).getLocation().toVector();
+		Vector from = body(a.player).getLocation().toVector();
+		Vector to = body(b.player).getLocation().toVector();
 		Vector focus = from.clone().midpoint(to).add(new Vector(0, 1.1, 0));
 		double angle = Math.atan2(to.getZ() - from.getZ(), to.getX() - from.getX()) + Math.PI / 2;
 		double distance = Math.max(4.5, from.distance(to) * 0.9 + 2.5);
@@ -501,7 +550,7 @@ final class Clash {
 			return;
 		}
 		char type = loser.card.type(index);
-		Location at = Cinematic.body(loser.player).getLocation().add(0, 1.2, 0);
+		Location at = body(loser.player).getLocation().add(0, 1.2, 0);
 		boolean destroyed = type == SkillCard.COIN_PLAIN || type == SkillCard.COIN_UNBREAKABLE && winner.hasUnbrokenGreen();
 		if (destroyed) {
 			loser.state[index] = DESTROYED;
@@ -510,7 +559,7 @@ final class Clash {
 			at.getWorld().spawnParticle(Particle.DUST, at, 10, 0.2, 0.2, 0.2, 0.0, new Particle.DustOptions(Color.fromRGB(0xC02020), 1.2F));
 			at.getWorld().playSound(at, Sound.ENTITY_ITEM_BREAK, SoundCategory.PLAYERS, 1.0F, 1.2F);
 			if (type == SkillCard.COIN_UNBREAKABLE) {
-				Hud.message(loser.player, Component.text("초록 코인에 파괴 불가 코인이 완전히 파괴되었다!", NamedTextColor.RED));
+				tell(loser.player, Component.text("초록 코인에 파괴 불가 코인이 완전히 파괴되었다!", NamedTextColor.RED));
 			}
 		} else {
 			// Unbreakable: out of the clash, but it will still strike, weaker.
@@ -526,7 +575,7 @@ final class Clash {
 		// The original: a win gives 10, 20% more per round from the second; a loss takes 2, 5% more per round.
 		int gain = (int) Math.round(10 * (1 + 0.2 * (rounds - 1)));
 		int loss = (int) Math.round(2 * (1 + 0.05 * (rounds - 1)));
-		if (Matthias.superGrit(winner.player)) {
+		if (winner.player instanceof Player grit && Matthias.superGrit(grit)) {
 			// [Super Grit]: rounds x 5 more (up to 15).
 			gain += Math.min(15, rounds * 5);
 		}
@@ -534,29 +583,28 @@ final class Clash {
 		Sanity.lose(loser.player, loss);
 		Sanity.fought(winner.player);
 		Sanity.fought(loser.player);
-		Hud.message(winner.player, Component.text("합 승리! (" + rounds + "합) 정신력 +" + gain, NamedTextColor.GOLD));
-		Hud.message(loser.player, Component.text("합 패배 (" + rounds + "합) 정신력 -" + loss, NamedTextColor.RED));
-		Location at = Cinematic.body(loser.player).getLocation().add(0, 1, 0);
+		tell(winner.player, Component.text("합 승리! (" + rounds + "합) 정신력 +" + gain, NamedTextColor.GOLD));
+		tell(loser.player, Component.text("합 패배 (" + rounds + "합) 정신력 -" + loss, NamedTextColor.RED));
+		Location at = body(loser.player).getLocation().add(0, 1, 0);
 		at.getWorld().playSound(at, Sound.ITEM_SHIELD_BREAK, SoundCategory.PLAYERS, 1.2F, 0.8F);
 		at.getWorld().spawnParticle(Particle.EXPLOSION, at, 1);
 		end(duel);
 		endCamera(winner);
 		endCamera(loser);
-		if (!loser.hasBroken()) {
-			SkillOverlay.hide(loser.player);
+		if (!loser.hasBroken() && loser.player instanceof Player viewer) {
+			SkillOverlay.hide(viewer);
 		}
-		if (loser.player.isOnline()) {
+		if (present(loser.player)) {
 			launch(winner, loser.player);
 		} else {
 			retire(winner);
 		}
 		// The loser's broken unbreakable coins strike after the winner's attack.
-		if (loser.hasBroken() && loser.player.isOnline()) {
+		if (loser.hasBroken() && present(loser.player)) {
 			reset(loser);
 			draw(loser);
 			Bukkit.getScheduler().runTaskLater(IndexPrescriptPlugin.instance(), () -> {
-				if (loser.player.isOnline() && !loser.player.isDead() && winner.player.isOnline() && !winner.player.isDead()
-						&& !busy(loser.player)) {
+				if (present(loser.player) && present(winner.player) && !busy(loser.player)) {
 					launch(loser, winner.player);
 				} else {
 					retire(loser);
@@ -577,7 +625,7 @@ final class Clash {
 	}
 
 	private static void launch(Side side, LivingEntity target) {
-		if (target == null || !target.isValid() || target.isDead() || !side.player.isOnline()) {
+		if (target == null || !target.isValid() || target.isDead() || !present(side.player)) {
 			retire(side);
 			return;
 		}
@@ -635,8 +683,8 @@ final class Clash {
 
 	// --- the panel ---------------------------------------------------------------------------
 
-	private static TextDisplay panel(Player player) {
-		return player.getWorld().spawn(sideOf(Cinematic.body(player)), TextDisplay.class, d -> {
+	private static TextDisplay panel(LivingEntity player) {
+		return player.getWorld().spawn(sideOf(body(player)), TextDisplay.class, d -> {
 			d.setPersistent(false);
 			d.setBillboard(Display.Billboard.CENTER);
 			d.setLineWidth(240);
@@ -666,7 +714,7 @@ final class Clash {
 
 	private static void follow(Side side) {
 		if (side.panel != null && side.panel.isValid()) {
-			Location want = sideOf(Cinematic.body(side.player));
+			Location want = sideOf(body(side.player));
 			if (want.getWorld() == side.panel.getWorld() && want.distanceSquared(side.panel.getLocation()) > 0.0025) {
 				side.panel.teleport(want);
 			}
@@ -824,12 +872,12 @@ final class Clash {
 		}, 1L);
 	}
 
-	private static void coinSound(Player player) {
+	private static void coinSound(LivingEntity player) {
 		player.getWorld().playSound(player.getLocation(), Sound.BLOCK_CHAIN_HIT, SoundCategory.PLAYERS, 0.6F, 1.8F);
 	}
 
 	private static Location midpoint(Side a, Side b) {
-		Vector mid = Cinematic.body(a.player).getLocation().toVector().midpoint(Cinematic.body(b.player).getLocation().toVector())
+		Vector mid = body(a.player).getLocation().toVector().midpoint(body(b.player).getLocation().toVector())
 				.add(new Vector(0, 1.2, 0));
 		return mid.toLocation(a.player.getWorld());
 	}

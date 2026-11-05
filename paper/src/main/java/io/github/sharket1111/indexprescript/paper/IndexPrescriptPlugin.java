@@ -7,6 +7,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -54,6 +55,8 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		getServer().getPluginManager().registerEvents(new BlackGodRevive.Events(), this);
 		getServer().getPluginManager().registerEvents(new BlackGodState.Events(), this);
 		getServer().getPluginManager().registerEvents(new Sanity(), this);
+		getServer().getPluginManager().registerEvents(new ClashDummy(), this);
+		Bukkit.getScheduler().runTask(this, ClashDummy::scan);
 		Bukkit.getScheduler().runTaskTimer(this, PrescriptTracker::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Laevatein::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Matthias::tick, 1L, 1L);
@@ -116,6 +119,9 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		}
 		if (args.length >= 1 && args[0].equalsIgnoreCase("renoir")) {
 			return renoir(sender, args);
+		}
+		if (args.length >= 1 && args[0].equalsIgnoreCase("dummy")) {
+			return dummy(sender, args);
 		}
 		if (args.length >= 1 && args[0].equalsIgnoreCase("blackgod")) {
 			if (!(sender instanceof Player player)) {
@@ -258,17 +264,91 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		return true;
 	}
 
+	/**
+	 * /ip dummy [base] [coin power] [coins] [types] [sanity] spawns a clash dummy;
+	 * /ip dummy set <base|power|coins|types|sanity|damage> <value>, /ip dummy info,
+	 * /ip dummy remove act on the dummy looked at (or the nearest within 16 blocks);
+	 * /ip dummy removeall removes every loaded one.
+	 */
+	private boolean dummy(CommandSender sender, String[] args) {
+		if (!(sender instanceof Player player)) {
+			sender.sendMessage(Messages.get(sender, "command.players_only"));
+			return true;
+		}
+		String sub = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "";
+		try {
+			switch (sub) {
+				case "set" -> {
+					LivingEntity dummy = nearDummy(player);
+					if (dummy == null || args.length < 4 || !ClashDummy.set(dummy, args[2], args[3])) {
+						player.sendMessage(Component.text("/ip dummy set <base|power|coins|types|sanity|damage> <값> (더미를 바라보고)", NamedTextColor.RED));
+						return true;
+					}
+					player.sendMessage(Component.text("더미: " + ClashDummy.describe(dummy), NamedTextColor.GOLD));
+				}
+				case "info" -> {
+					LivingEntity dummy = nearDummy(player);
+					player.sendMessage(dummy == null ? Component.text("근처에 더미가 없습니다.", NamedTextColor.RED)
+							: Component.text("더미: " + ClashDummy.describe(dummy), NamedTextColor.GOLD));
+				}
+				case "remove" -> {
+					LivingEntity dummy = nearDummy(player);
+					if (dummy != null) {
+						dummy.remove();
+					}
+					player.sendMessage(Component.text(dummy == null ? "근처에 더미가 없습니다." : "더미를 없앴습니다.", NamedTextColor.GOLD));
+				}
+				case "removeall" -> {
+					List<LivingEntity> all = ClashDummy.all();
+					all.forEach(org.bukkit.entity.Entity::remove);
+					player.sendMessage(Component.text("더미 " + all.size() + "개를 없앴습니다.", NamedTextColor.GOLD));
+				}
+				default -> {
+					int base = args.length >= 2 ? Integer.parseInt(args[1]) : 4;
+					int power = args.length >= 3 ? Integer.parseInt(args[2]) : 3;
+					int coins = args.length >= 4 ? Integer.parseInt(args[3]) : 3;
+					String types = args.length >= 5 ? args[4] : "";
+					int sanity = args.length >= 6 ? Integer.parseInt(args[5]) : 0;
+					LivingEntity dummy = ClashDummy.spawn(player, base, power, coins, types, sanity);
+					player.sendMessage(Component.text("합 테스트 더미를 세웠습니다. " + ClashDummy.describe(dummy), NamedTextColor.GOLD));
+				}
+			}
+		} catch (NumberFormatException e) {
+			player.sendMessage(Component.text("/ip dummy [기본위력] [코인위력] [코인수] [코인유형 N/R/G] [정신력]", NamedTextColor.RED));
+		}
+		return true;
+	}
+
+	/** The clash dummy the player looks at, or the nearest within 16 blocks. */
+	private static LivingEntity nearDummy(Player player) {
+		if (player.getTargetEntity(16) instanceof LivingEntity living && ClashDummy.is(living)) {
+			return living;
+		}
+		LivingEntity best = null;
+		double bestDistance = 16 * 16;
+		for (LivingEntity dummy : ClashDummy.all()) {
+			if (dummy.getWorld() == player.getWorld() && dummy.getLocation().distanceSquared(player.getLocation()) < bestDistance) {
+				best = dummy;
+				bestDistance = dummy.getLocation().distanceSquared(player.getLocation());
+			}
+		}
+		return best;
+	}
+
 	@Override
 	public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
 		return switch (args.length) {
-			case 1 -> List.of("give", "pack", "laevatein", "sanity", "mang", "renoir", "blackgod");
+			case 1 -> List.of("give", "pack", "laevatein", "sanity", "mang", "renoir", "blackgod", "dummy");
 			case 2 -> switch (args[0].toLowerCase(Locale.ROOT)) {
 				case "give" -> List.of("caduceus", "terminal", "laevatein", "hammer", "blackgod");
 				case "laevatein" -> List.of("0", "1", "2", "3");
 				case "mang" -> List.of("1", "2", "3", "4", "5", "6");
 				case "renoir" -> List.of("0", "50", "100");
+				case "dummy" -> List.of("4", "set", "info", "remove", "removeall");
 				default -> List.of();
 			};
+			case 3 -> args[0].equalsIgnoreCase("dummy") && args[1].equalsIgnoreCase("set")
+					? List.of("base", "power", "coins", "types", "sanity", "damage") : List.of();
 			default -> List.of();
 		};
 	}

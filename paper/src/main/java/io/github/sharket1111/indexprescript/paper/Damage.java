@@ -19,9 +19,9 @@ final class Damage {
 		if (ignoreHurtCooldown) {
 			target.setNoDamageTicks(0);
 		}
-		if (source instanceof Player player) {
+		if (source != null) {
 			// The coins of the skill being used (Clash) scale its damage.
-			amount *= Clash.scale(player);
+			amount *= Clash.scale(source);
 		}
 		double before = target.getHealth() + target.getAbsorptionAmount();
 		dealing = true;
@@ -30,12 +30,12 @@ final class Damage {
 		} finally {
 			dealing = false;
 		}
+		double after = target.isDead() ? 0.0 : target.getHealth() + target.getAbsorptionAmount();
 		if (source instanceof Player player) {
-			double after = target.isDead() ? 0.0 : target.getHealth() + target.getAbsorptionAmount();
 			TotalDamage.add(player, before - after);
-			if (target instanceof Player victim) {
-				TotalDamage.received(victim, before - after);
-			}
+		}
+		if (source != null && target instanceof Player victim) {
+			TotalDamage.received(victim, before - after);
 		}
 	}
 }

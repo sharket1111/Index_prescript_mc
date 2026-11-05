@@ -36,6 +36,10 @@ final class Sanity implements Listener {
 	private static final Map<UUID, Long> LAST_FIGHT = new ConcurrentHashMap<>();
 
 	static int of(Entity entity) {
+		if (entity instanceof LivingEntity living && ClashDummy.is(living)) {
+			// A clash dummy keeps the Sanity it was given.
+			return ClashDummy.sanity(living);
+		}
 		return entity == null ? 0 : VALUES.getOrDefault(entity.getUniqueId(), 0);
 	}
 
