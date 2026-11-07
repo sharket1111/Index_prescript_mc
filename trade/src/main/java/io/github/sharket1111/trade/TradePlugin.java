@@ -30,6 +30,14 @@ public final class TradePlugin extends JavaPlugin {
 		getServer().getPluginManager().registerEvents(new ChatPrompt.Events(), this);
 		getServer().getPluginManager().registerEvents(new Groups.Events(), this);
 		getServer().getPluginManager().registerEvents(new TradeTools.Events(), this);
+		BeaconRange beacons = new BeaconRange(this);
+		getServer().getPluginManager().registerEvents(beacons, this);
+		var beaconCommand = getCommand("beaconrange");
+		if (beaconCommand != null) {
+			beaconCommand.setExecutor(beacons);
+			beaconCommand.setTabCompleter(beacons);
+		}
+		getServer().getScheduler().runTask(this, beacons::restoreLoaded);
 	}
 
 	@Override

@@ -9,10 +9,18 @@ commands:
     description: Open the trade menu.
     usage: /trade
     permission: playertrade.use
+  beaconrange:
+    description: Set the effect range of the beacon you look at.
+    usage: /신호기 [정보|초기화|배수 <n>|<블록>]
+    aliases: [신호기, 신호기범위]
+    permission: playertrade.beacon
 permissions:
   playertrade.use:
     description: Open the trade menu.
     default: true
   playertrade.admin:
     description: Admin tab of the trade menu (listings, buy requests, records, server shop).
+    default: op
+  playertrade.beacon:
+    description: Set beacon effect ranges with /신호기.
     default: op
