@@ -33,7 +33,6 @@ public final class TradePlugin extends JavaPlugin {
 		}
 		ItemValues.load(this);
 		getLogger().info(ItemValues.count() + " items can be sold to the server.");
-		WebSite.start(this);
 		Land.load(this);
 		ChatPrompt.init(this);
 		AnvilPrompt.init(this);
@@ -55,6 +54,12 @@ public final class TradePlugin extends JavaPlugin {
 			beaconCommand.setTabCompleter(beacons);
 		}
 		getServer().getScheduler().runTask(this, beacons::restoreLoaded);
+		// Last: the web page reads the market, land, groups and the rest, so everything must be loaded first.
+		try {
+			WebSite.start(this);
+		} catch (RuntimeException e) {
+			getLogger().log(java.util.logging.Level.SEVERE, "The web page could not start; the rest of the plugin works as usual", e);
+		}
 	}
 
 	@Override

@@ -240,7 +240,16 @@ final class WebSite {
 
 	// --- what the page shows (built on the main thread) --------------------------------
 
+	/** Rebuilds the public snapshot; a failure keeps the last one and is logged, never thrown into the server. */
 	private static void refresh() {
+		try {
+			publicJson = snapshot();
+		} catch (RuntimeException e) {
+			plugin.getLogger().log(Level.WARNING, "Could not update the web page's public data", e);
+		}
+	}
+
+	private static String snapshot() {
 		JsonObject root = new JsonObject();
 		JsonObject srv = new JsonObject();
 		srv.addProperty("online", Bukkit.getOnlinePlayers().size());
@@ -274,7 +283,7 @@ final class WebSite {
 		}
 		root.add("orders", orders);
 		root.addProperty("updated", System.currentTimeMillis());
-		publicJson = GSON.toJson(root);
+		return GSON.toJson(root);
 	}
 
 	private static JsonObject currency() {
