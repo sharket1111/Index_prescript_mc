@@ -17,14 +17,14 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 
 /**
- * The "buying" board: requests to buy an item, with the offered trade
- * diamonds held by the plugin until someone fills the request or it is
- * withdrawn. Saved to orders.yml.
+ * The "buying" board: requests to buy an item, with the money offered held
+ * by the plugin until someone fills the request or it is withdrawn. Saved to
+ * orders.yml.
  */
 final class BuyOrders {
 	static final int MAX_PER_PLAYER = 10;
 	static final int MAX_AMOUNT = 64 * 9;
-	static final int MAX_PRICE = 9999;
+	static final int MAX_PRICE = 100_000_000;
 
 	static final class Order {
 		final UUID id;
@@ -74,7 +74,8 @@ final class BuyOrders {
 			try {
 				Order order = new Order(UUID.fromString(key), UUID.fromString(s.getString("buyer")), s.getString("buyer-name", "?"),
 						ItemStack.deserializeBytes(Base64.getDecoder().decode(s.getString("want", ""))), s.getInt("amount"),
-						s.getInt("price"), s.getLong("created"));
+						Money.needsMigration() ? (int) Math.min(MAX_PRICE, s.getInt("price") * Money.DIAMOND_RATE) : s.getInt("price"),
+						s.getLong("created"));
 				ORDERS.put(order.id, order);
 			} catch (RuntimeException e) {
 				owner.getLogger().log(Level.WARNING, "Skipping a broken buy request " + key, e);
@@ -82,7 +83,7 @@ final class BuyOrders {
 		}
 	}
 
-	private static void save() {
+	static void save() {
 		YamlConfiguration yaml = new YamlConfiguration();
 		for (Order order : ORDERS.values()) {
 			String path = "orders." + order.id;

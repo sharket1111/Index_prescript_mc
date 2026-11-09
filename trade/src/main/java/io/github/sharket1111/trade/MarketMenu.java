@@ -86,8 +86,7 @@ final class MarketMenu extends Menu {
 			inventory.setItem(NEXT_SLOT, TradeItems.button(Material.SPECTRAL_ARROW, "다음 페이지", NamedTextColor.WHITE));
 		}
 		if (!admin) {
-			inventory.setItem(WALLET_SLOT, TradeItems.glint(TradeItems.button(Material.DIAMOND,
-					"내 거래 전용 다이아: " + count(TradeItems::isTradeDiamond) + "개", NamedTextColor.AQUA)));
+			inventory.setItem(WALLET_SLOT, Money.wallet(player));
 		}
 	}
 
@@ -97,7 +96,7 @@ final class MarketMenu extends Menu {
 		shown.editMeta(meta -> {
 			List<Component> lore = meta.hasLore() ? new ArrayList<>(meta.lore()) : new ArrayList<>();
 			lore.add(Component.empty());
-			lore.add(TradeItems.plain("가격: 거래 전용 다이아 " + listing.price + "개", NamedTextColor.AQUA));
+			lore.add(TradeItems.plain("가격: " + Money.format(listing.price), NamedTextColor.GOLD));
 			lore.add(TradeItems.plain("판매자: " + Market.name(listing.seller) + (own ? " (나)" : ""), NamedTextColor.YELLOW));
 			if (admin) {
 				lore.add(TradeItems.plain(bedrock() ? "터치: 판매 취소(판매자 우편함으로)" : "우클릭: 판매 취소(판매자 우편함으로)", NamedTextColor.RED));

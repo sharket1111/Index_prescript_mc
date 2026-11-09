@@ -32,7 +32,13 @@ import net.kyori.adventure.text.format.NamedTextColor;
  */
 final class ShopConfig {
 	static final int MAX_PRODUCTS = 18;
-	static final int MAX_PRICE = 9999;
+	static final int MAX_PRICE = 100_000_000;
+	/** Default prices of the built-in goods (money). */
+	private static final int SPAWN_TICKET = 150;
+	private static final int CUSTOM_TICKET = 300;
+	private static final int XP_3 = 150;
+	private static final int LAND = 1000;
+	private static final int ENDER_CHEST = 50;
 
 	static final class Product {
 		final String id;
@@ -124,9 +130,9 @@ final class ShopConfig {
 		file = new File(owner.getDataFolder(), "shop.yml");
 		PRODUCTS.clear();
 		if (!file.exists()) {
-			PRODUCTS.add(new Product("spawn_ticket", "spawn_ticket", 2, 0, null));
-			PRODUCTS.add(new Product("custom_ticket", "custom_ticket", 4, 0, null));
-			PRODUCTS.add(new Product("xp_3", "xp", 2, 3, null));
+			PRODUCTS.add(new Product("spawn_ticket", "spawn_ticket", SPAWN_TICKET, 0, null));
+			PRODUCTS.add(new Product("custom_ticket", "custom_ticket", CUSTOM_TICKET, 0, null));
+			PRODUCTS.add(new Product("xp_3", "xp", XP_3, 3, null));
 			PRODUCTS.add(landProduct());
 			PRODUCTS.add(enderChestProduct());
 			PRODUCTS.add(new Product("trade_menu", "trade_menu", 0, 0, null));
@@ -155,7 +161,11 @@ final class ShopConfig {
 						item = ItemStack.of(material, Math.max(1, Math.min(material.getMaxStackSize(), s.getInt("amount", 1))));
 					}
 				}
-				PRODUCTS.add(new Product(id, type, Math.max(0, s.getInt("price", 1)), s.getInt("levels", 1), item));
+				int price = Math.max(0, s.getInt("price", 1));
+				if (Money.needsMigration()) {
+					price = migratedPrice(type, price, s.getInt("levels", 1));
+				}
+				PRODUCTS.add(new Product(id, type, price, s.getInt("levels", 1), item));
 			} catch (RuntimeException e) {
 				owner.getLogger().log(Level.WARNING, "Skipping the broken shop product " + id + " in shop.yml", e);
 			}
@@ -177,23 +187,41 @@ final class ShopConfig {
 			PRODUCTS.add(new Product("waypoint_book", "waypoint_book", 0, 0, null));
 			added = true;
 		}
-		if (added) {
+		if (added || Money.needsMigration()) {
 			save();
 		}
 	}
 
+	/**
+	 * A price saved in diamonds, in money: the built-in goods take their new
+	 * default prices (free ones stay free), anything else is converted.
+	 */
+	private static int migratedPrice(String type, int diamonds, int levels) {
+		if (diamonds == 0) {
+			return 0;
+		}
+		return switch (type) {
+			case "spawn_ticket" -> SPAWN_TICKET;
+			case "custom_ticket" -> CUSTOM_TICKET;
+			case "xp" -> Math.max(1, XP_3 * levels / 3);
+			case "land" -> LAND;
+			case "ender_chest" -> ENDER_CHEST;
+			default -> (int) Math.min(MAX_PRICE, diamonds * Money.DIAMOND_RATE);
+		};
+	}
+
 	private static Product enderChestProduct() {
-		return new Product("ender_chest", "ender_chest", 1, 0, null);
+		return new Product("ender_chest", "ender_chest", ENDER_CHEST, 0, null);
 	}
 
 	private static Product landProduct() {
-		return new Product("land", "land", 5, 0, null);
+		return new Product("land", "land", LAND, 0, null);
 	}
 
 	static void save() {
 		YamlConfiguration yaml = new YamlConfiguration();
 		yaml.options().setHeader(List.of(
-				"PlayerTrade server shop. Prices are in trade diamonds. Types:",
+				"PlayerTrade server shop. Prices are in the server's money (see economy.yml). Types:",
 				"  spawn_ticket, custom_ticket: return tickets",
 				"  xp: give 'levels' experience levels",
 				"  land: the chunk the buyer stands in becomes theirs",

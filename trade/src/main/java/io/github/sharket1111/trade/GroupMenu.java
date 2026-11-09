@@ -49,8 +49,8 @@ final class GroupMenu extends Menu {
 					"그룹을 만들거나, 초대를 받아 들어갈 수 있습니다.", "그룹은 " + Groups.MAX_GROUPS + "개까지 들어갈 수 있습니다."));
 		}
 		inventory.setItem(CREATE_SLOT, TradeItems.glint(TradeItems.button(Material.EMERALD, "그룹 만들기", NamedTextColor.GREEN,
-				"거래 전용 다이아 " + Groups.PRICE + "개가 듭니다.", "그룹 이름을 채팅으로 정합니다.",
-				"내 거래 전용 다이아: " + count(TradeItems::isTradeDiamond) + "개",
+				Money.format(Groups.PRICE) + "이(가) 듭니다.", "그룹 이름을 채팅으로 정합니다.",
+				"내 " + Money.name() + ": " + Money.format(Money.balance(me)),
 				"속한 그룹: " + groups.size() + "/" + Groups.MAX_GROUPS)));
 		int invites = Groups.invitesFor(me).size();
 		inventory.setItem(RECEIVED_SLOT, TradeItems.button(invites > 0 ? Material.WRITABLE_BOOK : Material.BOOK,
@@ -83,8 +83,8 @@ final class GroupMenu extends Menu {
 		if (Groups.of(player.getUniqueId()).size() >= Groups.MAX_GROUPS) {
 			return "그룹은 " + Groups.MAX_GROUPS + "개까지 들어갈 수 있습니다.";
 		}
-		if (count(TradeItems::isTradeDiamond) < Groups.PRICE) {
-			return "그룹을 만들려면 거래 전용 다이아 " + Groups.PRICE + "개가 필요합니다.";
+		if (!Money.has(player.getUniqueId(), Groups.PRICE)) {
+			return "그룹을 만들려면 " + Money.format(Groups.PRICE) + "이(가) 필요합니다.";
 		}
 		return null;
 	}
@@ -107,9 +107,14 @@ final class GroupMenu extends Menu {
 				new GroupMenu(player).open();
 				return;
 			}
-			take(TradeItems::isTradeDiamond, Groups.PRICE);
+			if (!Money.take(player.getUniqueId(), Groups.PRICE)) {
+				tell(Money.name() + "가 부족합니다.", NamedTextColor.RED);
+				failSound();
+				new GroupMenu(player).open();
+				return;
+			}
 			Groups.Group group = Groups.create(player, name);
-			tell("그룹 '" + name + "'을(를) 만들었습니다. 거래 전용 다이아 " + Groups.PRICE + "개를 냈습니다.", NamedTextColor.GREEN);
+			tell("그룹 '" + name + "'을(를) 만들었습니다. " + Money.format(Groups.PRICE) + "을(를) 냈습니다.", NamedTextColor.GREEN);
 			successSound();
 			new GroupHomeMenu(player, group.id).open();
 		}, () -> new GroupMenu(player).open());

@@ -13,7 +13,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 /**
  * Every waypoint of every group the player is in, on one screen (opened with
  * the waypoint book): a row per group. Clicking one teleports there for a
- * trade diamond, if the player's role in that group may.
+ * fee, if the player's role in that group may.
  */
 final class WaypointListMenu extends Menu {
 	private static final int BACK = 49;
@@ -21,7 +21,7 @@ final class WaypointListMenu extends Menu {
 	private final Map<Integer, Groups.Waypoint> waypointBySlot = new HashMap<>();
 
 	WaypointListMenu(Player player) {
-		super(player, "그룹 웨이포인트 (텔레포트: 다이아 " + Groups.TELEPORT_PRICE + "개)", 6);
+		super(player, "그룹 웨이포인트 (텔레포트: " + Money.format(Groups.TELEPORT_PRICE) + ")", 6);
 	}
 
 	@Override
@@ -48,7 +48,7 @@ final class WaypointListMenu extends Menu {
 				inventory.setItem(slot, TradeItems.button(use ? Material.LODESTONE : Material.GRAY_DYE, waypoint.name,
 						use ? NamedTextColor.LIGHT_PURPLE : NamedTextColor.GRAY, "그룹: " + group.name,
 						view ? "좌표: " + waypoint.coords() : "좌표: 비공개",
-						use ? "클릭: 텔레포트 (거래 전용 다이아 " + Groups.TELEPORT_PRICE + "개)" : "사용 권한이 없습니다"));
+						use ? "클릭: 텔레포트 (" + Money.format(Groups.TELEPORT_PRICE) + ")" : "사용 권한이 없습니다"));
 				groupBySlot.put(slot, group.id);
 				waypointBySlot.put(slot, waypoint);
 			}

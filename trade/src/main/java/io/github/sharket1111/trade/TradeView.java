@@ -10,8 +10,9 @@ import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
  * One player's view of a direct trade (9x6): their own offer on the left
- * (4x4), the other's on the right, and below the cancel button, their
- * confirmation and the other's. Clicking an item in the inventory below puts
+ * (4x4), the other's on the right, the money each offers in the row below
+ * (buttons to change one's own), and the cancel button, their confirmation
+ * and the other's. Clicking an item in the inventory below puts
  * it up; clicking one of their offered items takes it back.
  */
 final class TradeView extends Menu {
@@ -19,6 +20,10 @@ final class TradeView extends Menu {
 	private static final int CONFIRM_SLOT = 48;
 	private static final int OTHER_SLOT = 50;
 	private static final int INFO_SLOT = 53;
+	private static final int[] MONEY_STEP_SLOTS = {36, 37, 38, 39};
+	private static final int[] MONEY_STEPS = {-1000, -100, 100, 1000};
+	private static final int MY_MONEY_SLOT = 40;
+	private static final int THEIR_MONEY_SLOT = 42;
 	private final DirectTrade.Session session;
 
 	TradeView(Player player, DirectTrade.Session session) {
@@ -48,11 +53,18 @@ final class TradeView extends Menu {
 		}
 		ItemStack floor = TradeItems.button(Material.GRAY_STAINED_GLASS_PANE, " ", NamedTextColor.DARK_GRAY);
 		for (int slot = 36; slot < 45; slot++) {
-			if (slot != 40) {
-				inventory.setItem(slot, floor);
-			}
+			inventory.setItem(slot, floor);
 		}
 		Player other = session.other(player);
+		long myMoney = session.moneyOf(player);
+		for (int i = 0; i < MONEY_STEP_SLOTS.length; i++) {
+			inventory.setItem(MONEY_STEP_SLOTS[i], TradeItems.stepButton(MONEY_STEPS[i], "내가 줄 " + Money.name() + ": " + Money.format(myMoney)));
+		}
+		inventory.setItem(MY_MONEY_SLOT, TradeItems.glint(TradeItems.button(Material.GOLD_INGOT, "내가 줄 " + Money.name() + ": " + Money.format(myMoney),
+				NamedTextColor.GOLD, "왼쪽 버튼으로 정합니다. 좌클릭 +10 / 우클릭 -10",
+				"내 " + Money.name() + ": " + Money.format(Money.balance(player.getUniqueId())), "교환될 때 빠져나갑니다.")));
+		inventory.setItem(THEIR_MONEY_SLOT, TradeItems.button(Material.GOLD_NUGGET,
+				other.getName() + "님이 줄 " + Money.name() + ": " + Money.format(session.moneyOfOther(player)), NamedTextColor.YELLOW));
 		inventory.setItem(CANCEL_SLOT, TradeItems.button(Material.BARRIER, "거래 취소", NamedTextColor.RED, "올린 물건은 모두 돌려받습니다."));
 		inventory.setItem(CONFIRM_SLOT, session.confirmed(player)
 				? TradeItems.button(Material.LIME_CONCRETE, "확인함 (클릭: 확인 취소)", NamedTextColor.GREEN, "상대도 확인하면 교환됩니다.")
@@ -63,7 +75,8 @@ final class TradeView extends Menu {
 				: TradeItems.button(Material.GRAY_DYE, other.getName() + ": 아직 확인 안 함", NamedTextColor.GRAY));
 		inventory.setItem(INFO_SLOT, TradeItems.button(Material.BOOK, "사용법", NamedTextColor.GOLD,
 				"왼쪽 4x4: 내가 줄 물건 / 오른쪽 4x4: 받을 물건",
-				"아래 내 인벤토리의 아이템을 클릭하면 올리고,", "내가 올린 아이템을 클릭하면 되돌립니다."));
+				"아래 내 인벤토리의 아이템을 클릭하면 올리고,", "내가 올린 아이템을 클릭하면 되돌립니다.",
+				"금괴 줄: 주고받을 " + Money.name()));
 	}
 
 	@Override
@@ -81,6 +94,16 @@ final class TradeView extends Menu {
 			session.toggleConfirm(player);
 			return;
 		}
+		for (int i = 0; i < MONEY_STEP_SLOTS.length; i++) {
+			if (slot == MONEY_STEP_SLOTS[i]) {
+				offerMoney(session.moneyOf(player) + MONEY_STEPS[i]);
+				return;
+			}
+		}
+		if (slot == MY_MONEY_SLOT) {
+			offerMoney(session.moneyOf(player) + (click.isRightClick() ? -10 : 10));
+			return;
+		}
 		ItemStack[] mine = session.offerOf(player);
 		for (int i = 0; i < DirectTrade.OFFER_SLOTS; i++) {
 			if (mySlot(i) == slot && mine[i] != null) {
@@ -92,6 +115,17 @@ final class TradeView extends Menu {
 				return;
 			}
 		}
+	}
+
+	/** Changes the money offered, between nothing and the whole balance. */
+	private void offerMoney(long amount) {
+		long clamped = Math.max(0, Math.min(Money.balance(player.getUniqueId()), amount));
+		if (clamped == session.moneyOf(player)) {
+			failSound();
+			return;
+		}
+		clickSound();
+		session.setMoney(player, clamped);
 	}
 
 	/** Puts an item from the player's inventory up for the trade. */

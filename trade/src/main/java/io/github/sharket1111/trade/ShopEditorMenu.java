@@ -32,7 +32,7 @@ final class ShopEditorMenu extends Menu {
 			icon.editMeta(meta -> {
 				List<Component> lore = meta.hasLore() ? new ArrayList<>(meta.lore()) : new ArrayList<>();
 				lore.add(Component.empty());
-				lore.add(TradeItems.plain("가격: 거래 전용 다이아 " + product.price + "개", NamedTextColor.AQUA));
+				lore.add(TradeItems.plain("가격: " + Money.format(product.price), NamedTextColor.GOLD));
 				lore.add(TradeItems.plain("클릭: 가격 수정 / 삭제", NamedTextColor.GRAY));
 				meta.lore(lore);
 			});

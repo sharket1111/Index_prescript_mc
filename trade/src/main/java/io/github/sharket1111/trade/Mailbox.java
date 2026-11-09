@@ -11,7 +11,6 @@ import java.util.UUID;
 import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -22,9 +21,9 @@ import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
- * Each player's mailbox: items and trade diamonds that could not be handed
- * over straight away (sales and transfers while away, filled buy requests,
- * listings an admin took down, a full inventory). Saved to mail.yml.
+ * Each player's mailbox: items that could not be handed over straight away
+ * (filled buy requests, listings an admin took down, a full inventory).
+ * Saved to mail.yml. Money never goes through it (see {@link Money}).
  */
 final class Mailbox {
 	record Mail(UUID id, ItemStack item, String note, long time) {
@@ -115,12 +114,23 @@ final class Mailbox {
 		online.getInventory().addItem(item.clone()).values().forEach(rest -> send(to, rest, note));
 	}
 
-	/** Hands trade diamonds to a player as {@link #deliver} does, in full stacks. */
-	static void deliverDiamonds(UUID to, int amount, String note) {
-		int max = Material.DIAMOND.getMaxStackSize();
-		for (int given = 0; given < amount; given += max) {
-			deliver(to, TradeItems.tradeDiamond(Math.min(max, amount - given)), note);
+	/** On the first start with money: trade diamonds waiting in mailboxes become money. */
+	static void migrate() {
+		for (Map.Entry<UUID, List<Mail>> entry : BOXES.entrySet()) {
+			long diamonds = 0;
+			for (java.util.Iterator<Mail> it = entry.getValue().iterator(); it.hasNext();) {
+				Mail mail = it.next();
+				if (TradeItems.isTradeDiamond(mail.item())) {
+					diamonds += mail.item().getAmount();
+					it.remove();
+				}
+			}
+			if (diamonds > 0) {
+				Money.give(entry.getKey(), diamonds * Money.DIAMOND_RATE, "우편함에 있던 거래 전용 다이아 " + diamonds + "개");
+			}
 		}
+		BOXES.values().removeIf(List::isEmpty);
+		save();
 	}
 
 	/** Takes a mail out of the box, if it is still there. */

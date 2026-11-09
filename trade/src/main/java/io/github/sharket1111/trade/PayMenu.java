@@ -9,16 +9,17 @@ import org.bukkit.event.inventory.ClickType;
 
 import net.kyori.adventure.text.format.NamedTextColor;
 
-/** Sending trade diamonds to a picked player; they get them at once or, if away, in their mailbox. */
+/** Sending money to a picked player; they are told at once or, if away, on their next join. */
 final class PayMenu extends Menu {
 	private static final int AMOUNT_SLOT = 13;
 	private static final int[] STEP_SLOTS = {9, 10, 11, 15, 16, 17};
-	private static final int[] STEPS = {-64, -10, -1, 1, 10, 64};
+	private static final int[] STEPS = MONEY_STEPS;
+	private static final int INPUT_SLOT = 14;
 	private static final int SEND_SLOT = 22;
-	private static final int MAX = 9999;
+	private static final long MAX = Money.MAX_BALANCE;
 	private final UUID target;
 	private final String name;
-	private int amount = 1;
+	private long amount = 100;
 
 	PayMenu(Player player, UUID target, String name) {
 		super(player, "거래 - " + name + "에게 송금");
@@ -33,18 +34,19 @@ final class PayMenu extends Menu {
 
 	@Override
 	void draw() {
-		int have = count(TradeItems::isTradeDiamond);
+		long have = Money.balance(player.getUniqueId());
 		inventory.setItem(4, TradeItems.button(Material.PLAYER_HEAD, "받는 사람: " + name, NamedTextColor.YELLOW,
-				Bukkit.getPlayer(target) != null ? "접속 중: 바로 받습니다." : "접속 안 함: 우편함으로 받습니다."));
-		inventory.setItem(AMOUNT_SLOT, TradeItems.glint(TradeItems.button(Material.DIAMOND, amount, "보낼 개수: " + amount + "개",
-				NamedTextColor.AQUA, "내 거래 전용 다이아: " + have + "개")));
+				Bukkit.getPlayer(target) != null ? "접속 중: 바로 받습니다." : "접속 안 함: 다음 접속 때 알려줍니다."));
+		inventory.setItem(AMOUNT_SLOT, TradeItems.glint(TradeItems.button(Material.GOLD_INGOT, "보낼 금액: " + Money.format(amount),
+				NamedTextColor.GOLD, "내 " + Money.name() + ": " + Money.format(have))));
 		for (int i = 0; i < STEP_SLOTS.length; i++) {
-			inventory.setItem(STEP_SLOTS[i], TradeItems.stepButton(STEPS[i], "현재 개수: " + amount + "개"));
+			inventory.setItem(STEP_SLOTS[i], TradeItems.stepButton(STEPS[i], "현재 금액: " + Money.format(amount)));
 		}
+		inventory.setItem(INPUT_SLOT, typeButton());
 		inventory.setItem(BACK_SLOT, TradeItems.back());
 		inventory.setItem(SEND_SLOT, have >= amount
-				? TradeItems.button(Material.LIME_CONCRETE, "보내기", NamedTextColor.GREEN, "거래 전용 다이아 " + amount + "개를 보냅니다.")
-				: TradeItems.button(Material.GRAY_CONCRETE, "거래 전용 다이아가 부족합니다", NamedTextColor.RED));
+				? TradeItems.button(Material.LIME_CONCRETE, "보내기", NamedTextColor.GREEN, Money.format(amount) + "을(를) 보냅니다.")
+				: TradeItems.button(Material.GRAY_CONCRETE, Money.name() + "가 부족합니다", NamedTextColor.RED));
 	}
 
 	@Override
@@ -62,22 +64,26 @@ final class PayMenu extends Menu {
 				return;
 			}
 		}
+		if (slot == INPUT_SLOT) {
+			askAmount("보낼 금액을 입력하세요.", 1, Math.max(1, Money.balance(player.getUniqueId())), value -> amount = value);
+			return;
+		}
 		if (slot != SEND_SLOT) {
 			return;
 		}
-		if (count(TradeItems::isTradeDiamond) < amount) {
-			tell("거래 전용 다이아가 부족합니다.", NamedTextColor.RED);
+		if (target.equals(player.getUniqueId())) {
+			tell("자신에게는 보낼 수 없습니다.", NamedTextColor.RED);
 			failSound();
 			return;
 		}
-		take(TradeItems::isTradeDiamond, amount);
-		Mailbox.deliverDiamonds(target, amount, player.getName() + "님의 송금");
-		Player online = Bukkit.getPlayer(target);
-		if (online != null) {
-			online.sendMessage(net.kyori.adventure.text.Component.text(player.getName() + "님이 거래 전용 다이아 " + amount + "개를 보냈습니다.",
-					NamedTextColor.GREEN));
+		if (!Money.take(player.getUniqueId(), amount)) {
+			tell(Money.name() + "가 부족합니다.", NamedTextColor.RED);
+			failSound();
+			return;
 		}
-		tell(name + "님에게 거래 전용 다이아 " + amount + "개를 보냈습니다.", NamedTextColor.GREEN);
+		Money.give(target, amount, net.kyori.adventure.text.Component.text(player.getName() + "님이 " + Money.format(amount) + "을(를) 보냈습니다.",
+				NamedTextColor.GREEN), player.getName() + "님의 송금");
+		tell(name + "님에게 " + Money.format(amount) + "을(를) 보냈습니다.", NamedTextColor.GREEN);
 		successSound();
 		new MainMenu(player).open();
 	}

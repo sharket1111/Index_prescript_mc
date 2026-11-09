@@ -16,8 +16,8 @@ import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
  * Direct trades between two online players: a request that the other accepts
- * from their trade menu, then a shared window where each puts items up and
- * both confirm. Any change clears both confirmations, so nothing can be
+ * from their trade menu, then a shared window where each puts items and
+ * money up and both confirm. Any change clears both confirmations, so nothing can be
  * swapped in at the last moment; when both confirm the offers change hands.
  * Leaving, closing the window or quitting returns every offer to its owner.
  */
@@ -36,6 +36,9 @@ final class DirectTrade {
 		final Player b;
 		final ItemStack[] offerA = new ItemStack[OFFER_SLOTS];
 		final ItemStack[] offerB = new ItemStack[OFFER_SLOTS];
+		/** Money each offers; it stays on their balance until the trade completes. */
+		long moneyA;
+		long moneyB;
 		boolean confirmA;
 		boolean confirmB;
 		boolean done;
@@ -53,6 +56,23 @@ final class DirectTrade {
 
 		ItemStack[] offerOfOther(Player p) {
 			return p == a ? offerB : offerA;
+		}
+
+		long moneyOf(Player p) {
+			return p == a ? moneyA : moneyB;
+		}
+
+		long moneyOfOther(Player p) {
+			return p == a ? moneyB : moneyA;
+		}
+
+		void setMoney(Player p, long amount) {
+			if (p == a) {
+				moneyA = amount;
+			} else {
+				moneyB = amount;
+			}
+			changed();
 		}
 
 		boolean confirmed(Player p) {
@@ -93,6 +113,22 @@ final class DirectTrade {
 		}
 
 		private void complete() {
+			// The money offered must still be there; it is taken only now.
+			for (Player p : List.of(a, b)) {
+				if (!Money.has(p.getUniqueId(), moneyOf(p))) {
+					confirmA = false;
+					confirmB = false;
+					for (Player q : List.of(a, b)) {
+						q.sendMessage(Component.text(p.getName() + "님의 " + Money.name() + "가 올린 금액보다 적어 확인이 풀렸습니다.", NamedTextColor.RED));
+					}
+					refresh();
+					return;
+				}
+			}
+			Money.take(a.getUniqueId(), moneyA);
+			Money.take(b.getUniqueId(), moneyB);
+			Money.add(b.getUniqueId(), moneyA);
+			Money.add(a.getUniqueId(), moneyB);
 			done = true;
 			end();
 			hand(offerA, b, a.getName() + "님과의 거래");

@@ -36,7 +36,7 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 /**
  * Groups of players, saved to groups.yml. A player may be in several groups
- * (up to {@link #MAX_GROUPS}). A group costs {@link #PRICE} trade diamonds to
+ * (up to {@link #MAX_GROUPS}). A group costs {@link #PRICE} (money) to
  * found, has a name and an optional tag; each player picks which of their
  * groups' tags is shown before their name ([TAG]Name in chat, the player list
  * and over their head), or none. Groups have roles in rank order (changeable):
@@ -46,15 +46,15 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
  * group's discount on other members' goods.
  */
 final class Groups {
-	static final int PRICE = 3;
+	static final int PRICE = 500;
 	static final int MAX_MEMBERS = 36;
 	static final int MAX_ROLES = 8;
 	static final int MAX_DISCOUNT = 50;
 	static final int MAX_INVITES = 18;
 	static final int MAX_GROUPS = 9;
-	/** What each new waypoint costs, in trade diamonds: the first, second... up to the last allowed. */
-	static final int[] WAYPOINT_PRICES = {14, 20, 30, 40, 50};
-	static final int TELEPORT_PRICE = 1;
+	/** What each new waypoint costs: the first, second... up to the last allowed. */
+	static final int[] WAYPOINT_PRICES = {1000, 1500, 2500, 3500, 5000};
+	static final int TELEPORT_PRICE = 50;
 	private static final String NO_TAG = "none";
 	static final String LEADER = "leader";
 	static final String DEPUTY = "deputy";
@@ -70,7 +70,7 @@ final class Groups {
 		SETTINGS("그룹 설정", "그룹 할인율을 정합니다."),
 		NO_PVP("그룹원 공격 차단", "이 역할은 그룹원과 서로 공격할 수 없습니다."),
 		DISCOUNT("그룹 할인", "그룹원의 물품을 그룹 할인율만큼 싸게 삽니다."),
-		WAYPOINT_USE("웨이포인트 사용", "그룹 웨이포인트로 텔레포트합니다. (거래 전용 다이아 1개)"),
+		WAYPOINT_USE("웨이포인트 사용", "그룹 웨이포인트로 텔레포트합니다. (비용을 냅니다)"),
 		WAYPOINT_VIEW("웨이포인트 좌표 보기", "그룹 웨이포인트의 좌표를 봅니다. (없으면 비공개)"),
 		WAYPOINT_MANAGE("웨이포인트 관리", "웨이포인트를 사서 만들고, 이름/위치를 바꾸고, 지웁니다.");
 

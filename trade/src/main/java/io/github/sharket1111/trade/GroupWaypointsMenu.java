@@ -50,10 +50,10 @@ final class GroupWaypointsMenu extends Menu {
 				Groups.Waypoint waypoint = group.waypoints.get(i);
 				inventory.setItem(WAYPOINT_SLOTS[i], TradeItems.button(Material.LODESTONE, waypoint.name, NamedTextColor.AQUA,
 						view ? "좌표: " + waypoint.coords() : "좌표: 비공개",
-						use ? "텔레포트: 거래 전용 다이아 " + Groups.TELEPORT_PRICE + "개" : "사용 권한이 없습니다", "클릭: 열기"));
+						use ? "텔레포트: " + Money.format(Groups.TELEPORT_PRICE) : "사용 권한이 없습니다", "클릭: 열기"));
 			} else {
 				inventory.setItem(WAYPOINT_SLOTS[i], TradeItems.button(Material.GRAY_STAINED_GLASS_PANE, "빈 자리 " + (i + 1),
-						NamedTextColor.DARK_GRAY, "만들 때 가격: 거래 전용 다이아 " + Groups.WAYPOINT_PRICES[i] + "개"));
+						NamedTextColor.DARK_GRAY, "만들 때 가격: " + Money.format(Groups.WAYPOINT_PRICES[i])));
 			}
 		}
 		int price = nextPrice(group);
@@ -65,7 +65,7 @@ final class GroupWaypointsMenu extends Menu {
 			inventory.setItem(CREATE_SLOT, TradeItems.glint(TradeItems.button(manage ? Material.EMERALD : Material.GRAY_DYE,
 					"웨이포인트 만들기 (" + group.waypoints.size() + "/" + Groups.WAYPOINT_PRICES.length + ")",
 					manage ? NamedTextColor.GREEN : NamedTextColor.GRAY, "지금 서 있는 곳에 만듭니다.",
-					"가격: 거래 전용 다이아 " + price + "개", "내 거래 전용 다이아: " + count(TradeItems::isTradeDiamond) + "개",
+					"가격: " + Money.format(price), "내 " + Money.name() + ": " + Money.format(Money.balance(player.getUniqueId())),
 					manage ? "클릭: 이름을 채팅으로 정합니다." : "'웨이포인트 관리' 권한이 필요합니다.")));
 		}
 	}
@@ -101,8 +101,8 @@ final class GroupWaypointsMenu extends Menu {
 		if (price < 0) {
 			return "웨이포인트는 그룹당 " + Groups.WAYPOINT_PRICES.length + "개까지입니다.";
 		}
-		if (count(TradeItems::isTradeDiamond) < price) {
-			return "거래 전용 다이아 " + price + "개가 필요합니다.";
+		if (!Money.has(player.getUniqueId(), price)) {
+			return Money.format(price) + "이(가) 필요합니다.";
 		}
 		return null;
 	}
@@ -127,11 +127,16 @@ final class GroupWaypointsMenu extends Menu {
 				return;
 			}
 			int price = nextPrice(current);
-			take(TradeItems::isTradeDiamond, price);
+			if (!Money.take(player.getUniqueId(), price)) {
+				tell(Money.name() + "가 부족합니다.", NamedTextColor.RED);
+				failSound();
+				new GroupWaypointsMenu(player, groupId).open();
+				return;
+			}
 			current.waypoints.add(new Groups.Waypoint(name, player.getLocation()));
 			Groups.save();
 			TradeTools.offerWaypointBook(current);
-			tell("웨이포인트 '" + name + "'을(를) 만들었습니다. 거래 전용 다이아 " + price + "개를 냈습니다.", NamedTextColor.GREEN);
+			tell("웨이포인트 '" + name + "'을(를) 만들었습니다. " + Money.format(price) + "을(를) 냈습니다.", NamedTextColor.GREEN);
 			successSound();
 			new GroupWaypointsMenu(player, groupId).open();
 		}, () -> new GroupWaypointsMenu(player, groupId).open());

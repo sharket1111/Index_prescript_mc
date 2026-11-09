@@ -3,7 +3,6 @@ package io.github.sharket1111.trade;
 import java.util.function.Predicate;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
@@ -65,6 +64,18 @@ abstract class Menu implements InventoryHolder {
 	abstract void click(int slot, ClickType click);
 
 	/**
+	 * Slots of the menu the player may put items into and take them out of
+	 * freely (the sell box); none by default.
+	 */
+	boolean free(int slot) {
+		return false;
+	}
+
+	/** Something in the free slots may have changed (called a tick later). */
+	void freeChanged() {
+	}
+
+	/**
 	 * A click in the player's own inventory below the menu. By default it works
 	 * as usual, except that nothing may be moved into the menu.
 	 */
@@ -122,12 +133,50 @@ abstract class Menu implements InventoryHolder {
 		player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 0.8F, 1.2F);
 	}
 
-	/** Gives trade diamonds in full stacks, dropping what does not fit. */
-	static void giveTradeDiamonds(Player to, int count) {
-		int max = Material.DIAMOND.getMaxStackSize();
-		for (int given = 0; given < count; given += max) {
-			to.getInventory().addItem(TradeItems.tradeDiamond(Math.min(max, count - given))).values()
-					.forEach(rest -> to.getWorld().dropItem(to.getLocation(), rest));
+	/** Step buttons for money: -1000 ... +1000. */
+	static final int[] MONEY_STEPS = {-1000, -100, -10, 10, 100, 1000};
+
+	/** The button that asks for an amount in chat. */
+	static org.bukkit.inventory.ItemStack typeButton() {
+		return TradeItems.button(org.bukkit.Material.NAME_TAG, "직접 입력", NamedTextColor.YELLOW, "채팅으로 금액을 입력합니다.",
+				"예: 2500, 1.5만, 3천");
+	}
+
+	/**
+	 * Asks for an amount in chat (the menu closes), then reopens the menu with
+	 * it set; "취소" or a wrong number reopens it unchanged.
+	 */
+	final void askAmount(String question, long min, long max, java.util.function.LongConsumer set) {
+		ChatPrompt.ask(player, question + " (" + Money.format(min) + " ~ " + Money.format(max) + ")", text -> {
+			Long value = parseAmount(text);
+			if (value == null) {
+				tell("숫자로 입력하세요: " + text, NamedTextColor.RED);
+			} else {
+				set.accept(Math.max(min, Math.min(max, value)));
+			}
+			open();
+		}, this::open);
+	}
+
+	/** "2500", "2,500", "1.5만", "3천", "2500G" as a whole amount, or null. */
+	static Long parseAmount(String text) {
+		String t = text.replace(",", "").replace(" ", "").replace(Money.name(), "").replace("G", "").replace("g", "");
+		double unit = 1;
+		if (t.endsWith("만")) {
+			unit = 10_000;
+			t = t.substring(0, t.length() - 1);
+		} else if (t.endsWith("천")) {
+			unit = 1_000;
+			t = t.substring(0, t.length() - 1);
+		} else if (t.endsWith("k") || t.endsWith("K")) {
+			unit = 1_000;
+			t = t.substring(0, t.length() - 1);
+		}
+		try {
+			double value = Double.parseDouble(t) * unit;
+			return Double.isFinite(value) && value >= 0 && value < 1.0E15 ? Math.round(value) : null;
+		} catch (NumberFormatException e) {
+			return null;
 		}
 	}
 
@@ -174,6 +223,10 @@ abstract class Menu implements InventoryHolder {
 		return count;
 	}
 
+	private static void later(Menu menu) {
+		Bukkit.getScheduler().runTask(TradePlugin.getPlugin(TradePlugin.class), menu::freeChanged);
+	}
+
 	static final class Events implements Listener {
 		@EventHandler(priority = EventPriority.HIGHEST)
 		public void onClick(InventoryClickEvent event) {
@@ -181,18 +234,26 @@ abstract class Menu implements InventoryHolder {
 				return;
 			}
 			if (event.getClickedInventory() == event.getView().getTopInventory()) {
+				if (menu.free(event.getRawSlot())) {
+					// The sell box: items move as in any chest.
+					later(menu);
+					return;
+				}
 				// Menu items stay where they are.
 				event.setCancelled(true);
 				menu.click(event.getRawSlot(), event.getClick());
 			} else if (event.getClickedInventory() != null) {
 				menu.clickOwn(event);
+				if (!event.isCancelled()) {
+					later(menu);
+				}
 			}
 		}
 
 		/** Hands over money from sales made while the seller was away, and points out new mail. */
 		@EventHandler
 		public void onJoin(PlayerJoinEvent event) {
-			Market.payOut(event.getPlayer());
+			Money.onJoin(event.getPlayer());
 			Mailbox.notifyOnJoin(event.getPlayer());
 		}
 
@@ -213,9 +274,12 @@ abstract class Menu implements InventoryHolder {
 			if (!(event.getView().getTopInventory().getHolder(false) instanceof Menu)) {
 				return;
 			}
+			Menu menu = (Menu) event.getView().getTopInventory().getHolder(false);
 			int size = event.getView().getTopInventory().getSize();
-			if (event.getRawSlots().stream().anyMatch(slot -> slot < size)) {
+			if (event.getRawSlots().stream().anyMatch(slot -> slot < size && !menu.free(slot))) {
 				event.setCancelled(true);
+			} else {
+				later(menu);
 			}
 		}
 	}

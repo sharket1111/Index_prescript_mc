@@ -14,11 +14,24 @@ public final class TradePlugin extends JavaPlugin {
 	public void onEnable() {
 		TradeItems.init(this);
 		Tickets.init(this);
+		// The currency first: a server coming from trade diamonds converts its saved prices as they load.
+		Money.load(this);
+		boolean migrate = Money.needsMigration();
 		Market.load(this);
 		History.load(this);
 		Mailbox.load(this);
 		BuyOrders.load(this);
 		ShopConfig.load(this);
+		if (migrate) {
+			Market.migrate();
+			Mailbox.migrate();
+			BuyOrders.save();
+			History.save();
+			Money.finishMigration();
+			getLogger().info("Converted trade diamonds to " + Money.name() + " (1 diamond = " + Money.DIAMOND_RATE + ").");
+		}
+		ItemValues.load(this);
+		getLogger().info(ItemValues.count() + " items can be sold to the server.");
 		Land.load(this);
 		ChatPrompt.init(this);
 		TradeTools.init(this);
@@ -42,6 +55,12 @@ public final class TradePlugin extends JavaPlugin {
 
 	@Override
 	public void onDisable() {
+		// The sell box gives its items back when it closes.
+		for (Player player : getServer().getOnlinePlayers()) {
+			if (player.getOpenInventory().getTopInventory().getHolder(false) instanceof SellMenu) {
+				player.closeInventory();
+			}
+		}
 		DirectTrade.cancelAll();
 		Market.save();
 	}
@@ -52,7 +71,13 @@ public final class TradePlugin extends JavaPlugin {
 			sender.sendMessage(Component.text("플레이어만 쓸 수 있습니다.", NamedTextColor.RED));
 			return true;
 		}
-		new MainMenu(player).open();
+		if (args.length >= 1 && (args[0].equals("판매") || args[0].equalsIgnoreCase("sell"))) {
+			new SellMenu(player).open();
+		} else if (args.length >= 1 && (args[0].equals("잔액") || args[0].equalsIgnoreCase("money") || args[0].equalsIgnoreCase("balance"))) {
+			player.sendMessage(Component.text("내 " + Money.name() + ": " + Money.format(Money.balance(player.getUniqueId())), NamedTextColor.GOLD));
+		} else {
+			new MainMenu(player).open();
+		}
 		return true;
 	}
 }

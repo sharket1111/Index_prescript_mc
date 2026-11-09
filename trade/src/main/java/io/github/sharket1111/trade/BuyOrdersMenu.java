@@ -60,11 +60,10 @@ final class BuyOrdersMenu extends Menu {
 			inventory.setItem(NEW_SLOT, TradeItems.button(Material.WRITABLE_BOOK, "주문 올리기 (" + BuyOrders.of(player.getUniqueId()).size()
 					+ "/" + BuyOrders.MAX_PER_PLAYER + ")", NamedTextColor.GOLD,
 					"아래 내 인벤토리에서 사고 싶은 아이템을 클릭하면", "개수와 가격을 정해 주문을 올립니다.",
-					"주문할 때 가격만큼 거래 전용 다이아를 맡깁니다."));
+					"주문할 때 가격만큼 " + Money.name() + "를 맡깁니다."));
 			inventory.setItem(MINE_SLOT, TradeItems.button(Material.NAME_TAG, mineOnly ? "보기: 내 주문만" : "보기: 전체 주문",
 					NamedTextColor.YELLOW, "클릭: 전환"));
-			inventory.setItem(WALLET_SLOT, TradeItems.glint(TradeItems.button(Material.DIAMOND,
-					"내 거래 전용 다이아: " + count(TradeItems::isTradeDiamond) + "개", NamedTextColor.AQUA)));
+			inventory.setItem(WALLET_SLOT, Money.wallet(player));
 		}
 		if (page > 0) {
 			inventory.setItem(PREV_SLOT, TradeItems.button(Material.SPECTRAL_ARROW, "이전 페이지", NamedTextColor.WHITE));
@@ -82,12 +81,12 @@ final class BuyOrdersMenu extends Menu {
 			List<Component> lore = meta.hasLore() ? new ArrayList<>(meta.lore()) : new ArrayList<>();
 			lore.add(Component.empty());
 			lore.add(TradeItems.plain("삽니다: " + order.amount + "개", NamedTextColor.GOLD));
-			lore.add(TradeItems.plain("주는 값: 거래 전용 다이아 " + order.price + "개", NamedTextColor.AQUA));
+			lore.add(TradeItems.plain("주는 값: " + Money.format(order.price), NamedTextColor.GOLD));
 			lore.add(TradeItems.plain("주문한 사람: " + order.buyerName + (own ? " (나)" : ""), NamedTextColor.YELLOW));
 			if (admin) {
-				lore.add(TradeItems.plain(bedrock() ? "터치: 주문 삭제(다이아 환불)" : "우클릭: 주문 삭제(다이아 환불)", NamedTextColor.RED));
+				lore.add(TradeItems.plain(bedrock() ? "터치: 주문 삭제(환불)" : "우클릭: 주문 삭제(환불)", NamedTextColor.RED));
 			} else {
-				lore.add(TradeItems.plain(own ? "클릭: 주문 취소(다이아 돌려받기)" : "클릭: 팔기", NamedTextColor.GRAY));
+				lore.add(TradeItems.plain(own ? "클릭: 주문 취소(돌려받기)" : "클릭: 팔기", NamedTextColor.GRAY));
 			}
 			meta.lore(lore);
 		});
@@ -113,15 +112,15 @@ final class BuyOrdersMenu extends Menu {
 			} else if (admin) {
 				if (confirmed(click)) {
 					BuyOrders.remove(order);
-					Mailbox.deliverDiamonds(order.buyer, order.price, "관리자가 삭제한 삽니다 주문의 환불");
-					tell("주문을 삭제하고 다이아를 주문자에게 돌려보냈습니다.", NamedTextColor.YELLOW);
+					Money.give(order.buyer, order.price, "관리자가 삭제한 삽니다 주문의 환불");
+					tell("주문을 삭제하고 맡긴 " + Money.name() + "를 주문자에게 돌려보냈습니다.", NamedTextColor.YELLOW);
 					successSound();
 					redraw();
 				}
 			} else if (order.buyer.equals(player.getUniqueId())) {
 				BuyOrders.remove(order);
-				Mailbox.deliverDiamonds(player.getUniqueId(), order.price, "취소한 삽니다 주문의 환불");
-				tell("주문을 취소하고 거래 전용 다이아 " + order.price + "개를 돌려받았습니다.", NamedTextColor.YELLOW);
+				Money.add(player.getUniqueId(), order.price);
+				tell("주문을 취소하고 " + Money.format(order.price) + "을(를) 돌려받았습니다.", NamedTextColor.YELLOW);
 				successSound();
 				redraw();
 			} else {

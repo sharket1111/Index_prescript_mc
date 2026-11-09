@@ -75,7 +75,7 @@ final class HistoryMenu extends Menu {
 			List<Component> lore = meta.hasLore() ? new ArrayList<>(meta.lore()) : new ArrayList<>();
 			lore.add(Component.empty());
 			lore.add(TradeItems.plain(sales ? "구매자: " + entry.buyerName() : "판매자: " + entry.sellerName(), NamedTextColor.YELLOW));
-			lore.add(TradeItems.plain("가격: 거래 전용 다이아 " + entry.price() + "개", NamedTextColor.AQUA));
+			lore.add(TradeItems.plain("가격: " + Money.format(entry.price()), NamedTextColor.GOLD));
 			lore.add(TradeItems.plain("날짜: " + when, NamedTextColor.GRAY));
 			meta.lore(lore);
 		});

@@ -10,18 +10,19 @@ import org.bukkit.inventory.ItemStack;
 
 import net.kyori.adventure.text.format.NamedTextColor;
 
-/** Setting how many of an item to ask for and what to pay; posting it holds the diamonds. */
+/** Setting how many of an item to ask for and what to pay; posting it holds the money. */
 final class BuyOrderEditor extends Menu {
 	private static final int ITEM_SLOT = 4;
 	private static final int[] AMOUNT_SLOTS = {1, 2, 3, 5, 6, 7};
 	private static final int[] AMOUNT_STEPS = {-64, -10, -1, 1, 10, 64};
 	private static final int PRICE_SLOT = 13;
 	private static final int[] PRICE_SLOTS = {9, 10, 11, 15, 16, 17};
-	private static final int[] PRICE_STEPS = {-64, -10, -1, 1, 10, 64};
+	private static final int[] PRICE_STEPS = MONEY_STEPS;
+	private static final int INPUT_SLOT = 14;
 	private static final int POST_SLOT = 22;
 	private final ItemStack want;
 	private int amount;
-	private int price = 1;
+	private int price = 100;
 
 	BuyOrderEditor(Player player, ItemStack picked) {
 		super(player, "거래 - 삽니다 주문 올리기");
@@ -38,17 +39,18 @@ final class BuyOrderEditor extends Menu {
 		for (int i = 0; i < AMOUNT_SLOTS.length; i++) {
 			inventory.setItem(AMOUNT_SLOTS[i], TradeItems.stepButton(AMOUNT_STEPS[i], "살 개수: " + amount + "개"));
 		}
-		inventory.setItem(PRICE_SLOT, TradeItems.glint(TradeItems.button(Material.DIAMOND, price, "주는 값: 거래 전용 다이아 " + price + "개",
-				NamedTextColor.AQUA, "살 개수: " + amount + "개 (위 버튼)", "주는 값: 양옆 버튼")));
+		inventory.setItem(PRICE_SLOT, TradeItems.glint(TradeItems.button(Material.GOLD_INGOT, "주는 값: " + Money.format(price),
+				NamedTextColor.GOLD, "살 개수: " + amount + "개 (위 버튼)", "주는 값: 양옆 버튼이나 '직접 입력'")));
 		for (int i = 0; i < PRICE_SLOTS.length; i++) {
-			inventory.setItem(PRICE_SLOTS[i], TradeItems.stepButton(PRICE_STEPS[i], "주는 값: " + price + "개"));
+			inventory.setItem(PRICE_SLOTS[i], TradeItems.stepButton(PRICE_STEPS[i], "주는 값: " + Money.format(price)));
 		}
+		inventory.setItem(INPUT_SLOT, typeButton());
 		inventory.setItem(BACK_SLOT, TradeItems.back());
-		int have = count(TradeItems::isTradeDiamond);
+		long have = Money.balance(player.getUniqueId());
 		inventory.setItem(POST_SLOT, have >= price
-				? TradeItems.button(Material.LIME_CONCRETE, "주문 올리기", NamedTextColor.GREEN, amount + "개를 거래 전용 다이아 " + price + "개에 삽니다.",
-						"올리면 다이아 " + price + "개를 맡깁니다.")
-				: TradeItems.button(Material.GRAY_CONCRETE, "거래 전용 다이아가 부족합니다", NamedTextColor.RED, "내 거래 전용 다이아: " + have + "개"));
+				? TradeItems.button(Material.LIME_CONCRETE, "주문 올리기", NamedTextColor.GREEN, amount + "개를 " + Money.format(price) + "에 삽니다.",
+						"올리면 " + Money.format(price) + "을(를) 맡깁니다.")
+				: TradeItems.button(Material.GRAY_CONCRETE, Money.name() + "가 부족합니다", NamedTextColor.RED, "내 " + Money.name() + ": " + Money.format(have)));
 	}
 
 	@Override
@@ -74,6 +76,10 @@ final class BuyOrderEditor extends Menu {
 				return;
 			}
 		}
+		if (slot == INPUT_SLOT) {
+			askAmount("주는 값을 입력하세요.", 1, BuyOrders.MAX_PRICE, value -> price = (int) value);
+			return;
+		}
 		if (slot != POST_SLOT) {
 			return;
 		}
@@ -82,15 +88,14 @@ final class BuyOrderEditor extends Menu {
 			failSound();
 			return;
 		}
-		if (count(TradeItems::isTradeDiamond) < price) {
-			tell("거래 전용 다이아가 부족합니다.", NamedTextColor.RED);
+		if (!Money.take(player.getUniqueId(), price)) {
+			tell(Money.name() + "가 부족합니다.", NamedTextColor.RED);
 			failSound();
 			return;
 		}
-		take(TradeItems::isTradeDiamond, price);
 		BuyOrders.add(new BuyOrders.Order(UUID.randomUUID(), player.getUniqueId(), player.getName(), want.clone(), amount, price,
 				System.currentTimeMillis()));
-		tell("삽니다 주문을 올렸습니다: " + amount + "개, 거래 전용 다이아 " + price + "개", NamedTextColor.GREEN);
+		tell("삽니다 주문을 올렸습니다: " + amount + "개, " + Money.format(price), NamedTextColor.GREEN);
 		successSound();
 		new BuyOrdersMenu(player, 0, true, false).open();
 	}

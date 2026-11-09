@@ -41,8 +41,7 @@ final class ShopMenu extends Menu {
 	}
 
 	private ItemStack wallet() {
-		return TradeItems.glint(TradeItems.button(Material.DIAMOND, "내 거래 전용 다이아: " + count(TradeItems::isTradeDiamond) + "개",
-				NamedTextColor.AQUA, "다이아 교환 탭에서 일반 다이아몬드를", "거래 전용 다이아로 바꿀 수 있습니다."));
+		return Money.wallet(player);
 	}
 
 	private static ItemStack forSale(Listing listing) {
@@ -50,7 +49,7 @@ final class ShopMenu extends Menu {
 		shown.editMeta(meta -> {
 			List<Component> lore = meta.hasLore() ? new java.util.ArrayList<>(meta.lore()) : new java.util.ArrayList<>();
 			lore.add(Component.empty());
-			lore.add(TradeItems.plain("가격: 거래 전용 다이아 " + listing.price + "개", NamedTextColor.AQUA));
+			lore.add(TradeItems.plain("가격: " + Money.format(listing.price), NamedTextColor.GOLD));
 			lore.add(TradeItems.plain("클릭: 구매하기", NamedTextColor.GRAY));
 			meta.lore(lore);
 		});

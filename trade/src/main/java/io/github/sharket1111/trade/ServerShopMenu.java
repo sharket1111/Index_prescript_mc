@@ -11,7 +11,7 @@ import org.bukkit.inventory.ItemStack;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
-/** The server shop: goods from shop.yml sold for trade diamonds (right-click to buy). */
+/** The server shop: goods from shop.yml sold for money (right-click to buy). */
 final class ServerShopMenu extends Menu {
 	private static final int WALLET_SLOT = 22;
 
@@ -28,7 +28,7 @@ final class ServerShopMenu extends Menu {
 			icon.editMeta(meta -> {
 				List<Component> lore = meta.hasLore() ? new ArrayList<>(meta.lore()) : new ArrayList<>();
 				lore.add(Component.empty());
-				lore.add(TradeItems.plain(product.price == 0 ? "가격: 무료" : "가격: 거래 전용 다이아 " + product.price + "개", NamedTextColor.AQUA));
+				lore.add(TradeItems.plain(product.price == 0 ? "가격: 무료" : "가격: " + Money.format(product.price), NamedTextColor.GOLD));
 				lore.add(TradeItems.plain(bedrock() ? "터치: 구매" : "우클릭: 구매", NamedTextColor.GRAY));
 				meta.lore(lore);
 			});
@@ -38,8 +38,7 @@ final class ServerShopMenu extends Menu {
 			inventory.setItem(13, TradeItems.button(Material.BARRIER, "판매 중인 상품이 없습니다", NamedTextColor.GRAY));
 		}
 		inventory.setItem(BACK_SLOT, TradeItems.back());
-		inventory.setItem(WALLET_SLOT, TradeItems.glint(TradeItems.button(Material.DIAMOND,
-				"내 거래 전용 다이아: " + count(TradeItems::isTradeDiamond) + "개", NamedTextColor.AQUA)));
+		inventory.setItem(WALLET_SLOT, Money.wallet(player));
 	}
 
 	@Override
@@ -60,14 +59,13 @@ final class ServerShopMenu extends Menu {
 			failSound();
 			return;
 		}
-		int have = count(TradeItems::isTradeDiamond);
-		if (have < product.price) {
-			tell("거래 전용 다이아가 부족합니다. (" + (product.price - have) + "개 더 필요)", NamedTextColor.RED);
+		long have = Money.balance(player.getUniqueId());
+		if (!Money.take(player.getUniqueId(), product.price)) {
+			tell(Money.name() + "가 부족합니다. (" + Money.format(product.price - have) + " 더 필요)", NamedTextColor.RED);
 			failSound();
 			return;
 		}
-		take(TradeItems::isTradeDiamond, product.price);
-		tell(product.price == 0 ? product.name() + "을(를) 받았습니다." : product.name() + "을(를) 거래 전용 다이아 " + product.price + "개에 샀습니다.",
+		tell(product.price == 0 ? product.name() + "을(를) 받았습니다." : product.name() + "을(를) " + Money.format(product.price) + "에 샀습니다.",
 				NamedTextColor.GREEN);
 		successSound();
 		product.deliver(player);

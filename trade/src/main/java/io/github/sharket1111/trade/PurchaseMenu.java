@@ -10,9 +10,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
- * Confirming a purchase. The price in trade diamonds leaves the buyer's
- * inventory, the item goes to the buyer, and the seller is paid at once if
- * online or else into their mailbox.
+ * Confirming a purchase. The price leaves the buyer's balance, the item goes
+ * to the buyer, and the seller is paid (told at once if online, otherwise on
+ * their next join).
  */
 final class PurchaseMenu extends Menu {
 	private static final int ITEM_SLOT = 4;
@@ -34,22 +34,22 @@ final class PurchaseMenu extends Menu {
 
 	@Override
 	void draw() {
-		int have = count(TradeItems::isTradeDiamond);
+		long have = Money.balance(player.getUniqueId());
 		int price = price();
 		int discount = Groups.discount(player.getUniqueId(), listing.seller);
 		inventory.setItem(ITEM_SLOT, listing.item.clone());
-		inventory.setItem(PRICE_SLOT, TradeItems.glint(TradeItems.button(Material.DIAMOND, price,
-				"가격: 거래 전용 다이아 " + price + "개", NamedTextColor.AQUA,
-				discount > 0 ? "그룹 할인 " + discount + "% (원래 " + listing.price + "개)" : "판매자: " + Market.name(listing.seller),
+		inventory.setItem(PRICE_SLOT, TradeItems.glint(TradeItems.button(Material.GOLD_INGOT,
+				"가격: " + Money.format(price), NamedTextColor.GOLD,
+				discount > 0 ? "그룹 할인 " + discount + "% (원래 " + Money.format(listing.price) + ")" : "판매자: " + Market.name(listing.seller),
 				discount > 0 ? "판매자: " + Market.name(listing.seller) + " (같은 그룹)" : "",
-				"내 거래 전용 다이아: " + have + "개")));
+				"내 " + Money.name() + ": " + Money.format(have))));
 		inventory.setItem(BACK_SLOT, TradeItems.back());
 		boolean enough = have >= price;
 		inventory.setItem(BUY_SLOT, enough
 				? TradeItems.button(Material.LIME_CONCRETE, "구매하기", NamedTextColor.GREEN,
-						"거래 전용 다이아 " + price + "개를 내고 삽니다.")
-				: TradeItems.button(Material.GRAY_CONCRETE, "거래 전용 다이아가 부족합니다", NamedTextColor.RED,
-						(price - have) + "개가 더 필요합니다."));
+						Money.format(price) + "을(를) 내고 삽니다.")
+				: TradeItems.button(Material.GRAY_CONCRETE, Money.name() + "가 부족합니다", NamedTextColor.RED,
+						Money.format(price - have) + "이(가) 더 필요합니다."));
 	}
 
 	@Override
@@ -87,13 +87,12 @@ final class PurchaseMenu extends Menu {
 			}
 		}
 		int price = price();
-		if (count(TradeItems::isTradeDiamond) < price) {
-			tell("거래 전용 다이아가 부족합니다.", NamedTextColor.RED);
+		if (!Money.take(player.getUniqueId(), price)) {
+			tell(Money.name() + "가 부족합니다.", NamedTextColor.RED);
 			failSound();
 			redraw();
 			return;
 		}
-		take(TradeItems::isTradeDiamond, price);
 		Market.remove(listing);
 		History.record(listing, player.getUniqueId(), player.getName(), price);
 		if (chunk != null) {
@@ -103,7 +102,7 @@ final class PurchaseMenu extends Menu {
 		}
 		Component what = describe();
 		Market.pay(listing.seller, price, what, player.getName());
-		player.sendMessage(what.append(Component.text("을(를) 거래 전용 다이아 " + price + "개에 샀습니다.")).color(NamedTextColor.GREEN));
+		player.sendMessage(what.append(Component.text("을(를) " + Money.format(price) + "에 샀습니다.")).color(NamedTextColor.GREEN));
 		successSound();
 		back.get().open();
 	}

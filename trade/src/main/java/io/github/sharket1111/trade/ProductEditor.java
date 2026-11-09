@@ -13,7 +13,8 @@ final class ProductEditor extends Menu {
 	private static final int ITEM_SLOT = 4;
 	private static final int PRICE_SLOT = 13;
 	private static final int[] STEP_SLOTS = {9, 10, 11, 15, 16, 17};
-	private static final int[] STEPS = {-64, -10, -1, 1, 10, 64};
+	private static final int[] STEPS = MONEY_STEPS;
+	private static final int INPUT_SLOT = 14;
 	private static final int SAVE_SLOT = 22;
 	private static final int DELETE_SLOT = 26;
 	private final ShopConfig.Product existing;
@@ -24,17 +25,22 @@ final class ProductEditor extends Menu {
 		super(player, existing == null ? "관리 - 상품 추가" : "관리 - 상품 수정");
 		this.existing = existing;
 		this.newItem = newItem;
-		this.price = existing == null ? 1 : existing.price;
+		this.price = existing == null ? 100 : existing.price;
 	}
 
 	@Override
 	void draw() {
 		inventory.setItem(ITEM_SLOT, existing == null ? newItem.clone() : existing.icon());
-		inventory.setItem(PRICE_SLOT, TradeItems.glint(TradeItems.button(Material.DIAMOND, price, "가격: 거래 전용 다이아 " + price + "개",
-				NamedTextColor.AQUA, "양옆 버튼으로 정합니다.")));
+		ItemStack shown = existing == null ? newItem : existing.item;
+		ItemValues.Appraisal appraisal = shown == null ? null : ItemValues.appraise(shown);
+		inventory.setItem(PRICE_SLOT, TradeItems.glint(TradeItems.button(Material.GOLD_INGOT, "가격: " + Money.format(price),
+				NamedTextColor.GOLD, "양옆 버튼이나 '직접 입력'으로 정합니다.",
+				appraisal != null && appraisal.sellable() ? "서버 판매가: " + Money.format((long) Math.floor(appraisal.unit() * shown.getAmount()))
+						+ " (이보다 싸게 팔면 되팔기로 돈을 법니다)" : "")));
 		for (int i = 0; i < STEP_SLOTS.length; i++) {
-			inventory.setItem(STEP_SLOTS[i], TradeItems.stepButton(STEPS[i], "현재 가격: " + price + "개"));
+			inventory.setItem(STEP_SLOTS[i], TradeItems.stepButton(STEPS[i], "현재 가격: " + Money.format(price)));
 		}
+		inventory.setItem(INPUT_SLOT, typeButton());
 		inventory.setItem(BACK_SLOT, TradeItems.back());
 		inventory.setItem(SAVE_SLOT, TradeItems.button(Material.LIME_CONCRETE, existing == null ? "상품 추가" : "가격 저장",
 				NamedTextColor.GREEN));
@@ -57,6 +63,10 @@ final class ProductEditor extends Menu {
 				redraw();
 				return;
 			}
+		}
+		if (slot == INPUT_SLOT) {
+			askAmount("상품 가격을 입력하세요.", 0, ShopConfig.MAX_PRICE, value -> price = (int) value);
+			return;
 		}
 		if (slot == SAVE_SLOT) {
 			if (existing == null) {

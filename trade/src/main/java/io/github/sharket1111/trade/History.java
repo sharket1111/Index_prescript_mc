@@ -40,14 +40,15 @@ final class History {
 				ENTRIES.add(new Entry(UUID.fromString(String.valueOf(map.get("buyer"))), String.valueOf(map.get("buyer-name")),
 						UUID.fromString(String.valueOf(map.get("seller"))), String.valueOf(map.get("seller-name")),
 						ItemStack.deserializeBytes(Base64.getDecoder().decode(String.valueOf(map.get("item")))),
-						((Number) map.get("price")).intValue(), ((Number) map.get("time")).longValue()));
+						(int) Math.min(Integer.MAX_VALUE, ((Number) map.get("price")).longValue()
+								* (Money.needsMigration() ? Money.DIAMOND_RATE : 1)), ((Number) map.get("time")).longValue()));
 			} catch (RuntimeException e) {
 				owner.getLogger().log(Level.WARNING, "Skipping a broken history entry", e);
 			}
 		}
 	}
 
-	private static void save() {
+	static void save() {
 		YamlConfiguration yaml = new YamlConfiguration();
 		List<Map<String, Object>> list = new ArrayList<>();
 		for (Entry entry : ENTRIES) {

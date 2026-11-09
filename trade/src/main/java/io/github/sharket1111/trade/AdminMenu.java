@@ -24,7 +24,7 @@ final class AdminMenu extends Menu {
 		inventory.setItem(LISTINGS_SLOT, TradeItems.button(Material.CHEST, "판매 물품 관리", NamedTextColor.GOLD,
 				"모든 판매 물품을 보고, 문제 있는 물품의", "판매를 취소합니다. (물품은 판매자 우편함으로)"));
 		inventory.setItem(ORDERS_SLOT, TradeItems.button(Material.WRITABLE_BOOK, "삽니다 주문 관리", NamedTextColor.GOLD,
-				"주문을 삭제합니다. (맡긴 다이아는 주문자에게 환불)"));
+				"주문을 삭제합니다. (맡긴 돈은 주문자에게 환불)"));
 		inventory.setItem(HISTORY_SLOT, TradeItems.button(Material.BOOK, "거래 기록 조회", NamedTextColor.GOLD,
 				"플레이어를 골라 구매/판매 기록을 봅니다."));
 		inventory.setItem(SHOP_SLOT, TradeItems.button(Material.BELL, "서버 상점 편집", NamedTextColor.GOLD,

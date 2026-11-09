@@ -70,7 +70,7 @@ final class TradeTools {
 		book.editMeta(meta -> {
 			meta.itemName(Component.text("그룹 웨이포인트", NamedTextColor.AQUA));
 			meta.lore(List.of(TradeItems.plain("들고 웅크린 채 우클릭: 웨이포인트 목록", NamedTextColor.GRAY),
-					TradeItems.plain("텔레포트: 거래 전용 다이아 " + Groups.TELEPORT_PRICE + "개", NamedTextColor.GRAY)));
+					TradeItems.plain("텔레포트: " + Money.format(Groups.TELEPORT_PRICE), NamedTextColor.GRAY)));
 			meta.addEnchant(Enchantment.MENDING, 1, true);
 			meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
 			meta.setEnchantmentGlintOverride(true);

@@ -62,8 +62,8 @@ final class GroupWaypointMenu extends Menu {
 		inventory.setItem(INFO_SLOT, TradeItems.button(Material.LODESTONE, waypoint.name, NamedTextColor.AQUA,
 				"그룹: " + group.name, view ? "좌표: " + waypoint.coords() : "좌표: 비공개 ('웨이포인트 좌표 보기' 권한 필요)"));
 		inventory.setItem(TELEPORT_SLOT, TradeItems.button(use ? Material.ENDER_PEARL : Material.GRAY_DYE, "텔레포트",
-				use ? NamedTextColor.LIGHT_PURPLE : NamedTextColor.GRAY, "거래 전용 다이아 " + Groups.TELEPORT_PRICE + "개",
-				"내 거래 전용 다이아: " + count(TradeItems::isTradeDiamond) + "개",
+				use ? NamedTextColor.LIGHT_PURPLE : NamedTextColor.GRAY, Money.format(Groups.TELEPORT_PRICE),
+				"내 " + Money.name() + ": " + Money.format(Money.balance(player.getUniqueId())),
 				use ? "클릭: 이동" : "'웨이포인트 사용' 권한이 필요합니다."));
 		if (manage) {
 			inventory.setItem(RENAME_SLOT, TradeItems.button(Material.OAK_SIGN, "이름 바꾸기", NamedTextColor.GOLD,
@@ -71,7 +71,7 @@ final class GroupWaypointMenu extends Menu {
 			inventory.setItem(MOVE_SLOT, TradeItems.button(Material.COMPASS, "여기로 옮기기", NamedTextColor.GOLD,
 					"웨이포인트를 지금 서 있는 곳으로 옮깁니다. (무료)", bedrock() ? "누르면 옮깁니다." : "우클릭: 옮기기"));
 			inventory.setItem(DELETE_SLOT, TradeItems.button(Material.LAVA_BUCKET, "지우기", NamedTextColor.RED,
-					"낸 다이아는 돌려받지 못합니다.", "다시 만들면 그 자리의 가격을 냅니다.", bedrock() ? "누르면 지웁니다." : "우클릭: 지우기"));
+					"낸 돈은 돌려받지 못합니다.", "다시 만들면 그 자리의 가격을 냅니다.", bedrock() ? "누르면 지웁니다." : "우클릭: 지우기"));
 		}
 	}
 
@@ -142,7 +142,7 @@ final class GroupWaypointMenu extends Menu {
 		teleport(this, player, group, waypoint);
 	}
 
-	/** Teleports {@code player} (looking at {@code menu}) to a waypoint, for a trade diamond, if their role may. */
+	/** Teleports {@code player} (looking at {@code menu}) to a waypoint, for {@link Groups#TELEPORT_PRICE}, if their role may. */
 	static void teleport(Menu menu, Player player, Groups.Group group, Groups.Waypoint waypoint) {
 		if (!group.has(player.getUniqueId(), Groups.Perm.WAYPOINT_USE)) {
 			menu.tell("'웨이포인트 사용' 권한이 있는 역할만 텔레포트할 수 있습니다.", NamedTextColor.RED);
@@ -155,22 +155,21 @@ final class GroupWaypointMenu extends Menu {
 			menu.failSound();
 			return;
 		}
-		if (menu.count(TradeItems::isTradeDiamond) < Groups.TELEPORT_PRICE) {
-			menu.tell("텔레포트하려면 거래 전용 다이아 " + Groups.TELEPORT_PRICE + "개가 필요합니다.", NamedTextColor.RED);
+		if (!Money.take(player.getUniqueId(), Groups.TELEPORT_PRICE)) {
+			menu.tell("텔레포트하려면 " + Money.format(Groups.TELEPORT_PRICE) + "이(가) 필요합니다.", NamedTextColor.RED);
 			menu.failSound();
 			return;
 		}
-		menu.take(TradeItems::isTradeDiamond, Groups.TELEPORT_PRICE);
 		player.closeInventory();
 		String name = waypoint.name;
 		player.teleportAsync(to).thenAccept(done -> {
 			if (done) {
 				player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 0.8F, 1.0F);
-				player.sendMessage(net.kyori.adventure.text.Component.text("'" + name + "'(으)로 이동했습니다. (거래 전용 다이아 "
-						+ Groups.TELEPORT_PRICE + "개)", NamedTextColor.GREEN));
+				player.sendMessage(net.kyori.adventure.text.Component.text("'" + name + "'(으)로 이동했습니다. ("
+						+ Money.format(Groups.TELEPORT_PRICE) + ")", NamedTextColor.GREEN));
 			} else {
-				giveTradeDiamonds(player, Groups.TELEPORT_PRICE);
-				player.sendMessage(net.kyori.adventure.text.Component.text("텔레포트하지 못해 다이아를 돌려드렸습니다.", NamedTextColor.RED));
+				Money.add(player.getUniqueId(), Groups.TELEPORT_PRICE);
+				player.sendMessage(net.kyori.adventure.text.Component.text("텔레포트하지 못해 돈을 돌려드렸습니다.", NamedTextColor.RED));
 			}
 		});
 	}

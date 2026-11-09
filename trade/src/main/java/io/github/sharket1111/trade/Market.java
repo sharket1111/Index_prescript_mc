@@ -25,12 +25,12 @@ import net.kyori.adventure.text.format.NamedTextColor;
 final class Market {
 	static final int MAX_LISTINGS_PER_PLAYER = 18;
 	static final int MIN_PRICE = 1;
-	static final int MAX_PRICE = 9999;
+	static final int MAX_PRICE = 100_000_000;
 
 	private static Plugin plugin;
 	private static File file;
 	private static final Map<UUID, Listing> LISTINGS = new LinkedHashMap<>();
-	/** Trade diamonds owed to sellers who were away when their goods sold. */
+	/** Old: trade diamonds owed to sellers who were away when their goods sold (moved onto balances once). */
 	private static final Map<UUID, Integer> EARNINGS = new LinkedHashMap<>();
 
 	private Market() {
@@ -60,12 +60,24 @@ final class Market {
 			try {
 				ItemStack item = ItemStack.deserializeBytes(Base64.getDecoder().decode(s.getString("item", "")));
 				Listing listing = new Listing(UUID.fromString(key), UUID.fromString(s.getString("seller")),
-						s.getString("seller-name", "?"), item, s.getInt("price", MIN_PRICE), s.getLong("created"));
+						s.getString("seller-name", "?"), item, price(s.getInt("price", MIN_PRICE)), s.getLong("created"));
 				LISTINGS.put(listing.id, listing);
 			} catch (RuntimeException e) {
 				owner.getLogger().log(Level.WARNING, "Skipping a broken listing " + key, e);
 			}
 		}
+	}
+
+	/** A price read from the file: still in diamonds before the switch to money. */
+	private static int price(int saved) {
+		return Money.needsMigration() ? (int) Math.min(MAX_PRICE, saved * Money.DIAMOND_RATE) : saved;
+	}
+
+	/** On the first start with money: earnings still owed in diamonds go onto the sellers' balances. */
+	static void migrate() {
+		EARNINGS.forEach((seller, diamonds) -> Money.give(seller, diamonds * Money.DIAMOND_RATE, "접속하지 않은 동안 팔린 물품의 대금"));
+		EARNINGS.clear();
+		save();
 	}
 
 	static void save() {
@@ -78,7 +90,6 @@ final class Market {
 			yaml.set(path + ".created", listing.createdAt);
 			yaml.set(path + ".item", Base64.getEncoder().encodeToString(listing.item.serializeAsBytes()));
 		}
-		EARNINGS.forEach((seller, amount) -> yaml.set("earnings." + seller, amount));
 		try {
 			file.getParentFile().mkdirs();
 			yaml.save(file);
@@ -124,28 +135,11 @@ final class Market {
 		return "?";
 	}
 
-	/** Pays a seller: straight into their inventory if online, otherwise on their next join. */
+	/** Pays a seller: told at once if online, otherwise on their next join. */
 	static void pay(UUID seller, int amount, Component what, String buyer) {
-		Player online = Bukkit.getPlayer(seller);
-		if (online != null) {
-			Menu.giveTradeDiamonds(online, amount);
-			online.sendMessage(Component.text(buyer + "님이 ").append(what)
-					.append(Component.text("을(를) 사서 거래 전용 다이아 " + amount + "개를 받았습니다.")).color(NamedTextColor.GREEN));
-		} else {
-			// Away: the money waits in their mailbox.
-			Mailbox.deliverDiamonds(seller, amount, buyer + "님이 산 물품의 대금");
-		}
-	}
-
-	/** Hands over what a seller earned while away. */
-	static void payOut(Player seller) {
-		Integer owed = EARNINGS.remove(seller.getUniqueId());
-		if (owed == null || owed <= 0) {
-			return;
-		}
-		save();
-		Menu.giveTradeDiamonds(seller, owed);
-		seller.sendMessage(Component.text("접속하지 않은 동안 물품이 팔려 거래 전용 다이아 " + owed + "개를 받았습니다.", NamedTextColor.GREEN));
+		Money.give(seller, amount, Component.text(buyer + "님이 ").append(what)
+				.append(Component.text("을(를) 사서 " + Money.format(amount) + "을(를) 받았습니다.")).color(NamedTextColor.GREEN),
+				buyer + "님이 산 물품의 대금");
 	}
 
 	/** Every listing, oldest first. */
