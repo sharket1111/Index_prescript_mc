@@ -11,6 +11,7 @@ final class MainMenu extends Menu {
 	private static final int SELL_SLOT = 1;
 	private static final int WALLET_SLOT = 8;
 	private static final int MODE_SLOT = 18;
+	private static final int WEB_SLOT = 0;
 	private static final int MARKET_SLOT = 3;
 	private static final int SELLERS_SLOT = 4;
 	private static final int GOODS_SLOT = 5;
@@ -35,6 +36,13 @@ final class MainMenu extends Menu {
 		inventory.setItem(SELL_SLOT, TradeItems.button(Material.GOLD_BLOCK, "아이템 판매", NamedTextColor.GOLD,
 				"아이템을 서버에 팔아 " + Money.object() + " 얻습니다.", "광물, 작물, 몹 전리품, 블록 등"));
 		inventory.setItem(WALLET_SLOT, Money.wallet(player));
+		String site = WebSite.address();
+		boolean hasPassword = WebAccounts.hasPassword(player.getUniqueId());
+		inventory.setItem(WEB_SLOT, TradeItems.button(Material.SPYGLASS, "웹 사이트", NamedTextColor.AQUA,
+				site == null ? "관리자가 아직 웹 사이트를 켜지 않았습니다." : site,
+				"내 골드, 우편함, 거래 내역, 땅을 웹에서 봅니다.",
+				hasPassword ? "웹 비밀번호: 정해짐" : "웹 비밀번호: 아직 없음",
+				"클릭: 로그인 링크 / 비밀번호 / 로그아웃"));
 		boolean touch = bedrock();
 		inventory.setItem(MODE_SLOT, TradeItems.glint(TradeItems.button(touch ? Material.LIGHT_BLUE_CONCRETE : Material.ORANGE_CONCRETE,
 				"화면 모드: " + (touch ? "배드락 (터치)" : "자바"), NamedTextColor.AQUA,
@@ -77,6 +85,30 @@ final class MainMenu extends Menu {
 		}
 	}
 
+	/** The web site's choices: a quick login link, setting the password, logging out everywhere. */
+	private void webMenu() {
+		boolean hasPassword = WebAccounts.hasPassword(player.getUniqueId());
+		new ChoiceMenu(player, "거래 - 웹 사이트", java.util.List.of(
+				TradeItems.button(Material.ENDER_EYE, "바로 로그인 링크 받기", NamedTextColor.AQUA, "채팅에 나만 쓰는 [열기] 링크가 뜹니다.",
+						"비밀번호 없이 바로 내 정보가 열립니다."),
+				TradeItems.button(Material.TRIPWIRE_HOOK, hasPassword ? "웹 비밀번호 바꾸기" : "웹 비밀번호 정하기", NamedTextColor.GOLD,
+						"웹 사이트에서 닉네임과 이 비밀번호로 로그인합니다.", "다른 곳에서 쓰는 비밀번호와 다르게 정하세요."),
+				TradeItems.button(Material.BARRIER, "모든 기기에서 로그아웃", NamedTextColor.RED, "웹에 로그인된 모든 기기와 링크를 끊습니다.")),
+				() -> new MainMenu(player), choice -> {
+					switch (choice) {
+						case 0 -> {
+							player.closeInventory();
+							WebSite.link(player);
+						}
+						case 1 -> WebSite.askPassword(player, () -> new MainMenu(player).open());
+						default -> {
+							WebSite.command(player, "끊기");
+							new MainMenu(player).open();
+						}
+					}
+				}).open();
+	}
+
 	@Override
 	void click(int slot, ClickType click) {
 		Menu next = switch (slot) {
@@ -95,6 +127,11 @@ final class MainMenu extends Menu {
 			case ADMIN_SLOT -> player.hasPermission(AdminMenu.PERMISSION) ? new AdminMenu(player) : null;
 			default -> null;
 		};
+		if (slot == WEB_SLOT) {
+			clickSound();
+			webMenu();
+			return;
+		}
 		if (slot == MODE_SLOT) {
 			UiMode.set(player, !bedrock());
 			player.sendMessage(net.kyori.adventure.text.Component.text("화면 모드를 " + (bedrock() ? "배드락 (터치)" : "자바")

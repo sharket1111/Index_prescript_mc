@@ -6,12 +6,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -47,11 +44,11 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
  *
  * Anyone with the address sees the public part: players online, the market,
  * the buy board and the price table. A player's own part (money, mailbox,
- * purchases and sales, listings, buy requests, land, groups) needs the
- * personal link {@code /trade 웹} gives them: a random key valid for
- * {@code link-hours}, kept in memory only (a restart or {@code /trade 웹 끊기}
- * ends every link). The page only reads; nothing can be bought or changed
- * from it.
+ * purchases and sales, listings, buy requests, land, groups) needs a login
+ * ({@link WebAccounts}): the Minecraft name and a password set in game with
+ * {@code /trade 웹 비밀번호}, or the quick personal link {@code /trade 웹}
+ * gives. {@code /trade 웹 끊기} logs out everywhere. The page only reads the
+ * game; besides logging in it can only change the player's own password.
  *
  * Bukkit is not thread-safe, so the web threads never touch the game: the
  * public snapshot is rebuilt on the main thread every few seconds, and a
@@ -60,12 +57,8 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 final class WebSite {
 	private static final int REFRESH_TICKS = 100;
 	private static final int HISTORY_LIMIT = 60;
-	private static final SecureRandom RANDOM = new SecureRandom();
 	private static final Gson GSON = new Gson();
 	private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.plainText();
-
-	private record Link(UUID player, String name, long expires) {
-	}
 
 	private static Plugin plugin;
 	private static HttpServer server;
@@ -73,11 +66,12 @@ final class WebSite {
 	private static int port;
 	private static String address = "";
 	private static int linkHours = 24;
+	private static int sessionDays = 14;
+	private static final int MAX_BODY = 4096;
 	private static volatile String publicJson = "{}";
 	private static volatile String valuesJson = "[]";
 	private static byte[] indexPage = new byte[0];
 	private static byte[] namesJson = new byte[0];
-	private static final Map<String, Link> LINKS = new ConcurrentHashMap<>();
 
 	private WebSite() {
 	}
@@ -95,11 +89,13 @@ final class WebSite {
 					"enabled: turn it on once 'port' is a port your host gives this server",
 					"  (Shockbyte: panel > Ports > Add Additional Port).",
 					"address: the address players type to reach the server (IP or domain), used in links.",
-					"link-hours: how long a personal link from /trade 웹 works."));
+					"link-hours: how long a quick link from /trade 웹 works.",
+					"session-days: how long a login with name and password lasts on a device."));
 			yaml.set("enabled", false);
 			yaml.set("port", 0);
 			yaml.set("address", "");
 			yaml.set("link-hours", 24);
+			yaml.set("session-days", 14);
 			try {
 				owner.getDataFolder().mkdirs();
 				yaml.save(file);
@@ -111,6 +107,8 @@ final class WebSite {
 		port = yaml.getInt("port", 0);
 		address = yaml.getString("address", "").trim();
 		linkHours = Math.max(1, yaml.getInt("link-hours", 24));
+		sessionDays = Math.max(1, yaml.getInt("session-days", 14));
+		WebAccounts.load(owner);
 		if (!enabled) {
 			return;
 		}
@@ -141,7 +139,6 @@ final class WebSite {
 			server.stop(0);
 			server = null;
 		}
-		LINKS.clear();
 	}
 
 	private static byte[] resource(String path) {
@@ -159,39 +156,89 @@ final class WebSite {
 
 	// --- personal links ----------------------------------------------------------------
 
-	/** /trade 웹: a personal link to the page; {@code revoke} ends every link the player has. */
-	static void command(Player player, boolean revoke) {
-		if (revoke) {
-			LINKS.values().removeIf(link -> link.player.equals(player.getUniqueId()));
-			player.sendMessage(Component.text("내 웹 링크를 모두 끊었습니다.", NamedTextColor.YELLOW));
-			return;
+	/** /trade 웹 [비밀번호|끊기]: a quick login link, setting the web password, or logging out everywhere. */
+	static void command(Player player, String sub) {
+		switch (sub) {
+			case "끊기", "logout", "revoke" -> {
+				WebAccounts.endAll(player.getUniqueId());
+				player.sendMessage(Component.text("모든 기기에서 웹 로그아웃했습니다.", NamedTextColor.YELLOW));
+			}
+			case "비밀번호", "password" -> askPassword(player, null);
+			case "비밀번호삭제" -> {
+				WebAccounts.removePassword(player.getUniqueId());
+				player.sendMessage(Component.text("웹 비밀번호를 지웠습니다. 이제 이름과 비밀번호로는 로그인할 수 없습니다.", NamedTextColor.YELLOW));
+			}
+			default -> link(player);
 		}
+	}
+
+	/** The page's address and the commands, for the trade menu's web button. */
+	static String address() {
+		return enabled ? url() : null;
+	}
+
+	/** A quick login link, valid for {@code link-hours}. */
+	static void link(Player player) {
 		if (!enabled) {
 			player.sendMessage(Component.text("웹 페이지가 꺼져 있습니다. 관리자가 plugins/PlayerTrade/web.yml에서 켜야 합니다.", NamedTextColor.RED));
 			return;
 		}
-		long now = System.currentTimeMillis();
-		LINKS.values().removeIf(link -> link.expires < now);
-		byte[] bytes = new byte[18];
-		RANDOM.nextBytes(bytes);
-		String key = HexFormat.of().formatHex(bytes);
-		LINKS.put(key, new Link(player.getUniqueId(), player.getName(), now + TimeUnit.HOURS.toMillis(linkHours)));
+		String key = WebAccounts.newSession(player.getUniqueId(), TimeUnit.HOURS.toMillis(linkHours));
 		String link = url() + "#k=" + key;
-		player.sendMessage(Component.text("내 정보 웹 페이지 (" + linkHours + "시간 동안, 나만 쓰세요): ", NamedTextColor.GOLD)
+		player.sendMessage(Component.text("웹 페이지 바로 로그인 (" + linkHours + "시간, 나만 쓰세요): ", NamedTextColor.GOLD)
 				.append(Component.text("[열기]", NamedTextColor.AQUA).clickEvent(ClickEvent.openUrl(link))
 						.hoverEvent(HoverEvent.showText(Component.text(link)))));
-		player.sendMessage(Component.text("링크를 남에게 주면 내 정보가 보입니다. 끊으려면 /trade 웹 끊기", NamedTextColor.GRAY));
+		player.sendMessage(Component.text(WebAccounts.hasPassword(player.getUniqueId())
+				? "주소 " + url() + " 에서 닉네임과 웹 비밀번호로도 로그인할 수 있습니다."
+				: "웹 비밀번호를 정하면 링크 없이 닉네임과 비밀번호로 로그인할 수 있습니다: /trade 웹 비밀번호", NamedTextColor.GRAY));
+	}
+
+	/**
+	 * Asks for a new web password twice (chat, or an anvil in the touch mode;
+	 * never as a command, which the server log would keep), then sets it.
+	 */
+	static void askPassword(Player player, Runnable back) {
+		Runnable done = back == null ? () -> { } : back;
+		player.sendMessage(Component.text("웹 비밀번호는 이 서버 웹 페이지에만 쓰세요. 다른 사이트나 마인크래프트 계정 비밀번호와 다르게 정하세요."
+				+ " (웹 페이지가 http라 암호화되지 않습니다)", NamedTextColor.YELLOW));
+		ChatPrompt.ask(player, "새 웹 비밀번호를 입력하세요. (" + WebAccounts.MIN_PASSWORD + "~" + WebAccounts.MAX_PASSWORD + "글자)", first -> {
+			String problem = WebAccounts.badPassword(player.getName(), first);
+			if (problem != null) {
+				player.sendMessage(Component.text(problem, NamedTextColor.RED));
+				done.run();
+				return;
+			}
+			ChatPrompt.ask(player, "확인을 위해 한 번 더 입력하세요.", second -> {
+				if (!second.equals(first)) {
+					player.sendMessage(Component.text("두 번 입력한 비밀번호가 다릅니다. 다시 해 주세요.", NamedTextColor.RED));
+				} else {
+					WebAccounts.setPassword(player.getUniqueId(), player.getName(), first);
+					player.sendMessage(Component.text("웹 비밀번호를 정했습니다. 웹 페이지에서 닉네임 '" + player.getName()
+							+ "'과(와) 이 비밀번호로 로그인하세요." + (enabled ? " " + url() : ""), NamedTextColor.GREEN));
+				}
+				done.run();
+			}, done);
+		}, done);
 	}
 
 	// --- serving ---------------------------------------------------------------------
 
 	private static void handle(HttpExchange exchange) throws IOException {
 		try (exchange) {
-			if (!"GET".equals(exchange.getRequestMethod())) {
-				send(exchange, 405, "text/plain", "GET only".getBytes(StandardCharsets.UTF_8));
+			String path = exchange.getRequestURI().getPath();
+			if ("POST".equals(exchange.getRequestMethod())) {
+				switch (path) {
+					case "/api/login" -> login(exchange);
+					case "/api/logout" -> logout(exchange);
+					case "/api/password" -> password(exchange);
+					default -> send(exchange, 404, "text/plain", "Not found".getBytes(StandardCharsets.UTF_8));
+				}
 				return;
 			}
-			String path = exchange.getRequestURI().getPath();
+			if (!"GET".equals(exchange.getRequestMethod())) {
+				send(exchange, 405, "text/plain", "GET or POST only".getBytes(StandardCharsets.UTF_8));
+				return;
+			}
 			switch (path) {
 				case "/", "/index.html" -> send(exchange, 200, "text/html", indexPage);
 				case "/ko.json" -> send(exchange, 200, "application/json", namesJson);
@@ -207,20 +254,102 @@ final class WebSite {
 
 	private static void me(HttpExchange exchange) throws IOException {
 		String key = exchange.getRequestHeaders().getFirst("X-Key");
-		Link link = key == null ? null : LINKS.get(key.trim());
-		if (link == null || link.expires < System.currentTimeMillis()) {
-			if (link != null) {
-				LINKS.remove(key.trim());
-			}
-			json(exchange, 401, "{\"error\":\"링크가 만료되었습니다. 게임에서 /trade 웹 으로 새 링크를 받으세요.\"}");
+		UUID player = WebAccounts.session(key);
+		if (player == null) {
+			json(exchange, 401, error("로그인이 끝났습니다. 다시 로그인하세요."));
 			return;
 		}
-		Future<String> future = Bukkit.getScheduler().callSyncMethod(plugin, () -> mine(link));
+		long expires = WebAccounts.expires(key);
+		Future<String> future = Bukkit.getScheduler().callSyncMethod(plugin, () -> mine(player, expires));
 		try {
 			json(exchange, 200, future.get(5, TimeUnit.SECONDS));
 		} catch (Exception e) {
 			json(exchange, 503, "{\"error\":\"서버가 바빠서 정보를 가져오지 못했습니다. 잠시 뒤 다시 시도하세요.\"}");
 		}
+	}
+
+	private static String error(String message) {
+		JsonObject out = new JsonObject();
+		out.addProperty("error", message);
+		return GSON.toJson(out);
+	}
+
+	/** The request's JSON body (at most {@link #MAX_BODY} bytes), or null. */
+	private static JsonObject body(HttpExchange exchange) throws IOException {
+		byte[] bytes = exchange.getRequestBody().readNBytes(MAX_BODY + 1);
+		if (bytes.length > MAX_BODY) {
+			return null;
+		}
+		try {
+			return GSON.fromJson(new String(bytes, StandardCharsets.UTF_8), JsonObject.class);
+		} catch (RuntimeException e) {
+			return null;
+		}
+	}
+
+	private static String text(JsonObject body, String field) {
+		return body != null && body.has(field) && body.get(field).isJsonPrimitive() ? body.get(field).getAsString() : "";
+	}
+
+	private static String address(HttpExchange exchange) {
+		return exchange.getRemoteAddress() == null ? "?" : exchange.getRemoteAddress().getAddress().getHostAddress();
+	}
+
+	/** POST /api/login {name, password}: a session key for the page. */
+	private static void login(HttpExchange exchange) throws IOException {
+		JsonObject body = body(exchange);
+		String name = text(body, "name");
+		String password = text(body, "password");
+		if (name.isBlank() || password.isEmpty() || password.length() > WebAccounts.MAX_PASSWORD) {
+			json(exchange, 400, error("닉네임과 비밀번호를 입력하세요."));
+			return;
+		}
+		WebAccounts.Login result = WebAccounts.login(name, password, address(exchange));
+		if (result.player() == null) {
+			json(exchange, 401, error(result.error()));
+			return;
+		}
+		String key = WebAccounts.newSession(result.player(), TimeUnit.DAYS.toMillis(sessionDays));
+		JsonObject out = new JsonObject();
+		out.addProperty("key", key);
+		out.addProperty("name", WebAccounts.nameOf(result.player()));
+		json(exchange, 200, GSON.toJson(out));
+	}
+
+	/** POST /api/logout: ends this device's session. */
+	private static void logout(HttpExchange exchange) throws IOException {
+		WebAccounts.endSession(exchange.getRequestHeaders().getFirst("X-Key"));
+		json(exchange, 200, "{}");
+	}
+
+	/** POST /api/password {old, new}: changes the password (every other session ends); answers with a new key. */
+	private static void password(HttpExchange exchange) throws IOException {
+		UUID player = WebAccounts.session(exchange.getRequestHeaders().getFirst("X-Key"));
+		if (player == null) {
+			json(exchange, 401, error("로그인이 끝났습니다. 다시 로그인하세요."));
+			return;
+		}
+		JsonObject body = body(exchange);
+		String old = text(body, "old");
+		String fresh = text(body, "new");
+		String name = WebAccounts.nameOf(player);
+		if (name == null) {
+			json(exchange, 400, error("아직 웹 비밀번호가 없습니다. 게임에서 /trade 웹 비밀번호 로 먼저 정하세요."));
+			return;
+		}
+		if (!WebAccounts.verify(player, old)) {
+			json(exchange, 403, error("지금 비밀번호가 맞지 않습니다."));
+			return;
+		}
+		String problem = WebAccounts.badPassword(name, fresh);
+		if (problem != null) {
+			json(exchange, 400, error(problem));
+			return;
+		}
+		WebAccounts.setPassword(player, name, fresh);
+		JsonObject out = new JsonObject();
+		out.addProperty("key", WebAccounts.newSession(player, TimeUnit.DAYS.toMillis(sessionDays)));
+		json(exchange, 200, GSON.toJson(out));
 	}
 
 	private static void json(HttpExchange exchange, int status, String body) throws IOException {
@@ -360,15 +489,15 @@ final class WebSite {
 	}
 
 	/** A player's own part of the page. */
-	private static String mine(Link link) {
-		UUID id = link.player;
+	private static String mine(UUID id, long expires) {
 		JsonObject root = new JsonObject();
 		String name = Bukkit.getOfflinePlayer(id).getName();
-		root.addProperty("name", name != null ? name : link.name);
+		root.addProperty("name", name != null ? name : String.valueOf(WebAccounts.nameOf(id)));
+		root.addProperty("hasPassword", WebAccounts.hasPassword(id));
 		root.addProperty("online", Bukkit.getPlayer(id) != null);
 		root.addProperty("balance", Money.balance(id));
 		root.add("currency", currency());
-		root.addProperty("expires", link.expires);
+		root.addProperty("expires", expires);
 		JsonArray mail = new JsonArray();
 		for (Mailbox.Mail entry : Mailbox.of(id)) {
 			JsonObject row = new JsonObject();

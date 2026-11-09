@@ -83,7 +83,7 @@ public final class TradePlugin extends JavaPlugin {
 			return true;
 		}
 		if (args.length >= 1 && (args[0].equals("웹") || args[0].equalsIgnoreCase("web"))) {
-			WebSite.command(player, args.length >= 2 && (args[1].equals("끊기") || args[1].equalsIgnoreCase("revoke")));
+			WebSite.command(player, args.length >= 2 ? args[1] : "");
 		} else if (args.length >= 1 && (args[0].equals("화폐") || args[0].equalsIgnoreCase("currency"))) {
 			currency(player, args);
 		} else if (args.length >= 1 && (args[0].equals("판매") || args[0].equalsIgnoreCase("sell"))) {

@@ -74,6 +74,18 @@ h2 { font: 400 22px/1.2 var(--font-display); margin: 8px 0 0; }
 .btn { font: 500 14px var(--font-body); color: var(--ink); background: var(--chip); border: 0; border-radius: 10px; padding: 9px 14px; cursor: pointer; }
 .err { color: var(--bad); font-size: 14px; }
 section[hidden] { display: none !important; }
+.who { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-weight: 600; }
+.who.in { background: var(--gold-soft); border-color: var(--gold); color: var(--gold-ink); }
+.hright { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+form.login { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 12px; max-width: 420px; }
+form.login h2 { margin: 0; }
+form.login label { display: grid; gap: 4px; font-size: 14px; font-weight: 500; }
+form.login input { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; }
+.btn.primary { background: var(--chip-on); color: var(--chip-on-ink); padding: 11px 16px; font-weight: 600; }
+.ok { color: var(--live); font-size: 14px; }
+details.pw { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+details.pw summary { cursor: pointer; font-weight: 600; }
+details.pw form.login { border: 0; padding: 12px 0 0; }
 @media (max-width: 520px) { .row { padding: 10px 12px; } .card .v { font-size: 22px; } }
 </style>
 </head>
@@ -84,7 +96,10 @@ section[hidden] { display: none !important; }
       <h1><span class="g">서버</span> 장터</h1>
       <p class="sub" id="motd">서버 정보를 불러오는 중입니다.</p>
     </div>
-    <div class="live" id="live"><span class="dot" id="dot"></span><span>접속 <b id="liveCount">-</b>명</span></div>
+    <div class="hright">
+      <a class="who" id="who" href="#me">로그인</a>
+      <div class="live" id="live"><span class="dot" id="dot"></span><span>접속 <b id="liveCount">-</b>명</span></div>
+    </div>
   </header>
 
   <nav aria-label="메뉴">
@@ -260,33 +275,94 @@ section[hidden] { display: none !important; }
     }), "표에 없는 아이템은 서버에 팔 수 없습니다.");
     if (list.length > shown.length) $("list-prices").appendChild(el("div", "empty", "검색해서 나머지 " + (list.length - shown.length) + "개를 찾아보세요."));
   }
+  function field(label, id, type, auto) {
+    var l = el("label", null, label);
+    var input = el("input");
+    input.id = id; input.type = type; input.autocomplete = auto; input.required = true;
+    l.appendChild(input);
+    return l;
+  }
+  function loginForm() {
+    var f = el("form", "login");
+    f.appendChild(el("h2", null, "로그인"));
+    f.appendChild(field("마인크래프트 닉네임", "lname", "text", "username"));
+    f.appendChild(field("웹 비밀번호", "lpass", "password", "current-password"));
+    var msg = el("p", "err");
+    msg.hidden = true;
+    f.appendChild(msg);
+    var go = el("button", "btn primary", "로그인");
+    go.type = "submit";
+    f.appendChild(go);
+    var help = el("div", "meta");
+    help.appendChild(document.createTextNode("웹 비밀번호는 게임에서 정합니다: "));
+    help.appendChild(el("code", null, "/trade 웹 비밀번호"));
+    help.appendChild(document.createTextNode(" 또는 /trade → 웹 사이트 → 비밀번호 정하기. 비밀번호 없이 들어오려면 게임에서 "));
+    help.appendChild(el("code", null, "/trade 웹"));
+    help.appendChild(document.createTextNode(" 링크를 누르세요."));
+    f.appendChild(help);
+    f.addEventListener("submit", function (e) {
+      e.preventDefault();
+      go.disabled = true; msg.hidden = true;
+      post("/api/login", { name: $("lname").value, password: $("lpass").value }).then(function (r) {
+        go.disabled = false;
+        if (!r.ok) { msg.textContent = r.body.error || "로그인하지 못했습니다."; msg.hidden = false; return; }
+        setKey(r.body.key); meError = ""; ME = null;
+        drawMe(); loadMe();
+      }).catch(function () { go.disabled = false; msg.textContent = "서버에 연결할 수 없습니다."; msg.hidden = false; });
+    });
+    return f;
+  }
+  function passwordForm() {
+    var d = el("details", "pw");
+    d.appendChild(el("summary", null, ME.hasPassword ? "웹 비밀번호 바꾸기" : "웹 비밀번호 정하기"));
+    if (!ME.hasPassword) {
+      d.appendChild(el("p", "meta", "처음 비밀번호는 게임에서 정합니다: /trade 웹 비밀번호 (또는 /trade → 웹 사이트)."));
+      return d;
+    }
+    var f = el("form", "login");
+    f.appendChild(field("지금 비밀번호", "pold", "password", "current-password"));
+    f.appendChild(field("새 비밀번호 (6~64글자)", "pnew", "password", "new-password"));
+    f.appendChild(field("새 비밀번호 한 번 더", "pnew2", "password", "new-password"));
+    var msg = el("p", "err"); msg.hidden = true; f.appendChild(msg);
+    var go = el("button", "btn primary", "바꾸기"); go.type = "submit"; f.appendChild(go);
+    f.appendChild(el("p", "meta", "바꾸면 다른 기기는 모두 로그아웃됩니다."));
+    f.addEventListener("submit", function (e) {
+      e.preventDefault();
+      msg.hidden = true; msg.className = "err";
+      if ($("pnew").value !== $("pnew2").value) { msg.textContent = "새 비밀번호 두 개가 다릅니다."; msg.hidden = false; return; }
+      go.disabled = true;
+      post("/api/password", { old: $("pold").value, "new": $("pnew").value }, { "X-Key": key }).then(function (r) {
+        go.disabled = false;
+        if (!r.ok) { msg.textContent = r.body.error || "바꾸지 못했습니다."; msg.hidden = false; return; }
+        setKey(r.body.key);
+        msg.className = "ok"; msg.textContent = "비밀번호를 바꿨습니다."; msg.hidden = false;
+        $("pold").value = ""; $("pnew").value = ""; $("pnew2").value = "";
+      }).catch(function () { go.disabled = false; msg.textContent = "서버에 연결할 수 없습니다."; msg.hidden = false; });
+    });
+    d.appendChild(f);
+    return d;
+  }
+  function drawWho() {
+    var w = $("who");
+    if (key && ME) { w.textContent = ME.name + "님"; w.className = "who in"; }
+    else { w.textContent = "로그인"; w.className = "who"; }
+  }
   function drawMe() {
+    drawWho();
     var body = $("meBody");
     body.replaceChildren();
-    if (!key) {
-      var n = el("div", "note");
-      n.appendChild(el("strong", null, "내 정보는 개인 링크로 봅니다."));
-      var p = el("span", null, "게임 채팅에 ");
-      p.appendChild(el("code", null, "/trade 웹"));
-      p.appendChild(document.createTextNode(" 을 입력하고 [열기]를 누르면, 내 골드·우편함·거래 내역·땅이 이 탭에 나옵니다."));
-      n.appendChild(p);
-      n.appendChild(el("span", "muted", "링크는 나만 쓰세요. 다른 사람이 열면 내 정보가 보입니다."));
-      body.appendChild(n);
-      return;
-    }
+    if (!key) { body.appendChild(loginForm()); return; }
     if (meError) {
       var e = el("div", "note");
       e.appendChild(el("span", "err", meError));
-      var again = el("button", "btn", "다른 링크 쓰기 (지금 링크 지우기)");
-      again.addEventListener("click", logout);
-      e.appendChild(again);
       body.appendChild(e);
+      body.appendChild(loginForm());
       return;
     }
     if (!ME) { body.appendChild(el("p", "muted", "내 정보를 불러오는 중입니다.")); return; }
     var head = el("div", "tools");
     head.appendChild(el("h2", null, ME.name + "님" + (ME.online ? " (접속 중)" : "")));
-    var out = el("button", "btn", "이 기기에서 링크 지우기");
+    var out = el("button", "btn", "로그아웃");
     out.addEventListener("click", logout);
     head.appendChild(out);
     body.appendChild(head);
@@ -325,18 +401,31 @@ section[hidden] { display: none !important; }
       return r;
     }), "속한 그룹이 없습니다.");
     body.appendChild(groups);
-    body.appendChild(el("p", "muted", "링크 만료: " + new Date(ME.expires).toLocaleString("ko-KR") + " · 20초마다 새로 고칩니다."));
+    body.appendChild(el("h2", null, "계정"));
+    body.appendChild(passwordForm());
+    body.appendChild(el("p", "muted", "로그인 유지: " + new Date(ME.expires).toLocaleString("ko-KR") + "까지 · 20초마다 새로 고칩니다."));
+  }
+  function setKey(k) {
+    key = k;
+    try { localStorage.setItem(KEY_STORE, key); } catch (e) {}
   }
   function logout() {
+    if (key) post("/api/logout", {}, { "X-Key": key }).catch(function () {});
     key = ""; ME = null; meError = "";
     try { localStorage.removeItem(KEY_STORE); } catch (e) {}
     drawMe();
   }
 
   // --- data ---------------------------------------------------------------------
+  function post(url, data, headers) {
+    var h = Object.assign({ "Content-Type": "application/json" }, headers || {});
+    return fetch(url, { method: "POST", headers: h, body: JSON.stringify(data), cache: "no-store" }).then(function (r) {
+      return r.json().then(function (j) { return { ok: r.ok, body: j }; });
+    });
+  }
   function get(url, headers) {
     return fetch(url, { headers: headers || {}, cache: "no-store" }).then(function (r) {
-      return r.json().then(function (j) { return { ok: r.ok, body: j }; });
+      return r.json().then(function (j) { return { ok: r.ok, status: r.status, body: j }; });
     });
   }
   function loadPublic() {
@@ -354,7 +443,12 @@ section[hidden] { display: none !important; }
   function loadMe() {
     if (!key) return;
     get("/api/me", { "X-Key": key }).then(function (r) {
-      if (r.ok) { ME = r.body; meError = ""; } else { ME = null; meError = r.body.error || "정보를 가져오지 못했습니다."; }
+      if (r.ok) { ME = r.body; meError = ""; }
+      else if (r.status === 401 || !r.ok) {
+        ME = null; meError = r.body.error || "정보를 가져오지 못했습니다.";
+        if (r.status === 401) { key = ""; try { localStorage.removeItem(KEY_STORE); } catch (e) {} }
+      }
+      drawWho();
       if (view === "me") drawMe();
     }).catch(function () { meError = "서버에 연결할 수 없습니다."; if (view === "me") drawMe(); });
   }
@@ -386,6 +480,7 @@ section[hidden] { display: none !important; }
   get("/api/values").then(function (r) { VALUES = r.body; if (view === "prices") drawPrices(); }).catch(function () {});
   setInterval(loadPublic, 5000);
   setInterval(function () { if (view === "me") loadMe(); }, 20000);
+  if (key) loadMe();
   route();
 })();
 </script>

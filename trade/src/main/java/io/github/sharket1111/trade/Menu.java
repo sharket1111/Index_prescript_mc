@@ -303,6 +303,7 @@ abstract class Menu implements InventoryHolder {
 		@EventHandler
 		public void onJoin(PlayerJoinEvent event) {
 			Money.onJoin(event.getPlayer());
+			WebAccounts.renamed(event.getPlayer().getUniqueId(), event.getPlayer().getName());
 			Mailbox.notifyOnJoin(event.getPlayer());
 		}
 
