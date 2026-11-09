@@ -15,6 +15,7 @@ final class AdminMenu extends Menu {
 	private static final int SHOP_SLOT = 16;
 	private static final int PROTECT_SLOT = 22;
 	private static final int CURRENCY_SLOT = 4;
+	private static final int GIVE_ALL_SLOT = 20;
 	static final int NAME_MAX = 10;
 	static final int SYMBOL_MAX = 5;
 
@@ -37,6 +38,8 @@ final class AdminMenu extends Menu {
 		inventory.setItem(CURRENCY_SLOT, TradeItems.glint(TradeItems.button(Material.GOLD_INGOT, "화폐 이름: " + Money.name()
 				+ " (단위 " + Money.symbol() + ")", NamedTextColor.GOLD, "클릭: 화폐 이름과 단위를 채팅으로 바꿉니다.",
 				"예: 이름 '원', 단위 '원' → 1,250 원", "명령어: /trade 화폐 <이름> [단위]")));
+		inventory.setItem(GIVE_ALL_SLOT, TradeItems.button(Material.GOLD_BLOCK, "전체 지급", NamedTextColor.GOLD,
+				"모든 플레이어(또는 접속 중인 플레이어)에게", "같은 금액을 지급합니다. (관리자 잔액은 그대로)"));
 		inventory.setItem(BACK_SLOT, TradeItems.back());
 	}
 
@@ -82,6 +85,7 @@ final class AdminMenu extends Menu {
 			case SHOP_SLOT -> new ShopEditorMenu(player).open();
 			case PROTECT_SLOT -> new ProtectMenu(player, 0).open();
 			case CURRENCY_SLOT -> renameCurrency();
+			case GIVE_ALL_SLOT -> new GiveAllMenu(player).open();
 			default -> {
 				return;
 			}

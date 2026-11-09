@@ -242,6 +242,31 @@ final class Money {
 		save();
 	}
 
+	/**
+	 * Pays every one of {@code ids} the same amount (saved once): those online
+	 * are told at once, the others on their next join.
+	 */
+	static void giveAll(java.util.Collection<UUID> ids, long amount, String note) {
+		if (amount <= 0) {
+			return;
+		}
+		for (UUID id : ids) {
+			set(id, Math.min(MAX_BALANCE, balance(id) + amount));
+			Player online = Bukkit.getPlayer(id);
+			if (online != null) {
+				online.sendMessage(Component.text(note + ": " + format(amount) + "을(를) 받았습니다.", NamedTextColor.GOLD));
+			} else {
+				AWAY_TOTAL.merge(id, amount, Long::sum);
+				List<String> notes = AWAY_NOTES.computeIfAbsent(id, key -> new ArrayList<>());
+				notes.add(note + ": " + format(amount));
+				while (notes.size() > MAX_NOTES) {
+					notes.remove(0);
+				}
+			}
+		}
+		save();
+	}
+
 	/** Pays a player with a plain note, shown now or on their next join. */
 	static void give(UUID id, long amount, String note) {
 		give(id, amount, Component.text(note + ": " + format(amount) + "을(를) 받았습니다.", NamedTextColor.GREEN), note);
