@@ -243,8 +243,9 @@ final class Money {
 	}
 
 	/**
-	 * Pays every one of {@code ids} the same amount (saved once): those online
-	 * are told at once, the others on their next join.
+	 * Pays every one of {@code ids} the same amount (saved once), with the
+	 * admin's {@code note}: those online see it at once (chat, a title and a
+	 * sound), the others in what came in while they were away.
 	 */
 	static void giveAll(java.util.Collection<UUID> ids, long amount, String note) {
 		if (amount <= 0) {
@@ -254,7 +255,12 @@ final class Money {
 			set(id, Math.min(MAX_BALANCE, balance(id) + amount));
 			Player online = Bukkit.getPlayer(id);
 			if (online != null) {
-				online.sendMessage(Component.text(note + ": " + format(amount) + "을(를) 받았습니다.", NamedTextColor.GOLD));
+				online.sendMessage(Component.text("[전체 지급] ", NamedTextColor.GOLD)
+						.append(Component.text(note, NamedTextColor.YELLOW))
+						.append(Component.text(" (+" + format(amount) + ")", NamedTextColor.GREEN)));
+				online.showTitle(net.kyori.adventure.title.Title.title(Component.text("+" + format(amount), NamedTextColor.GOLD),
+						Component.text(note, NamedTextColor.YELLOW)));
+				online.playSound(online.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, org.bukkit.SoundCategory.MASTER, 0.8F, 1.2F);
 			} else {
 				AWAY_TOTAL.merge(id, amount, Long::sum);
 				List<String> notes = AWAY_NOTES.computeIfAbsent(id, key -> new ArrayList<>());
