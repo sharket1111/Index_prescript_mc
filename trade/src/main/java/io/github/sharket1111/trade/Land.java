@@ -218,6 +218,11 @@ final class Land {
 		return Math.abs(location.getBlockX() >> 4) <= SPAWN_RADIUS && Math.abs(location.getBlockZ() >> 4) <= SPAWN_RADIUS;
 	}
 
+	/** Every chunk {@code owner} owns. */
+	static List<Claim> ownedBy(UUID owner) {
+		return CLAIMS.values().stream().filter(c -> c.owner.equals(owner)).toList();
+	}
+
 	static long claimsOf(UUID owner) {
 		return CLAIMS.values().stream().filter(c -> c.owner.equals(owner)).count();
 	}

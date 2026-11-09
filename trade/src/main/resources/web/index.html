@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<title>서버 장터</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+/* A trading post's board: a header with the live player count, tabs, then ruled ledgers with prices on the right edge. */
+:root {
+  --bg: #eceee9; --surface: #fbfbf8; --ink: #1d2320; --muted: #5b655f; --line: #d3d8d1;
+  --gold: #a46f06; --gold-ink: #7a5204; --gold-soft: #f2e4bd; --chip: #e2e6df; --chip-on: #1d2320; --chip-on-ink: #fbfbf8;
+  --live: #2f8a4f; --bad: #b3361f; --blue: #3f5fa8; --blue-soft: #dfe5f4;
+  --font-display: "Black Han Sans", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #131714; --surface: #1a1f1b; --ink: #e6ebe4; --muted: #98a39b; --line: #2c332e;
+    --gold: #e0b03a; --gold-ink: #f0c65a; --gold-soft: #3a3019; --chip: #242a26; --chip-on: #e6ebe4; --chip-on-ink: #131714;
+    --live: #5cc47f; --bad: #ef7a62; --blue: #93a9e6; --blue-soft: #232b40; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font-body);
+  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 56px max(16px, env(safe-area-inset-left)); }
+.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+h1 { font: 400 clamp(32px, 6vw, 48px)/1.05 var(--font-display); margin: 0; }
+h1 .g { color: var(--gold); }
+.sub { color: var(--muted); margin: 6px 0 0; font-size: 14px; }
+.live { display: inline-flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-weight: 600; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--live); box-shadow: 0 0 0 3px color-mix(in srgb, var(--live) 25%, transparent); }
+.dot.off { background: var(--bad); box-shadow: none; }
+.live b { font-family: var(--font-num); }
+nav { display: flex; gap: 6px; overflow-x: auto; position: sticky; top: 0; z-index: 5; background: var(--bg); padding-block: 8px; border-bottom: 1px solid var(--line); }
+nav a { flex: none; text-decoration: none; color: var(--ink); background: var(--chip); border-radius: 999px; padding: 8px 14px; font-weight: 500; }
+nav a[aria-current="page"] { background: var(--chip-on); color: var(--chip-on-ink); }
+nav a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tools input[type=search] { flex: 1 1 240px; min-width: 0; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+select, .tools input[type=number] { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; }
+.tools input[type=number] { width: 84px; font-family: var(--font-num); text-align: right; }
+.muted { color: var(--muted); font-size: 13px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.card .k { color: var(--muted); font-size: 13px; }
+.card .v { font: 600 26px/1.2 var(--font-num); font-variant-numeric: tabular-nums; margin-top: 2px; overflow-wrap: anywhere; }
+.card.gold { background: var(--gold-soft); border-color: var(--gold); }
+.card.gold .v { color: var(--gold-ink); }
+h2 { font: 400 22px/1.2 var(--font-display); margin: 8px 0 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pchip { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 14px; }
+.ledger { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; align-items: center; padding: 11px 16px; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.main { min-width: 0; display: grid; gap: 2px; }
+.main strong { font-weight: 600; overflow-wrap: anywhere; }
+.meta { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.ench { color: var(--blue); font-size: 13px; }
+.tag { display: inline-block; font-size: 11.5px; border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; line-height: 19px; color: var(--muted); margin-left: 6px; }
+.tag.land { color: var(--live); border-color: var(--live); }
+.price { text-align: right; font: 600 16px var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.price .u { color: var(--gold-ink); margin-left: 4px; font-size: 13px; }
+.empty { padding: 26px 16px; text-align: center; color: var(--muted); }
+.note { background: var(--surface); border: 1px dashed var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 6px; }
+.note code { font-family: var(--font-num); background: var(--chip); border-radius: 6px; padding: 1px 6px; }
+.btn { font: 500 14px var(--font-body); color: var(--ink); background: var(--chip); border: 0; border-radius: 10px; padding: 9px 14px; cursor: pointer; }
+.err { color: var(--bad); font-size: 14px; }
+section[hidden] { display: none !important; }
+@media (max-width: 520px) { .row { padding: 10px 12px; } .card .v { font-size: 22px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1><span class="g">서버</span> 장터</h1>
+      <p class="sub" id="motd">서버 정보를 불러오는 중입니다.</p>
+    </div>
+    <div class="live" id="live"><span class="dot" id="dot"></span><span>접속 <b id="liveCount">-</b>명</span></div>
+  </header>
+
+  <nav aria-label="메뉴">
+    <a href="#server">서버</a><a href="#market">시장</a><a href="#orders">삽니다</a><a href="#prices">시세표</a><a href="#me">내 정보</a>
+  </nav>
+
+  <section id="v-server">
+    <div class="cards" id="serverCards"></div>
+    <h2>지금 접속한 사람</h2>
+    <div class="chips" id="players"></div>
+    <p class="muted" id="updated"></p>
+  </section>
+
+  <section id="v-market" hidden>
+    <div class="tools">
+      <input type="search" id="mq" placeholder="물건이나 판매자 이름으로 찾기" aria-label="시장에서 찾기" autocomplete="off">
+      <select id="msort" aria-label="정렬"><option value="new">최신순</option><option value="low">싼 순</option><option value="high">비싼 순</option></select>
+    </div>
+    <p class="muted" id="mcount"></p>
+    <div class="ledger" id="list-market"></div>
+    <p class="muted">사려면 게임에서 /trade → 시장으로 가세요.</p>
+  </section>
+
+  <section id="v-orders" hidden>
+    <div class="tools"><input type="search" id="oq" placeholder="물건이나 주문한 사람 이름으로 찾기" aria-label="주문에서 찾기" autocomplete="off"></div>
+    <p class="muted" id="ocount"></p>
+    <div class="ledger" id="list-orders"></div>
+    <p class="muted">주문에 팔려면 게임에서 /trade → 삽니다 게시판으로 가세요.</p>
+  </section>
+
+  <section id="v-prices" hidden>
+    <div class="tools">
+      <input type="search" id="pq" placeholder="아이템 이름으로 찾기 (예: 다이아, 철)" aria-label="시세에서 찾기" autocomplete="off">
+      <label class="muted" for="pqty">수량</label><input type="number" id="pqty" min="1" max="99999" value="1">
+      <select id="psort" aria-label="정렬"><option value="high">비싼 순</option><option value="low">싼 순</option><option value="name">이름 순</option></select>
+    </div>
+    <p class="muted" id="pcount"></p>
+    <div class="ledger" id="list-prices"></div>
+    <p class="muted">서버에 팔 때 받는 값입니다. 도구·무기·방어구는 재료값의 절반이고 닳은 만큼 더 깎입니다. 마법이 부여된 책은 마법 레벨 1당 20을 더 받습니다.</p>
+  </section>
+
+  <section id="v-me" hidden>
+    <div id="meBody"></div>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var KO = { items: {}, enchants: {} };
+  var PUB = null, VALUES = null, ME = null, meError = "";
+  var KEY_STORE = "trade-web-key";
+  var key = "";
+  try { key = localStorage.getItem(KEY_STORE) || ""; } catch (e) {}
+  var m = /(?:^|[#&])k=([0-9a-f]{20,})/.exec(location.hash);
+  if (m) {
+    key = m[1];
+    try { localStorage.setItem(KEY_STORE, key); } catch (e) {}
+    history.replaceState(null, "", location.pathname + "#me");
+  }
+
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function sym() { return (PUB && PUB.currency && PUB.currency.symbol) || (VALUES && VALUES.currency && VALUES.currency.symbol) || "G"; }
+  function money(v) {
+    if (v >= 100 || Math.abs(v - Math.round(v)) < 0.005) return Math.round(v).toLocaleString("ko-KR");
+    return String(Math.round(v * 100) / 100);
+  }
+  function ago(t) {
+    var s = Math.max(0, (Date.now() - t) / 1000);
+    if (s < 60) return "방금";
+    if (s < 3600) return Math.floor(s / 60) + "분 전";
+    if (s < 86400) return Math.floor(s / 3600) + "시간 전";
+    return Math.floor(s / 86400) + "일 전";
+  }
+  function itemName(it) {
+    return it.name || KO.items[it.id] || it.id.replace(/_/g, " ");
+  }
+  function enchText(it) {
+    if (!it.ench) return "";
+    return it.ench.map(function (p) { return (KO.enchants[p[0]] || p[0]) + " " + p[1]; }).join(", ");
+  }
+  function priceCell(v) {
+    var d = el("div", "price", money(v));
+    d.appendChild(el("span", "u", sym()));
+    return d;
+  }
+  /** One ledger row: the item (name, amount, enchantments, wear), a line of details, and a price. */
+  function row(it, details, price, extraTag) {
+    var r = el("div", "row"), main = el("div", "main");
+    var title = el("strong", null, itemName(it) + (it.amount > 1 ? " ×" + it.amount : ""));
+    if (extraTag) title.appendChild(el("span", "tag " + extraTag[0], extraTag[1]));
+    main.appendChild(title);
+    var e = enchText(it);
+    if (e) main.appendChild(el("span", "ench", e));
+    if (it.wear) main.appendChild(el("span", "meta", "내구도 " + (100 - it.wear) + "% 남음"));
+    if (details) main.appendChild(el("span", "meta", details));
+    r.appendChild(main);
+    if (price != null) r.appendChild(priceCell(price));
+    return r;
+  }
+  function fill(box, rows, emptyText) {
+    box.replaceChildren();
+    if (!rows.length) { box.appendChild(el("div", "empty", emptyText)); return; }
+    var frag = document.createDocumentFragment();
+    rows.forEach(function (r) { frag.appendChild(r); });
+    box.appendChild(frag);
+  }
+  function card(k, v, gold) {
+    var c = el("div", "card" + (gold ? " gold" : ""));
+    c.appendChild(el("div", "k", k));
+    c.appendChild(el("div", "v", v));
+    return c;
+  }
+
+  // --- views -------------------------------------------------------------------
+  function drawServer() {
+    if (!PUB) return;
+    var s = PUB.server;
+    $("motd").textContent = (s.motd || "마인크래프트 서버") + " · " + s.version;
+    $("liveCount").textContent = s.online;
+    var cards = $("serverCards");
+    cards.replaceChildren(card("접속 인원", s.online + " / " + s.max), card("시장 물품", PUB.market.length + "개"),
+      card("삽니다 주문", PUB.orders.length + "건"), card("화폐", PUB.currency.name + " (" + PUB.currency.symbol + ")"));
+    var box = $("players");
+    box.replaceChildren();
+    if (!s.players.length) box.appendChild(el("span", "muted", "지금은 아무도 없습니다."));
+    s.players.forEach(function (n) { box.appendChild(el("span", "pchip", n)); });
+    $("updated").textContent = "5초마다 새로 고칩니다. 마지막 갱신: " + new Date(PUB.updated).toLocaleTimeString("ko-KR");
+  }
+  function drawMarket() {
+    if (!PUB) return;
+    var q = $("mq").value.trim().toLowerCase(), sort = $("msort").value;
+    var list = PUB.market.filter(function (l) {
+      return !q || (itemName(l.item) + " " + l.item.id + " " + l.seller).toLowerCase().indexOf(q) >= 0;
+    });
+    list.sort(sort === "low" ? function (a, b) { return a.price - b.price; } : sort === "high" ? function (a, b) { return b.price - a.price; } : function (a, b) { return b.time - a.time; });
+    $("mcount").textContent = "판매 중 " + list.length + "개";
+    fill($("list-market"), list.map(function (l) {
+      return row(l.item, "판매자 " + l.seller + " · " + ago(l.time), l.price, l.land ? ["land", "땅 " + l.land.split(";").slice(1).join(", ")] : null);
+    }), q ? "찾는 물품이 없습니다." : "지금 시장에 올라온 물품이 없습니다.");
+  }
+  function drawOrders() {
+    if (!PUB) return;
+    var q = $("oq").value.trim().toLowerCase();
+    var list = PUB.orders.filter(function (o) {
+      return !q || (itemName(o.item) + " " + o.item.id + " " + o.buyer).toLowerCase().indexOf(q) >= 0;
+    });
+    $("ocount").textContent = "주문 " + list.length + "건";
+    fill($("list-orders"), list.map(function (o) {
+      var it = Object.assign({}, o.item, { amount: o.amount });
+      return row(it, "주문한 사람 " + o.buyer + " · " + ago(o.time), o.price);
+    }), q ? "찾는 주문이 없습니다." : "지금 올라온 삽니다 주문이 없습니다.");
+  }
+  function drawPrices() {
+    if (!VALUES) return;
+    var q = $("pq").value.trim().toLowerCase(), sort = $("psort").value;
+    var qty = Math.max(1, Math.min(99999, Math.floor(Number($("pqty").value) || 1)));
+    var list = VALUES.items.filter(function (r) {
+      return !q || ((KO.items[r[0]] || "") + " " + r[0] + " " + r[0].replace(/_/g, " ")).toLowerCase().indexOf(q) >= 0;
+    });
+    list.sort(sort === "low" ? function (a, b) { return a[1] - b[1]; } : sort === "name" ? function (a, b) { return (KO.items[a[0]] || a[0]).localeCompare(KO.items[b[0]] || b[0], "ko"); } : function (a, b) { return b[1] - a[1]; });
+    $("pcount").textContent = list.length + "개" + (qty > 1 ? " · " + qty + "개 기준" : " · 1개 가격");
+    var shown = list.slice(0, 400);
+    fill($("list-prices"), shown.map(function (r) {
+      var v = qty > 1 ? Math.floor(r[1] * qty + 1e-6) : r[1];
+      return row({ id: r[0], amount: 1 }, r[2] ? "도구·장비: 재료값의 절반" : r[0], v);
+    }), "표에 없는 아이템은 서버에 팔 수 없습니다.");
+    if (list.length > shown.length) $("list-prices").appendChild(el("div", "empty", "검색해서 나머지 " + (list.length - shown.length) + "개를 찾아보세요."));
+  }
+  function drawMe() {
+    var body = $("meBody");
+    body.replaceChildren();
+    if (!key) {
+      var n = el("div", "note");
+      n.appendChild(el("strong", null, "내 정보는 개인 링크로 봅니다."));
+      var p = el("span", null, "게임 채팅에 ");
+      p.appendChild(el("code", null, "/trade 웹"));
+      p.appendChild(document.createTextNode(" 을 입력하고 [열기]를 누르면, 내 골드·우편함·거래 내역·땅이 이 탭에 나옵니다."));
+      n.appendChild(p);
+      n.appendChild(el("span", "muted", "링크는 나만 쓰세요. 다른 사람이 열면 내 정보가 보입니다."));
+      body.appendChild(n);
+      return;
+    }
+    if (meError) {
+      var e = el("div", "note");
+      e.appendChild(el("span", "err", meError));
+      var again = el("button", "btn", "다른 링크 쓰기 (지금 링크 지우기)");
+      again.addEventListener("click", logout);
+      e.appendChild(again);
+      body.appendChild(e);
+      return;
+    }
+    if (!ME) { body.appendChild(el("p", "muted", "내 정보를 불러오는 중입니다.")); return; }
+    var head = el("div", "tools");
+    head.appendChild(el("h2", null, ME.name + "님" + (ME.online ? " (접속 중)" : "")));
+    var out = el("button", "btn", "이 기기에서 링크 지우기");
+    out.addEventListener("click", logout);
+    head.appendChild(out);
+    body.appendChild(head);
+    var cards = el("div", "cards");
+    cards.append(card("내 " + ME.currency.name, money(ME.balance) + " " + ME.currency.symbol, true), card("우편함", ME.mail.length + "개"),
+      card("판매 중", ME.listings.length + "개"), card("내 땅", ME.land.length + "청크"));
+    body.appendChild(cards);
+    function section(title, rows, empty) {
+      body.appendChild(el("h2", null, title));
+      var box = el("div", "ledger");
+      fill(box, rows, empty);
+      body.appendChild(box);
+    }
+    section("우편함", ME.mail.map(function (x) { return row(x.item, x.note + " · " + ago(x.time), null); }), "우편함이 비어 있습니다.");
+    section("내가 판매 중인 물품", ME.listings.map(function (x) { return row(x.item, "올린 때 " + ago(x.time), x.price); }), "판매 중인 물품이 없습니다.");
+    section("내 삽니다 주문", ME.orders.map(function (o) { return row(Object.assign({}, o.item, { amount: o.amount }), ago(o.time), o.price); }), "올린 주문이 없습니다.");
+    section("산 기록", ME.bought.map(function (x) { return row(x.item, "판매자 " + x.with + " · " + ago(x.time), x.price); }), "산 기록이 없습니다.");
+    section("판 기록", ME.sold.map(function (x) { return row(x.item, "구매자 " + x.with + " · " + ago(x.time), x.price); }), "판 기록이 없습니다.");
+    body.appendChild(el("h2", null, "내 땅"));
+    var land = el("div", "ledger");
+    fill(land, ME.land.map(function (c) {
+      var r = el("div", "row"), main = el("div", "main");
+      main.appendChild(el("strong", null, c.world + " · X " + c.x + " ~ " + (c.x + 15) + ", Z " + c.z + " ~ " + (c.z + 15)));
+      main.appendChild(el("span", "meta", "허락한 플레이어 " + c.members + "명 · 모두에게: " + (c.everyone.length ? c.everyone.join(", ") : "없음")));
+      r.appendChild(main);
+      return r;
+    }), "가진 땅이 없습니다. 서버 상점의 '땅 소유권'으로 살 수 있습니다.");
+    body.appendChild(land);
+    body.appendChild(el("h2", null, "내 그룹"));
+    var groups = el("div", "ledger");
+    fill(groups, ME.groups.map(function (g) {
+      var r = el("div", "row"), main = el("div", "main");
+      main.appendChild(el("strong", null, g.name));
+      main.appendChild(el("span", "meta", "내 역할: " + (g.role || "-") + " · 그룹원 " + g.members + "명"));
+      r.appendChild(main);
+      return r;
+    }), "속한 그룹이 없습니다.");
+    body.appendChild(groups);
+    body.appendChild(el("p", "muted", "링크 만료: " + new Date(ME.expires).toLocaleString("ko-KR") + " · 20초마다 새로 고칩니다."));
+  }
+  function logout() {
+    key = ""; ME = null; meError = "";
+    try { localStorage.removeItem(KEY_STORE); } catch (e) {}
+    drawMe();
+  }
+
+  // --- data ---------------------------------------------------------------------
+  function get(url, headers) {
+    return fetch(url, { headers: headers || {}, cache: "no-store" }).then(function (r) {
+      return r.json().then(function (j) { return { ok: r.ok, body: j }; });
+    });
+  }
+  function loadPublic() {
+    get("/api/public").then(function (r) {
+      PUB = r.body;
+      $("dot").classList.remove("off");
+      drawServer();
+      if (view === "market") drawMarket();
+      if (view === "orders") drawOrders();
+    }).catch(function () {
+      $("dot").classList.add("off");
+      $("motd").textContent = "서버에 연결할 수 없습니다. 서버가 꺼져 있을 수 있습니다.";
+    });
+  }
+  function loadMe() {
+    if (!key) return;
+    get("/api/me", { "X-Key": key }).then(function (r) {
+      if (r.ok) { ME = r.body; meError = ""; } else { ME = null; meError = r.body.error || "정보를 가져오지 못했습니다."; }
+      if (view === "me") drawMe();
+    }).catch(function () { meError = "서버에 연결할 수 없습니다."; if (view === "me") drawMe(); });
+  }
+
+  // --- routing ------------------------------------------------------------------
+  var VIEWS = ["server", "market", "orders", "prices", "me"];
+  var view = "server";
+  function route() {
+    var h = location.hash.replace("#", "");
+    view = VIEWS.indexOf(h) >= 0 ? h : "server";
+    VIEWS.forEach(function (v) { $("v-" + v).hidden = v !== view; });
+    document.querySelectorAll("nav a").forEach(function (a) {
+      if (a.getAttribute("href") === "#" + view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    });
+    if (view === "market") drawMarket();
+    if (view === "orders") drawOrders();
+    if (view === "prices") drawPrices();
+    if (view === "me") { drawMe(); loadMe(); }
+  }
+  window.addEventListener("hashchange", route);
+  $("mq").addEventListener("input", drawMarket);
+  $("msort").addEventListener("change", drawMarket);
+  $("oq").addEventListener("input", drawOrders);
+  $("pq").addEventListener("input", drawPrices);
+  $("psort").addEventListener("change", drawPrices);
+  $("pqty").addEventListener("input", drawPrices);
+
+  get("/ko.json").then(function (r) { KO = r.body || KO; route(); loadPublic(); }).catch(function () { route(); loadPublic(); });
+  get("/api/values").then(function (r) { VALUES = r.body; if (view === "prices") drawPrices(); }).catch(function () {});
+  setInterval(loadPublic, 5000);
+  setInterval(function () { if (view === "me") loadMe(); }, 20000);
+  route();
+})();
+</script>
+</body>
+</html>

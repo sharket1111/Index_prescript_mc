@@ -33,6 +33,7 @@ public final class TradePlugin extends JavaPlugin {
 		}
 		ItemValues.load(this);
 		getLogger().info(ItemValues.count() + " items can be sold to the server.");
+		WebSite.start(this);
 		Land.load(this);
 		ChatPrompt.init(this);
 		AnvilPrompt.init(this);
@@ -64,6 +65,7 @@ public final class TradePlugin extends JavaPlugin {
 				player.closeInventory();
 			}
 		}
+		WebSite.stop();
 		AnvilPrompt.closeAll();
 		DirectTrade.cancelAll();
 		Market.save();
@@ -75,7 +77,9 @@ public final class TradePlugin extends JavaPlugin {
 			sender.sendMessage(Component.text("플레이어만 쓸 수 있습니다.", NamedTextColor.RED));
 			return true;
 		}
-		if (args.length >= 1 && (args[0].equals("화폐") || args[0].equalsIgnoreCase("currency"))) {
+		if (args.length >= 1 && (args[0].equals("웹") || args[0].equalsIgnoreCase("web"))) {
+			WebSite.command(player, args.length >= 2 && (args[1].equals("끊기") || args[1].equalsIgnoreCase("revoke")));
+		} else if (args.length >= 1 && (args[0].equals("화폐") || args[0].equalsIgnoreCase("currency"))) {
 			currency(player, args);
 		} else if (args.length >= 1 && (args[0].equals("판매") || args[0].equalsIgnoreCase("sell"))) {
 			new SellMenu(player).open();
