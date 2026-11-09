@@ -304,13 +304,36 @@ final class Money {
 		convertDiamonds(player);
 	}
 
-	/** Old trade diamonds in the inventory or ender chest become money at {@link #DIAMOND_RATE} each. */
+	/** What one old trade diamond turns into: a diamond's value in values.yml (100 by default). */
+	static long diamondValue() {
+		Double value = ItemValues.value(Material.DIAMOND);
+		return value != null && value > 0 ? Math.round(value) : DIAMOND_RATE;
+	}
+
+	/**
+	 * Old trade diamonds the player carries become money, at a diamond's value
+	 * each: in the inventory (armour and off hand too), on the cursor, in the
+	 * ender chest, and inside shulker boxes and bundles kept in either.
+	 */
 	static void convertDiamonds(Player player) {
 		int count = takeDiamonds(player.getInventory()) + takeDiamonds(player.getEnderChest());
+		ItemStack cursor = player.getItemOnCursor();
+		if (TradeItems.isTradeDiamond(cursor)) {
+			count += cursor.getAmount();
+			player.setItemOnCursor(null);
+		} else if (cursor != null && !cursor.isEmpty()) {
+			int inside = takeNested(cursor);
+			if (inside > 0) {
+				count += inside;
+				player.setItemOnCursor(cursor);
+			}
+		}
 		if (count > 0) {
-			long amount = count * DIAMOND_RATE;
+			long amount = count * diamondValue();
 			add(player.getUniqueId(), amount);
-			player.sendMessage(Component.text("거래 전용 다이아 " + count + "개가 " + format(amount) + "(으)로 바뀌었습니다.", NamedTextColor.GOLD));
+			player.sendMessage(Component.text("거래 전용 다이아 " + count + "개가 " + format(amount) + "(으)로 바뀌었습니다. (1개 = "
+					+ format(diamondValue()) + ")", NamedTextColor.GOLD));
+			player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_EXPERIENCE_ORB_PICKUP, org.bukkit.SoundCategory.MASTER, 0.8F, 1.0F);
 		}
 	}
 
@@ -318,9 +341,49 @@ final class Money {
 		int count = 0;
 		for (int slot = 0; slot < inventory.getSize(); slot++) {
 			ItemStack stack = inventory.getItem(slot);
+			if (stack == null || stack.isEmpty()) {
+				continue;
+			}
 			if (TradeItems.isTradeDiamond(stack)) {
 				count += stack.getAmount();
 				inventory.setItem(slot, null);
+			} else {
+				int inside = takeNested(stack);
+				if (inside > 0) {
+					count += inside;
+					inventory.setItem(slot, stack);
+				}
+			}
+		}
+		return count;
+	}
+
+	/** Takes trade diamonds out of a shulker box or bundle item (changing {@code stack}); returns how many. */
+	private static int takeNested(ItemStack stack) {
+		if (!stack.hasItemMeta()) {
+			return 0;
+		}
+		org.bukkit.inventory.meta.ItemMeta meta = stack.getItemMeta();
+		int count = 0;
+		if (meta instanceof org.bukkit.inventory.meta.BlockStateMeta blockMeta && blockMeta.hasBlockState()
+				&& blockMeta.getBlockState() instanceof org.bukkit.block.ShulkerBox box) {
+			count = takeDiamonds(box.getInventory());
+			if (count > 0) {
+				blockMeta.setBlockState(box);
+				stack.setItemMeta(blockMeta);
+			}
+		} else if (meta instanceof org.bukkit.inventory.meta.BundleMeta bundle && bundle.hasItems()) {
+			List<ItemStack> kept = new ArrayList<>();
+			for (ItemStack inside : bundle.getItems()) {
+				if (TradeItems.isTradeDiamond(inside)) {
+					count += inside.getAmount();
+				} else {
+					kept.add(inside);
+				}
+			}
+			if (count > 0) {
+				bundle.setItems(kept);
+				stack.setItemMeta(bundle);
 			}
 		}
 		return count;

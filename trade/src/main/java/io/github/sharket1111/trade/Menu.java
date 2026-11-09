@@ -311,6 +311,26 @@ abstract class Menu implements InventoryHolder {
 			if (event.getInventory().getHolder(false) instanceof Menu menu && event.getPlayer() == menu.player) {
 				menu.closed();
 			}
+			// Old trade diamonds taken out of a chest become money straight away.
+			if (event.getPlayer() instanceof org.bukkit.entity.Player player) {
+				Bukkit.getScheduler().runTask(TradePlugin.getPlugin(TradePlugin.class), () -> {
+					if (player.isOnline()) {
+						Money.convertDiamonds(player);
+					}
+				});
+			}
+		}
+
+		/** ...and so do ones picked up from the ground. */
+		@EventHandler(ignoreCancelled = true)
+		public void onPickup(org.bukkit.event.entity.EntityPickupItemEvent event) {
+			if (event.getEntity() instanceof org.bukkit.entity.Player player && TradeItems.isTradeDiamond(event.getItem().getItemStack())) {
+				Bukkit.getScheduler().runTask(TradePlugin.getPlugin(TradePlugin.class), () -> {
+					if (player.isOnline()) {
+						Money.convertDiamonds(player);
+					}
+				});
+			}
 		}
 
 		@EventHandler

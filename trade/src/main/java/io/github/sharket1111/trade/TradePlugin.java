@@ -29,7 +29,7 @@ public final class TradePlugin extends JavaPlugin {
 			BuyOrders.save();
 			History.save();
 			Money.finishMigration();
-			getLogger().info("Converted trade diamonds to " + Money.name() + " (1 diamond = " + Money.DIAMOND_RATE + ").");
+			getLogger().info("Converted saved trade diamond prices to " + Money.name() + " (1 diamond = " + Money.DIAMOND_RATE + ").");
 		}
 		ItemValues.load(this);
 		getLogger().info(ItemValues.count() + " items can be sold to the server.");

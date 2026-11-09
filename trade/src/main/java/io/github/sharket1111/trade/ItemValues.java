@@ -114,6 +114,11 @@ final class ItemValues {
 		return VALUES.size();
 	}
 
+	/** The table's value of one {@code material}, or null if it cannot be sold. */
+	static Double value(Material material) {
+		return VALUES.get(material);
+	}
+
 	// --- appraising ---------------------------------------------------------------------
 
 	/** What one of {@code stack} sells for, or why it cannot be sold. */
@@ -122,7 +127,7 @@ final class ItemValues {
 			return new Appraisal(0, "빈 칸");
 		}
 		if (TradeItems.isTradeDiamond(stack)) {
-			return new Appraisal(Money.DIAMOND_RATE, null);
+			return new Appraisal(Money.diamondValue(), null);
 		}
 		if (TradeTools.toolOf(stack) != null) {
 			return new Appraisal(0, "무료 아이템");
