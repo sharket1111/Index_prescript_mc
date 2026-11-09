@@ -34,7 +34,7 @@ final class ProductEditor extends Menu {
 		ItemStack shown = existing == null ? newItem : existing.item;
 		ItemValues.Appraisal appraisal = shown == null ? null : ItemValues.appraise(shown);
 		inventory.setItem(PRICE_SLOT, TradeItems.glint(TradeItems.button(Material.GOLD_INGOT, "가격: " + Money.format(price),
-				NamedTextColor.GOLD, "양옆 버튼이나 '직접 입력'으로 정합니다.",
+				NamedTextColor.GOLD, "클릭: 채팅으로 직접 입력", "양옆 버튼: 조금씩 바꾸기",
 				appraisal != null && appraisal.sellable() ? "서버 판매가: " + Money.format((long) Math.floor(appraisal.unit() * shown.getAmount()))
 						+ " (이보다 싸게 팔면 되팔기로 돈을 법니다)" : "")));
 		for (int i = 0; i < STEP_SLOTS.length; i++) {
@@ -64,7 +64,7 @@ final class ProductEditor extends Menu {
 				return;
 			}
 		}
-		if (slot == INPUT_SLOT) {
+		if (slot == INPUT_SLOT || slot == PRICE_SLOT) {
 			askAmount("상품 가격을 입력하세요.", 0, ShopConfig.MAX_PRICE, value -> price = (int) value);
 			return;
 		}

@@ -55,7 +55,7 @@ final class ListingEditor extends Menu {
 	void draw() {
 		inventory.setItem(ITEM_SLOT, item.clone());
 		inventory.setItem(PRICE_SLOT, TradeItems.glint(TradeItems.button(Material.GOLD_INGOT, "가격: " + Money.format(price),
-				NamedTextColor.GOLD, "양옆 버튼이나 '직접 입력'으로 정합니다.", "(" + Money.format(Market.MIN_PRICE) + " ~ " + Money.format(Market.MAX_PRICE) + ")",
+				NamedTextColor.GOLD, "클릭: 채팅으로 직접 입력", "양옆 버튼: 조금씩 바꾸기", "(" + Money.format(Market.MIN_PRICE) + " ~ " + Money.format(Market.MAX_PRICE) + ")",
 				Land.deedChunk(item) != null ? "" : "서버 판매가: " + serverValue())));
 		for (int i = 0; i < STEP_SLOTS.length; i++) {
 			inventory.setItem(STEP_SLOTS[i], TradeItems.stepButton(STEPS[i], "현재 가격: " + Money.format(price)));
@@ -89,7 +89,7 @@ final class ListingEditor extends Menu {
 				return;
 			}
 		}
-		if (slot == INPUT_SLOT) {
+		if (slot == INPUT_SLOT || slot == PRICE_SLOT) {
 			askAmount("판매 가격을 입력하세요.", Market.MIN_PRICE, Market.MAX_PRICE, value -> price = (int) value);
 			return;
 		}

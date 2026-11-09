@@ -24,7 +24,10 @@ final class TradeView extends Menu {
 	private static final int[] MONEY_STEPS = {-1000, -100, 100, 1000};
 	private static final int MY_MONEY_SLOT = 40;
 	private static final int THEIR_MONEY_SLOT = 42;
+	private static final int TYPE_MONEY_SLOT = 41;
 	private final DirectTrade.Session session;
+	/** Typing an amount in chat: the window is closed for it, but the trade goes on. */
+	private boolean typing;
 
 	TradeView(Player player, DirectTrade.Session session) {
 		super(player, "거래 - " + session.other(player).getName() + "님과 직접 거래", 6);
@@ -63,6 +66,8 @@ final class TradeView extends Menu {
 		inventory.setItem(MY_MONEY_SLOT, TradeItems.glint(TradeItems.button(Material.GOLD_INGOT, "내가 줄 " + Money.name() + ": " + Money.format(myMoney),
 				NamedTextColor.GOLD, "왼쪽 버튼으로 정합니다. 좌클릭 +10 / 우클릭 -10",
 				"내 " + Money.name() + ": " + Money.format(Money.balance(player.getUniqueId())), "교환될 때 빠져나갑니다.")));
+		inventory.setItem(TYPE_MONEY_SLOT, TradeItems.button(Material.NAME_TAG, "줄 " + Money.name() + " 직접 입력", NamedTextColor.YELLOW,
+				"채팅으로 금액을 입력합니다. (예: 2500, 1.5만)", "입력하는 동안에도 거래는 이어집니다."));
 		inventory.setItem(THEIR_MONEY_SLOT, TradeItems.button(Material.GOLD_NUGGET,
 				other.getName() + "님이 줄 " + Money.name() + ": " + Money.format(session.moneyOfOther(player)), NamedTextColor.YELLOW));
 		inventory.setItem(CANCEL_SLOT, TradeItems.button(Material.BARRIER, "거래 취소", NamedTextColor.RED, "올린 물건은 모두 돌려받습니다."));
@@ -100,6 +105,10 @@ final class TradeView extends Menu {
 				return;
 			}
 		}
+		if (slot == TYPE_MONEY_SLOT) {
+			typeMoney();
+			return;
+		}
 		if (slot == MY_MONEY_SLOT) {
 			offerMoney(session.moneyOf(player) + (click.isRightClick() ? -10 : 10));
 			return;
@@ -115,6 +124,32 @@ final class TradeView extends Menu {
 				return;
 			}
 		}
+	}
+
+	/** Asks for the money to offer in chat; the window comes back afterwards, the trade still on. */
+	private void typeMoney() {
+		typing = true;
+		Runnable back = () -> {
+			typing = false;
+			if (!session.done && player.isOnline()) {
+				open();
+			}
+		};
+		ChatPrompt.ask(player, "줄 " + Money.object() + " 입력하세요. (내 " + Money.name() + ": " + Money.format(Money.balance(player.getUniqueId())) + ")",
+				text -> {
+					Long value = parseAmount(text);
+					if (session.done) {
+						typing = false;
+						tell("거래가 이미 끝났습니다.", NamedTextColor.GRAY);
+						return;
+					}
+					if (value == null) {
+						tell("숫자로 입력하세요: " + text, NamedTextColor.RED);
+					} else {
+						offerMoney(value);
+					}
+					back.run();
+				}, back, back);
 	}
 
 	/** Changes the money offered, between nothing and the whole balance. */
@@ -156,10 +191,10 @@ final class TradeView extends Menu {
 		failSound();
 	}
 
-	/** Closing the window cancels the trade. */
+	/** Closing the window cancels the trade (not when it closed for typing an amount). */
 	@Override
 	void closed() {
-		if (!session.done) {
+		if (!session.done && !typing) {
 			session.cancel(player);
 		}
 	}

@@ -28,7 +28,7 @@ final class ChatPrompt {
 	private static final Map<UUID, Pending> PENDING = new ConcurrentHashMap<>();
 	private static Plugin plugin;
 
-	private record Pending(Consumer<String> answer, Runnable cancelled, long token) {
+	private record Pending(Consumer<String> answer, Runnable cancelled, Runnable timedOut, long token) {
 	}
 
 	private ChatPrompt() {
@@ -40,8 +40,13 @@ final class ChatPrompt {
 
 	/** Asks {@code question}; {@code answer} gets the line typed, {@code cancelled} runs on "취소" or after a minute. */
 	static void ask(Player player, String question, Consumer<String> answer, Runnable cancelled) {
+		ask(player, question, answer, cancelled, null);
+	}
+
+	/** As {@link #ask(Player, String, Consumer, Runnable)}, and {@code timedOut} runs if a minute passes with no answer. */
+	static void ask(Player player, String question, Consumer<String> answer, Runnable cancelled, Runnable timedOut) {
 		long token = System.nanoTime();
-		PENDING.put(player.getUniqueId(), new Pending(answer, cancelled, token));
+		PENDING.put(player.getUniqueId(), new Pending(answer, cancelled, timedOut, token));
 		player.closeInventory();
 		player.sendMessage(Component.text(question, NamedTextColor.GOLD));
 		player.sendMessage(Component.text("채팅으로 입력하세요. ('취소'를 입력하면 그만둡니다)", NamedTextColor.GRAY));
@@ -51,6 +56,9 @@ final class ChatPrompt {
 				PENDING.remove(player.getUniqueId());
 				if (player.isOnline()) {
 					player.sendMessage(Component.text("입력 시간이 지나 취소되었습니다.", NamedTextColor.GRAY));
+					if (pending.timedOut != null) {
+						pending.timedOut.run();
+					}
 				}
 			}
 		}, TIMEOUT_TICKS);

@@ -40,7 +40,7 @@ final class BuyOrderEditor extends Menu {
 			inventory.setItem(AMOUNT_SLOTS[i], TradeItems.stepButton(AMOUNT_STEPS[i], "살 개수: " + amount + "개"));
 		}
 		inventory.setItem(PRICE_SLOT, TradeItems.glint(TradeItems.button(Material.GOLD_INGOT, "주는 값: " + Money.format(price),
-				NamedTextColor.GOLD, "살 개수: " + amount + "개 (위 버튼)", "주는 값: 양옆 버튼이나 '직접 입력'")));
+				NamedTextColor.GOLD, "살 개수: " + amount + "개 (위 버튼)", "클릭: 주는 값을 채팅으로 직접 입력", "양옆 버튼: 조금씩 바꾸기")));
 		for (int i = 0; i < PRICE_SLOTS.length; i++) {
 			inventory.setItem(PRICE_SLOTS[i], TradeItems.stepButton(PRICE_STEPS[i], "주는 값: " + Money.format(price)));
 		}
@@ -76,7 +76,7 @@ final class BuyOrderEditor extends Menu {
 				return;
 			}
 		}
-		if (slot == INPUT_SLOT) {
+		if (slot == INPUT_SLOT || slot == PRICE_SLOT) {
 			askAmount("주는 값을 입력하세요.", 1, BuyOrders.MAX_PRICE, value -> price = (int) value);
 			return;
 		}

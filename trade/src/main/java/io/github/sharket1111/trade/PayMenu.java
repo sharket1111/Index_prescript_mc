@@ -38,7 +38,7 @@ final class PayMenu extends Menu {
 		inventory.setItem(4, TradeItems.button(Material.PLAYER_HEAD, "받는 사람: " + name, NamedTextColor.YELLOW,
 				Bukkit.getPlayer(target) != null ? "접속 중: 바로 받습니다." : "접속 안 함: 다음 접속 때 알려줍니다."));
 		inventory.setItem(AMOUNT_SLOT, TradeItems.glint(TradeItems.button(Material.GOLD_INGOT, "보낼 금액: " + Money.format(amount),
-				NamedTextColor.GOLD, "내 " + Money.name() + ": " + Money.format(have))));
+				NamedTextColor.GOLD, "클릭: 채팅으로 직접 입력", "양옆 버튼: 조금씩 바꾸기", "내 " + Money.name() + ": " + Money.format(have))));
 		for (int i = 0; i < STEP_SLOTS.length; i++) {
 			inventory.setItem(STEP_SLOTS[i], TradeItems.stepButton(STEPS[i], "현재 금액: " + Money.format(amount)));
 		}
@@ -64,7 +64,7 @@ final class PayMenu extends Menu {
 				return;
 			}
 		}
-		if (slot == INPUT_SLOT) {
+		if (slot == INPUT_SLOT || slot == AMOUNT_SLOT) {
 			askAmount("보낼 금액을 입력하세요.", 1, Math.max(1, Money.balance(player.getUniqueId())), value -> amount = value);
 			return;
 		}
