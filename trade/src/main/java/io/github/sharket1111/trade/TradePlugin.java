@@ -82,7 +82,10 @@ public final class TradePlugin extends JavaPlugin {
 			sender.sendMessage(Component.text("플레이어만 쓸 수 있습니다.", NamedTextColor.RED));
 			return true;
 		}
-		if (args.length >= 1 && (args[0].equals("웹") || args[0].equalsIgnoreCase("web"))) {
+		if (args.length >= 2 && args[0].equals("공지") && player.hasPermission(AdminMenu.PERMISSION)) {
+			WebNotices.post("공지", String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length)), player.getName(), false);
+			player.sendMessage(Component.text("웹 사이트에 공지를 올렸습니다.", NamedTextColor.GREEN));
+		} else if (args.length >= 1 && (args[0].equals("웹") || args[0].equalsIgnoreCase("web"))) {
 			WebSite.command(player, args.length >= 2 ? args[1] : "");
 		} else if (args.length >= 1 && (args[0].equals("화폐") || args[0].equalsIgnoreCase("currency"))) {
 			currency(player, args);

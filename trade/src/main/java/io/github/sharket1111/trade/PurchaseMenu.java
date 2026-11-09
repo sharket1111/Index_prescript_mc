@@ -93,8 +93,8 @@ final class PurchaseMenu extends Menu {
 			redraw();
 			return;
 		}
-		Market.remove(listing);
 		History.record(listing, player.getUniqueId(), player.getName(), price);
+		Market.remove(listing);
 		if (chunk != null) {
 			Land.transfer(chunk, player);
 		} else {

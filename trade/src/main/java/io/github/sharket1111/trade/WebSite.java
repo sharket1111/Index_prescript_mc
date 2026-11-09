@@ -90,12 +90,17 @@ final class WebSite {
 					"  (Shockbyte: panel > Ports > Add Additional Port).",
 					"address: the address players type to reach the server (IP or domain), used in links.",
 					"link-hours: how long a quick link from /trade 웹 works.",
-					"session-days: how long a login with name and password lasts on a device."));
+					"session-days: how long a login with name and password lasts on a device.",
+					"trade-enabled: whether logged-in players may buy and send money from the page.",
+					"max-per-action / max-per-day: the most a player may spend from the page at once / in a day."));
 			yaml.set("enabled", false);
 			yaml.set("port", 0);
 			yaml.set("address", "");
 			yaml.set("link-hours", 24);
 			yaml.set("session-days", 14);
+			yaml.set("trade-enabled", true);
+			yaml.set("max-per-action", 100000);
+			yaml.set("max-per-day", 300000);
 			try {
 				owner.getDataFolder().mkdirs();
 				yaml.save(file);
@@ -108,7 +113,9 @@ final class WebSite {
 		address = yaml.getString("address", "").trim();
 		linkHours = Math.max(1, yaml.getInt("link-hours", 24));
 		sessionDays = Math.max(1, yaml.getInt("session-days", 14));
+		WebActions.configure(yaml.getBoolean("trade-enabled", true), yaml.getLong("max-per-action", 100000), yaml.getLong("max-per-day", 300000));
 		WebAccounts.load(owner);
+		WebNotices.load(owner);
 		if (!enabled) {
 			return;
 		}
@@ -120,6 +127,7 @@ final class WebSite {
 		indexPage = resource("/web/index.html");
 		namesJson = resource("/web/ko.json");
 		valuesJson = values();
+		WebData.start(owner);
 		refresh();
 		Bukkit.getScheduler().runTaskTimer(owner, WebSite::refresh, REFRESH_TICKS, REFRESH_TICKS);
 		try {
@@ -229,6 +237,23 @@ final class WebSite {
 			if ("POST".equals(exchange.getRequestMethod())) {
 				switch (path) {
 					case "/api/login" -> login(exchange);
+					case "/api/buy" -> action(exchange, (player, body) -> WebActions.buy(player, text(body, "id")));
+					case "/api/pay" -> action(exchange, (player, body) -> WebActions.pay(player, text(body, "to"), number(body, "amount")));
+					case "/api/order/cancel" -> action(exchange, (player, body) -> WebActions.cancelOrder(player, text(body, "id")));
+					case "/api/admin/balance" -> admin(exchange, (player, body) -> WebActions.balance(player, text(body, "name"), text(body, "mode"),
+							number(body, "amount")));
+					case "/api/admin/giveall" -> admin(exchange, (player, body) -> WebActions.giveAll(player, number(body, "amount"),
+							body != null && body.has("everyone") && body.get("everyone").getAsBoolean(), text(body, "message")));
+					case "/api/admin/notice" -> admin(exchange, (player, body) -> {
+						if (text(body, "body").isBlank() && text(body, "title").isBlank()) {
+							return WebActions.error("내용을 입력하세요.");
+						}
+						WebNotices.post(text(body, "title"), text(body, "body"), WebActions.name(player) + "(웹)", false);
+						return WebActions.ok("공지를 올렸습니다.");
+					});
+					case "/api/admin/notice/delete" -> admin(exchange, (player, body) -> WebNotices.delete(text(body, "id"))
+							? WebActions.ok("공지를 지웠습니다.") : WebActions.error("이미 없는 공지입니다."));
+					case "/api/admin/shop" -> admin(exchange, (player, body) -> WebActions.shopPrice(player, text(body, "id"), number(body, "price")));
 					case "/api/logout" -> logout(exchange);
 					case "/api/password" -> password(exchange);
 					default -> send(exchange, 404, "text/plain", "Not found".getBytes(StandardCharsets.UTF_8));
@@ -245,11 +270,64 @@ final class WebSite {
 				case "/api/public" -> json(exchange, 200, publicJson);
 				case "/api/values" -> json(exchange, 200, valuesJson);
 				case "/api/me" -> me(exchange);
+				case "/api/stats" -> json(exchange, 200, WebData.stats());
+				case "/api/map" -> json(exchange, 200, WebData.map());
+				case "/api/notices" -> json(exchange, 200, GSON.toJson(notices()));
+				case "/api/admin" -> admin(exchange, (player, body) -> WebActions.adminData());
 				default -> send(exchange, 404, "text/plain", "Not found".getBytes(StandardCharsets.UTF_8));
 			}
 		} catch (RuntimeException e) {
 			plugin.getLogger().log(Level.WARNING, "Web request failed", e);
 		}
+	}
+
+	/** Something a logged-in player does: run on the main thread with their id and the request body. */
+	private interface Action {
+		String run(UUID player, JsonObject body);
+	}
+
+	private static void action(HttpExchange exchange, Action action) throws IOException {
+		UUID player = WebAccounts.session(exchange.getRequestHeaders().getFirst("X-Key"));
+		if (player == null) {
+			json(exchange, 401, error("로그인이 끝났습니다. 다시 로그인하세요."));
+			return;
+		}
+		JsonObject body = "POST".equals(exchange.getRequestMethod()) ? body(exchange) : null;
+		Future<String> future = Bukkit.getScheduler().callSyncMethod(plugin, () -> action.run(player, body));
+		try {
+			String answer = future.get(5, TimeUnit.SECONDS);
+			json(exchange, answer.contains("\"error\"") ? 400 : 200, answer);
+		} catch (Exception e) {
+			json(exchange, 503, error("서버가 바빠서 처리하지 못했습니다. 잠시 뒤 다시 시도하세요."));
+		}
+	}
+
+	/** An admin's action: as {@link #action}, for players with the trade admin permission (or ops). */
+	private static void admin(HttpExchange exchange, Action action) throws IOException {
+		action(exchange, (player, body) -> WebActions.isAdmin(player) ? action.run(player, body) : WebActions.error("관리자만 쓸 수 있습니다."));
+	}
+
+	private static long number(JsonObject body, String field) {
+		try {
+			return body != null && body.has(field) ? body.get(field).getAsLong() : 0;
+		} catch (RuntimeException e) {
+			return 0;
+		}
+	}
+
+	private static JsonArray notices() {
+		JsonArray out = new JsonArray();
+		for (WebNotices.Notice notice : WebNotices.all()) {
+			JsonObject row = new JsonObject();
+			row.addProperty("id", notice.id());
+			row.addProperty("title", notice.title());
+			row.addProperty("body", notice.body());
+			row.addProperty("author", notice.author());
+			row.addProperty("time", notice.time());
+			row.addProperty("giveAll", notice.giveAll());
+			out.add(row);
+		}
+		return out;
 	}
 
 	private static void me(HttpExchange exchange) throws IOException {
@@ -397,7 +475,13 @@ final class WebSite {
 			JsonObject row = new JsonObject();
 			row.add("item", item(listing.item));
 			row.addProperty("price", listing.price);
+			row.addProperty("id", listing.id.toString());
 			row.addProperty("seller", Market.name(listing.seller));
+			row.addProperty("sellerId", listing.seller.toString());
+			Double average = WebData.average(listing.item.getType().getKey().getKey());
+			if (average != null) {
+				row.addProperty("avg", average);
+			}
 			row.addProperty("time", listing.createdAt);
 			String chunk = Land.deedChunk(listing.item);
 			if (chunk != null) {
@@ -411,6 +495,7 @@ final class WebSite {
 			orders.add(order(order));
 		}
 		root.add("orders", orders);
+		root.add("notices", notices());
 		root.addProperty("updated", System.currentTimeMillis());
 		return GSON.toJson(root);
 	}
@@ -424,6 +509,7 @@ final class WebSite {
 
 	private static JsonObject order(BuyOrders.Order order) {
 		JsonObject row = new JsonObject();
+		row.addProperty("id", order.id.toString());
 		ItemStack shown = order.want.clone();
 		shown.setAmount(1);
 		row.add("item", item(shown));
@@ -494,6 +580,31 @@ final class WebSite {
 		String name = Bukkit.getOfflinePlayer(id).getName();
 		root.addProperty("name", name != null ? name : String.valueOf(WebAccounts.nameOf(id)));
 		root.addProperty("hasPassword", WebAccounts.hasPassword(id));
+		root.addProperty("uuid", id.toString());
+		root.addProperty("admin", WebActions.isAdmin(id));
+		root.add("limits", WebActions.limits(id));
+		JsonObject stats = new JsonObject();
+		org.bukkit.OfflinePlayer offline = Bukkit.getOfflinePlayer(id);
+		try {
+			stats.addProperty("minutes", offline.getStatistic(org.bukkit.Statistic.PLAY_ONE_MINUTE) / 20L / 60L);
+			stats.addProperty("deaths", offline.getStatistic(org.bukkit.Statistic.DEATHS));
+			stats.addProperty("playerKills", offline.getStatistic(org.bukkit.Statistic.PLAYER_KILLS));
+			stats.addProperty("mobKills", offline.getStatistic(org.bukkit.Statistic.MOB_KILLS));
+		} catch (RuntimeException e) {
+			// No statistics yet.
+		}
+		stats.addProperty("firstPlayed", offline.getFirstPlayed());
+		stats.addProperty("lastSeen", offline.getLastSeen());
+		root.add("stats", stats);
+		Player online = Bukkit.getPlayer(id);
+		if (online != null) {
+			root.add("inventory", slots(online.getInventory().getStorageContents()));
+			ItemStack[] worn = online.getInventory().getArmorContents();
+			ItemStack[] gear = java.util.Arrays.copyOf(worn, worn.length + 1);
+			gear[worn.length] = online.getInventory().getItemInOffHand();
+			root.add("gear", slots(gear));
+			root.add("enderChest", slots(online.getEnderChest().getContents()));
+		}
 		root.addProperty("online", Bukkit.getPlayer(id) != null);
 		root.addProperty("balance", Money.balance(id));
 		root.add("currency", currency());
@@ -550,6 +661,19 @@ final class WebSite {
 		}
 		root.add("groups", groups);
 		return GSON.toJson(root);
+	}
+
+	/** Slots of an inventory: an item per slot, or null for an empty one. */
+	private static JsonArray slots(ItemStack[] contents) {
+		JsonArray out = new JsonArray();
+		for (ItemStack stack : contents) {
+			if (stack == null || stack.isEmpty()) {
+				out.add(com.google.gson.JsonNull.INSTANCE);
+			} else {
+				out.add(item(stack));
+			}
+		}
+		return out;
 	}
 
 	private static JsonArray history(UUID id, boolean sales) {

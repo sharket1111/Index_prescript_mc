@@ -13,7 +13,7 @@
 :root {
   --bg: #eceee9; --surface: #fbfbf8; --ink: #1d2320; --muted: #5b655f; --line: #d3d8d1;
   --gold: #a46f06; --gold-ink: #7a5204; --gold-soft: #f2e4bd; --chip: #e2e6df; --chip-on: #1d2320; --chip-on-ink: #fbfbf8;
-  --live: #2f8a4f; --bad: #b3361f; --blue: #3f5fa8; --blue-soft: #dfe5f4;
+  --live: #2f8a4f; --live-soft: #dcefe2; --bad: #b3361f; --bad-soft: #f6e0da; --blue: #3f5fa8; --blue-soft: #dfe5f4;
   --font-display: "Black Han Sans", "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   --font-num: "IBM Plex Mono", ui-monospace, Menlo, monospace;
@@ -23,70 +23,99 @@
   :root {
     --bg: #131714; --surface: #1a1f1b; --ink: #e6ebe4; --muted: #98a39b; --line: #2c332e;
     --gold: #e0b03a; --gold-ink: #f0c65a; --gold-soft: #3a3019; --chip: #242a26; --chip-on: #e6ebe4; --chip-on-ink: #131714;
-    --live: #5cc47f; --bad: #ef7a62; --blue: #93a9e6; --blue-soft: #232b40; color-scheme: dark;
+    --live: #5cc47f; --live-soft: #1d3324; --bad: #ef7a62; --bad-soft: #3d221c; --blue: #93a9e6; --blue-soft: #232b40; color-scheme: dark;
   }
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font-body);
-  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 56px max(16px, env(safe-area-inset-left)); }
-.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 64px max(16px, env(safe-area-inset-left)); }
+.wrap { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
 header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
 h1 { font: 400 clamp(32px, 6vw, 48px)/1.05 var(--font-display); margin: 0; }
 h1 .g { color: var(--gold); }
+h2 { font: 400 22px/1.2 var(--font-display); margin: 10px 0 0; }
+h3 { font-size: 15px; margin: 0; }
 .sub { color: var(--muted); margin: 6px 0 0; font-size: 14px; }
-.live { display: inline-flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-weight: 600; }
+.hright { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.pill { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-weight: 600; }
+.pill.in { background: var(--gold-soft); border-color: var(--gold); color: var(--gold-ink); }
+.pill b { font-family: var(--font-num); }
 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--live); box-shadow: 0 0 0 3px color-mix(in srgb, var(--live) 25%, transparent); }
 .dot.off { background: var(--bad); box-shadow: none; }
-.live b { font-family: var(--font-num); }
-nav { display: flex; gap: 6px; overflow-x: auto; position: sticky; top: 0; z-index: 5; background: var(--bg); padding-block: 8px; border-bottom: 1px solid var(--line); }
+nav { display: flex; gap: 6px; overflow-x: auto; position: sticky; top: 0; z-index: 5; background: var(--bg); padding-block: 8px; border-bottom: 1px solid var(--line); scrollbar-width: thin; }
 nav a { flex: none; text-decoration: none; color: var(--ink); background: var(--chip); border-radius: 999px; padding: 8px 14px; font-weight: 500; }
 nav a[aria-current="page"] { background: var(--chip-on); color: var(--chip-on-ink); }
-nav a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+nav a[hidden] { display: none; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, canvas:focus-visible, .row.click:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+section { display: flex; flex-direction: column; gap: 12px; }
+section[hidden] { display: none !important; }
 .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.tools input[type=search] { flex: 1 1 240px; min-width: 0; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
-select, .tools input[type=number] { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; }
-.tools input[type=number] { width: 84px; font-family: var(--font-num); text-align: right; }
-.muted { color: var(--muted); font-size: 13px; }
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+input, select, textarea { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; max-width: 100%; }
+.tools input[type=search] { flex: 1 1 240px; min-width: 0; }
+input[type=number] { font-family: var(--font-num); }
+.muted { color: var(--muted); font-size: 13px; margin: 0; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
 .card .k { color: var(--muted); font-size: 13px; }
-.card .v { font: 600 26px/1.2 var(--font-num); font-variant-numeric: tabular-nums; margin-top: 2px; overflow-wrap: anywhere; }
+.card .v { font: 600 22px/1.25 var(--font-num); font-variant-numeric: tabular-nums; margin-top: 2px; overflow-wrap: anywhere; }
 .card.gold { background: var(--gold-soft); border-color: var(--gold); }
 .card.gold .v { color: var(--gold-ink); }
-h2 { font: 400 22px/1.2 var(--font-display); margin: 8px 0 0; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.pchip { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 14px; }
+.pchip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 14px; }
+.who-line { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; min-width: 0; }
+.head { width: 24px; height: 24px; border-radius: 6px; image-rendering: pixelated; background: var(--chip); flex: none; }
+.head.big { width: 48px; height: 48px; border-radius: 10px; }
 .ledger { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
 .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; align-items: center; padding: 11px 16px; border-top: 1px solid var(--line); }
 .row:first-child { border-top: 0; }
+.row.click { cursor: pointer; }
 .main { min-width: 0; display: grid; gap: 2px; }
 .main strong { font-weight: 600; overflow-wrap: anywhere; }
 .meta { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .ench { color: var(--blue); font-size: 13px; }
-.tag { display: inline-block; font-size: 11.5px; border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; line-height: 19px; color: var(--muted); margin-left: 6px; }
+.tag { display: inline-block; font-size: 11.5px; font-weight: 500; border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; line-height: 19px; color: var(--muted); margin-left: 6px; }
+.tag.good { color: var(--live); border-color: var(--live); background: var(--live-soft); }
+.tag.bad { color: var(--bad); border-color: var(--bad); background: var(--bad-soft); }
 .tag.land { color: var(--live); border-color: var(--live); }
+.side { display: flex; align-items: center; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
 .price { text-align: right; font: 600 16px var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .price .u { color: var(--gold-ink); margin-left: 4px; font-size: 13px; }
+.detail { grid-column: 1 / -1; padding-top: 8px; }
 .empty { padding: 26px 16px; text-align: center; color: var(--muted); }
 .note { background: var(--surface); border: 1px dashed var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 6px; }
-.note code { font-family: var(--font-num); background: var(--chip); border-radius: 6px; padding: 1px 6px; }
-.btn { font: 500 14px var(--font-body); color: var(--ink); background: var(--chip); border: 0; border-radius: 10px; padding: 9px 14px; cursor: pointer; }
-.err { color: var(--bad); font-size: 14px; }
-section[hidden] { display: none !important; }
-.who { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-weight: 600; }
-.who.in { background: var(--gold-soft); border-color: var(--gold); color: var(--gold-ink); }
-.hright { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-form.login { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 12px; max-width: 420px; }
-form.login h2 { margin: 0; }
-form.login label { display: grid; gap: 4px; font-size: 14px; font-weight: 500; }
-form.login input { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; }
-.btn.primary { background: var(--chip-on); color: var(--chip-on-ink); padding: 11px 16px; font-weight: 600; }
-.ok { color: var(--live); font-size: 14px; }
-details.pw { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
-details.pw summary { cursor: pointer; font-weight: 600; }
-details.pw form.login { border: 0; padding: 12px 0 0; }
-@media (max-width: 520px) { .row { padding: 10px 12px; } .card .v { font-size: 22px; } }
+code { font-family: var(--font-num); background: var(--chip); border-radius: 6px; padding: 1px 6px; }
+.btn { font: 500 14px var(--font-body); color: var(--ink); background: var(--chip); border: 0; border-radius: 10px; padding: 8px 14px; cursor: pointer; }
+.btn.primary { background: var(--chip-on); color: var(--chip-on-ink); font-weight: 600; }
+.btn.buy { background: var(--gold); color: var(--chip-on-ink); font-weight: 600; }
+.btn.armed { background: var(--bad); color: #fff; }
+.btn:disabled { opacity: 0.55; cursor: default; }
+.err { color: var(--bad); font-size: 14px; margin: 0; }
+form.box, .box { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 10px; min-width: 0; }
+form.box label { display: grid; gap: 4px; font-size: 14px; font-weight: 500; }
+form.box input, form.box textarea, form.box select { background: var(--bg); width: 100%; min-width: 0; }
+.side input { background: var(--bg); }
+details.box summary { cursor: pointer; font-weight: 600; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 12px; align-items: start; }
+.notice { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--gold); border-radius: 10px; padding: 12px 14px; display: grid; gap: 4px; }
+.notice.give { border-left-color: var(--live); }
+.notice p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rank .row { grid-template-columns: 28px minmax(0, 1fr) auto; }
+.rank .n { font: 600 14px var(--font-num); color: var(--muted); }
+.rank .row:first-child .n { color: var(--gold); }
+.slots { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; }
+.slot { aspect-ratio: 1; background: var(--chip); border-radius: 6px; padding: 3px; font-size: 10.5px; line-height: 1.15; overflow: hidden; position: relative; overflow-wrap: anywhere; }
+.slot b { position: absolute; right: 3px; bottom: 1px; font: 600 11px var(--font-num); background: var(--chip); padding-left: 2px; }
+.slot.ench { box-shadow: inset 0 0 0 2px var(--blue); }
+.mapwrap { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; height: min(70vh, 560px); touch-action: none; }
+.mapwrap canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; }
+.toasts { position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); display: grid; gap: 8px; z-index: 20; max-width: min(360px, calc(100vw - 32px)); }
+.toast { background: var(--chip-on); color: var(--chip-on-ink); border-radius: 12px; padding: 12px 14px; box-shadow: 0 6px 20px rgb(0 0 0 / 0.2); font-size: 14px; }
+.toast.bad { background: var(--bad); color: #fff; }
+.chart { width: 100%; height: 160px; display: block; }
+@media (max-width: 520px) { .row { padding: 10px 12px; } .card .v { font-size: 19px; } .slot { font-size: 9px; } }
 </style>
 </head>
 <body>
@@ -97,17 +126,19 @@ details.pw form.login { border: 0; padding: 12px 0 0; }
       <p class="sub" id="motd">서버 정보를 불러오는 중입니다.</p>
     </div>
     <div class="hright">
-      <a class="who" id="who" href="#me">로그인</a>
-      <div class="live" id="live"><span class="dot" id="dot"></span><span>접속 <b id="liveCount">-</b>명</span></div>
+      <a class="pill" id="who" href="#me">로그인</a>
+      <span class="pill"><span class="dot" id="dot"></span>접속 <b id="liveCount">-</b>명</span>
     </div>
   </header>
 
   <nav aria-label="메뉴">
-    <a href="#server">서버</a><a href="#market">시장</a><a href="#orders">삽니다</a><a href="#prices">시세표</a><a href="#me">내 정보</a>
+    <a href="#server">서버</a><a href="#market">시장</a><a href="#orders">삽니다</a><a href="#prices">시세</a><a href="#ranks">랭킹</a><a href="#map">지도</a><a href="#me">내 정보</a><a href="#admin" id="adminTab" hidden>관리자</a>
   </nav>
 
   <section id="v-server">
     <div class="cards" id="serverCards"></div>
+    <h2>공지</h2>
+    <div id="notices" style="display:grid;gap:8px"></div>
     <h2>지금 접속한 사람</h2>
     <div class="chips" id="players"></div>
     <p class="muted" id="updated"></p>
@@ -116,371 +147,675 @@ details.pw form.login { border: 0; padding: 12px 0 0; }
   <section id="v-market" hidden>
     <div class="tools">
       <input type="search" id="mq" placeholder="물건이나 판매자 이름으로 찾기" aria-label="시장에서 찾기" autocomplete="off">
-      <select id="msort" aria-label="정렬"><option value="new">최신순</option><option value="low">싼 순</option><option value="high">비싼 순</option></select>
+      <select id="msort" aria-label="정렬"><option value="new">최신순</option><option value="low">싼 순</option><option value="high">비싼 순</option><option value="deal">평균보다 싼 순</option></select>
     </div>
     <p class="muted" id="mcount"></p>
     <div class="ledger" id="list-market"></div>
-    <p class="muted">사려면 게임에서 /trade → 시장으로 가세요.</p>
+    <p class="muted" id="mhint"></p>
   </section>
 
   <section id="v-orders" hidden>
     <div class="tools"><input type="search" id="oq" placeholder="물건이나 주문한 사람 이름으로 찾기" aria-label="주문에서 찾기" autocomplete="off"></div>
     <p class="muted" id="ocount"></p>
     <div class="ledger" id="list-orders"></div>
-    <p class="muted">주문에 팔려면 게임에서 /trade → 삽니다 게시판으로 가세요.</p>
+    <p class="muted">주문에 물건을 팔려면 게임에서 /trade → 삽니다 게시판으로 가세요.</p>
   </section>
 
   <section id="v-prices" hidden>
     <div class="tools">
       <input type="search" id="pq" placeholder="아이템 이름으로 찾기 (예: 다이아, 철)" aria-label="시세에서 찾기" autocomplete="off">
-      <label class="muted" for="pqty">수량</label><input type="number" id="pqty" min="1" max="99999" value="1">
-      <select id="psort" aria-label="정렬"><option value="high">비싼 순</option><option value="low">싼 순</option><option value="name">이름 순</option></select>
+      <label class="muted" for="pqty">수량</label><input type="number" id="pqty" min="1" max="99999" value="1" style="width:84px">
+      <select id="psort" aria-label="정렬"><option value="high">서버 판매가 비싼 순</option><option value="low">서버 판매가 싼 순</option><option value="traded">거래 많은 순</option><option value="name">이름 순</option></select>
     </div>
     <p class="muted" id="pcount"></p>
     <div class="ledger" id="list-prices"></div>
-    <p class="muted">서버에 팔 때 받는 값입니다. 도구·무기·방어구는 재료값의 절반이고 닳은 만큼 더 깎입니다. 마법이 부여된 책은 마법 레벨 1당 20을 더 받습니다.</p>
+    <p class="muted">오른쪽은 서버에 팔 때 받는 값입니다. 줄을 누르면 플레이어끼리 실제로 거래된 가격 그래프가 나옵니다. 도구·무기·방어구는 재료값의 절반이고, 마법이 부여된 책은 마법 레벨 1당 20을 더 받습니다.</p>
   </section>
 
-  <section id="v-me" hidden>
-    <div id="meBody"></div>
+  <section id="v-ranks" hidden>
+    <div class="grid2" id="ranks"></div>
+    <p class="muted" id="rupdated"></p>
   </section>
+
+  <section id="v-map" hidden>
+    <div class="tools">
+      <select id="mworld" aria-label="월드"></select>
+      <button class="btn" type="button" id="zin" aria-label="확대">＋</button>
+      <button class="btn" type="button" id="zout" aria-label="축소">－</button>
+      <button class="btn" type="button" id="mhome">스폰으로</button>
+      <span class="muted" id="mpos"></span>
+    </div>
+    <div class="mapwrap"><canvas id="mapc" tabindex="0" aria-label="땅 지도: 끌어서 움직이고, 누르면 그 청크의 주인을 봅니다"></canvas></div>
+    <p class="muted" id="minfo">청크를 누르면 주인이 나옵니다. 끌어서 움직이고, 휠이나 ＋/－로 확대합니다. (방향키로도 움직입니다)</p>
+    <div class="legend"><span><i style="background:var(--gold)"></i>내 땅</span><span><i style="background:hsl(200 55% 55%)"></i>다른 사람 땅 (사람마다 색이 다름)</span><span><i style="background:var(--muted)"></i>보호구역</span><span><i style="border:2px solid var(--live)"></i>판매 중인 땅</span><span><i style="border:2px dashed var(--muted)"></i>스폰 주변 (살 수 없음)</span></div>
+  </section>
+
+  <section id="v-me" hidden><div id="meBody" style="display:grid;gap:12px"></div></section>
+
+  <section id="v-admin" hidden><div id="adminBody" style="display:grid;gap:12px"></div></section>
 </div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script>
 (function () {
   "use strict";
   var KO = { items: {}, enchants: {} };
-  var PUB = null, VALUES = null, ME = null, meError = "";
-  var KEY_STORE = "trade-web-key";
-  var key = "";
-  try { key = localStorage.getItem(KEY_STORE) || ""; } catch (e) {}
+  var PUB = null, VALUES = null, STATS = null, MAP = null, ME = null, ADMIN = null, meError = "";
+  var KEY_STORE = "trade-web-key", SOUND_STORE = "trade-web-sound";
+  var key = "", sound = false, unread = 0, baseTitle = document.title;
+  try { key = localStorage.getItem(KEY_STORE) || ""; sound = localStorage.getItem(SOUND_STORE) === "1"; } catch (e) {}
   var m = /(?:^|[#&])k=([0-9a-f]{20,})/.exec(location.hash);
-  if (m) {
-    key = m[1];
-    try { localStorage.setItem(KEY_STORE, key); } catch (e) {}
-    history.replaceState(null, "", location.pathname + "#me");
-  }
+  if (m) { key = m[1]; try { localStorage.setItem(KEY_STORE, key); } catch (e) {} history.replaceState(null, "", location.pathname + "#me"); }
 
+  // --- helpers ------------------------------------------------------------------
   function $(id) { return document.getElementById(id); }
-  function el(tag, cls, text) {
-    var n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    return n;
+  function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+  function sym() { return (PUB && PUB.currency.symbol) || (VALUES && VALUES.currency.symbol) || "G"; }
+  function cname() { return (PUB && PUB.currency.name) || "골드"; }
+  function money(v) { if (v >= 100 || Math.abs(v - Math.round(v)) < 0.005) return Math.round(v).toLocaleString("ko-KR"); return String(Math.round(v * 100) / 100); }
+  function ago(t) { var s = Math.max(0, (Date.now() - t) / 1000); if (s < 60) return "방금"; if (s < 3600) return Math.floor(s / 60) + "분 전"; if (s < 86400) return Math.floor(s / 3600) + "시간 전"; return Math.floor(s / 86400) + "일 전"; }
+  function hours(min) { return min >= 60 ? Math.floor(min / 60).toLocaleString("ko-KR") + "시간 " + (min % 60) + "분" : min + "분"; }
+  function itemName(it) { return it.name || KO.items[it.id] || it.id.replace(/_/g, " "); }
+  function enchText(it) { return it.ench ? it.ench.map(function (p) { return (KO.enchants[p[0]] || p[0]) + " " + p[1]; }).join(", ") : ""; }
+  function head(uuid, big) {
+    var img = el("img", "head" + (big ? " big" : ""));
+    img.alt = ""; img.loading = "lazy"; img.referrerPolicy = "no-referrer";
+    img.src = "https://mc-heads.net/avatar/" + encodeURIComponent(uuid) + "/" + (big ? 64 : 32);
+    img.onerror = function () { img.style.visibility = "hidden"; };
+    return img;
   }
-  function sym() { return (PUB && PUB.currency && PUB.currency.symbol) || (VALUES && VALUES.currency && VALUES.currency.symbol) || "G"; }
-  function money(v) {
-    if (v >= 100 || Math.abs(v - Math.round(v)) < 0.005) return Math.round(v).toLocaleString("ko-KR");
-    return String(Math.round(v * 100) / 100);
-  }
-  function ago(t) {
-    var s = Math.max(0, (Date.now() - t) / 1000);
-    if (s < 60) return "방금";
-    if (s < 3600) return Math.floor(s / 60) + "분 전";
-    if (s < 86400) return Math.floor(s / 3600) + "시간 전";
-    return Math.floor(s / 86400) + "일 전";
-  }
-  function itemName(it) {
-    return it.name || KO.items[it.id] || it.id.replace(/_/g, " ");
-  }
-  function enchText(it) {
-    if (!it.ench) return "";
-    return it.ench.map(function (p) { return (KO.enchants[p[0]] || p[0]) + " " + p[1]; }).join(", ");
-  }
-  function priceCell(v) {
-    var d = el("div", "price", money(v));
-    d.appendChild(el("span", "u", sym()));
-    return d;
-  }
-  /** One ledger row: the item (name, amount, enchantments, wear), a line of details, and a price. */
-  function row(it, details, price, extraTag) {
+  function priceCell(v) { var d = el("div", "price", money(v)); d.appendChild(el("span", "u", sym())); return d; }
+  function row(it, details, price, tag) {
     var r = el("div", "row"), main = el("div", "main");
     var title = el("strong", null, itemName(it) + (it.amount > 1 ? " ×" + it.amount : ""));
-    if (extraTag) title.appendChild(el("span", "tag " + extraTag[0], extraTag[1]));
+    if (tag) title.appendChild(el("span", "tag " + tag[0], tag[1]));
     main.appendChild(title);
-    var e = enchText(it);
-    if (e) main.appendChild(el("span", "ench", e));
+    var e = enchText(it); if (e) main.appendChild(el("span", "ench", e));
     if (it.wear) main.appendChild(el("span", "meta", "내구도 " + (100 - it.wear) + "% 남음"));
     if (details) main.appendChild(el("span", "meta", details));
     r.appendChild(main);
-    if (price != null) r.appendChild(priceCell(price));
+    var side = el("div", "side");
+    if (price != null) side.appendChild(priceCell(price));
+    r.appendChild(side);
+    r.side = side;
     return r;
   }
   function fill(box, rows, emptyText) {
     box.replaceChildren();
     if (!rows.length) { box.appendChild(el("div", "empty", emptyText)); return; }
-    var frag = document.createDocumentFragment();
-    rows.forEach(function (r) { frag.appendChild(r); });
-    box.appendChild(frag);
+    var frag = document.createDocumentFragment(); rows.forEach(function (r) { frag.appendChild(r); }); box.appendChild(frag);
   }
-  function card(k, v, gold) {
-    var c = el("div", "card" + (gold ? " gold" : ""));
-    c.appendChild(el("div", "k", k));
-    c.appendChild(el("div", "v", v));
-    return c;
+  function card(k, v, gold) { var c = el("div", "card" + (gold ? " gold" : "")); c.appendChild(el("div", "k", k)); c.appendChild(el("div", "v", v)); return c; }
+  function toast(text, bad) {
+    var t = el("div", "toast" + (bad ? " bad" : ""), text);
+    $("toasts").appendChild(t);
+    setTimeout(function () { t.remove(); }, 6000);
+  }
+  function field(label, id, type, attrs) {
+    var l = el("label", null, label);
+    var input = el(type === "textarea" ? "textarea" : "input");
+    input.id = id; if (type !== "textarea") input.type = type;
+    Object.keys(attrs || {}).forEach(function (k) { input.setAttribute(k, attrs[k]); });
+    l.appendChild(input); return l;
+  }
+  /** A button that needs a second press within 4 seconds (for spending money or deleting). */
+  function confirmButton(label, armedLabel, cls, run) {
+    var b = el("button", "btn " + (cls || ""), label), timer = null;
+    b.type = "button";
+    b.addEventListener("click", function (ev) {
+      ev.stopPropagation();
+      if (!b.classList.contains("armed")) {
+        b.classList.add("armed"); b.textContent = armedLabel;
+        timer = setTimeout(function () { b.classList.remove("armed"); b.textContent = label; }, 4000);
+        return;
+      }
+      clearTimeout(timer); b.disabled = true; b.classList.remove("armed"); b.textContent = "처리 중";
+      run(function () { b.disabled = false; b.textContent = label; });
+    });
+    return b;
   }
 
-  // --- views -------------------------------------------------------------------
+  // --- network ------------------------------------------------------------------
+  function call(method, url, data, auth) {
+    var h = {};
+    if (data) h["Content-Type"] = "application/json";
+    if (auth && key) h["X-Key"] = key;
+    return fetch(url, { method: method, headers: h, body: data ? JSON.stringify(data) : undefined, cache: "no-store" })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, status: r.status, body: j }; }); });
+  }
+  function act(url, data, done) {
+    return call("POST", url, data, true).then(function (r) {
+      if (r.status === 401) forget(r.body.error);
+      if (r.ok && r.body.ok) toast(r.body.ok); else toast(r.body.error || "처리하지 못했습니다.", true);
+      if (done) done(r);
+      loadPublic(); loadMe();
+      return r;
+    }).catch(function () { toast("서버에 연결할 수 없습니다.", true); if (done) done({ ok: false }); });
+  }
+
+  // --- server -------------------------------------------------------------------
   function drawServer() {
     if (!PUB) return;
     var s = PUB.server;
     $("motd").textContent = (s.motd || "마인크래프트 서버") + " · " + s.version;
     $("liveCount").textContent = s.online;
-    var cards = $("serverCards");
-    cards.replaceChildren(card("접속 인원", s.online + " / " + s.max), card("시장 물품", PUB.market.length + "개"),
+    $("serverCards").replaceChildren(card("접속 인원", s.online + " / " + s.max), card("시장 물품", PUB.market.length + "개"),
       card("삽니다 주문", PUB.orders.length + "건"), card("화폐", PUB.currency.name + " (" + PUB.currency.symbol + ")"));
-    var box = $("players");
-    box.replaceChildren();
+    var nb = $("notices"); nb.replaceChildren();
+    if (!PUB.notices.length) nb.appendChild(el("p", "muted", "올라온 공지가 없습니다."));
+    PUB.notices.slice(0, 8).forEach(function (n) {
+      var box = el("div", "notice" + (n.giveAll ? " give" : ""));
+      box.appendChild(el("h3", null, n.title));
+      if (n.body) box.appendChild(el("p", null, n.body));
+      box.appendChild(el("span", "meta", n.author + " · " + ago(n.time)));
+      nb.appendChild(box);
+    });
+    var box = $("players"); box.replaceChildren();
     if (!s.players.length) box.appendChild(el("span", "muted", "지금은 아무도 없습니다."));
     s.players.forEach(function (n) { box.appendChild(el("span", "pchip", n)); });
     $("updated").textContent = "5초마다 새로 고칩니다. 마지막 갱신: " + new Date(PUB.updated).toLocaleTimeString("ko-KR");
   }
+
+  // --- market -------------------------------------------------------------------
+  function dealRatio(l) { return l.avg ? (l.price / Math.max(1, l.item.amount)) / l.avg : null; }
+  function canTrade() { return !!(key && ME && ME.limits && ME.limits.enabled); }
   function drawMarket() {
     if (!PUB) return;
     var q = $("mq").value.trim().toLowerCase(), sort = $("msort").value;
-    var list = PUB.market.filter(function (l) {
-      return !q || (itemName(l.item) + " " + l.item.id + " " + l.seller).toLowerCase().indexOf(q) >= 0;
-    });
-    list.sort(sort === "low" ? function (a, b) { return a.price - b.price; } : sort === "high" ? function (a, b) { return b.price - a.price; } : function (a, b) { return b.time - a.time; });
+    var list = PUB.market.filter(function (l) { return !q || (itemName(l.item) + " " + l.item.id + " " + l.seller).toLowerCase().indexOf(q) >= 0; });
+    var cmp = { low: function (a, b) { return a.price - b.price; }, high: function (a, b) { return b.price - a.price; },
+      deal: function (a, b) { return (dealRatio(a) || 9) - (dealRatio(b) || 9); }, "new": function (a, b) { return b.time - a.time; } };
+    list.sort(cmp[sort] || cmp["new"]);
     $("mcount").textContent = "판매 중 " + list.length + "개";
+    $("mhint").textContent = canTrade() ? "웹에서는 한 번에 " + money(ME.limits.perAction) + " " + sym() + ", 하루 " + money(ME.limits.perDay) + " " + sym() + "까지 살 수 있습니다. 산 물건은 게임에 들어가면 인벤토리나 우편함으로 받습니다. 땅은 게임에서만 삽니다."
+      : key ? "웹 거래가 꺼져 있습니다. 사려면 게임에서 /trade → 시장으로 가세요." : "로그인하면 여기서 바로 살 수 있습니다. 게임에서는 /trade → 시장.";
     fill($("list-market"), list.map(function (l) {
-      return row(l.item, "판매자 " + l.seller + " · " + ago(l.time), l.price, l.land ? ["land", "땅 " + l.land.split(";").slice(1).join(", ")] : null);
+      var ratio = dealRatio(l), tag = null;
+      if (l.land) tag = ["land", "땅 " + l.land.split(";").slice(1).join(", ")];
+      else if (ratio && ratio <= 0.9) tag = ["good", "평균보다 " + Math.round((1 - ratio) * 100) + "% 쌈"];
+      else if (ratio && ratio >= 1.1) tag = ["bad", "평균보다 " + Math.round((ratio - 1) * 100) + "% 비쌈"];
+      var r = row(l.item, "판매자 " + l.seller + " · " + ago(l.time) + (l.avg ? " · 평균 거래가 개당 " + money(l.avg) + " " + sym() : ""), l.price, tag);
+      if (canTrade() && !l.land && l.sellerId !== ME.uuid) {
+        r.side.appendChild(confirmButton("사기", money(l.price) + " " + sym() + " 확인", "buy", function (done) { act("/api/buy", { id: l.id }, done); }));
+      }
+      return r;
     }), q ? "찾는 물품이 없습니다." : "지금 시장에 올라온 물품이 없습니다.");
   }
   function drawOrders() {
     if (!PUB) return;
     var q = $("oq").value.trim().toLowerCase();
-    var list = PUB.orders.filter(function (o) {
-      return !q || (itemName(o.item) + " " + o.item.id + " " + o.buyer).toLowerCase().indexOf(q) >= 0;
-    });
+    var list = PUB.orders.filter(function (o) { return !q || (itemName(o.item) + " " + o.item.id + " " + o.buyer).toLowerCase().indexOf(q) >= 0; });
     $("ocount").textContent = "주문 " + list.length + "건";
     fill($("list-orders"), list.map(function (o) {
-      var it = Object.assign({}, o.item, { amount: o.amount });
-      return row(it, "주문한 사람 " + o.buyer + " · " + ago(o.time), o.price);
+      return row(Object.assign({}, o.item, { amount: o.amount }), "주문한 사람 " + o.buyer + " · " + ago(o.time), o.price);
     }), q ? "찾는 주문이 없습니다." : "지금 올라온 삽니다 주문이 없습니다.");
+  }
+
+  // --- prices and trade charts --------------------------------------------------
+  var openItem = null;
+  function trades(id) { return STATS && STATS.trades && STATS.trades[id]; }
+  function drawChart(canvas, t) {
+    var dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    var c = canvas.getContext("2d"); c.scale(dpr, dpr);
+    var css = getComputedStyle(document.documentElement);
+    var ink = css.getPropertyValue("--muted").trim(), gold = css.getPropertyValue("--gold").trim(), line = css.getPropertyValue("--line").trim();
+    var pts = t.recent, ys = pts.map(function (p) { return p[1]; });
+    var lo = Math.min.apply(null, ys), hi = Math.max.apply(null, ys);
+    if (t.avg != null) { lo = Math.min(lo, t.avg); hi = Math.max(hi, t.avg); }
+    if (hi === lo) { hi += 1; lo = Math.max(0, lo - 1); }
+    var L = 58, R = 12, T = 12, B = 22, W = w - L - R, H = h - T - B;
+    function x(i) { return L + (pts.length === 1 ? W / 2 : W * i / (pts.length - 1)); }
+    function y(v) { return T + H - (v - lo) / (hi - lo) * H; }
+    c.font = "11px " + css.getPropertyValue("--font-num"); c.fillStyle = ink; c.strokeStyle = line; c.lineWidth = 1;
+    [lo, (lo + hi) / 2, hi].forEach(function (v) { c.beginPath(); c.moveTo(L, y(v)); c.lineTo(w - R, y(v)); c.stroke(); c.textAlign = "right"; c.fillText(money(v), L - 6, y(v) + 4); });
+    if (t.avg != null) { c.setLineDash([4, 4]); c.strokeStyle = ink; c.beginPath(); c.moveTo(L, y(t.avg)); c.lineTo(w - R, y(t.avg)); c.stroke(); c.setLineDash([]); }
+    c.strokeStyle = gold; c.lineWidth = 2; c.beginPath();
+    pts.forEach(function (p, i) { if (i) c.lineTo(x(i), y(p[1])); else c.moveTo(x(i), y(p[1])); }); c.stroke();
+    c.fillStyle = gold; pts.forEach(function (p, i) { c.beginPath(); c.arc(x(i), y(p[1]), 3, 0, Math.PI * 2); c.fill(); });
+    c.fillStyle = ink; c.textAlign = "left"; c.fillText(new Date(pts[0][0]).toLocaleDateString("ko-KR"), L, h - 6);
+    c.textAlign = "right"; c.fillText(new Date(pts[pts.length - 1][0]).toLocaleDateString("ko-KR"), w - R, h - 6);
   }
   function drawPrices() {
     if (!VALUES) return;
     var q = $("pq").value.trim().toLowerCase(), sort = $("psort").value;
     var qty = Math.max(1, Math.min(99999, Math.floor(Number($("pqty").value) || 1)));
-    var list = VALUES.items.filter(function (r) {
-      return !q || ((KO.items[r[0]] || "") + " " + r[0] + " " + r[0].replace(/_/g, " ")).toLowerCase().indexOf(q) >= 0;
-    });
-    list.sort(sort === "low" ? function (a, b) { return a[1] - b[1]; } : sort === "name" ? function (a, b) { return (KO.items[a[0]] || a[0]).localeCompare(KO.items[b[0]] || b[0], "ko"); } : function (a, b) { return b[1] - a[1]; });
+    var list = VALUES.items.filter(function (r) { return !q || ((KO.items[r[0]] || "") + " " + r[0] + " " + r[0].replace(/_/g, " ")).toLowerCase().indexOf(q) >= 0; });
+    function count(r) { var t = trades(r[0]); return t ? t.count : 0; }
+    var cmp = { low: function (a, b) { return a[1] - b[1]; }, name: function (a, b) { return (KO.items[a[0]] || a[0]).localeCompare(KO.items[b[0]] || b[0], "ko"); },
+      traded: function (a, b) { return count(b) - count(a) || b[1] - a[1]; }, high: function (a, b) { return b[1] - a[1]; } };
+    list.sort(cmp[sort] || cmp.high);
     $("pcount").textContent = list.length + "개" + (qty > 1 ? " · " + qty + "개 기준" : " · 1개 가격");
-    var shown = list.slice(0, 400);
+    var shown = list.slice(0, 300);
     fill($("list-prices"), shown.map(function (r) {
+      var t = trades(r[0]);
       var v = qty > 1 ? Math.floor(r[1] * qty + 1e-6) : r[1];
-      return row({ id: r[0], amount: 1 }, r[2] ? "도구·장비: 재료값의 절반" : r[0], v);
+      var info = (r[2] ? "도구·장비: 재료값의 절반 · " : "") + (t ? "플레이어 거래 " + t.count + "번" + (t.avg != null ? " · 30일 평균 개당 " + money(t.avg) + " " + sym() : "") : "플레이어 거래 기록 없음");
+      var line = row({ id: r[0], amount: 1 }, info, v);
+      line.classList.add("click"); line.tabIndex = 0;
+      if (openItem === r[0]) {
+        var d = el("div", "detail");
+        if (t && t.recent.length) {
+          d.appendChild(el("p", "muted", "최근 거래 " + t.recent.length + "번의 개당 가격 (점선: 30일 평균)"));
+          var cv = el("canvas", "chart"); d.appendChild(cv); requestAnimationFrame(function () { drawChart(cv, t); });
+        } else d.appendChild(el("p", "muted", "아직 플레이어끼리 거래된 기록이 없습니다."));
+        line.appendChild(d);
+      }
+      function toggle() { openItem = openItem === r[0] ? null : r[0]; drawPrices(); }
+      line.addEventListener("click", toggle);
+      line.addEventListener("keydown", function (e) { if (e.key === "Enter") toggle(); });
+      return line;
     }), "표에 없는 아이템은 서버에 팔 수 없습니다.");
     if (list.length > shown.length) $("list-prices").appendChild(el("div", "empty", "검색해서 나머지 " + (list.length - shown.length) + "개를 찾아보세요."));
   }
-  function field(label, id, type, auto) {
-    var l = el("label", null, label);
-    var input = el("input");
-    input.id = id; input.type = type; input.autocomplete = auto; input.required = true;
-    l.appendChild(input);
-    return l;
+
+  // --- rankings ----------------------------------------------------------------
+  function drawRanks() {
+    var box = $("ranks"); box.replaceChildren();
+    if (!STATS || !STATS.ranks) { box.appendChild(el("p", "muted", "랭킹을 불러오는 중입니다.")); return; }
+    var boards = [["rich", cname() + " 부자", function (v) { return money(v) + " " + sym(); }],
+      ["sellers", "판매왕 (판 금액 합계)", function (v) { return money(v) + " " + sym(); }],
+      ["playtime", "플레이 시간", hours], ["land", "땅 부자", function (v) { return v + "청크"; }]];
+    boards.forEach(function (b) {
+      var wrap = el("div"); wrap.appendChild(el("h2", null, b[1]));
+      var list = el("div", "ledger rank");
+      fill(list, (STATS.ranks[b[0]] || []).map(function (p, i) {
+        var r = el("div", "row"); r.appendChild(el("span", "n", String(i + 1)));
+        var who = el("span", "who-line"); who.appendChild(head(p.uuid)); who.appendChild(document.createTextNode(p.name)); r.appendChild(who);
+        r.appendChild(el("div", "price", b[2](p.value))); return r;
+      }), "아직 기록이 없습니다.");
+      wrap.appendChild(list); box.appendChild(wrap);
+    });
+    $("rupdated").textContent = "1분마다 새로 계산합니다. 마지막: " + new Date(STATS.updated).toLocaleTimeString("ko-KR");
   }
+
+  // --- land map ----------------------------------------------------------------
+  var mapState = { world: "", cx: 0, cz: 0, size: 14, centered: false };
+  function hue(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; }
+  function mapCells(world) {
+    var cells = {};
+    MAP.zones.forEach(function (z) { if (z[0] === world) cells[z[1] + "," + z[2]] = { zone: true }; });
+    MAP.claims.forEach(function (c) { if (c[0] === world) cells[c[1] + "," + c[2]] = { owner: c[3], uuid: c[4], sale: c[5] === 1 }; });
+    return cells;
+  }
+  function drawMap() {
+    if (!MAP) return;
+    var sel = $("mworld");
+    if (!sel.options.length) MAP.worlds.forEach(function (w) { var o = el("option", null, w); o.value = w; sel.appendChild(o); });
+    if (!mapState.world) mapState.world = MAP.worlds[0] || "world";
+    sel.value = mapState.world;
+    if (!mapState.centered && ME) {
+      var mine = MAP.claims.filter(function (c) { return c[4] === ME.uuid && c[0] === mapState.world; });
+      if (mine.length) { mapState.cx = mine[0][1] + 0.5; mapState.cz = mine[0][2] + 0.5; }
+      mapState.centered = true;
+    }
+    var cv = $("mapc"), dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+    if (!w || !h) return;
+    cv.width = w * dpr; cv.height = h * dpr;
+    var c = cv.getContext("2d"); c.scale(dpr, dpr);
+    var css = getComputedStyle(document.documentElement);
+    var S = mapState.size, cells = mapCells(mapState.world);
+    c.fillStyle = css.getPropertyValue("--surface"); c.fillRect(0, 0, w, h);
+    var x0 = Math.floor(mapState.cx - w / 2 / S) - 1, z0 = Math.floor(mapState.cz - h / 2 / S) - 1;
+    var x1 = Math.ceil(mapState.cx + w / 2 / S) + 1, z1 = Math.ceil(mapState.cz + h / 2 / S) + 1;
+    function sx(cx) { return w / 2 + (cx - mapState.cx) * S; }
+    function sz(cz) { return h / 2 + (cz - mapState.cz) * S; }
+    if (S >= 8) {
+      c.strokeStyle = css.getPropertyValue("--line"); c.lineWidth = 1; c.beginPath();
+      for (var gx = x0; gx <= x1; gx++) { c.moveTo(Math.round(sx(gx)) + 0.5, 0); c.lineTo(Math.round(sx(gx)) + 0.5, h); }
+      for (var gz = z0; gz <= z1; gz++) { c.moveTo(0, Math.round(sz(gz)) + 0.5); c.lineTo(w, Math.round(sz(gz)) + 0.5); }
+      c.stroke();
+    }
+    var gold = css.getPropertyValue("--gold").trim(), live = css.getPropertyValue("--live").trim(), muted = css.getPropertyValue("--muted").trim();
+    Object.keys(cells).forEach(function (k) {
+      var p = k.split(","), cx = +p[0], cz = +p[1];
+      if (cx < x0 || cx > x1 || cz < z0 || cz > z1) return;
+      var cell = cells[k];
+      c.fillStyle = cell.zone ? muted : ME && cell.uuid === ME.uuid ? gold : "hsl(" + hue(cell.uuid) + " 55% 55%)";
+      c.globalAlpha = cell.zone ? 0.45 : 0.85; c.fillRect(sx(cx) + 1, sz(cz) + 1, S - 1, S - 1); c.globalAlpha = 1;
+      if (cell.sale) { c.strokeStyle = live; c.lineWidth = 2; c.strokeRect(sx(cx) + 2, sz(cz) + 2, S - 3, S - 3); }
+    });
+    var r = MAP.spawnRadius; c.setLineDash([5, 4]); c.strokeStyle = muted; c.lineWidth = 1.5;
+    c.strokeRect(sx(-r), sz(-r), (2 * r + 1) * S, (2 * r + 1) * S); c.setLineDash([]);
+    c.fillStyle = css.getPropertyValue("--ink"); c.beginPath(); c.arc(sx(0.5), sz(0.5), 3, 0, Math.PI * 2); c.fill();
+    $("mpos").textContent = "가운데: 블록 X " + Math.round(mapState.cx * 16) + ", Z " + Math.round(mapState.cz * 16);
+  }
+  function mapPick(ev) {
+    var cv = $("mapc"), rect = cv.getBoundingClientRect(), S = mapState.size;
+    var cx = Math.floor(mapState.cx + (ev.clientX - rect.left - rect.width / 2) / S), cz = Math.floor(mapState.cz + (ev.clientY - rect.top - rect.height / 2) / S);
+    var cell = mapCells(mapState.world)[cx + "," + cz];
+    var where = "청크 " + cx + ", " + cz + " (블록 X " + cx * 16 + "~" + (cx * 16 + 15) + ", Z " + cz * 16 + "~" + (cz * 16 + 15) + ")";
+    $("minfo").textContent = where + " · " + (!cell ? "주인 없음" : cell.zone ? "보호구역" : cell.owner + "님의 땅" + (cell.sale ? " (판매 중: 시장 탭)" : ""));
+  }
+  (function mapInput() {
+    var cv = $("mapc"), drag = null, moved = false;
+    cv.addEventListener("pointerdown", function (e) { drag = { x: e.clientX, y: e.clientY, cx: mapState.cx, cz: mapState.cz }; moved = false; cv.setPointerCapture(e.pointerId); });
+    cv.addEventListener("pointermove", function (e) {
+      if (!drag) return;
+      var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 4) moved = true;
+      mapState.cx = drag.cx - dx / mapState.size; mapState.cz = drag.cz - dy / mapState.size; drawMap();
+    });
+    cv.addEventListener("pointerup", function (e) { if (drag && !moved) mapPick(e); drag = null; });
+    cv.addEventListener("wheel", function (e) { e.preventDefault(); zoom(e.deltaY < 0 ? 1.25 : 0.8); }, { passive: false });
+    cv.addEventListener("keydown", function (e) {
+      var step = 4, k = e.key;
+      if (k === "ArrowLeft") mapState.cx -= step; else if (k === "ArrowRight") mapState.cx += step; else if (k === "ArrowUp") mapState.cz -= step; else if (k === "ArrowDown") mapState.cz += step; else return;
+      e.preventDefault(); drawMap();
+    });
+  })();
+  function zoom(f) { mapState.size = Math.max(3, Math.min(48, mapState.size * f)); drawMap(); }
+  $("zin").addEventListener("click", function () { zoom(1.4); });
+  $("zout").addEventListener("click", function () { zoom(1 / 1.4); });
+  $("mhome").addEventListener("click", function () { mapState.cx = 0.5; mapState.cz = 0.5; drawMap(); });
+  $("mworld").addEventListener("change", function (e) { mapState.world = e.target.value; mapState.centered = false; drawMap(); });
+  window.addEventListener("resize", function () { if (view === "map") drawMap(); });
+
+  // --- my info ----------------------------------------------------------------
   function loginForm() {
-    var f = el("form", "login");
+    var f = el("form", "box"); f.style.maxWidth = "460px";
     f.appendChild(el("h2", null, "로그인"));
-    f.appendChild(field("마인크래프트 닉네임", "lname", "text", "username"));
-    f.appendChild(field("웹 비밀번호", "lpass", "password", "current-password"));
-    var msg = el("p", "err");
-    msg.hidden = true;
-    f.appendChild(msg);
-    var go = el("button", "btn primary", "로그인");
-    go.type = "submit";
-    f.appendChild(go);
-    var help = el("div", "meta");
-    help.appendChild(document.createTextNode("웹 비밀번호는 게임에서 정합니다: "));
-    help.appendChild(el("code", null, "/trade 웹 비밀번호"));
-    help.appendChild(document.createTextNode(" 또는 /trade → 웹 사이트 → 비밀번호 정하기. 비밀번호 없이 들어오려면 게임에서 "));
-    help.appendChild(el("code", null, "/trade 웹"));
-    help.appendChild(document.createTextNode(" 링크를 누르세요."));
+    f.appendChild(field("마인크래프트 닉네임", "lname", "text", { autocomplete: "username", required: "" }));
+    f.appendChild(field("웹 비밀번호", "lpass", "password", { autocomplete: "current-password", required: "" }));
+    var msg = el("p", "err"); msg.hidden = true; f.appendChild(msg);
+    var go = el("button", "btn primary", "로그인"); go.type = "submit"; f.appendChild(go);
+    var help = el("p", "meta");
+    help.append("웹 비밀번호는 게임에서 정합니다: ", el("code", null, "/trade 웹 비밀번호"), " 또는 /trade → 웹 사이트. 비밀번호 없이 들어오려면 게임에서 ", el("code", null, "/trade 웹"), " 링크를 누르세요.");
     f.appendChild(help);
     f.addEventListener("submit", function (e) {
-      e.preventDefault();
-      go.disabled = true; msg.hidden = true;
-      post("/api/login", { name: $("lname").value, password: $("lpass").value }).then(function (r) {
+      e.preventDefault(); go.disabled = true; msg.hidden = true;
+      call("POST", "/api/login", { name: $("lname").value, password: $("lpass").value }).then(function (r) {
         go.disabled = false;
         if (!r.ok) { msg.textContent = r.body.error || "로그인하지 못했습니다."; msg.hidden = false; return; }
-        setKey(r.body.key); meError = ""; ME = null;
-        drawMe(); loadMe();
+        setKey(r.body.key); meError = ""; ME = null; drawMe(); loadMe();
       }).catch(function () { go.disabled = false; msg.textContent = "서버에 연결할 수 없습니다."; msg.hidden = false; });
     });
     return f;
   }
-  function passwordForm() {
-    var d = el("details", "pw");
-    d.appendChild(el("summary", null, ME.hasPassword ? "웹 비밀번호 바꾸기" : "웹 비밀번호 정하기"));
-    if (!ME.hasPassword) {
-      d.appendChild(el("p", "meta", "처음 비밀번호는 게임에서 정합니다: /trade 웹 비밀번호 (또는 /trade → 웹 사이트)."));
-      return d;
-    }
-    var f = el("form", "login");
-    f.appendChild(field("지금 비밀번호", "pold", "password", "current-password"));
-    f.appendChild(field("새 비밀번호 (6~64글자)", "pnew", "password", "new-password"));
-    f.appendChild(field("새 비밀번호 한 번 더", "pnew2", "password", "new-password"));
-    var msg = el("p", "err"); msg.hidden = true; f.appendChild(msg);
-    var go = el("button", "btn primary", "바꾸기"); go.type = "submit"; f.appendChild(go);
-    f.appendChild(el("p", "meta", "바꾸면 다른 기기는 모두 로그아웃됩니다."));
+  function slotGrid(title, items, note) {
+    var wrap = el("div", "box"); wrap.appendChild(el("h3", null, title));
+    var g = el("div", "slots");
+    items.forEach(function (it) {
+      var s = el("div", "slot" + (it && it.ench ? " ench" : ""));
+      if (it) { s.textContent = itemName(it); s.title = itemName(it) + (it.amount > 1 ? " ×" + it.amount : "") + (enchText(it) ? " · " + enchText(it) : ""); if (it.amount > 1) s.appendChild(el("b", null, String(it.amount))); }
+      g.appendChild(s);
+    });
+    wrap.appendChild(g); if (note) wrap.appendChild(el("p", "muted", note)); return wrap;
+  }
+  function payForm() {
+    var f = el("form", "box");
+    f.appendChild(el("h3", null, cname() + " 보내기"));
+    if (!canTrade()) { f.appendChild(el("p", "muted", "웹 거래가 꺼져 있습니다. 게임에서 /trade → 송금을 쓰세요.")); return f; }
+    f.appendChild(field("받는 사람 닉네임", "payTo", "text", { required: "", autocomplete: "off" }));
+    f.appendChild(field("금액 (" + sym() + ")", "payAmt", "number", { min: "1", max: String(ME.limits.perAction), required: "" }));
+    var go = el("button", "btn primary", "보내기"); go.type = "submit"; f.appendChild(go);
+    f.appendChild(el("p", "muted", "웹에서는 한 번에 " + money(ME.limits.perAction) + " " + sym() + ", 하루 " + money(ME.limits.perDay) + " " + sym() + "까지 (오늘 " + money(ME.limits.spentToday) + " 사용)"));
+    var armed = false, timer = null;
     f.addEventListener("submit", function (e) {
       e.preventDefault();
-      msg.hidden = true; msg.className = "err";
-      if ($("pnew").value !== $("pnew2").value) { msg.textContent = "새 비밀번호 두 개가 다릅니다."; msg.hidden = false; return; }
-      go.disabled = true;
-      post("/api/password", { old: $("pold").value, "new": $("pnew").value }, { "X-Key": key }).then(function (r) {
-        go.disabled = false;
-        if (!r.ok) { msg.textContent = r.body.error || "바꾸지 못했습니다."; msg.hidden = false; return; }
-        setKey(r.body.key);
-        msg.className = "ok"; msg.textContent = "비밀번호를 바꿨습니다."; msg.hidden = false;
-        $("pold").value = ""; $("pnew").value = ""; $("pnew2").value = "";
-      }).catch(function () { go.disabled = false; msg.textContent = "서버에 연결할 수 없습니다."; msg.hidden = false; });
+      if (!armed) {
+        armed = true; go.textContent = $("payTo").value + "님에게 " + money(Number($("payAmt").value) || 0) + " " + sym() + " 보내기 확인"; go.classList.add("armed");
+        timer = setTimeout(function () { armed = false; go.textContent = "보내기"; go.classList.remove("armed"); }, 5000); return;
+      }
+      clearTimeout(timer); armed = false; go.disabled = true; go.classList.remove("armed"); go.textContent = "처리 중";
+      act("/api/pay", { to: $("payTo").value, amount: Number($("payAmt").value) || 0 }, function () { go.disabled = false; go.textContent = "보내기"; });
     });
-    d.appendChild(f);
-    return d;
+    return f;
+  }
+  function passwordForm() {
+    var d = el("details", "box"); d.appendChild(el("summary", null, ME.hasPassword ? "웹 비밀번호 바꾸기" : "웹 비밀번호 정하기"));
+    if (!ME.hasPassword) { d.appendChild(el("p", "meta", "처음 비밀번호는 게임에서 정합니다: /trade 웹 비밀번호 (또는 /trade → 웹 사이트).")); return d; }
+    var f = el("form", "box"); f.style.border = "0"; f.style.padding = "0";
+    f.appendChild(field("지금 비밀번호", "pold", "password", { autocomplete: "current-password", required: "" }));
+    f.appendChild(field("새 비밀번호 (6~64글자)", "pnew", "password", { autocomplete: "new-password", required: "" }));
+    f.appendChild(field("새 비밀번호 한 번 더", "pnew2", "password", { autocomplete: "new-password", required: "" }));
+    var go = el("button", "btn primary", "바꾸기"); go.type = "submit"; f.appendChild(go);
+    f.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if ($("pnew").value !== $("pnew2").value) { toast("새 비밀번호 두 개가 다릅니다.", true); return; }
+      go.disabled = true;
+      call("POST", "/api/password", { old: $("pold").value, "new": $("pnew").value }, true).then(function (r) {
+        go.disabled = false;
+        if (!r.ok) { toast(r.body.error || "바꾸지 못했습니다.", true); return; }
+        setKey(r.body.key); toast("비밀번호를 바꿨습니다. 다른 기기는 로그아웃되었습니다.");
+      }).catch(function () { go.disabled = false; toast("서버에 연결할 수 없습니다.", true); });
+    });
+    d.appendChild(f); return d;
   }
   function drawWho() {
     var w = $("who");
-    if (key && ME) { w.textContent = ME.name + "님"; w.className = "who in"; }
-    else { w.textContent = "로그인"; w.className = "who"; }
+    if (key && ME) { w.textContent = ME.name + "님"; w.className = "pill in"; } else { w.textContent = "로그인"; w.className = "pill"; }
+    $("adminTab").hidden = !(ME && ME.admin);
+  }
+  function section(body, title, rows, empty) {
+    body.appendChild(el("h2", null, title));
+    var box = el("div", "ledger"); fill(box, rows, empty); body.appendChild(box);
   }
   function drawMe() {
     drawWho();
-    var body = $("meBody");
-    body.replaceChildren();
+    var body = $("meBody"); body.replaceChildren();
     if (!key) { body.appendChild(loginForm()); return; }
-    if (meError) {
-      var e = el("div", "note");
-      e.appendChild(el("span", "err", meError));
-      body.appendChild(e);
-      body.appendChild(loginForm());
-      return;
-    }
+    if (meError) { var e = el("div", "note"); e.appendChild(el("span", "err", meError)); body.appendChild(e); body.appendChild(loginForm()); return; }
     if (!ME) { body.appendChild(el("p", "muted", "내 정보를 불러오는 중입니다.")); return; }
-    var head = el("div", "tools");
-    head.appendChild(el("h2", null, ME.name + "님" + (ME.online ? " (접속 중)" : "")));
-    var out = el("button", "btn", "로그아웃");
-    out.addEventListener("click", logout);
-    head.appendChild(out);
-    body.appendChild(head);
+    var top = el("div", "tools");
+    top.appendChild(head(ME.uuid, true));
+    var who = el("div", "main"); who.appendChild(el("h2", null, ME.name + "님")); who.appendChild(el("span", "meta", ME.online ? "지금 접속 중" : "마지막 접속 " + (ME.stats.lastSeen ? ago(ME.stats.lastSeen) : "-")));
+    top.appendChild(who);
+    var out = el("button", "btn", "로그아웃"); out.addEventListener("click", logout); top.appendChild(out);
+    body.appendChild(top);
+    var st = ME.stats || {};
     var cards = el("div", "cards");
     cards.append(card("내 " + ME.currency.name, money(ME.balance) + " " + ME.currency.symbol, true), card("우편함", ME.mail.length + "개"),
-      card("판매 중", ME.listings.length + "개"), card("내 땅", ME.land.length + "청크"));
+      card("판매 중", ME.listings.length + "개"), card("내 땅", ME.land.length + "청크"),
+      card("플레이 시간", st.minutes != null ? hours(st.minutes) : "-"), card("몹 처치 / 죽음", (st.mobKills || 0) + " / " + (st.deaths || 0)));
     body.appendChild(cards);
-    function section(title, rows, empty) {
-      body.appendChild(el("h2", null, title));
-      var box = el("div", "ledger");
-      fill(box, rows, empty);
-      body.appendChild(box);
-    }
-    section("우편함", ME.mail.map(function (x) { return row(x.item, x.note + " · " + ago(x.time), null); }), "우편함이 비어 있습니다.");
-    section("내가 판매 중인 물품", ME.listings.map(function (x) { return row(x.item, "올린 때 " + ago(x.time), x.price); }), "판매 중인 물품이 없습니다.");
-    section("내 삽니다 주문", ME.orders.map(function (o) { return row(Object.assign({}, o.item, { amount: o.amount }), ago(o.time), o.price); }), "올린 주문이 없습니다.");
-    section("산 기록", ME.bought.map(function (x) { return row(x.item, "판매자 " + x.with + " · " + ago(x.time), x.price); }), "산 기록이 없습니다.");
-    section("판 기록", ME.sold.map(function (x) { return row(x.item, "구매자 " + x.with + " · " + ago(x.time), x.price); }), "판 기록이 없습니다.");
+    var two = el("div", "grid2");
+    two.appendChild(payForm());
+    var alerts = el("div", "box"); alerts.appendChild(el("h3", null, "실시간 알림"));
+    alerts.appendChild(el("p", "meta", "이 페이지를 켜두면 물건이 팔리거나, 돈이 들어오거나, 우편이 오면 화면 아래에 알림이 뜨고 탭 제목에 숫자가 붙습니다."));
+    var sb = el("button", "btn", sound ? "알림 소리 끄기" : "알림 소리 켜기");
+    sb.addEventListener("click", function () { sound = !sound; try { localStorage.setItem(SOUND_STORE, sound ? "1" : "0"); } catch (e) {} if (sound) beep(); drawMe(); });
+    alerts.appendChild(sb); two.appendChild(alerts); body.appendChild(two);
+    if (ME.inventory) {
+      var inv = el("div", "grid2");
+      inv.appendChild(slotGrid("인벤토리", ME.inventory.slice(9, 36).concat(ME.inventory.slice(0, 9)), "아래 줄이 단축바입니다. 파란 테두리는 마법이 부여된 아이템."));
+      inv.appendChild(slotGrid("엔더 상자", ME.enderChest));
+      body.appendChild(inv);
+    } else body.appendChild(el("p", "muted", "인벤토리와 엔더 상자는 게임에 접속해 있을 때 보입니다."));
+    section(body, "우편함", ME.mail.map(function (x) { return row(x.item, x.note + " · " + ago(x.time), null); }), "우편함이 비어 있습니다.");
+    section(body, "내가 판매 중인 물품", ME.listings.map(function (x) { return row(x.item, "올린 때 " + ago(x.time), x.price); }), "판매 중인 물품이 없습니다.");
+    section(body, "내 삽니다 주문", ME.orders.map(function (o) {
+      var r = row(Object.assign({}, o.item, { amount: o.amount }), ago(o.time), o.price);
+      r.side.appendChild(confirmButton("취소", "취소 확인", "", function (done) { act("/api/order/cancel", { id: o.id }, done); }));
+      return r;
+    }), "올린 주문이 없습니다.");
+    section(body, "산 기록", ME.bought.map(function (x) { return row(x.item, "판매자 " + x.with + " · " + ago(x.time), x.price); }), "산 기록이 없습니다.");
+    section(body, "판 기록", ME.sold.map(function (x) { return row(x.item, "구매자 " + x.with + " · " + ago(x.time), x.price); }), "판 기록이 없습니다.");
     body.appendChild(el("h2", null, "내 땅"));
     var land = el("div", "ledger");
     fill(land, ME.land.map(function (c) {
       var r = el("div", "row"), main = el("div", "main");
       main.appendChild(el("strong", null, c.world + " · X " + c.x + " ~ " + (c.x + 15) + ", Z " + c.z + " ~ " + (c.z + 15)));
       main.appendChild(el("span", "meta", "허락한 플레이어 " + c.members + "명 · 모두에게: " + (c.everyone.length ? c.everyone.join(", ") : "없음")));
-      r.appendChild(main);
-      return r;
+      r.appendChild(main); return r;
     }), "가진 땅이 없습니다. 서버 상점의 '땅 소유권'으로 살 수 있습니다.");
     body.appendChild(land);
     body.appendChild(el("h2", null, "내 그룹"));
     var groups = el("div", "ledger");
     fill(groups, ME.groups.map(function (g) {
       var r = el("div", "row"), main = el("div", "main");
-      main.appendChild(el("strong", null, g.name));
-      main.appendChild(el("span", "meta", "내 역할: " + (g.role || "-") + " · 그룹원 " + g.members + "명"));
-      r.appendChild(main);
-      return r;
+      main.appendChild(el("strong", null, g.name)); main.appendChild(el("span", "meta", "내 역할: " + (g.role || "-") + " · 그룹원 " + g.members + "명"));
+      r.appendChild(main); return r;
     }), "속한 그룹이 없습니다.");
     body.appendChild(groups);
     body.appendChild(el("h2", null, "계정"));
     body.appendChild(passwordForm());
-    body.appendChild(el("p", "muted", "로그인 유지: " + new Date(ME.expires).toLocaleString("ko-KR") + "까지 · 20초마다 새로 고칩니다."));
+    body.appendChild(el("p", "muted", "로그인 유지: " + new Date(ME.expires).toLocaleString("ko-KR") + "까지"));
   }
-  function setKey(k) {
-    key = k;
-    try { localStorage.setItem(KEY_STORE, key); } catch (e) {}
-  }
+  function setKey(k) { key = k; try { localStorage.setItem(KEY_STORE, key); } catch (e) {} }
+  function forget(message) { key = ""; ME = null; ADMIN = null; meError = message || ""; try { localStorage.removeItem(KEY_STORE); } catch (e) {} drawWho(); }
   function logout() {
-    if (key) post("/api/logout", {}, { "X-Key": key }).catch(function () {});
-    key = ""; ME = null; meError = "";
-    try { localStorage.removeItem(KEY_STORE); } catch (e) {}
-    drawMe();
+    if (key) call("POST", "/api/logout", {}, true).catch(function () {});
+    forget(""); drawMe();
+    if (view === "admin") location.hash = "#me";
   }
 
-  // --- data ---------------------------------------------------------------------
-  function post(url, data, headers) {
-    var h = Object.assign({ "Content-Type": "application/json" }, headers || {});
-    return fetch(url, { method: "POST", headers: h, body: JSON.stringify(data), cache: "no-store" }).then(function (r) {
-      return r.json().then(function (j) { return { ok: r.ok, body: j }; });
-    });
+  // --- live alerts ------------------------------------------------------------
+  var audio = null;
+  function beep() {
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      var o = audio.createOscillator(), g = audio.createGain(); o.connect(g); g.connect(audio.destination);
+      o.frequency.value = 880; g.gain.value = 0.06; o.start(); o.stop(audio.currentTime + 0.15);
+    } catch (e) {}
   }
-  function get(url, headers) {
-    return fetch(url, { headers: headers || {}, cache: "no-store" }).then(function (r) {
-      return r.json().then(function (j) { return { ok: r.ok, status: r.status, body: j }; });
-    });
+  function notify(text) {
+    toast(text);
+    if (sound) beep();
+    if (document.hidden) { unread++; document.title = "(" + unread + ") " + baseTitle; }
   }
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) { unread = 0; document.title = baseTitle; } });
+  var ownAction = 0;
+  function compare(before, after) {
+    if (!before || before.name !== after.name) return;
+    var newSales = after.sold.filter(function (s) { return !before.sold.some(function (b) { return b.time === s.time; }); });
+    newSales.forEach(function (s) { notify(itemName(s.item) + " ×" + s.item.amount + "이(가) " + money(s.price) + " " + sym() + "에 팔렸습니다. (구매자 " + s.with + ")"); });
+    var mine = Date.now() - ownAction < 3000;
+    if (after.mail.length > before.mail.length && !mine) notify("우편이 " + (after.mail.length - before.mail.length) + "개 왔습니다.");
+    var fromSales = newSales.reduce(function (a, s) { return a + s.price; }, 0);
+    var diff = after.balance - before.balance - fromSales;
+    if (diff > 0 && !mine) notify(money(diff) + " " + sym() + "이(가) 들어왔습니다. (잔액 " + money(after.balance) + " " + sym() + ")");
+  }
+
+  // --- admin ------------------------------------------------------------------
+  function drawAdmin() {
+    var body = $("adminBody"); body.replaceChildren();
+    if (!ME || !ME.admin) { body.appendChild(el("p", "muted", "관리자만 볼 수 있습니다.")); return; }
+    if (!ADMIN) { body.appendChild(el("p", "muted", "불러오는 중입니다.")); return; }
+    var grid = el("div", "grid2");
+    var bf = el("form", "box"); bf.appendChild(el("h3", null, "플레이어 잔액 바꾸기"));
+    bf.appendChild(field("닉네임", "aName", "text", { required: "", autocomplete: "off", list: "aPlayers" }));
+    var dl = el("datalist"); dl.id = "aPlayers"; ADMIN.players.forEach(function (p) { var o = el("option"); o.value = p.name; dl.appendChild(o); }); bf.appendChild(dl);
+    var mode = el("label", null, "방식"); var sel = el("select"); sel.id = "aMode";
+    [["add", "더하기 (빼려면 음수)"], ["set", "이 금액으로 정하기"]].forEach(function (x) { var o = el("option", null, x[1]); o.value = x[0]; sel.appendChild(o); });
+    mode.appendChild(sel); bf.appendChild(mode);
+    bf.appendChild(field("금액", "aAmt", "number", { required: "" }));
+    var bgo = el("button", "btn primary", "적용"); bgo.type = "submit"; bf.appendChild(bgo);
+    bf.addEventListener("submit", function (e) { e.preventDefault(); act("/api/admin/balance", { name: $("aName").value, mode: $("aMode").value, amount: Number($("aAmt").value) || 0 }, loadAdmin); });
+    grid.appendChild(bf);
+    var gf = el("form", "box"); gf.appendChild(el("h3", null, "전체 지급"));
+    gf.appendChild(field("한 사람당 금액", "gAmt", "number", { min: "1", required: "" }));
+    var target = el("label", null, "받는 사람"); var ts = el("select"); ts.id = "gTarget";
+    [["online", "접속 중인 플레이어 (" + ADMIN.online + "명)"], ["everyone", "모든 플레이어 (" + ADMIN.everyone + "명)"]].forEach(function (x) { var o = el("option", null, x[1]); o.value = x[0]; ts.appendChild(o); });
+    target.appendChild(ts); gf.appendChild(target);
+    gf.appendChild(field("안내 메시지 (60글자까지)", "gMsg", "text", { maxlength: "60", placeholder: "관리자 전체 지급" }));
+    var ggo = el("button", "btn primary", "지급하기"); ggo.type = "submit"; gf.appendChild(ggo);
+    var garmed = false, gtimer = null;
+    gf.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (!garmed) { garmed = true; ggo.textContent = "한 번 더 누르면 지급합니다"; ggo.classList.add("armed"); gtimer = setTimeout(function () { garmed = false; ggo.textContent = "지급하기"; ggo.classList.remove("armed"); }, 5000); return; }
+      clearTimeout(gtimer); garmed = false; ggo.classList.remove("armed"); ggo.textContent = "지급하기";
+      act("/api/admin/giveall", { amount: Number($("gAmt").value) || 0, everyone: $("gTarget").value === "everyone", message: $("gMsg").value }, loadAdmin);
+    });
+    grid.appendChild(gf);
+    var nf = el("form", "box"); nf.appendChild(el("h3", null, "공지 쓰기"));
+    nf.appendChild(field("제목", "nTitle", "text", { maxlength: "60" }));
+    nf.appendChild(field("내용", "nBody", "textarea", { maxlength: "600", rows: "4" }));
+    var ngo = el("button", "btn primary", "올리기"); ngo.type = "submit"; nf.appendChild(ngo);
+    nf.addEventListener("submit", function (e) { e.preventDefault(); act("/api/admin/notice", { title: $("nTitle").value, body: $("nBody").value }, function (r) { if (r.ok) { $("nTitle").value = ""; $("nBody").value = ""; } }); });
+    nf.appendChild(el("p", "muted", "게임에서는 /trade 공지 <내용>"));
+    grid.appendChild(nf);
+    body.appendChild(grid);
+    body.appendChild(el("h2", null, "올라온 공지"));
+    var nl = el("div", "ledger");
+    fill(nl, (PUB ? PUB.notices : []).map(function (n) {
+      var r = el("div", "row"), main = el("div", "main");
+      main.appendChild(el("strong", null, n.title)); if (n.body) main.appendChild(el("span", "meta", n.body)); main.appendChild(el("span", "meta", n.author + " · " + ago(n.time)));
+      r.appendChild(main);
+      var side = el("div", "side"); side.appendChild(confirmButton("지우기", "지우기 확인", "", function (done) { act("/api/admin/notice/delete", { id: n.id }, done); }));
+      r.appendChild(side); return r;
+    }), "공지가 없습니다.");
+    body.appendChild(nl);
+    body.appendChild(el("h2", null, "서버 상점 가격"));
+    var sl = el("div", "ledger");
+    fill(sl, ADMIN.products.map(function (p) {
+      var r = el("div", "row"), main = el("div", "main"); main.appendChild(el("strong", null, p.name)); main.appendChild(el("span", "meta", p.id)); r.appendChild(main);
+      var side = el("div", "side"); var inp = el("input"); inp.type = "number"; inp.min = "0"; inp.value = p.price; inp.style.width = "120px"; inp.setAttribute("aria-label", p.name + " 가격");
+      var save = el("button", "btn", "저장"); save.type = "button"; save.addEventListener("click", function () { act("/api/admin/shop", { id: p.id, price: Number(inp.value) || 0 }, loadAdmin); });
+      side.append(inp, save); r.appendChild(side); return r;
+    }), "상품이 없습니다.");
+    body.appendChild(sl);
+    body.appendChild(el("h2", null, "플레이어 잔액"));
+    var pl = el("div", "ledger");
+    fill(pl, ADMIN.players.slice().sort(function (a, b) { return b.balance - a.balance; }).map(function (p) {
+      var r = el("div", "row click"), main = el("div", "main"); main.appendChild(el("strong", null, p.name + (p.online ? " · 접속 중" : ""))); r.appendChild(main);
+      r.appendChild(priceCell(p.balance)); r.addEventListener("click", function () { $("aName").value = p.name; $("aName").focus(); }); return r;
+    }), "플레이어가 없습니다.");
+    body.appendChild(pl);
+  }
+
+  // --- loading -----------------------------------------------------------------
   function loadPublic() {
-    get("/api/public").then(function (r) {
-      PUB = r.body;
-      $("dot").classList.remove("off");
-      drawServer();
-      if (view === "market") drawMarket();
-      if (view === "orders") drawOrders();
-    }).catch(function () {
-      $("dot").classList.add("off");
-      $("motd").textContent = "서버에 연결할 수 없습니다. 서버가 꺼져 있을 수 있습니다.";
-    });
+    call("GET", "/api/public").then(function (r) {
+      PUB = r.body; $("dot").classList.remove("off");
+      if (view === "server") drawServer();
+      $("liveCount").textContent = PUB.server.online;
+      $("motd").textContent = (PUB.server.motd || "마인크래프트 서버") + " · " + PUB.server.version;
+      if (view === "market") drawMarket(); if (view === "orders") drawOrders();
+    }).catch(function () { $("dot").classList.add("off"); $("motd").textContent = "서버에 연결할 수 없습니다. 서버가 꺼져 있을 수 있습니다."; });
   }
+  function loadStats() {
+    call("GET", "/api/stats").then(function (r) { STATS = r.body; if (view === "ranks") drawRanks(); if (view === "prices") drawPrices(); if (view === "market") drawMarket(); }).catch(function () {});
+  }
+  function loadMap() { call("GET", "/api/map").then(function (r) { MAP = r.body; if (view === "map") drawMap(); }).catch(function () {}); }
   function loadMe() {
     if (!key) return;
-    get("/api/me", { "X-Key": key }).then(function (r) {
-      if (r.ok) { ME = r.body; meError = ""; }
-      else if (r.status === 401 || !r.ok) {
-        ME = null; meError = r.body.error || "정보를 가져오지 못했습니다.";
-        if (r.status === 401) { key = ""; try { localStorage.removeItem(KEY_STORE); } catch (e) {} }
-      }
+    call("GET", "/api/me", null, true).then(function (r) {
+      if (r.ok) { var before = ME; ME = r.body; meError = ""; compare(before, ME); }
+      else if (r.status === 401) forget(r.body.error); else meError = r.body.error || "정보를 가져오지 못했습니다.";
       drawWho();
-      if (view === "me") drawMe();
-    }).catch(function () { meError = "서버에 연결할 수 없습니다."; if (view === "me") drawMe(); });
+      if (view === "me" && !document.activeElement.closest("#meBody form")) drawMe();
+      if (view === "market") drawMarket();
+      if (view === "admin" && !ADMIN) loadAdmin();
+    }).catch(function () {});
   }
+  function loadAdmin() {
+    if (!ME || !ME.admin) { drawAdmin(); return; }
+    call("GET", "/api/admin", null, true).then(function (r) { ADMIN = r.ok ? r.body : null; if (view === "admin") drawAdmin(); }).catch(function () {});
+  }
+  var rawAct = act;
+  act = function (url, data, done) { ownAction = Date.now(); return rawAct(url, data, done); };
 
   // --- routing ------------------------------------------------------------------
-  var VIEWS = ["server", "market", "orders", "prices", "me"];
+  var VIEWS = ["server", "market", "orders", "prices", "ranks", "map", "me", "admin"];
   var view = "server";
   function route() {
     var h = location.hash.replace("#", "");
     view = VIEWS.indexOf(h) >= 0 ? h : "server";
     VIEWS.forEach(function (v) { $("v-" + v).hidden = v !== view; });
-    document.querySelectorAll("nav a").forEach(function (a) {
-      if (a.getAttribute("href") === "#" + view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
-    });
+    document.querySelectorAll("nav a").forEach(function (a) { if (a.getAttribute("href") === "#" + view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+    if (view === "server") drawServer();
     if (view === "market") drawMarket();
     if (view === "orders") drawOrders();
     if (view === "prices") drawPrices();
+    if (view === "ranks") { drawRanks(); loadStats(); }
+    if (view === "map") { drawMap(); loadMap(); }
     if (view === "me") { drawMe(); loadMe(); }
+    if (view === "admin") { drawAdmin(); loadAdmin(); }
   }
   window.addEventListener("hashchange", route);
-  $("mq").addEventListener("input", drawMarket);
-  $("msort").addEventListener("change", drawMarket);
+  $("mq").addEventListener("input", drawMarket); $("msort").addEventListener("change", drawMarket);
   $("oq").addEventListener("input", drawOrders);
-  $("pq").addEventListener("input", drawPrices);
-  $("psort").addEventListener("change", drawPrices);
-  $("pqty").addEventListener("input", drawPrices);
+  $("pq").addEventListener("input", drawPrices); $("psort").addEventListener("change", drawPrices); $("pqty").addEventListener("input", drawPrices);
 
-  get("/ko.json").then(function (r) { KO = r.body || KO; route(); loadPublic(); }).catch(function () { route(); loadPublic(); });
-  get("/api/values").then(function (r) { VALUES = r.body; if (view === "prices") drawPrices(); }).catch(function () {});
-  setInterval(loadPublic, 5000);
-  setInterval(function () { if (view === "me") loadMe(); }, 20000);
+  call("GET", "/ko.json").then(function (r) { KO = r.body || KO; route(); }).catch(function () { route(); });
+  call("GET", "/api/values").then(function (r) { VALUES = r.body; if (view === "prices") drawPrices(); }).catch(function () {});
+  loadPublic(); loadStats();
   if (key) loadMe();
+  setInterval(loadPublic, 5000);
+  setInterval(loadMe, 10000);
+  setInterval(loadStats, 60000);
+  setInterval(function () { if (view === "map") loadMap(); }, 30000);
   route();
 })();
 </script>

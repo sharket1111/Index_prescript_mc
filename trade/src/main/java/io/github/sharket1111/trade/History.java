@@ -93,6 +93,11 @@ final class History {
 		save();
 	}
 
+	/** Every purchase on record, oldest first (a copy). */
+	static List<Entry> all() {
+		return List.copyOf(ENTRIES);
+	}
+
 	/** A player's purchases ({@code sales} false) or sales, newest first. */
 	static List<Entry> of(UUID player, boolean sales) {
 		List<Entry> found = new ArrayList<>();

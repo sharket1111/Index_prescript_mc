@@ -186,6 +186,17 @@ final class Money {
 
 	// --- balances -----------------------------------------------------------------------
 
+	/** Every balance (a copy). */
+	static Map<UUID, Long> balances() {
+		return Map.copyOf(BALANCES);
+	}
+
+	/** Sets a balance outright (admins). */
+	static void setBalance(UUID id, long amount) {
+		set(id, Math.max(0, Math.min(MAX_BALANCE, amount)));
+		save();
+	}
+
 	static long balance(UUID id) {
 		return BALANCES.getOrDefault(id, 0L);
 	}

@@ -270,6 +270,16 @@ final class Land {
 		return stack.getItemMeta().getPersistentDataContainer().get(deedKey, PersistentDataType.STRING);
 	}
 
+	/** Every claimed chunk (a copy). */
+	static List<Claim> all() {
+		return List.copyOf(CLAIMS.values());
+	}
+
+	/** Every protected chunk's key (a copy). */
+	static List<String> zones() {
+		return List.copyOf(ZONES);
+	}
+
 	static Claim claimByKey(String key) {
 		return CLAIMS.get(key);
 	}

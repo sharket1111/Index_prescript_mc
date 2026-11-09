@@ -39,6 +39,10 @@ final class GiveAllMenu extends Menu {
 
 	/** Who would be paid: online players, or everyone who has played here. */
 	private Set<UUID> recipients() {
+		return recipients(everyone);
+	}
+
+	static Set<UUID> recipients(boolean everyone) {
 		Set<UUID> ids = new LinkedHashSet<>();
 		for (Player online : Bukkit.getOnlinePlayers()) {
 			ids.add(online.getUniqueId());
@@ -130,12 +134,18 @@ final class GiveAllMenu extends Menu {
 			failSound();
 			return;
 		}
-		Money.giveAll(ids, amount, message);
+		give(ids, amount, message, player.getName(), everyone);
 		tell(ids.size() + "명에게 " + Money.format(amount) + "씩 지급했습니다. (합계 " + Money.format(amount * ids.size()) + ")",
 				NamedTextColor.GREEN);
-		TradePlugin.getPlugin(TradePlugin.class).getLogger().info(player.getName() + " gave " + amount + " to " + ids.size()
-				+ (everyone ? " players (everyone)" : " online players"));
 		successSound();
 		redraw();
+	}
+
+	/** Pays everyone in {@code ids}, posts it on the web page's notices and logs it (from the menu or the web admin page). */
+	static void give(Set<UUID> ids, long amount, String message, String admin, boolean everyone) {
+		Money.giveAll(ids, amount, message);
+		WebNotices.post("전체 지급: " + Money.format(amount), message + " (" + ids.size() + "명)", admin, true);
+		TradePlugin.getPlugin(TradePlugin.class).getLogger().info(admin + " gave " + amount + " to " + ids.size()
+				+ (everyone ? " players (everyone)" : " online players"));
 	}
 }
