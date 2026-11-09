@@ -71,6 +71,23 @@ final class ItemValues {
 	private ItemValues() {
 	}
 
+	/** Bumped when the default table changes in a way existing files should take up. */
+	private static final int VERSION = 2;
+
+	/** Each ore (and its deepslate form) is worth exactly what it gives: the mineral, or the ingot it smelts into. */
+	private static final Map<String, String> ORES = new TreeMap<>(Map.ofEntries(
+			Map.entry("DIAMOND_ORE", "DIAMOND"), Map.entry("DEEPSLATE_DIAMOND_ORE", "DIAMOND"),
+			Map.entry("EMERALD_ORE", "EMERALD"), Map.entry("DEEPSLATE_EMERALD_ORE", "EMERALD"),
+			Map.entry("IRON_ORE", "IRON_INGOT"), Map.entry("DEEPSLATE_IRON_ORE", "IRON_INGOT"),
+			Map.entry("GOLD_ORE", "GOLD_INGOT"), Map.entry("DEEPSLATE_GOLD_ORE", "GOLD_INGOT"),
+			Map.entry("NETHER_GOLD_ORE", "GOLD_INGOT"),
+			Map.entry("COPPER_ORE", "COPPER_INGOT"), Map.entry("DEEPSLATE_COPPER_ORE", "COPPER_INGOT"),
+			Map.entry("COAL_ORE", "COAL"), Map.entry("DEEPSLATE_COAL_ORE", "COAL"),
+			Map.entry("REDSTONE_ORE", "REDSTONE"), Map.entry("DEEPSLATE_REDSTONE_ORE", "REDSTONE"),
+			Map.entry("LAPIS_ORE", "LAPIS_LAZULI"), Map.entry("DEEPSLATE_LAPIS_ORE", "LAPIS_LAZULI"),
+			Map.entry("NETHER_QUARTZ_ORE", "QUARTZ"),
+			Map.entry("ANCIENT_DEBRIS", "NETHERITE_SCRAP")));
+
 	static void load(Plugin owner) {
 		plugin = owner;
 		file = new File(owner.getDataFolder(), "values.yml");
@@ -80,7 +97,8 @@ final class ItemValues {
 			save();
 			return;
 		}
-		ConfigurationSection root = YamlConfiguration.loadConfiguration(file).getConfigurationSection("values");
+		YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+		ConfigurationSection root = yaml.getConfigurationSection("values");
 		if (root == null) {
 			return;
 		}
@@ -91,10 +109,28 @@ final class ItemValues {
 				VALUES.put(material, value);
 			}
 		}
+		if (yaml.getInt("version", 1) < VERSION) {
+			// Older tables valued ores above their minerals: they now match, the rest stays as the admin left it.
+			oresAsMinerals();
+			save();
+			owner.getLogger().info("values.yml: ores now match their minerals.");
+		}
+	}
+
+	/** Sets every ore to its mineral's value (when the mineral has one). */
+	private static void oresAsMinerals() {
+		ORES.forEach((ore, mineral) -> {
+			Material oreType = Material.matchMaterial(ore);
+			Material mineralType = Material.matchMaterial(mineral);
+			if (oreType != null && mineralType != null && VALUES.containsKey(mineralType)) {
+				VALUES.put(oreType, VALUES.get(mineralType));
+			}
+		});
 	}
 
 	private static void save() {
 		YamlConfiguration yaml = new YamlConfiguration();
+		yaml.set("version", VERSION);
 		yaml.options().setHeader(List.of(
 				"PlayerTrade item values: what the server pays for one of each item when it is sold.",
 				"Change a number to reprice an item; remove a line to stop it being sold.",
@@ -195,6 +231,13 @@ final class ItemValues {
 			}
 		}
 		VALUES.putAll(base);
+		oresAsMinerals();
+		for (String ore : ORES.keySet()) {
+			Material type = Material.matchMaterial(ore);
+			if (type != null && VALUES.containsKey(type)) {
+				base.put(type, VALUES.get(type));
+			}
+		}
 		// Everything made from them is worth what goes into it, the cheapest way.
 		for (int pass = 0; pass < PASSES; pass++) {
 			boolean changed = false;
@@ -358,26 +401,26 @@ final class ItemValues {
 	static {
 		// Ores and what they give.
 		put(100, "DIAMOND");
-		put(120, "DIAMOND_ORE", "DEEPSLATE_DIAMOND_ORE");
+
 		put(10, "EMERALD");
-		put(15, "EMERALD_ORE", "DEEPSLATE_EMERALD_ORE");
-		put(10, "IRON_INGOT", "IRON_ORE", "DEEPSLATE_IRON_ORE");
+
+		put(10, "IRON_INGOT");
 		put(8, "RAW_IRON");
-		put(20, "GOLD_INGOT", "GOLD_ORE", "DEEPSLATE_GOLD_ORE");
+		put(20, "GOLD_INGOT");
 		put(16, "RAW_GOLD");
-		put(8, "NETHER_GOLD_ORE");
-		put(3, "COPPER_INGOT", "COPPER_ORE", "DEEPSLATE_COPPER_ORE");
+
+		put(3, "COPPER_INGOT");
 		put(2, "RAW_COPPER");
 		put(4, "COAL");
-		put(6, "COAL_ORE", "DEEPSLATE_COAL_ORE");
+
 		put(3, "CHARCOAL");
 		put(3, "REDSTONE");
-		put(12, "REDSTONE_ORE", "DEEPSLATE_REDSTONE_ORE");
+
 		put(4, "LAPIS_LAZULI");
-		put(18, "LAPIS_ORE", "DEEPSLATE_LAPIS_ORE");
+
 		put(4, "QUARTZ");
-		put(5, "NETHER_QUARTZ_ORE");
-		put(250, "NETHERITE_SCRAP", "ANCIENT_DEBRIS");
+
+		put(250, "NETHERITE_SCRAP");
 		put(3, "AMETHYST_SHARD");
 		put(100, "ECHO_SHARD");
 		put(2, "GLOWSTONE_DUST");
