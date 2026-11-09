@@ -69,9 +69,26 @@ final class WebData {
 		}
 	}
 
+	/** A player's name, falling back to the names saved with their trades and land when the server has none cached. */
 	private static String name(UUID id) {
-		String name = Bukkit.getOfflinePlayer(id).getName();
-		return name != null ? name : Market.name(id);
+		String name = WebActions.name(id);
+		if (!"?".equals(name)) {
+			return name;
+		}
+		for (History.Entry entry : History.all()) {
+			if (id.equals(entry.seller()) && entry.sellerName() != null) {
+				return entry.sellerName();
+			}
+			if (id.equals(entry.buyer()) && entry.buyerName() != null) {
+				return entry.buyerName();
+			}
+		}
+		for (Land.Claim claim : Land.all()) {
+			if (claim.owner.equals(id)) {
+				return claim.ownerName;
+			}
+		}
+		return name;
 	}
 
 	private static JsonArray top(Map<UUID, Long> values) {
