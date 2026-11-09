@@ -14,6 +14,9 @@ final class AdminMenu extends Menu {
 	private static final int HISTORY_SLOT = 14;
 	private static final int SHOP_SLOT = 16;
 	private static final int PROTECT_SLOT = 22;
+	private static final int CURRENCY_SLOT = 4;
+	static final int NAME_MAX = 10;
+	static final int SYMBOL_MAX = 5;
 
 	AdminMenu(Player player) {
 		super(player, "거래 - 관리자");
@@ -31,7 +34,37 @@ final class AdminMenu extends Menu {
 				"상품 추가, 가격 수정, 삭제 (shop.yml에 저장)"));
 		inventory.setItem(PROTECT_SLOT, TradeItems.button(Material.BEDROCK, "보호구역", NamedTextColor.GOLD,
 				"서 있는 곳 주변 청크를 보호구역으로 지정/해제합니다."));
+		inventory.setItem(CURRENCY_SLOT, TradeItems.glint(TradeItems.button(Material.GOLD_INGOT, "화폐 이름: " + Money.name()
+				+ " (단위 " + Money.symbol() + ")", NamedTextColor.GOLD, "클릭: 화폐 이름과 단위를 채팅으로 바꿉니다.",
+				"예: 이름 '원', 단위 '원' → 1,250 원", "명령어: /trade 화폐 <이름> [단위]")));
 		inventory.setItem(BACK_SLOT, TradeItems.back());
+	}
+
+	/** Asks for the currency's new name, then its symbol ("-" keeps it). */
+	private void renameCurrency() {
+		ChatPrompt.ask(player, "새 화폐 이름을 입력하세요. (지금: " + Money.name() + ", 1~" + NAME_MAX + "글자)", name -> {
+			String problem = Money.badName(name, NAME_MAX);
+			if (problem != null) {
+				tell(problem, NamedTextColor.RED);
+				failSound();
+				open();
+				return;
+			}
+			ChatPrompt.ask(player, "새 단위를 입력하세요. (지금: " + Money.symbol() + ", 1~" + SYMBOL_MAX + "글자, '-'는 그대로)", symbol -> {
+				String keep = symbol.equals("-") ? null : symbol;
+				String bad = keep == null ? null : Money.badName(keep, SYMBOL_MAX);
+				if (bad != null) {
+					tell(bad, NamedTextColor.RED);
+					failSound();
+					open();
+					return;
+				}
+				Money.rename(name, keep);
+				tell("화폐를 '" + Money.name() + "'(단위 " + Money.symbol() + ")(으)로 바꿨습니다. 예: " + Money.format(1250), NamedTextColor.GREEN);
+				successSound();
+				open();
+			}, this::open);
+		}, this::open);
 	}
 
 	@Override
@@ -48,6 +81,7 @@ final class AdminMenu extends Menu {
 					(id, name) -> new HistoryMenu(player, id, name, 0, false).open()).open();
 			case SHOP_SLOT -> new ShopEditorMenu(player).open();
 			case PROTECT_SLOT -> new ProtectMenu(player, 0).open();
+			case CURRENCY_SLOT -> renameCurrency();
 			default -> {
 				return;
 			}

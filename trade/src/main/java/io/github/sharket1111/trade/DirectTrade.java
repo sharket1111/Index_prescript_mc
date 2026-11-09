@@ -119,7 +119,7 @@ final class DirectTrade {
 					confirmA = false;
 					confirmB = false;
 					for (Player q : List.of(a, b)) {
-						q.sendMessage(Component.text(p.getName() + "님의 " + Money.name() + "가 올린 금액보다 적어 확인이 풀렸습니다.", NamedTextColor.RED));
+						q.sendMessage(Component.text(p.getName() + "님의 " + Money.subject() + " 올린 금액보다 적어 확인이 풀렸습니다.", NamedTextColor.RED));
 					}
 					refresh();
 					return;

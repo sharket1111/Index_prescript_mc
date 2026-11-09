@@ -119,6 +119,60 @@ final class Money {
 		return name;
 	}
 
+	static String symbol() {
+		return symbol;
+	}
+
+	/** The name with 이/가. */
+	static String subject() {
+		return name + (batchim(name) ? "이" : "가");
+	}
+
+	/** The name with 을/를. */
+	static String object() {
+		return name + (batchim(name) ? "을" : "를");
+	}
+
+	/** The name with (으)로. */
+	static String means() {
+		char last = name.isEmpty() ? 'a' : name.charAt(name.length() - 1);
+		boolean rieul = last >= 0xAC00 && last <= 0xD7A3 && (last - 0xAC00) % 28 == 8;
+		return name + (batchim(name) && !rieul ? "으로" : "로");
+	}
+
+	/** Whether a word ends in a final consonant (Hangul; anything else reads as not). */
+	private static boolean batchim(String word) {
+		if (word.isEmpty()) {
+			return false;
+		}
+		char last = word.charAt(word.length() - 1);
+		return last >= 0xAC00 && last <= 0xD7A3 && (last - 0xAC00) % 28 != 0;
+	}
+
+	/** Why a currency name or symbol cannot be used, or null. */
+	static String badName(String text, int max) {
+		if (text.isBlank() || text.length() > max) {
+			return "1~" + max + "글자로 정하세요.";
+		}
+		for (char c : text.toCharArray()) {
+			if (Character.isISOControl(c) || c == '\u00a7' || c == '&') {
+				return "쓸 수 없는 문자가 있습니다.";
+			}
+		}
+		return null;
+	}
+
+	/** Renames the currency (and its symbol when given); saved at once. */
+	static void rename(String newName, String newSymbol) {
+		if (newName != null) {
+			name = newName.strip();
+		}
+		if (newSymbol != null) {
+			symbol = newSymbol.strip();
+		}
+		save();
+	}
+
 	/** "1,250 G". */
 	static String format(long amount) {
 		return String.format("%,d %s", amount, symbol);
@@ -127,7 +181,7 @@ final class Money {
 	/** The wallet button the menus show. */
 	static ItemStack wallet(Player player) {
 		return TradeItems.glint(TradeItems.button(Material.GOLD_INGOT, "내 " + name + ": " + format(balance(player.getUniqueId())),
-				NamedTextColor.GOLD, "아이템 판매 탭에서 아이템을 팔아 " + name + "를 얻습니다."));
+				NamedTextColor.GOLD, "아이템 판매 탭에서 아이템을 팔아 " + object() + " 얻습니다."));
 	}
 
 	// --- balances -----------------------------------------------------------------------

@@ -108,7 +108,7 @@ final class GroupMenu extends Menu {
 				return;
 			}
 			if (!Money.take(player.getUniqueId(), Groups.PRICE)) {
-				tell(Money.name() + "가 부족합니다.", NamedTextColor.RED);
+				tell(Money.subject() + " 부족합니다.", NamedTextColor.RED);
 				failSound();
 				new GroupMenu(player).open();
 				return;

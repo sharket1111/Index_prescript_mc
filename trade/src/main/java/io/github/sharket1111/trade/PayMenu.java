@@ -46,7 +46,7 @@ final class PayMenu extends Menu {
 		inventory.setItem(BACK_SLOT, TradeItems.back());
 		inventory.setItem(SEND_SLOT, have >= amount
 				? TradeItems.button(Material.LIME_CONCRETE, "보내기", NamedTextColor.GREEN, Money.format(amount) + "을(를) 보냅니다.")
-				: TradeItems.button(Material.GRAY_CONCRETE, Money.name() + "가 부족합니다", NamedTextColor.RED));
+				: TradeItems.button(Material.GRAY_CONCRETE, Money.subject() + " 부족합니다", NamedTextColor.RED));
 	}
 
 	@Override
@@ -77,7 +77,7 @@ final class PayMenu extends Menu {
 			return;
 		}
 		if (!Money.take(player.getUniqueId(), amount)) {
-			tell(Money.name() + "가 부족합니다.", NamedTextColor.RED);
+			tell(Money.subject() + " 부족합니다.", NamedTextColor.RED);
 			failSound();
 			return;
 		}

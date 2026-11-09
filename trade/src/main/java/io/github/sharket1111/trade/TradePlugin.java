@@ -71,7 +71,9 @@ public final class TradePlugin extends JavaPlugin {
 			sender.sendMessage(Component.text("플레이어만 쓸 수 있습니다.", NamedTextColor.RED));
 			return true;
 		}
-		if (args.length >= 1 && (args[0].equals("판매") || args[0].equalsIgnoreCase("sell"))) {
+		if (args.length >= 1 && (args[0].equals("화폐") || args[0].equalsIgnoreCase("currency"))) {
+			currency(player, args);
+		} else if (args.length >= 1 && (args[0].equals("판매") || args[0].equalsIgnoreCase("sell"))) {
 			new SellMenu(player).open();
 		} else if (args.length >= 1 && (args[0].equals("잔액") || args[0].equalsIgnoreCase("money") || args[0].equalsIgnoreCase("balance"))) {
 			player.sendMessage(Component.text("내 " + Money.name() + ": " + Money.format(Money.balance(player.getUniqueId())), NamedTextColor.GOLD));
@@ -79,5 +81,29 @@ public final class TradePlugin extends JavaPlugin {
 			new MainMenu(player).open();
 		}
 		return true;
+	}
+
+	/** /trade 화폐 <이름> [단위]: renames the currency (admins). */
+	private static void currency(Player player, String[] args) {
+		if (!player.hasPermission(AdminMenu.PERMISSION)) {
+			player.sendMessage(Component.text("관리자만 쓸 수 있습니다.", NamedTextColor.RED));
+			return;
+		}
+		if (args.length < 2) {
+			player.sendMessage(Component.text("지금 화폐: " + Money.name() + " (단위 " + Money.symbol() + ")", NamedTextColor.GOLD));
+			player.sendMessage(Component.text("사용법: /trade 화폐 <이름> [단위]  예: /trade 화폐 원 원", NamedTextColor.GRAY));
+			return;
+		}
+		String problem = Money.badName(args[1], AdminMenu.NAME_MAX);
+		if (problem == null && args.length >= 3) {
+			problem = Money.badName(args[2], AdminMenu.SYMBOL_MAX);
+		}
+		if (problem != null) {
+			player.sendMessage(Component.text(problem, NamedTextColor.RED));
+			return;
+		}
+		Money.rename(args[1], args.length >= 3 ? args[2] : null);
+		player.sendMessage(Component.text("화폐를 '" + Money.name() + "'(단위 " + Money.symbol() + ")(으)로 바꿨습니다. 예: "
+				+ Money.format(1250), NamedTextColor.GREEN));
 	}
 }

@@ -48,7 +48,7 @@ final class PurchaseMenu extends Menu {
 		inventory.setItem(BUY_SLOT, enough
 				? TradeItems.button(Material.LIME_CONCRETE, "구매하기", NamedTextColor.GREEN,
 						Money.format(price) + "을(를) 내고 삽니다.")
-				: TradeItems.button(Material.GRAY_CONCRETE, Money.name() + "가 부족합니다", NamedTextColor.RED,
+				: TradeItems.button(Material.GRAY_CONCRETE, Money.subject() + " 부족합니다", NamedTextColor.RED,
 						Money.format(price - have) + "이(가) 더 필요합니다."));
 	}
 
@@ -88,7 +88,7 @@ final class PurchaseMenu extends Menu {
 		}
 		int price = price();
 		if (!Money.take(player.getUniqueId(), price)) {
-			tell(Money.name() + "가 부족합니다.", NamedTextColor.RED);
+			tell(Money.subject() + " 부족합니다.", NamedTextColor.RED);
 			failSound();
 			redraw();
 			return;

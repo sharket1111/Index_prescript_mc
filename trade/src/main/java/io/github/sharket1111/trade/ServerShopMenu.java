@@ -61,7 +61,7 @@ final class ServerShopMenu extends Menu {
 		}
 		long have = Money.balance(player.getUniqueId());
 		if (!Money.take(player.getUniqueId(), product.price)) {
-			tell(Money.name() + "가 부족합니다. (" + Money.format(product.price - have) + " 더 필요)", NamedTextColor.RED);
+			tell(Money.subject() + " 부족합니다. (" + Money.format(product.price - have) + " 더 필요)", NamedTextColor.RED);
 			failSound();
 			return;
 		}

@@ -128,7 +128,7 @@ final class GroupWaypointsMenu extends Menu {
 			}
 			int price = nextPrice(current);
 			if (!Money.take(player.getUniqueId(), price)) {
-				tell(Money.name() + "가 부족합니다.", NamedTextColor.RED);
+				tell(Money.subject() + " 부족합니다.", NamedTextColor.RED);
 				failSound();
 				new GroupWaypointsMenu(player, groupId).open();
 				return;

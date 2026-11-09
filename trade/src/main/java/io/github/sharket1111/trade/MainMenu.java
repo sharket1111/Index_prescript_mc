@@ -32,7 +32,7 @@ final class MainMenu extends Menu {
 	void draw() {
 		Money.convertDiamonds(player);
 		inventory.setItem(SELL_SLOT, TradeItems.button(Material.GOLD_BLOCK, "아이템 판매", NamedTextColor.GOLD,
-				"아이템을 서버에 팔아 " + Money.name() + "를 얻습니다.", "광물, 작물, 몹 전리품, 블록 등"));
+				"아이템을 서버에 팔아 " + Money.object() + " 얻습니다.", "광물, 작물, 몹 전리품, 블록 등"));
 		inventory.setItem(WALLET_SLOT, Money.wallet(player));
 		inventory.setItem(MARKET_SLOT, TradeItems.button(Material.EMERALD, "시장", NamedTextColor.GREEN,
 				"모든 판매 물품을 한눈에 보고 삽니다.", "가격순 정렬, 분류별 보기"));
@@ -45,9 +45,9 @@ final class MainMenu extends Menu {
 		inventory.setItem(DIRECT_SLOT, TradeItems.button(Material.SHIELD, "직접 거래", NamedTextColor.LIGHT_PURPLE,
 				"접속한 플레이어와 1:1로 물건을 교환합니다.", "받은 거래 요청: " + DirectTrade.requestsFor(player).size() + "개"));
 		inventory.setItem(PAY_SLOT, TradeItems.button(Material.GOLD_INGOT, "송금", NamedTextColor.YELLOW,
-				Money.name() + "를 다른 플레이어에게 보냅니다."));
+				Money.object() + " 다른 플레이어에게 보냅니다."));
 		inventory.setItem(SERVER_SHOP_SLOT, TradeItems.button(Material.BELL, "서버 상점", NamedTextColor.LIGHT_PURPLE,
-				"귀환권, 경험치 같은 물품을", Money.name() + "로 삽니다."));
+				"귀환권, 경험치 같은 물품을", Money.means() + " 삽니다."));
 		int mail = Mailbox.of(player.getUniqueId()).size();
 		inventory.setItem(MAIL_SLOT, TradeItems.button(mail > 0 ? Material.CHEST_MINECART : Material.MINECART, "우편함 (" + mail + ")",
 				mail > 0 ? NamedTextColor.GOLD : NamedTextColor.GRAY, "받지 않은 물건을 받습니다."));

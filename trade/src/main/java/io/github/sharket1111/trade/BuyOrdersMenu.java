@@ -60,7 +60,7 @@ final class BuyOrdersMenu extends Menu {
 			inventory.setItem(NEW_SLOT, TradeItems.button(Material.WRITABLE_BOOK, "주문 올리기 (" + BuyOrders.of(player.getUniqueId()).size()
 					+ "/" + BuyOrders.MAX_PER_PLAYER + ")", NamedTextColor.GOLD,
 					"아래 내 인벤토리에서 사고 싶은 아이템을 클릭하면", "개수와 가격을 정해 주문을 올립니다.",
-					"주문할 때 가격만큼 " + Money.name() + "를 맡깁니다."));
+					"주문할 때 가격만큼 " + Money.object() + " 맡깁니다."));
 			inventory.setItem(MINE_SLOT, TradeItems.button(Material.NAME_TAG, mineOnly ? "보기: 내 주문만" : "보기: 전체 주문",
 					NamedTextColor.YELLOW, "클릭: 전환"));
 			inventory.setItem(WALLET_SLOT, Money.wallet(player));
@@ -113,7 +113,7 @@ final class BuyOrdersMenu extends Menu {
 				if (confirmed(click)) {
 					BuyOrders.remove(order);
 					Money.give(order.buyer, order.price, "관리자가 삭제한 삽니다 주문의 환불");
-					tell("주문을 삭제하고 맡긴 " + Money.name() + "를 주문자에게 돌려보냈습니다.", NamedTextColor.YELLOW);
+					tell("주문을 삭제하고 맡긴 " + Money.object() + " 주문자에게 돌려보냈습니다.", NamedTextColor.YELLOW);
 					successSound();
 					redraw();
 				}

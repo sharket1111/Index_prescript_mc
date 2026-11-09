@@ -50,7 +50,7 @@ final class BuyOrderEditor extends Menu {
 		inventory.setItem(POST_SLOT, have >= price
 				? TradeItems.button(Material.LIME_CONCRETE, "주문 올리기", NamedTextColor.GREEN, amount + "개를 " + Money.format(price) + "에 삽니다.",
 						"올리면 " + Money.format(price) + "을(를) 맡깁니다.")
-				: TradeItems.button(Material.GRAY_CONCRETE, Money.name() + "가 부족합니다", NamedTextColor.RED, "내 " + Money.name() + ": " + Money.format(have)));
+				: TradeItems.button(Material.GRAY_CONCRETE, Money.subject() + " 부족합니다", NamedTextColor.RED, "내 " + Money.name() + ": " + Money.format(have)));
 	}
 
 	@Override
@@ -89,7 +89,7 @@ final class BuyOrderEditor extends Menu {
 			return;
 		}
 		if (!Money.take(player.getUniqueId(), price)) {
-			tell(Money.name() + "가 부족합니다.", NamedTextColor.RED);
+			tell(Money.subject() + " 부족합니다.", NamedTextColor.RED);
 			failSound();
 			return;
 		}
