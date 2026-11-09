@@ -158,6 +158,19 @@ abstract class Menu implements InventoryHolder {
 		}, this::open);
 	}
 
+	/** As {@link #askAmount}, for a plain number with {@code unit} after it (개, %, 청크...). */
+	final void askNumber(String question, long min, long max, String unit, java.util.function.LongConsumer set) {
+		ChatPrompt.ask(player, question + " (" + min + unit + " ~ " + max + unit + ")", text -> {
+			Long value = parseAmount(text.replace(unit, ""));
+			if (value == null) {
+				tell("숫자로 입력하세요: " + text, NamedTextColor.RED);
+			} else {
+				set.accept(Math.max(min, Math.min(max, value)));
+			}
+			open();
+		}, this::open);
+	}
+
 	/** "2500", "2,500", "1.5만", "3천", "2500G" as a whole amount, or null. */
 	static Long parseAmount(String text) {
 		String t = text.replace(",", "").replace(" ", "").replace(Money.name(), "").replace("G", "").replace("g", "");

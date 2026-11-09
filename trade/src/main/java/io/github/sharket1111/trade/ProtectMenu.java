@@ -39,7 +39,7 @@ final class ProtectMenu extends Menu {
 				"전체 보호구역: " + Land.zoneCount() + "청크"));
 		inventory.setItem(MINUS_SLOT, TradeItems.stepButton(-1, "범위: 반경 " + radius + "청크"));
 		inventory.setItem(RADIUS_SLOT, TradeItems.button(Material.MAP, Math.max(1, radius), "범위: 반경 " + radius + "청크 (" + size + "x" + size + ")",
-				NamedTextColor.WHITE, "서 있는 청크를 중심으로 합니다."));
+				NamedTextColor.WHITE, "서 있는 청크를 중심으로 합니다.", "클릭: 채팅으로 직접 입력"));
 		inventory.setItem(PLUS_SLOT, TradeItems.stepButton(1, "범위: 반경 " + radius + "청크"));
 		inventory.setItem(BACK_SLOT, TradeItems.back());
 		inventory.setItem(SET_SLOT, TradeItems.button(Material.LIME_CONCRETE, "보호구역 지정", NamedTextColor.GREEN,
@@ -58,6 +58,7 @@ final class ProtectMenu extends Menu {
 		}
 		switch (slot) {
 			case BACK_SLOT -> new AdminMenu(player).open();
+			case RADIUS_SLOT -> askNumber("보호구역 반경을 입력하세요.", 0, MAX_RADIUS, "청크", value -> radius = (int) value);
 			case MINUS_SLOT, PLUS_SLOT -> {
 				radius = Math.max(0, Math.min(MAX_RADIUS, radius + (slot == PLUS_SLOT ? 1 : -1)));
 				clickSound();

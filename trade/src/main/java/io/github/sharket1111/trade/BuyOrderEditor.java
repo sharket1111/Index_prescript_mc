@@ -35,6 +35,13 @@ final class BuyOrderEditor extends Menu {
 	void draw() {
 		ItemStack shown = want.clone();
 		shown.setAmount(Math.max(1, Math.min(shown.getMaxStackSize(), amount)));
+		shown.editMeta(meta -> {
+			java.util.List<net.kyori.adventure.text.Component> lore = meta.hasLore() ? new java.util.ArrayList<>(meta.lore()) : new java.util.ArrayList<>();
+			lore.add(net.kyori.adventure.text.Component.empty());
+			lore.add(TradeItems.plain("살 개수: " + amount + "개", NamedTextColor.GOLD));
+			lore.add(TradeItems.plain("클릭: 개수를 채팅으로 직접 입력", NamedTextColor.GRAY));
+			meta.lore(lore);
+		});
 		inventory.setItem(ITEM_SLOT, shown);
 		for (int i = 0; i < AMOUNT_SLOTS.length; i++) {
 			inventory.setItem(AMOUNT_SLOTS[i], TradeItems.stepButton(AMOUNT_STEPS[i], "살 개수: " + amount + "개"));
@@ -75,6 +82,10 @@ final class BuyOrderEditor extends Menu {
 				redraw();
 				return;
 			}
+		}
+		if (slot == ITEM_SLOT) {
+			askNumber("살 개수를 입력하세요.", 1, BuyOrders.MAX_AMOUNT, "개", value -> amount = (int) value);
+			return;
 		}
 		if (slot == INPUT_SLOT || slot == PRICE_SLOT) {
 			askAmount("주는 값을 입력하세요.", 1, BuyOrders.MAX_PRICE, value -> price = (int) value);

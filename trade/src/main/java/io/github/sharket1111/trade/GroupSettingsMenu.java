@@ -36,7 +36,8 @@ final class GroupSettingsMenu extends Menu {
 				"그룹 할인율: " + group.discount + "%", NamedTextColor.GOLD,
 				"'그룹 할인' 권한이 있는 역할의 그룹원이", "다른 그룹원의 물품을 살 때 이만큼 깎입니다.",
 				"(판매자는 깎인 값을 받습니다, 0~" + Groups.MAX_DISCOUNT + "%)",
-				"예: 10개짜리 → " + Groups.discounted(10, group.discount) + "개")));
+				"예: " + Money.format(1000) + "짜리 → " + Money.format(Groups.discounted(1000, group.discount)),
+				"클릭: 채팅으로 직접 입력")));
 		for (int i = 0; i < STEP_SLOTS.length; i++) {
 			inventory.setItem(STEP_SLOTS[i], TradeItems.stepButton(STEPS[i], "지금: " + group.discount + "%"));
 		}
@@ -51,6 +52,16 @@ final class GroupSettingsMenu extends Menu {
 		}
 		Groups.Group group = group();
 		if (group == null) {
+			return;
+		}
+		if (slot == VALUE_SLOT) {
+			askNumber("그룹 할인율을 입력하세요.", 0, Groups.MAX_DISCOUNT, "%", value -> {
+				Groups.Group now = group();
+				if (now != null) {
+					now.discount = (int) value;
+					Groups.save();
+				}
+			});
 			return;
 		}
 		for (int i = 0; i < STEP_SLOTS.length; i++) {
