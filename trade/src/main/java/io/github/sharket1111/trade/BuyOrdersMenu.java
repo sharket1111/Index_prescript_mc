@@ -84,7 +84,7 @@ final class BuyOrdersMenu extends Menu {
 			lore.add(TradeItems.plain("주는 값: " + Money.format(order.price), NamedTextColor.GOLD));
 			lore.add(TradeItems.plain("주문한 사람: " + order.buyerName + (own ? " (나)" : ""), NamedTextColor.YELLOW));
 			if (admin) {
-				lore.add(TradeItems.plain(bedrock() ? "터치: 주문 삭제(환불)" : "우클릭: 주문 삭제(환불)", NamedTextColor.RED));
+				lore.add(TradeItems.plain(bedrock() ? "두 번 터치: 주문 삭제(환불)" : "우클릭: 주문 삭제(환불)", NamedTextColor.RED));
 			} else {
 				lore.add(TradeItems.plain(own ? "클릭: 주문 취소(돌려받기)" : "클릭: 팔기", NamedTextColor.GRAY));
 			}

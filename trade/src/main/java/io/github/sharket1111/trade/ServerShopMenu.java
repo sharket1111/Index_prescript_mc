@@ -29,7 +29,7 @@ final class ServerShopMenu extends Menu {
 				List<Component> lore = meta.hasLore() ? new ArrayList<>(meta.lore()) : new ArrayList<>();
 				lore.add(Component.empty());
 				lore.add(TradeItems.plain(product.price == 0 ? "가격: 무료" : "가격: " + Money.format(product.price), NamedTextColor.GOLD));
-				lore.add(TradeItems.plain(bedrock() ? "터치: 구매" : "우클릭: 구매", NamedTextColor.GRAY));
+				lore.add(TradeItems.plain(bedrock() ? "두 번 터치: 구매" : "우클릭: 구매", NamedTextColor.GRAY));
 				meta.lore(lore);
 			});
 			inventory.setItem(i, icon);

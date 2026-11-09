@@ -26,17 +26,23 @@ import net.kyori.adventure.text.format.NamedTextColor;
 
 /**
  * A chest-style menu (9x3, or 9x6 for long lists). Its items cannot be taken out and nothing can be
- * put in; clicks on it are handed to {@link #click}. Bedrock players
- * (Floodgate) cannot right-click on a touch screen, so where a button asks
- * for a right-click any click works for them.
+ * put in; clicks on it are handed to {@link #click}. In the Bedrock (touch)
+ * mode ({@link UiMode}) there is no right-click: where a button asks for one,
+ * a second tap on the same button does it, and numbers are entered on a
+ * keypad ({@link KeypadMenu}) instead of in chat.
  */
 abstract class Menu implements InventoryHolder {
 	static final int SIZE = 27;
 	static final int BACK_SLOT = 18;
-	private static final String FLOODGATE_PREFIX = "00000000-0000-0000-";
+	/** A tap arms a careful action in the touch mode; a second tap on the same button within this many ticks does it. */
+	private static final long ARM_TICKS = 60;
 
 	protected final Player player;
 	protected final Inventory inventory;
+	/** The slot of the click being handled (for the touch mode's second tap). */
+	private int clickedSlot = -1;
+	private int armedSlot = -1;
+	private long armedAt;
 
 	Menu(Player player, String title) {
 		this(player, title, 3);
@@ -97,14 +103,29 @@ abstract class Menu implements InventoryHolder {
 		draw();
 	}
 
-	/** A right-click, or any click from a Bedrock player. */
+	/**
+	 * For actions that need care: a right-click (Java mode), or in the touch
+	 * mode a second tap on the same button (the first one only arms it).
+	 */
 	final boolean confirmed(ClickType click) {
-		return click == ClickType.RIGHT || click == ClickType.SHIFT_RIGHT
-				|| bedrock() && (click == ClickType.LEFT || click == ClickType.SHIFT_LEFT);
+		if (!bedrock()) {
+			return click == ClickType.RIGHT || click == ClickType.SHIFT_RIGHT;
+		}
+		long now = player.getWorld().getFullTime();
+		if (armedSlot == clickedSlot && clickedSlot >= 0 && now - armedAt <= ARM_TICKS) {
+			armedSlot = -1;
+			return true;
+		}
+		armedSlot = clickedSlot;
+		armedAt = now;
+		player.sendActionBar(Component.text("한 번 더 누르면 실행합니다.", NamedTextColor.YELLOW));
+		clickSound();
+		return false;
 	}
 
+	/** Whether the player uses the Bedrock (touch) mode. */
 	final boolean bedrock() {
-		return player.getUniqueId().toString().startsWith(FLOODGATE_PREFIX);
+		return UiMode.touch(player);
 	}
 
 	/** Refuses (with a message) the free handy items, which may not be sold, traded or stored for others. */
@@ -147,6 +168,13 @@ abstract class Menu implements InventoryHolder {
 	 * it set; "취소" or a wrong number reopens it unchanged.
 	 */
 	final void askAmount(String question, long min, long max, java.util.function.LongConsumer set) {
+		if (bedrock()) {
+			new KeypadMenu(player, question, min, max, Money::format, value -> {
+				set.accept(value);
+				open();
+			}, this::open, null).open();
+			return;
+		}
 		ChatPrompt.ask(player, question + " (" + Money.format(min) + " ~ " + Money.format(max) + ")", text -> {
 			Long value = parseAmount(text);
 			if (value == null) {
@@ -160,6 +188,13 @@ abstract class Menu implements InventoryHolder {
 
 	/** As {@link #askAmount}, for a plain number with {@code unit} after it (개, %, 청크...). */
 	final void askNumber(String question, long min, long max, String unit, java.util.function.LongConsumer set) {
+		if (bedrock()) {
+			new KeypadMenu(player, question, min, max, value -> value + unit, value -> {
+				set.accept(value);
+				open();
+			}, this::open, null).open();
+			return;
+		}
 		ChatPrompt.ask(player, question + " (" + min + unit + " ~ " + max + unit + ")", text -> {
 			Long value = parseAmount(text.replace(unit, ""));
 			if (value == null) {
@@ -254,6 +289,7 @@ abstract class Menu implements InventoryHolder {
 				}
 				// Menu items stay where they are.
 				event.setCancelled(true);
+				menu.clickedSlot = event.getRawSlot();
 				menu.click(event.getRawSlot(), event.getClick());
 			} else if (event.getClickedInventory() != null) {
 				menu.clickOwn(event);

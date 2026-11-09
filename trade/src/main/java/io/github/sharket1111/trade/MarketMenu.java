@@ -99,7 +99,7 @@ final class MarketMenu extends Menu {
 			lore.add(TradeItems.plain("가격: " + Money.format(listing.price), NamedTextColor.GOLD));
 			lore.add(TradeItems.plain("판매자: " + Market.name(listing.seller) + (own ? " (나)" : ""), NamedTextColor.YELLOW));
 			if (admin) {
-				lore.add(TradeItems.plain(bedrock() ? "터치: 판매 취소(판매자 우편함으로)" : "우클릭: 판매 취소(판매자 우편함으로)", NamedTextColor.RED));
+				lore.add(TradeItems.plain(bedrock() ? "두 번 터치: 판매 취소(판매자 우편함으로)" : "우클릭: 판매 취소(판매자 우편함으로)", NamedTextColor.RED));
 			} else if (!own) {
 				lore.add(TradeItems.plain("클릭: 구매하기", NamedTextColor.GRAY));
 			}

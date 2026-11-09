@@ -105,7 +105,7 @@ final class GroupRoleMenu extends Menu {
 					"지금: " + role.name, "클릭: 채팅으로 입력"));
 			if (!leaderRole && !role.id.equals(Groups.MEMBER)) {
 				inventory.setItem(DELETE_SLOT, TradeItems.button(Material.LAVA_BUCKET, "역할 지우기", NamedTextColor.RED,
-						"이 역할의 그룹원은 '" + group.roles.getLast().name + "'이(가) 됩니다.", bedrock() ? "누르면 지웁니다." : "우클릭: 지우기"));
+						"이 역할의 그룹원은 '" + group.roles.getLast().name + "'이(가) 됩니다.", bedrock() ? "두 번 누르면 지웁니다." : "우클릭: 지우기"));
 			}
 		}
 	}

@@ -95,10 +95,10 @@ final class GroupHomeMenu extends Menu {
 					"다른 그룹원에게 그룹장을 넘깁니다.", "나는 부대표가 됩니다."));
 			inventory.setItem(LEAVE_SLOT, TradeItems.button(Material.TNT, "그룹 해체", NamedTextColor.RED,
 					"그룹을 없앱니다. 되돌릴 수 없습니다.", "만들 때 낸 돈은 돌려받지 못합니다.",
-					bedrock() ? "누르면 해체" : "우클릭: 해체"));
+					bedrock() ? "두 번 누르면 해체" : "우클릭: 해체"));
 		} else {
 			inventory.setItem(LEAVE_SLOT, TradeItems.button(Material.OAK_DOOR, "그룹 나가기", NamedTextColor.RED,
-					bedrock() ? "누르면 나갑니다." : "우클릭: 나가기"));
+					bedrock() ? "두 번 누르면 나갑니다." : "우클릭: 나가기"));
 		}
 	}
 

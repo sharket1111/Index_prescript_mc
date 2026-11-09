@@ -64,10 +64,10 @@ final class TradeView extends Menu {
 			inventory.setItem(MONEY_STEP_SLOTS[i], TradeItems.stepButton(MONEY_STEPS[i], "내가 줄 " + Money.name() + ": " + Money.format(myMoney)));
 		}
 		inventory.setItem(MY_MONEY_SLOT, TradeItems.glint(TradeItems.button(Material.GOLD_INGOT, "내가 줄 " + Money.name() + ": " + Money.format(myMoney),
-				NamedTextColor.GOLD, "왼쪽 버튼으로 정합니다. 좌클릭 +10 / 우클릭 -10",
+				NamedTextColor.GOLD, bedrock() ? "누르면 숫자 키패드로 입력합니다." : "왼쪽 버튼으로 정합니다. 좌클릭 +10 / 우클릭 -10",
 				"내 " + Money.name() + ": " + Money.format(Money.balance(player.getUniqueId())), "교환될 때 빠져나갑니다.")));
 		inventory.setItem(TYPE_MONEY_SLOT, TradeItems.button(Material.NAME_TAG, "줄 " + Money.name() + " 직접 입력", NamedTextColor.YELLOW,
-				"채팅으로 금액을 입력합니다. (예: 2500, 1.5만)", "입력하는 동안에도 거래는 이어집니다."));
+				bedrock() ? "숫자 키패드로 금액을 입력합니다." : "채팅으로 금액을 입력합니다. (예: 2500, 1.5만)", "입력하는 동안에도 거래는 이어집니다."));
 		inventory.setItem(THEIR_MONEY_SLOT, TradeItems.button(Material.GOLD_NUGGET,
 				other.getName() + "님이 줄 " + Money.name() + ": " + Money.format(session.moneyOfOther(player)), NamedTextColor.YELLOW));
 		inventory.setItem(CANCEL_SLOT, TradeItems.button(Material.BARRIER, "거래 취소", NamedTextColor.RED, "올린 물건은 모두 돌려받습니다."));
@@ -110,7 +110,12 @@ final class TradeView extends Menu {
 			return;
 		}
 		if (slot == MY_MONEY_SLOT) {
-			offerMoney(session.moneyOf(player) + (click.isRightClick() ? -10 : 10));
+			if (bedrock()) {
+				// No right-click on a touch screen: a tap opens the keypad.
+				typeMoney();
+			} else {
+				offerMoney(session.moneyOf(player) + (click.isRightClick() ? -10 : 10));
+			}
 			return;
 		}
 		ItemStack[] mine = session.offerOf(player);
@@ -126,9 +131,30 @@ final class TradeView extends Menu {
 		}
 	}
 
-	/** Asks for the money to offer in chat; the window comes back afterwards, the trade still on. */
+	/** Asks for the money to offer (keypad in the touch mode, chat otherwise); the window comes back afterwards, the trade still on. */
 	private void typeMoney() {
 		typing = true;
+		if (bedrock()) {
+			new KeypadMenu(player, "줄 " + Money.object() + " 입력하세요.", 0, Money.balance(player.getUniqueId()), Money::format, value -> {
+				typing = false;
+				if (session.done) {
+					tell("거래가 이미 끝났습니다.", NamedTextColor.GRAY);
+					return;
+				}
+				offerMoney(value);
+				open();
+			}, () -> {
+				typing = false;
+				if (!session.done) {
+					open();
+				}
+			}, () -> {
+				// Closing the keypad closes the trade window too: the trade is called off as usual.
+				typing = false;
+				session.cancel(player);
+			}).open();
+			return;
+		}
 		Runnable back = () -> {
 			typing = false;
 			if (!session.done && player.isOnline()) {

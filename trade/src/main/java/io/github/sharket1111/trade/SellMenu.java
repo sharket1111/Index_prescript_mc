@@ -27,6 +27,7 @@ final class SellMenu extends Menu {
 	private static final int BOX = 45;
 	private static final int BACK = 45;
 	private static final int WALLET_SLOT = 47;
+	private static final int ADD_ALL_SLOT = 48;
 	private static final int TOTAL_SLOT = 49;
 	private static final int HELP_SLOT = 51;
 	private static final int SELL_SLOT = 53;
@@ -36,9 +37,10 @@ final class SellMenu extends Menu {
 		super(player, "거래 - 아이템 판매", 6);
 	}
 
+	/** In the Java mode the box works like a chest; in the touch mode a tap moves a whole stack (see {@link #click}, {@link #clickOwn}). */
 	@Override
 	boolean free(int slot) {
-		return slot >= 0 && slot < BOX;
+		return !bedrock() && slot >= 0 && slot < BOX;
 	}
 
 	@Override
@@ -60,8 +62,12 @@ final class SellMenu extends Menu {
 		}
 		inventory.setItem(BACK, TradeItems.back());
 		inventory.setItem(WALLET_SLOT, Money.wallet(player));
+		inventory.setItem(ADD_ALL_SLOT, TradeItems.button(Material.HOPPER, "팔 수 있는 것 모두 넣기", NamedTextColor.YELLOW,
+				"인벤토리(단축바 제외)에서 팔 수 있는 아이템을", "모두 위 칸에 넣습니다.", "도구·무기·방어구는 넣지 않습니다."));
 		inventory.setItem(HELP_SLOT, TradeItems.button(Material.BOOK, "사용법", NamedTextColor.GOLD,
-				"팔 아이템을 위 칸에 넣으세요. (쉬프트 클릭 가능)", "아래 금괴에 넣은 아이템의 값이 나옵니다.",
+				bedrock() ? "아래 내 인벤토리의 아이템을 누르면 한 묶음씩 들어가고," : "팔 아이템을 위 칸에 넣으세요. (쉬프트 클릭 가능)",
+				bedrock() ? "위 칸의 아이템을 누르면 돌려받습니다." : "",
+				"아래 금 블록에 넣은 아이템의 값이 나옵니다.",
 				"'판매'를 누르면 팔 수 있는 것만 팔고,", "나머지는 그대로 남습니다.", "메뉴를 닫으면 남은 아이템을 돌려받습니다.",
 				"도구·무기·방어구는 재료값의 절반이고,", "닳은 만큼 더 깎입니다."));
 		Summary summary = summary();
@@ -128,15 +134,103 @@ final class SellMenu extends Menu {
 			new MainMenu(player).open();
 		} else if (slot == SELL_SLOT) {
 			sell();
+		} else if (slot == ADD_ALL_SLOT) {
+			addAll();
+		} else if (slot >= 0 && slot < BOX) {
+			// Touch mode: a tap on the box gives that stack back.
+			ItemStack stack = inventory.getItem(slot);
+			if (stack != null && !stack.isEmpty()) {
+				inventory.setItem(slot, null);
+				give(stack);
+				clickSound();
+				drawControls();
+			}
 		}
 	}
 
-	/** Shift-clicking moves items into the box; the controls are full, so nothing lands there. */
+	/** Java mode: shift-click moves items in (the controls are full, so nothing lands there). Touch mode: a tap moves the stack in. */
 	@Override
 	void clickOwn(InventoryClickEvent event) {
-		if (event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
-			event.setCancelled(true);
+		if (!bedrock()) {
+			if (event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
+				event.setCancelled(true);
+			}
+			return;
 		}
+		event.setCancelled(true);
+		ItemStack picked = event.getCurrentItem();
+		if (picked == null || picked.isEmpty()) {
+			return;
+		}
+		if (put(picked.clone())) {
+			event.getClickedInventory().setItem(event.getSlot(), null);
+			clickSound();
+		} else {
+			tell("판매 칸이 가득 찼습니다.", NamedTextColor.RED);
+			failSound();
+		}
+		drawControls();
+	}
+
+	/** Puts a stack in the box (merging with like stacks); false if it does not all fit (then nothing moves). */
+	private boolean put(ItemStack stack) {
+		int room = 0;
+		for (int slot = 0; slot < BOX; slot++) {
+			ItemStack here = inventory.getItem(slot);
+			if (here == null || here.isEmpty()) {
+				room += stack.getMaxStackSize();
+			} else if (here.isSimilar(stack)) {
+				room += here.getMaxStackSize() - here.getAmount();
+			}
+		}
+		if (room < stack.getAmount()) {
+			return false;
+		}
+		int left = stack.getAmount();
+		for (int slot = 0; slot < BOX && left > 0; slot++) {
+			ItemStack here = inventory.getItem(slot);
+			if (here != null && here.isSimilar(stack) && here.getAmount() < here.getMaxStackSize()) {
+				int add = Math.min(left, here.getMaxStackSize() - here.getAmount());
+				here.setAmount(here.getAmount() + add);
+				inventory.setItem(slot, here);
+				left -= add;
+			}
+		}
+		for (int slot = 0; slot < BOX && left > 0; slot++) {
+			ItemStack here = inventory.getItem(slot);
+			if (here == null || here.isEmpty()) {
+				ItemStack part = stack.clone();
+				part.setAmount(Math.min(left, stack.getMaxStackSize()));
+				inventory.setItem(slot, part);
+				left -= part.getAmount();
+			}
+		}
+		return true;
+	}
+
+	/** Every sellable item from the inventory (not the hotbar, armour or gear) into the box. */
+	private void addAll() {
+		org.bukkit.inventory.PlayerInventory own = player.getInventory();
+		int moved = 0;
+		for (int slot = 9; slot < 36; slot++) {
+			ItemStack stack = own.getItem(slot);
+			if (stack == null || stack.isEmpty() || stack.getType().getMaxDurability() > 0 || !ItemValues.appraise(stack).sellable()) {
+				continue;
+			}
+			if (!put(stack.clone())) {
+				tell("판매 칸이 가득 차서 일부만 넣었습니다.", NamedTextColor.YELLOW);
+				break;
+			}
+			own.setItem(slot, null);
+			moved += stack.getAmount();
+		}
+		if (moved == 0) {
+			tell("넣을 아이템이 없습니다. (단축바, 도구·무기·방어구는 빼고 찾습니다)", NamedTextColor.GRAY);
+			failSound();
+		} else {
+			clickSound();
+		}
+		drawControls();
 	}
 
 	private void sell() {

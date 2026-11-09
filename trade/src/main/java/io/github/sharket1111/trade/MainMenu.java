@@ -10,6 +10,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 final class MainMenu extends Menu {
 	private static final int SELL_SLOT = 1;
 	private static final int WALLET_SLOT = 8;
+	private static final int MODE_SLOT = 18;
 	private static final int MARKET_SLOT = 3;
 	private static final int SELLERS_SLOT = 4;
 	private static final int GOODS_SLOT = 5;
@@ -34,6 +35,14 @@ final class MainMenu extends Menu {
 		inventory.setItem(SELL_SLOT, TradeItems.button(Material.GOLD_BLOCK, "아이템 판매", NamedTextColor.GOLD,
 				"아이템을 서버에 팔아 " + Money.object() + " 얻습니다.", "광물, 작물, 몹 전리품, 블록 등"));
 		inventory.setItem(WALLET_SLOT, Money.wallet(player));
+		boolean touch = bedrock();
+		inventory.setItem(MODE_SLOT, TradeItems.glint(TradeItems.button(touch ? Material.LIGHT_BLUE_CONCRETE : Material.ORANGE_CONCRETE,
+				"화면 모드: " + (touch ? "배드락 (터치)" : "자바"), NamedTextColor.AQUA,
+				touch ? "숫자는 상자 안 키패드로 입력합니다." : "숫자는 채팅으로 입력합니다.",
+				touch ? "모든 조작이 터치 한 번이고, 삭제·구매처럼" : "삭제·구매처럼 조심할 조작은 우클릭입니다.",
+				touch ? "조심할 조작은 같은 버튼을 두 번 누릅니다." : "",
+				UiMode.chosen(player) ? "" : "(접속한 기기에 맞춰 자동으로 정해졌습니다)",
+				"클릭: " + (touch ? "자바" : "배드락 (터치)") + " 모드로 바꾸기")));
 		inventory.setItem(MARKET_SLOT, TradeItems.button(Material.EMERALD, "시장", NamedTextColor.GREEN,
 				"모든 판매 물품을 한눈에 보고 삽니다.", "가격순 정렬, 분류별 보기"));
 		inventory.setItem(SELLERS_SLOT, TradeItems.button(Material.PLAYER_HEAD, "판매자별 구매", NamedTextColor.GREEN,
@@ -86,6 +95,14 @@ final class MainMenu extends Menu {
 			case ADMIN_SLOT -> player.hasPermission(AdminMenu.PERMISSION) ? new AdminMenu(player) : null;
 			default -> null;
 		};
+		if (slot == MODE_SLOT) {
+			UiMode.set(player, !bedrock());
+			player.sendMessage(net.kyori.adventure.text.Component.text("화면 모드를 " + (bedrock() ? "배드락 (터치)" : "자바")
+					+ "(으)로 바꿨습니다.", NamedTextColor.AQUA));
+			successSound();
+			redraw();
+			return;
+		}
 		if (slot == PAY_SLOT) {
 			clickSound();
 			PayMenu.open(player);

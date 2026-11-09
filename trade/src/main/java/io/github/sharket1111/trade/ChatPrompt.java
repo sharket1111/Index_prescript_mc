@@ -45,6 +45,11 @@ final class ChatPrompt {
 
 	/** As {@link #ask(Player, String, Consumer, Runnable)}, and {@code timedOut} runs if a minute passes with no answer. */
 	static void ask(Player player, String question, Consumer<String> answer, Runnable cancelled, Runnable timedOut) {
+		if (UiMode.touch(player)) {
+			// Touch mode: an anvil's name field instead of chat.
+			AnvilPrompt.ask(player, question, answer, cancelled);
+			return;
+		}
 		long token = System.nanoTime();
 		PENDING.put(player.getUniqueId(), new Pending(answer, cancelled, timedOut, token));
 		player.closeInventory();

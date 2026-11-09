@@ -33,7 +33,7 @@ final class DirectTradeMenu extends Menu {
 			head.editMeta(SkullMeta.class, meta -> {
 				meta.setOwningPlayer(from);
 				meta.itemName(Component.text(from.getName() + "님의 거래 요청", NamedTextColor.GOLD));
-				meta.lore(List.of(TradeItems.plain(bedrock() ? "터치: 수락" : "좌클릭: 수락 / 우클릭: 거절", NamedTextColor.GRAY)));
+				meta.lore(List.of(TradeItems.plain(bedrock() ? "누르면 수락/거절을 고릅니다." : "좌클릭: 수락 / 우클릭: 거절", NamedTextColor.GRAY)));
 			});
 			inventory.setItem(i, head);
 			bySlot.put(i, from);
@@ -62,7 +62,21 @@ final class DirectTradeMenu extends Menu {
 			}).open();
 		} else if (bySlot.containsKey(slot)) {
 			Player from = bySlot.get(slot);
-			if (click.isRightClick() && !bedrock()) {
+			if (bedrock()) {
+				// Touch: no right-click, so accepting and declining are two buttons.
+				clickSound();
+				new ChoiceMenu(player, "거래 - " + from.getName() + "님의 요청", java.util.List.of(
+						TradeItems.button(Material.LIME_CONCRETE, "수락", NamedTextColor.GREEN, from.getName() + "님과 직접 거래를 시작합니다."),
+						TradeItems.button(Material.RED_CONCRETE, "거절", NamedTextColor.RED, "요청을 거절합니다.")),
+						() -> new DirectTradeMenu(player), choice -> {
+							if (choice == 0) {
+								DirectTrade.accept(player, from);
+							} else {
+								DirectTrade.decline(player, from);
+								new DirectTradeMenu(player).open();
+							}
+						}).open();
+			} else if (click.isRightClick()) {
 				DirectTrade.decline(player, from);
 				redraw();
 			} else {

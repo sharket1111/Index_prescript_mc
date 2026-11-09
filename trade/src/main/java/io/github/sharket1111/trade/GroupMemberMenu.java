@@ -44,7 +44,7 @@ final class GroupMemberMenu extends Menu {
 				assign ? "클릭: 내 역할보다 낮은 역할 중에서 고릅니다." : "'역할 지정' 권한과 더 높은 역할이 필요합니다."));
 		inventory.setItem(KICK_SLOT, TradeItems.button(kick ? Material.IRON_DOOR : Material.GRAY_DYE, "추방",
 				kick ? NamedTextColor.RED : NamedTextColor.GRAY,
-				kick ? (bedrock() ? "누르면 내보냅니다." : "우클릭: 내보내기") : "'추방' 권한과 더 높은 역할이 필요합니다."));
+				kick ? (bedrock() ? "두 번 누르면 내보냅니다." : "우클릭: 내보내기") : "'추방' 권한과 더 높은 역할이 필요합니다."));
 	}
 
 	@Override

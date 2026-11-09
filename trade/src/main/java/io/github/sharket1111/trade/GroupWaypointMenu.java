@@ -69,9 +69,9 @@ final class GroupWaypointMenu extends Menu {
 			inventory.setItem(RENAME_SLOT, TradeItems.button(Material.OAK_SIGN, "이름 바꾸기", NamedTextColor.GOLD,
 					"지금: " + waypoint.name, "클릭: 채팅으로 입력"));
 			inventory.setItem(MOVE_SLOT, TradeItems.button(Material.COMPASS, "여기로 옮기기", NamedTextColor.GOLD,
-					"웨이포인트를 지금 서 있는 곳으로 옮깁니다. (무료)", bedrock() ? "누르면 옮깁니다." : "우클릭: 옮기기"));
+					"웨이포인트를 지금 서 있는 곳으로 옮깁니다. (무료)", bedrock() ? "두 번 누르면 옮깁니다." : "우클릭: 옮기기"));
 			inventory.setItem(DELETE_SLOT, TradeItems.button(Material.LAVA_BUCKET, "지우기", NamedTextColor.RED,
-					"낸 돈은 돌려받지 못합니다.", "다시 만들면 그 자리의 가격을 냅니다.", bedrock() ? "누르면 지웁니다." : "우클릭: 지우기"));
+					"낸 돈은 돌려받지 못합니다.", "다시 만들면 그 자리의 가격을 냅니다.", bedrock() ? "두 번 누르면 지웁니다." : "우클릭: 지우기"));
 		}
 	}
 

@@ -13,6 +13,7 @@ public final class TradePlugin extends JavaPlugin {
 	@Override
 	public void onEnable() {
 		TradeItems.init(this);
+		UiMode.init(this);
 		Tickets.init(this);
 		// The currency first: a server coming from trade diamonds converts its saved prices as they load.
 		Money.load(this);
@@ -34,6 +35,7 @@ public final class TradePlugin extends JavaPlugin {
 		getLogger().info(ItemValues.count() + " items can be sold to the server.");
 		Land.load(this);
 		ChatPrompt.init(this);
+		AnvilPrompt.init(this);
 		TradeTools.init(this);
 		Groups.load(this);
 		SharedStorage.load(this);
@@ -41,6 +43,7 @@ public final class TradePlugin extends JavaPlugin {
 		getServer().getPluginManager().registerEvents(new Tickets(), this);
 		getServer().getPluginManager().registerEvents(new LandListener(), this);
 		getServer().getPluginManager().registerEvents(new ChatPrompt.Events(), this);
+		getServer().getPluginManager().registerEvents(new AnvilPrompt(), this);
 		getServer().getPluginManager().registerEvents(new Groups.Events(), this);
 		getServer().getPluginManager().registerEvents(new TradeTools.Events(), this);
 		BeaconRange beacons = new BeaconRange(this);
@@ -61,6 +64,7 @@ public final class TradePlugin extends JavaPlugin {
 				player.closeInventory();
 			}
 		}
+		AnvilPrompt.closeAll();
 		DirectTrade.cancelAll();
 		Market.save();
 	}
