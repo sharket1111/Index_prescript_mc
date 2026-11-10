@@ -39,6 +39,8 @@ public final class TradePlugin extends JavaPlugin {
 		TradeTools.init(this);
 		Groups.load(this);
 		SharedStorage.load(this);
+		Discord.load(this);
+		Auctions.load(this);
 		getServer().getPluginManager().registerEvents(new Menu.Events(), this);
 		getServer().getPluginManager().registerEvents(new Tickets(), this);
 		getServer().getPluginManager().registerEvents(new LandListener(), this);
@@ -60,6 +62,7 @@ public final class TradePlugin extends JavaPlugin {
 		} catch (RuntimeException e) {
 			getLogger().log(java.util.logging.Level.SEVERE, "The web page could not start; the rest of the plugin works as usual", e);
 		}
+		Discord.serverStarted();
 	}
 
 	@Override
@@ -71,6 +74,8 @@ public final class TradePlugin extends JavaPlugin {
 			}
 		}
 		WebSite.stop();
+		Auctions.save();
+		Discord.serverStopping();
 		AnvilPrompt.closeAll();
 		DirectTrade.cancelAll();
 		Market.save();
@@ -85,6 +90,10 @@ public final class TradePlugin extends JavaPlugin {
 		if (args.length >= 2 && args[0].equals("공지") && player.hasPermission(AdminMenu.PERMISSION)) {
 			WebNotices.post("공지", String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length)), player.getName(), false);
 			player.sendMessage(Component.text("웹 사이트에 공지를 올렸습니다.", NamedTextColor.GREEN));
+		} else if (args.length >= 1 && args[0].equals("디스코드") && player.hasPermission(AdminMenu.PERMISSION)) {
+			player.sendMessage(Component.text(Discord.test(player.getName()), NamedTextColor.YELLOW));
+		} else if (args.length >= 1 && (args[0].equals("경매") || args[0].equalsIgnoreCase("auction"))) {
+			new AuctionMenu(player, 0, false).open();
 		} else if (args.length >= 1 && (args[0].equals("웹") || args[0].equalsIgnoreCase("web"))) {
 			WebSite.command(player, args.length >= 2 ? args[1] : "");
 		} else if (args.length >= 1 && (args[0].equals("화폐") || args[0].equalsIgnoreCase("currency"))) {

@@ -29,4 +29,8 @@ processResources {
 	filesMatching('plugin.yml') {
 		expand 'version': project.version, 'apiVersion': apiVersion
 	}
+	// The web page's weapon codex reads the game guide.
+	from(file('../docs/guide.md')) {
+		into 'web'
+	}
 }

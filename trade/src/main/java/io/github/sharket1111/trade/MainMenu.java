@@ -16,6 +16,7 @@ final class MainMenu extends Menu {
 	private static final int SELLERS_SLOT = 4;
 	private static final int GOODS_SLOT = 5;
 	private static final int ORDERS_SLOT = 7;
+	private static final int AUCTION_SLOT = 6;
 	private static final int DIRECT_SLOT = 10;
 	private static final int PAY_SLOT = 12;
 	private static final int SERVER_SHOP_SLOT = 14;
@@ -57,6 +58,9 @@ final class MainMenu extends Menu {
 				"플레이어를 골라 그 플레이어의", "물품을 보고 삽니다."));
 		inventory.setItem(GOODS_SLOT, TradeItems.button(Material.CHEST, "내 물품", NamedTextColor.GOLD,
 				"다른 플레이어에게 팔 물품을", "가격을 정해 등록하고 관리합니다."));
+		int auctions = Auctions.all().size();
+		inventory.setItem(AUCTION_SLOT, TradeItems.button(Material.MACE, "경매장 (" + auctions + ")", NamedTextColor.LIGHT_PURPLE,
+				"입찰해서 사고, 내 물건을 경매에 올려요.", "/trade 경매"));
 		inventory.setItem(ORDERS_SLOT, TradeItems.button(Material.WRITABLE_BOOK, "삽니다 게시판", NamedTextColor.GOLD,
 				"사고 싶은 물건을 올리거나,", "다른 사람의 주문에 팝니다."));
 		inventory.setItem(DIRECT_SLOT, TradeItems.button(Material.SHIELD, "직접 거래", NamedTextColor.LIGHT_PURPLE,
@@ -117,6 +121,7 @@ final class MainMenu extends Menu {
 			case SELLERS_SLOT -> new SellersMenu(player, 0);
 			case GOODS_SLOT -> new GoodsMenu(player);
 			case ORDERS_SLOT -> new BuyOrdersMenu(player, 0, false, false);
+			case AUCTION_SLOT -> new AuctionMenu(player, 0, false);
 			case DIRECT_SLOT -> new DirectTradeMenu(player);
 			case SERVER_SHOP_SLOT -> new ServerShopMenu(player);
 			case MAIL_SLOT -> new MailMenu(player, 0);

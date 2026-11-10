@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - trade/**
+      - docs/guide.md
       - .github/workflows/trade.yml
   pull_request:
   workflow_dispatch:

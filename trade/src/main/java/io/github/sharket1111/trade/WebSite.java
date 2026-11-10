@@ -72,6 +72,9 @@ final class WebSite {
 	private static volatile String valuesJson = "[]";
 	private static byte[] indexPage = new byte[0];
 	private static byte[] namesJson = new byte[0];
+	private static byte[] guideMd = new byte[0];
+	/** Korean item names from ko.json, for text outside the page (Discord). */
+	private static Map<String, String> koItems = Map.of();
 
 	private WebSite() {
 	}
@@ -116,6 +119,15 @@ final class WebSite {
 		WebActions.configure(yaml.getBoolean("trade-enabled", true), yaml.getLong("max-per-action", 100000), yaml.getLong("max-per-day", 300000));
 		WebAccounts.load(owner);
 		WebNotices.load(owner);
+		namesJson = resource("/web/ko.json");
+		try {
+			JsonObject names = GSON.fromJson(new String(namesJson, StandardCharsets.UTF_8), JsonObject.class);
+			Map<String, String> items = new java.util.HashMap<>();
+			names.getAsJsonObject("items").entrySet().forEach(e -> items.put(e.getKey(), e.getValue().getAsString()));
+			koItems = items;
+		} catch (RuntimeException e) {
+			// Item ids instead of Korean names.
+		}
 		if (!enabled) {
 			return;
 		}
@@ -125,7 +137,7 @@ final class WebSite {
 			return;
 		}
 		indexPage = resource("/web/index.html");
-		namesJson = resource("/web/ko.json");
+		guideMd = resource("/web/guide.md");
 		valuesJson = values();
 		WebData.start(owner);
 		refresh();
@@ -160,6 +172,24 @@ final class WebSite {
 	private static String url() {
 		String host = !address.isEmpty() ? address : !Bukkit.getIp().isEmpty() ? Bukkit.getIp() : "서버주소";
 		return "http://" + host + ":" + port + "/";
+	}
+
+	/** An item as plain text: its own name, or the Korean name, with "×n" for more than one. */
+	static String itemText(ItemStack stack) {
+		String name = null;
+		if (stack.hasItemMeta()) {
+			ItemMeta meta = stack.getItemMeta();
+			if (meta.hasCustomName()) {
+				name = PLAIN.serialize(meta.customName());
+			} else if (meta.hasItemName()) {
+				name = PLAIN.serialize(meta.itemName());
+			}
+		}
+		if (name == null || name.isBlank()) {
+			String id = stack.getType().getKey().getKey();
+			name = koItems.getOrDefault(id, id.replace('_', ' '));
+		}
+		return stack.getAmount() > 1 ? name + " ×" + stack.getAmount() : name;
 	}
 
 	// --- personal links ----------------------------------------------------------------
@@ -254,6 +284,20 @@ final class WebSite {
 					case "/api/admin/notice/delete" -> admin(exchange, (player, body) -> WebNotices.delete(text(body, "id"))
 							? WebActions.ok("공지를 지웠습니다.") : WebActions.error("이미 없는 공지입니다."));
 					case "/api/admin/shop" -> admin(exchange, (player, body) -> WebActions.shopPrice(player, text(body, "id"), number(body, "price")));
+					case "/api/auction/bid" -> action(exchange, (player, body) -> WebActions.auctionBid(player, text(body, "id"), number(body, "amount")));
+					case "/api/auction/cancel" -> action(exchange, (player, body) -> WebActions.auctionCancel(player, text(body, "id")));
+					case "/api/auction/create" -> action(exchange, (player, body) -> WebActions.auctionCreate(player, (int) number(body, "slot"),
+							text(body, "item"), number(body, "amount"), number(body, "start"), number(body, "hours")));
+					case "/api/sell/server" -> action(exchange, (player, body) -> WebActions.sellToServer(player, (int) number(body, "slot"),
+							text(body, "item"), number(body, "amount")));
+					case "/api/sell/list" -> action(exchange, (player, body) -> WebActions.listItem(player, (int) number(body, "slot"),
+							text(body, "item"), number(body, "amount"), number(body, "price")));
+					case "/api/listing/cancel" -> action(exchange, (player, body) -> WebActions.withdrawListing(player, text(body, "id")));
+					case "/api/listing/price" -> action(exchange, (player, body) -> WebActions.listingPrice(player, text(body, "id"), number(body, "price")));
+					case "/api/admin/discord" -> admin(exchange, (player, body) -> {
+						String answer = Discord.test(WebActions.name(player) + "(웹)");
+						return Discord.enabled() ? WebActions.ok(answer) : WebActions.error(answer);
+					});
 					case "/api/logout" -> logout(exchange);
 					case "/api/password" -> password(exchange);
 					default -> send(exchange, 404, "text/plain", "Not found".getBytes(StandardCharsets.UTF_8));
@@ -272,6 +316,9 @@ final class WebSite {
 				case "/api/me" -> me(exchange);
 				case "/api/stats" -> json(exchange, 200, WebData.stats());
 				case "/api/map" -> json(exchange, 200, WebData.map());
+				case "/api/economy" -> json(exchange, 200, WebData.economy());
+				case "/api/player" -> profile(exchange);
+				case "/guide.md" -> send(exchange, 200, "text/markdown", guideMd);
 				case "/api/notices" -> json(exchange, 200, GSON.toJson(notices()));
 				case "/api/admin" -> admin(exchange, (player, body) -> WebActions.adminData());
 				default -> send(exchange, 404, "text/plain", "Not found".getBytes(StandardCharsets.UTF_8));
@@ -328,6 +375,130 @@ final class WebSite {
 			out.add(row);
 		}
 		return out;
+	}
+
+	/** GET /api/player?name=...: what anyone may see of a player. */
+	private static void profile(HttpExchange exchange) throws IOException {
+		String query = exchange.getRequestURI().getRawQuery();
+		String name = "";
+		if (query != null) {
+			for (String part : query.split("&")) {
+				if (part.startsWith("name=")) {
+					name = java.net.URLDecoder.decode(part.substring(5), StandardCharsets.UTF_8).trim();
+				}
+			}
+		}
+		if (name.isEmpty() || name.length() > 32) {
+			json(exchange, 400, error("이름을 확인하세요."));
+			return;
+		}
+		String wanted = name;
+		Future<String> future = Bukkit.getScheduler().callSyncMethod(plugin, () -> profileOf(wanted));
+		try {
+			String answer = future.get(5, TimeUnit.SECONDS);
+			json(exchange, answer == null ? 404 : 200, answer == null ? error("'" + wanted + "' 플레이어를 찾을 수 없습니다.") : answer);
+		} catch (Exception e) {
+			json(exchange, 503, error("서버가 바빠서 가져오지 못했습니다."));
+		}
+	}
+
+	private static String profileOf(String name) {
+		org.bukkit.OfflinePlayer cached = Bukkit.getOfflinePlayerIfCached(name);
+		UUID id = cached != null ? cached.getUniqueId() : WebData.byName(name);
+		if (id == null) {
+			return null;
+		}
+		org.bukkit.OfflinePlayer offline = Bukkit.getOfflinePlayer(id);
+		JsonObject root = new JsonObject();
+		root.addProperty("uuid", id.toString());
+		root.addProperty("name", WebActions.name(id));
+		root.addProperty("online", offline.isOnline());
+		root.addProperty("firstPlayed", offline.getFirstPlayed());
+		root.addProperty("lastSeen", offline.getLastSeen());
+		try {
+			root.addProperty("minutes", offline.getStatistic(org.bukkit.Statistic.PLAY_ONE_MINUTE) / 20L / 60L);
+		} catch (RuntimeException e) {
+			// No statistics yet.
+		}
+		JsonObject ranks = new JsonObject();
+		for (String board : List.of("rich", "sellers", "land", "playtime")) {
+			long[] position = WebData.position(board, id);
+			if (position != null) {
+				JsonObject row = new JsonObject();
+				row.addProperty("rank", position[0]);
+				// Others' money stays private unless it is on the public top 10.
+				if (!"rich".equals(board) || position[0] <= 10) {
+					row.addProperty("value", position[1]);
+				}
+				ranks.add(board, row);
+			}
+		}
+		root.add("ranks", ranks);
+		JsonArray listings = new JsonArray();
+		for (Listing listing : Market.of(id)) {
+			JsonObject row = new JsonObject();
+			row.addProperty("id", listing.id.toString());
+			row.add("item", item(listing.item));
+			row.addProperty("price", listing.price);
+			row.addProperty("time", listing.createdAt);
+			if (Land.deedChunk(listing.item) != null) {
+				row.addProperty("land", true);
+			}
+			listings.add(row);
+		}
+		root.add("listings", listings);
+		JsonArray auctions = new JsonArray();
+		for (Auctions.Auction auction : Auctions.of(id)) {
+			auctions.add(auction(auction));
+		}
+		root.add("auctions", auctions);
+		root.addProperty("land", Land.ownedBy(id).size());
+		JsonArray groups = new JsonArray();
+		for (Groups.Group group : Groups.of(id)) {
+			JsonObject row = new JsonObject();
+			row.addProperty("name", group.name);
+			row.addProperty("members", group.memberRoles.size());
+			groups.add(row);
+		}
+		root.add("groups", groups);
+		long soldCount = 0;
+		long soldTotal = 0;
+		JsonArray recent = new JsonArray();
+		List<History.Entry> sold = History.of(id, true);
+		for (History.Entry entry : sold) {
+			soldCount++;
+			soldTotal += entry.price();
+			if (recent.size() < 8) {
+				JsonObject row = new JsonObject();
+				row.add("item", item(entry.item()));
+				row.addProperty("price", entry.price());
+				row.addProperty("time", entry.time());
+				recent.add(row);
+			}
+		}
+		root.addProperty("soldCount", soldCount);
+		root.addProperty("soldTotal", soldTotal);
+		root.add("recentSales", recent);
+		return GSON.toJson(root);
+	}
+
+	private static JsonObject auction(Auctions.Auction auction) {
+		JsonObject row = new JsonObject();
+		row.addProperty("id", auction.id.toString());
+		row.add("item", item(auction.item));
+		row.addProperty("seller", auction.sellerName);
+		row.addProperty("sellerId", auction.seller.toString());
+		row.addProperty("start", auction.start);
+		row.addProperty("bid", auction.bid);
+		row.addProperty("bids", auction.bids);
+		if (auction.bidder != null) {
+			row.addProperty("bidder", auction.bidderName);
+			row.addProperty("bidderId", auction.bidder.toString());
+		}
+		row.addProperty("min", auction.minimum());
+		row.addProperty("ends", auction.endsAt);
+		row.addProperty("created", auction.createdAt);
+		return row;
 	}
 
 	private static void me(HttpExchange exchange) throws IOException {
@@ -495,6 +666,12 @@ final class WebSite {
 			orders.add(order(order));
 		}
 		root.add("orders", orders);
+		JsonArray auctions = new JsonArray();
+		for (Auctions.Auction auction : Auctions.all()) {
+			auctions.add(auction(auction));
+		}
+		root.add("auctions", auctions);
+		root.addProperty("serverTime", System.currentTimeMillis());
 		root.add("notices", notices());
 		root.addProperty("updated", System.currentTimeMillis());
 		return GSON.toJson(root);
@@ -598,7 +775,21 @@ final class WebSite {
 		root.add("stats", stats);
 		Player online = Bukkit.getPlayer(id);
 		if (online != null) {
-			root.add("inventory", slots(online.getInventory().getStorageContents()));
+			JsonArray inventory = slots(online.getInventory().getStorageContents());
+			ItemStack[] storage = online.getInventory().getStorageContents();
+			for (int i = 0; i < storage.length; i++) {
+				if (storage[i] != null && !storage[i].isEmpty()) {
+					JsonObject slot = inventory.get(i).getAsJsonObject();
+					ItemValues.Appraisal appraisal = ItemValues.appraise(storage[i]);
+					if (appraisal.sellable()) {
+						slot.addProperty("sell", (long) Math.floor(appraisal.unit() * storage[i].getAmount() + 1.0E-6));
+					} else {
+						slot.addProperty("noSell", appraisal.reason());
+					}
+					slot.addProperty("tool", TradeTools.toolOf(storage[i]) != null);
+				}
+			}
+			root.add("inventory", inventory);
 			ItemStack[] worn = online.getInventory().getArmorContents();
 			ItemStack[] gear = java.util.Arrays.copyOf(worn, worn.length + 1);
 			gear[worn.length] = online.getInventory().getItemInOffHand();
@@ -623,12 +814,30 @@ final class WebSite {
 		JsonArray listings = new JsonArray();
 		for (Listing listing : Market.of(id)) {
 			JsonObject row = new JsonObject();
+			row.addProperty("id", listing.id.toString());
 			row.add("item", item(listing.item));
 			row.addProperty("price", listing.price);
 			row.addProperty("time", listing.createdAt);
+			if (Land.deedChunk(listing.item) != null) {
+				row.addProperty("land", true);
+			}
 			listings.add(row);
 		}
 		root.add("listings", listings);
+		JsonArray myAuctions = new JsonArray();
+		for (Auctions.Auction auction : Auctions.of(id)) {
+			myAuctions.add(auction(auction));
+		}
+		root.add("auctions", myAuctions);
+		JsonArray leading = new JsonArray();
+		for (Auctions.Auction auction : Auctions.leading(id)) {
+			leading.add(auction(auction));
+		}
+		root.add("bids", leading);
+		JsonObject listingLimits = new JsonObject();
+		listingLimits.addProperty("listings", Market.MAX_LISTINGS_PER_PLAYER);
+		listingLimits.addProperty("auctions", Auctions.MAX_PER_PLAYER);
+		root.add("max", listingLimits);
 		JsonArray orders = new JsonArray();
 		for (BuyOrders.Order order : BuyOrders.of(id)) {
 			orders.add(order(order));

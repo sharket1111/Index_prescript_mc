@@ -178,6 +178,166 @@ final class WebActions {
 		return error("이미 끝난 주문입니다.");
 	}
 
+	// --- auctions ------------------------------------------------------------------------
+
+	static String auctionBid(UUID player, String auctionId, long amount) {
+		Auctions.Auction auction = Auctions.get(auctionId);
+		if (auction == null) {
+			return error("이미 끝난 경매입니다.");
+		}
+		String why = limit(player, amount);
+		if (why != null) {
+			return error(why);
+		}
+		why = Auctions.bid(player, name(player), auction, amount);
+		if (why != null) {
+			return error(why);
+		}
+		spend(player, amount);
+		return ok(Money.format(amount) + " 입찰했습니다. 더 높은 입찰이 오면 돈을 돌려받아요.");
+	}
+
+	static String auctionCancel(UUID player, String auctionId) {
+		Auctions.Auction auction = Auctions.get(auctionId);
+		if (auction == null) {
+			return error("이미 끝난 경매입니다.");
+		}
+		String why = Auctions.cancel(player, auction);
+		return why != null ? error(why) : ok("경매를 취소했습니다. 물품은 " + (Bukkit.getPlayer(player) != null ? "인벤토리" : "우편함") + "로 돌아갑니다.");
+	}
+
+	// --- selling from the page (the player must be in game: the items are in their inventory) ----
+
+	/**
+	 * The item in slot {@code slot} of an online player's inventory, if it is
+	 * still the one the page showed ({@code itemId} x {@code amount}); else null.
+	 */
+	private static org.bukkit.inventory.ItemStack slot(Player online, int slot, String itemId, long amount) {
+		if (slot < 0 || slot >= online.getInventory().getStorageContents().length) {
+			return null;
+		}
+		org.bukkit.inventory.ItemStack stack = online.getInventory().getItem(slot);
+		if (stack == null || stack.isEmpty() || !stack.getType().getKey().getKey().equals(itemId) || stack.getAmount() != amount) {
+			return null;
+		}
+		return stack;
+	}
+
+	private static final String GONE = "인벤토리가 바뀌었습니다. 새로 고친 뒤 다시 해 주세요.";
+	private static final String OFFLINE = "게임에 접속해 있을 때만 인벤토리의 물건을 팔 수 있습니다.";
+
+	static String sellToServer(UUID player, int slotIndex, String itemId, long amount) {
+		Player online = Bukkit.getPlayer(player);
+		if (online == null) {
+			return error(OFFLINE);
+		}
+		if (!tradeEnabled) {
+			return error("웹 거래가 꺼져 있습니다. 게임에서 해 주세요.");
+		}
+		org.bukkit.inventory.ItemStack stack = slot(online, slotIndex, itemId, amount);
+		if (stack == null) {
+			return error(GONE);
+		}
+		ItemValues.Appraisal appraisal = ItemValues.appraise(stack);
+		if (!appraisal.sellable()) {
+			return error("서버에 팔 수 없습니다: " + appraisal.reason());
+		}
+		long total = (long) Math.floor(appraisal.unit() * stack.getAmount() + 1.0E-6);
+		if (total <= 0) {
+			return error("값이 0이라 팔 수 없습니다.");
+		}
+		String what = WebSite.itemText(stack);
+		online.getInventory().setItem(slotIndex, null);
+		Money.add(player, total);
+		online.sendMessage(Component.text("웹에서 " + what + "을(를) 서버에 팔아 " + Money.format(total) + "을(를) 받았습니다.", NamedTextColor.GOLD));
+		return ok(what + "을(를) " + Money.format(total) + "에 팔았습니다.");
+	}
+
+	static String listItem(UUID player, int slotIndex, String itemId, long amount, long price) {
+		Player online = Bukkit.getPlayer(player);
+		if (online == null) {
+			return error(OFFLINE);
+		}
+		if (price < Market.MIN_PRICE || price > Market.MAX_PRICE) {
+			return error("가격은 " + Money.format(Market.MIN_PRICE) + " ~ " + Money.format(Market.MAX_PRICE) + " 사이로 정하세요.");
+		}
+		if (Market.of(player).size() >= Market.MAX_LISTINGS_PER_PLAYER) {
+			return error("물품은 " + Market.MAX_LISTINGS_PER_PLAYER + "개까지 등록할 수 있습니다.");
+		}
+		org.bukkit.inventory.ItemStack stack = slot(online, slotIndex, itemId, amount);
+		if (stack == null) {
+			return error(GONE);
+		}
+		if (TradeTools.toolOf(stack) != null) {
+			return error("무료 아이템(거래 메뉴, 웨이포인트 책)은 팔 수 없습니다.");
+		}
+		online.getInventory().setItem(slotIndex, null);
+		Market.add(new Listing(UUID.randomUUID(), player, online.getName(), stack.clone(), (int) price, System.currentTimeMillis()));
+		online.sendMessage(Component.text("웹에서 " + WebSite.itemText(stack) + "을(를) " + Money.format(price) + "에 시장에 올렸습니다.", NamedTextColor.GREEN));
+		return ok("시장에 " + Money.format(price) + "에 올렸습니다.");
+	}
+
+	static String auctionCreate(UUID player, int slotIndex, String itemId, long amount, long start, long hours) {
+		Player online = Bukkit.getPlayer(player);
+		if (online == null) {
+			return error(OFFLINE);
+		}
+		boolean allowed = false;
+		for (int h : Auctions.HOURS) {
+			allowed |= h == hours;
+		}
+		if (!allowed || start < Auctions.MIN_START || start > Auctions.MAX_PRICE) {
+			return error("시작가와 기간을 확인하세요.");
+		}
+		org.bukkit.inventory.ItemStack stack = slot(online, slotIndex, itemId, amount);
+		if (stack == null) {
+			return error(GONE);
+		}
+		String why = Auctions.refuse(player, stack);
+		if (why != null) {
+			return error(why);
+		}
+		online.getInventory().setItem(slotIndex, null);
+		Auctions.start(player, online.getName(), stack, start, (int) hours);
+		online.sendMessage(Component.text("웹에서 " + WebSite.itemText(stack) + " 경매를 시작했습니다.", NamedTextColor.GREEN));
+		return ok("경매를 시작했습니다. 시작가 " + Money.format(start) + ", " + hours + "시간.");
+	}
+
+	/** Takes one of the player's own listings off the market; the item goes to the inventory or mailbox (land stays theirs). */
+	static String withdrawListing(UUID player, String listingId) {
+		Listing listing = listing(listingId);
+		if (listing == null || !listing.seller.equals(player)) {
+			return error("이미 없어진 물품입니다.");
+		}
+		Market.remove(listing);
+		if (Land.deedChunk(listing.item) != null) {
+			return ok("땅 판매를 취소했습니다. 땅은 계속 내 것입니다.");
+		}
+		Mailbox.deliver(player, listing.item.clone(), "시장에서 내린 물품");
+		return ok("물품을 내렸습니다. " + (Bukkit.getPlayer(player) != null ? "인벤토리" : "우편함") + "로 돌아갑니다.");
+	}
+
+	static String listingPrice(UUID player, String listingId, long price) {
+		Listing listing = listing(listingId);
+		if (listing == null || !listing.seller.equals(player)) {
+			return error("이미 없어진 물품입니다.");
+		}
+		if (price < Market.MIN_PRICE || price > Market.MAX_PRICE) {
+			return error("가격은 " + Money.format(Market.MIN_PRICE) + " ~ " + Money.format(Market.MAX_PRICE) + " 사이로 정하세요.");
+		}
+		listing.price = (int) price;
+		Market.save();
+		return ok("가격을 " + Money.format(price) + "(으)로 바꿨습니다.");
+	}
+
+	private static Listing listing(String id) {
+		try {
+			return Market.get(UUID.fromString(id));
+		} catch (IllegalArgumentException e) {
+			return null;
+		}
+	}
+
 	// --- admins ------------------------------------------------------------------------
 
 	static boolean isAdmin(UUID id) {
@@ -215,6 +375,7 @@ final class WebActions {
 		root.add("products", products);
 		root.addProperty("online", Bukkit.getOnlinePlayers().size());
 		root.addProperty("everyone", GiveAllMenu.recipients(true).size());
+		root.addProperty("discord", Discord.enabled());
 		return GSON.toJson(root);
 	}
 

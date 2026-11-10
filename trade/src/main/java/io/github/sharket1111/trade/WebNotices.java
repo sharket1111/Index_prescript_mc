@@ -70,6 +70,7 @@ final class WebNotices {
 		String cleanBody = clean(body, BODY_MAX);
 		NOTICES.add(0, new Notice(UUID.randomUUID().toString(), cleanTitle.isEmpty() ? "공지" : cleanTitle, cleanBody, author,
 				System.currentTimeMillis(), giveAll));
+		Discord.notice(cleanTitle.isEmpty() ? "공지" : cleanTitle, cleanBody, author, giveAll);
 		while (NOTICES.size() > MAX) {
 			NOTICES.remove(NOTICES.size() - 1);
 		}
