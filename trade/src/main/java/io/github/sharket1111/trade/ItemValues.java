@@ -72,7 +72,7 @@ final class ItemValues {
 	}
 
 	/** Bumped when the default table changes in a way existing files should take up. */
-	private static final int VERSION = 2;
+	private static final int VERSION = 3;
 
 	/** Each ore (and its deepslate form) is worth exactly what it gives: the mineral, or the ingot it smelts into. */
 	private static final Map<String, String> ORES = new TreeMap<>(Map.ofEntries(
@@ -109,12 +109,55 @@ final class ItemValues {
 				VALUES.put(material, value);
 			}
 		}
-		if (yaml.getInt("version", 1) < VERSION) {
+		int version = yaml.getInt("version", 1);
+		if (version < 2) {
 			// Older tables valued ores above their minerals: they now match, the rest stays as the admin left it.
 			oresAsMinerals();
-			save();
 			owner.getLogger().info("values.yml: ores now match their minerals.");
 		}
+		if (version < 3) {
+			// Emeralds and quartz are easy to farm: much cheaper now.
+			int changed = repriced(Map.of("EMERALD", 10.0, "QUARTZ", 4.0));
+			owner.getLogger().info("values.yml: emeralds and quartz are cheaper (" + changed + " items repriced).");
+		}
+		if (version < VERSION) {
+			save();
+		}
+	}
+
+	/**
+	 * After raw values changed in the code ({@code before}: what they were),
+	 * updates the table: every item whose value is still what the old raw
+	 * values gave (the admin has not changed it) gets the new one, worked out
+	 * through the recipes as when the table is built. Returns how many changed.
+	 */
+	private static int repriced(Map<String, Double> before) {
+		Map<Material, Double> kept = new EnumMap<>(Material.class);
+		kept.putAll(VALUES);
+		Map<String, Double> now = new java.util.HashMap<>();
+		before.keySet().forEach(name -> now.put(name, BASE.get(name)));
+		BASE.putAll(before);
+		VALUES.clear();
+		build();
+		Map<Material, Double> old = new EnumMap<>(Material.class);
+		old.putAll(VALUES);
+		BASE.putAll(now);
+		VALUES.clear();
+		build();
+		Map<Material, Double> fresh = new EnumMap<>(Material.class);
+		fresh.putAll(VALUES);
+		VALUES.clear();
+		VALUES.putAll(kept);
+		int changed = 0;
+		for (Map.Entry<Material, Double> entry : fresh.entrySet()) {
+			Double was = old.get(entry.getKey());
+			Double current = kept.get(entry.getKey());
+			if (was != null && current != null && Math.abs(current - was) < 0.005 && Math.abs(entry.getValue() - was) > 1.0E-9) {
+				VALUES.put(entry.getKey(), entry.getValue());
+				changed++;
+			}
+		}
+		return changed;
 	}
 
 	/** Sets every ore to its mineral's value (when the mineral has one). */
@@ -402,7 +445,7 @@ final class ItemValues {
 		// Ores and what they give.
 		put(100, "DIAMOND");
 
-		put(10, "EMERALD");
+		put(2, "EMERALD");
 
 		put(10, "IRON_INGOT");
 		put(8, "RAW_IRON");
@@ -418,7 +461,7 @@ final class ItemValues {
 
 		put(4, "LAPIS_LAZULI");
 
-		put(4, "QUARTZ");
+		put(1, "QUARTZ");
 
 		put(250, "NETHERITE_SCRAP");
 		put(3, "AMETHYST_SHARD");
