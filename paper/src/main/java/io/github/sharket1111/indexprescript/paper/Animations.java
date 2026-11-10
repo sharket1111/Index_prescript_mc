@@ -6,10 +6,13 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.Level;
 
@@ -22,11 +25,18 @@ import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.util.Transformation;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
+import org.joml.Matrix4f;
+
+import com.destroystokyo.paper.profile.PlayerProfile;
+import com.destroystokyo.paper.profile.ProfileProperty;
+
+import io.papermc.paper.entity.TeleportFlag;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -39,19 +49,31 @@ import com.google.gson.JsonObject;
  * (or {@link #play} from a skill). Each part is a display entity (an item,
  * such as a weapon model, or a block) moved through its keyframes in the
  * player's own frame: x to their right, y up, z forward, so the animation
- * turns with them. Between keyframes the client smooths the motion; easing
- * is followed by sending a new pose every two ticks. Events play sounds and
- * particle effects ({@link StudioEffects}) on their tick.
+ * turns with them. A "rig" part is a whole player body (head, body, arms,
+ * legs) whose bones have keyframes of their own; other parts can hang from a
+ * bone ("parent": "actor.right_arm") to hold a weapon. A rig can stand in for
+ * the player (hide_player) and carry them along (drive_player). Between
+ * keyframes the client smooths the motion; easing is followed by sending a new
+ * pose every two ticks. Events play sounds and particle effects
+ * ({@link StudioEffects}) on their tick.
  */
 final class Animations {
 	private static final Gson GSON = new Gson();
 	private static final int STEP = 2;
+	/** A player model is 32 pixels tall but drawn 1.875 blocks tall. */
+	private static final float RIG_SCALE = 0.9375F;
+	static final List<String> BONES = List.of("head", "body", "right_arm", "left_arm", "right_leg", "left_leg");
+	/** Joints in pixels, in the player's frame (x right, y up, z forward). */
+	private static final Map<String, float[]> PIVOTS = Map.of("head", new float[] {0, 24, 0}, "body", new float[] {0, 24, 0},
+			"right_arm", new float[] {5, 22, 0}, "left_arm", new float[] {-5, 22, 0}, "right_leg", new float[] {2, 12, 0}, "left_leg",
+			new float[] {-2, 12, 0});
 
 	record Key(int t, float[] pos, float[] rot, float[] scale, String ease) {
 	}
 
 	record Part(String id, String kind, String item, String model, List<String> data, String block, String transform, boolean glow,
-			int brightness, List<Key> keys) {
+			int brightness, List<Key> keys, String parent, String skin, String outfit, boolean hidePlayer, boolean drivePlayer,
+			Map<String, List<Key>> bones) {
 	}
 
 	record Event(int t, String type, String sound, float volume, float pitch, String effect) {
@@ -78,12 +100,9 @@ final class Animations {
 		File dir = folder();
 		if (!dir.exists()) {
 			dir.mkdirs();
-			try {
-				Files.writeString(new File(dir, "example_spin.json").toPath(), EXAMPLE, StandardCharsets.UTF_8);
-			} catch (IOException e) {
-				owner.getLogger().log(Level.WARNING, "Could not write the example animation", e);
-			}
 		}
+		writeExample(dir, "example_spin.json", EXAMPLE);
+		writeExample(dir, "example_rig_slash.json", EXAMPLE_RIG);
 		File[] files = dir.listFiles((d, name) -> name.endsWith(".json"));
 		if (files != null) {
 			for (File file : files) {
@@ -96,6 +115,18 @@ final class Animations {
 			}
 		}
 		return ANIMS.size();
+	}
+
+	private static void writeExample(File dir, String name, String text) {
+		File file = new File(dir, name);
+		if (file.exists()) {
+			return;
+		}
+		try {
+			Files.writeString(file.toPath(), text, StandardCharsets.UTF_8);
+		} catch (IOException e) {
+			plugin.getLogger().log(Level.WARNING, "Could not write the example animation " + name, e);
+		}
 	}
 
 	static List<String> names() {
@@ -114,26 +145,51 @@ final class Animations {
 		return o.has(key) && !o.get(key).isJsonNull() ? o.get(key).getAsString() : fallback;
 	}
 
+	private static boolean bool(JsonObject o, String key, boolean fallback) {
+		return o.has(key) && !o.get(key).isJsonNull() ? o.get(key).getAsBoolean() : fallback;
+	}
+
+	private static List<Key> keys(JsonArray arr) {
+		List<Key> keys = new ArrayList<>();
+		if (arr != null) {
+			for (JsonElement k : arr) {
+				JsonObject ko = k.getAsJsonObject();
+				keys.add(new Key(ko.get("t").getAsInt(), vec(ko, "pos", 0, 0, 0), vec(ko, "rot", 0, 0, 0), vec(ko, "scale", 1, 1, 1), str(ko, "ease", "linear")));
+			}
+		}
+		keys.sort((a, b) -> Integer.compare(a.t(), b.t()));
+		return keys;
+	}
+
 	private static Anim parse(JsonObject root, String fallbackName) {
 		List<Part> parts = new ArrayList<>();
 		for (JsonElement e : root.getAsJsonArray("parts")) {
 			JsonObject o = e.getAsJsonObject();
-			List<Key> keys = new ArrayList<>();
-			for (JsonElement k : o.getAsJsonArray("keys")) {
-				JsonObject ko = k.getAsJsonObject();
-				keys.add(new Key(ko.get("t").getAsInt(), vec(ko, "pos", 0, 0, 0), vec(ko, "rot", 0, 0, 0), vec(ko, "scale", 1, 1, 1), str(ko, "ease", "linear")));
-			}
-			keys.sort((a, b) -> Integer.compare(a.t(), b.t()));
+			String kind = str(o, "kind", "item");
+			List<Key> keys = keys(o.getAsJsonArray("keys"));
 			if (keys.isEmpty()) {
-				continue;
+				if (!kind.equals("rig")) {
+					continue;
+				}
+				keys.add(new Key(0, new float[3], new float[3], new float[] {1, 1, 1}, "linear"));
 			}
 			List<String> data = new ArrayList<>();
 			if (o.has("data")) {
 				o.getAsJsonArray("data").forEach(d -> data.add(d.getAsString()));
 			}
-			parts.add(new Part(str(o, "id", "part"), str(o, "kind", "item"), str(o, "item", "minecraft:iron_sword"), str(o, "model", null), data,
-					str(o, "block", "minecraft:glowstone"), str(o, "transform", "fixed"), o.has("glow") && o.get("glow").getAsBoolean(),
-					o.has("brightness") ? o.get("brightness").getAsInt() : -1, keys));
+			Map<String, List<Key>> bones = new HashMap<>();
+			if (o.has("bones")) {
+				JsonObject b = o.getAsJsonObject("bones");
+				for (String bone : BONES) {
+					if (b.has(bone)) {
+						bones.put(bone, keys(b.getAsJsonArray(bone)));
+					}
+				}
+			}
+			parts.add(new Part(str(o, "id", "part"), kind, str(o, "item", "minecraft:iron_sword"), str(o, "model", null), data,
+					str(o, "block", "minecraft:glowstone"), str(o, "transform", "fixed"), bool(o, "glow", false),
+					o.has("brightness") ? o.get("brightness").getAsInt() : -1, keys, str(o, "parent", ""), str(o, "skin", "player"),
+					str(o, "outfit", ""), bool(o, "hide_player", false), bool(o, "drive_player", false), bones));
 		}
 		List<Event> events = new ArrayList<>();
 		if (root.has("events")) {
@@ -144,8 +200,8 @@ final class Animations {
 			}
 		}
 		int length = root.has("length") ? root.get("length").getAsInt() : 40;
-		return new Anim(str(root, "name", fallbackName), Math.max(1, Math.min(2400, length)), root.has("follow") && root.get("follow").getAsBoolean(),
-				parts, events);
+		boolean drives = parts.stream().anyMatch(Part::drivePlayer);
+		return new Anim(str(root, "name", fallbackName), Math.max(1, Math.min(2400, length)), !drives && bool(root, "follow", false), parts, events);
 	}
 
 	// --- playing ----------------------------------------------------------------------------
@@ -154,14 +210,19 @@ final class Animations {
 		final Anim anim;
 		final Player player;
 		Location origin;
-		final Display[] displays;
+		/** Per part: one display, or for a rig one per bone (BONES order). */
+		final Display[][] displays;
+		final Map<String, Part> byId = new HashMap<>();
+		boolean hidden;
+		boolean addedInvisibility;
 		int tick;
 
 		Playback(Anim anim, Player player) {
 			this.anim = anim;
 			this.player = player;
 			this.origin = flat(player.getLocation());
-			this.displays = new Display[anim.parts().size()];
+			this.displays = new Display[anim.parts().size()][];
+			anim.parts().forEach(p -> byId.put(p.id(), p));
 		}
 	}
 
@@ -195,9 +256,32 @@ final class Animations {
 	}
 
 	private static void remove(Playback p) {
-		for (Display d : p.displays) {
-			if (d != null && d.isValid()) {
-				d.remove();
+		for (Display[] ds : p.displays) {
+			if (ds != null) {
+				for (Display d : ds) {
+					if (d != null && d.isValid()) {
+						d.remove();
+					}
+				}
+			}
+		}
+		if (p.hidden) {
+			p.hidden = false;
+			if (p.addedInvisibility) {
+				p.player.removePotionEffect(PotionEffectType.INVISIBILITY);
+			}
+			if (p.player.isOnline()) {
+				Map<EquipmentSlot, ItemStack> real = new HashMap<>();
+				for (EquipmentSlot slot : EquipmentSlot.values()) {
+					if (p.player.canUseEquipmentSlot(slot)) {
+						real.put(slot, p.player.getEquipment().getItem(slot));
+					}
+				}
+				for (Player viewer : p.player.getWorld().getPlayers()) {
+					if (!viewer.equals(p.player)) {
+						viewer.sendEquipmentChange(p.player, real);
+					}
+				}
 			}
 		}
 	}
@@ -216,21 +300,36 @@ final class Animations {
 			for (int i = 0; i < p.anim.parts().size(); i++) {
 				Part part = p.anim.parts().get(i);
 				int first = part.keys().get(0).t();
-				int last = part.keys().get(part.keys().size() - 1).t();
 				if (p.tick == first && p.displays[i] == null) {
 					p.displays[i] = spawn(p, part);
 				}
-				Display d = p.displays[i];
-				if (d == null || !d.isValid()) {
+				Display[] ds = p.displays[i];
+				if (ds == null) {
 					continue;
 				}
-				if (p.anim.follow()) {
-					d.teleport(p.origin);
+				if (part.kind().equals("rig")) {
+					if (part.hidePlayer()) {
+						hide(p);
+					}
+					if (part.drivePlayer()) {
+						drive(p, part);
+					}
 				}
-				if (p.tick > first && (p.tick - first) % STEP == 0 && p.tick <= last + STEP) {
-					d.setInterpolationDelay(0);
-					d.setInterpolationDuration(STEP);
-					d.setTransformation(pose(part, p.tick + STEP));
+				boolean send = p.tick > first && (p.tick - first) % STEP == 0;
+				Matrix4f[] poses = send ? matrices(p, part, p.tick + STEP) : null;
+				for (int b = 0; b < ds.length; b++) {
+					Display d = ds[b];
+					if (d == null || !d.isValid()) {
+						continue;
+					}
+					if (p.anim.follow()) {
+						d.teleport(p.origin);
+					}
+					if (send) {
+						d.setInterpolationDelay(0);
+						d.setInterpolationDuration(STEP);
+						d.setTransformationMatrix(poses[b]);
+					}
 				}
 			}
 			for (Event e : p.anim.events()) {
@@ -242,49 +341,135 @@ final class Animations {
 		}
 	}
 
-	private static Display spawn(Playback p, Part part) {
+	/** Hides the real player while a rig stands in: invisible, and their equipment shown as empty to everyone else. */
+	private static void hide(Playback p) {
+		if (!p.hidden) {
+			p.hidden = true;
+			if (!p.player.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
+				p.addedInvisibility = true;
+				p.player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, p.anim.length() + 20, 0, false, false, false));
+			}
+		}
+		Map<EquipmentSlot, ItemStack> empty = new HashMap<>();
+		for (EquipmentSlot slot : EquipmentSlot.values()) {
+			if (p.player.canUseEquipmentSlot(slot)) {
+				empty.put(slot, ItemStack.empty());
+			}
+		}
+		for (Player viewer : p.player.getWorld().getPlayers()) {
+			if (!viewer.equals(p.player) && viewer.getLocation().distanceSquared(p.player.getLocation()) < 128 * 128) {
+				viewer.sendEquipmentChange(p.player, empty);
+			}
+		}
+	}
+
+	/** Moves the player to where the rig's feet are, keeping where they look. */
+	private static void drive(Playback p, Part rig) {
+		Key k = sample(rig.keys(), p.tick);
+		Location to = world(p.origin, k.pos()[0], k.pos()[1], k.pos()[2]);
+		Location at = p.player.getLocation();
+		to.setYaw(0);
+		to.setPitch(0);
+		p.player.setFallDistance(0);
+		p.player.teleport(new Location(at.getWorld(), to.getX(), to.getY(), to.getZ(), 0, 0), TeleportFlag.Relative.YAW, TeleportFlag.Relative.PITCH);
+		p.player.setVelocity(new org.bukkit.util.Vector());
+	}
+
+	/** A point in the player's frame (right, up, forward), as a world location. */
+	private static Location world(Location origin, float right, float up, float forward) {
+		double yaw = Math.toRadians(origin.getYaw());
+		double sin = Math.sin(yaw);
+		double cos = Math.cos(yaw);
+		// Facing yaw, forward is (-sin, 0, cos) and the player's left is (cos, 0, sin).
+		return origin.clone().add(-right * cos - forward * sin, up, -right * sin + forward * cos);
+	}
+
+	private static Display[] spawn(Playback p, Part part) {
 		Location at = p.origin.clone();
-		Display display;
-		if (part.kind().equals("block")) {
+		Display[] out;
+		if (part.kind().equals("rig")) {
+			String outfit = outfit(p, part);
+			out = new Display[BONES.size()];
+			for (int b = 0; b < BONES.size(); b++) {
+				String bone = BONES.get(b);
+				ItemStack stack;
+				if (bone.equals("head") && part.skin().equals("player")) {
+					stack = new ItemStack(Material.PLAYER_HEAD);
+					stack.editMeta(SkullMeta.class, meta -> meta.setPlayerProfile(p.player.getPlayerProfile()));
+				} else {
+					stack = modelled(Material.STICK, "index_prescript:rig", List.of(outfit, bone));
+				}
+				out[b] = at.getWorld().spawn(at, ItemDisplay.class, d -> {
+					d.setItemStack(stack);
+					d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
+				});
+			}
+		} else if (part.kind().equals("block")) {
 			Material material = Material.matchMaterial(part.block());
-			BlockDisplay block = at.getWorld().spawn(at, BlockDisplay.class, b -> b.setBlock((material != null && material.isBlock() ? material
-					: Material.GLOWSTONE).createBlockData()));
-			display = block;
+			out = new Display[] {at.getWorld().spawn(at, BlockDisplay.class, b -> b.setBlock((material != null && material.isBlock() ? material
+					: Material.GLOWSTONE).createBlockData()))};
 		} else {
 			Material material = Material.matchMaterial(part.item());
-			ItemStack stack = new ItemStack(material != null && material.isItem() ? material : Material.IRON_SWORD);
-			stack.editMeta(meta -> {
-				if (part.model() != null && !part.model().isBlank()) {
-					NamespacedKey key = NamespacedKey.fromString(part.model());
-					if (key != null) {
-						meta.setItemModel(key);
-					}
-				}
-				if (!part.data().isEmpty()) {
-					var cmd = meta.getCustomModelDataComponent();
-					cmd.setStrings(part.data());
-					meta.setCustomModelDataComponent(cmd);
-				}
-			});
-			ItemDisplay item = at.getWorld().spawn(at, ItemDisplay.class, d -> {
+			ItemStack stack = modelled(material != null && material.isItem() ? material : Material.IRON_SWORD, part.model(), part.data());
+			out = new Display[] {at.getWorld().spawn(at, ItemDisplay.class, d -> {
 				d.setItemStack(stack);
 				d.setItemDisplayTransform(transform(part.transform()));
-			});
-			display = item;
+			})};
 		}
-		display.setPersistent(false);
-		display.setRotation(at.getYaw(), 0);
-		display.setTeleportDuration(1);
-		display.setViewRange(2.0F);
-		if (part.glow()) {
-			display.setGlowing(true);
+		Matrix4f[] poses = matrices(p, part, part.keys().get(0).t());
+		for (int i = 0; i < out.length; i++) {
+			Display display = out[i];
+			display.setPersistent(false);
+			display.setRotation(at.getYaw(), 0);
+			display.setTeleportDuration(1);
+			display.setViewRange(2.0F);
+			if (part.glow()) {
+				display.setGlowing(true);
+			}
+			if (part.brightness() >= 0) {
+				display.setBrightness(new Display.Brightness(Math.min(15, part.brightness()), Math.min(15, part.brightness())));
+			}
+			display.setInterpolationDuration(0);
+			display.setTransformationMatrix(poses[i]);
 		}
-		if (part.brightness() >= 0) {
-			display.setBrightness(new Display.Brightness(Math.min(15, part.brightness()), Math.min(15, part.brightness())));
+		return out;
+	}
+
+	/** The outfit of a rig: the one named, else for the player's own skin a default body with matching arm width. */
+	private static String outfit(Playback p, Part part) {
+		if (!part.skin().equals("player")) {
+			return part.skin();
 		}
-		display.setInterpolationDuration(0);
-		display.setTransformation(pose(part, part.keys().get(0).t()));
-		return display;
+		if (!part.outfit().isBlank()) {
+			return part.outfit();
+		}
+		boolean slim = false;
+		PlayerProfile profile = p.player.getPlayerProfile();
+		for (ProfileProperty property : profile.getProperties()) {
+			if (property.getName().equals("textures")) {
+				String json = new String(java.util.Base64.getDecoder().decode(property.getValue()), StandardCharsets.UTF_8);
+				slim = json.contains("\"slim\"");
+			}
+		}
+		return slim ? "steve_slim" : "steve";
+	}
+
+	private static ItemStack modelled(Material material, String model, List<String> data) {
+		ItemStack stack = new ItemStack(material);
+		stack.editMeta(meta -> {
+			if (model != null && !model.isBlank()) {
+				NamespacedKey key = NamespacedKey.fromString(model);
+				if (key != null) {
+					meta.setItemModel(key);
+				}
+			}
+			if (!data.isEmpty()) {
+				var cmd = meta.getCustomModelDataComponent();
+				cmd.setStrings(data);
+				meta.setCustomModelDataComponent(cmd);
+			}
+		});
+		return stack;
 	}
 
 	private static ItemDisplay.ItemDisplayTransform transform(String name) {
@@ -295,9 +480,78 @@ final class Animations {
 		}
 	}
 
-	/** The part's pose at tick {@code t}, eased between its keyframes. */
-	private static Transformation pose(Part part, int t) {
-		List<Key> keys = part.keys();
+	// --- poses -------------------------------------------------------------------------------
+
+	/** The display matrices of a part at tick {@code t}: one, or one per bone for a rig. */
+	private static Matrix4f[] matrices(Playback p, Part part, int t) {
+		Matrix4f[] out;
+		if (part.kind().equals("rig")) {
+			out = new Matrix4f[BONES.size()];
+			for (int b = 0; b < BONES.size(); b++) {
+				String bone = BONES.get(b);
+				Matrix4f m = boneMatrix(p, part, bone, t, new HashSet<>());
+				if (bone.equals("head") && part.skin().equals("player")) {
+					// A player head item draws its skull below the origin, face turned back.
+					m.translate(0, 0.5F, 0).rotateY((float) Math.PI);
+				}
+				out[b] = m;
+			}
+		} else {
+			out = new Matrix4f[] {partMatrix(p, part, t, new HashSet<>())};
+		}
+		for (int i = 0; i < out.length; i++) {
+			// The studio's x points to the player's right; the entity's own +x is their left.
+			out[i] = new Matrix4f().scale(-1, 1, 1).mul(out[i]).scale(-1, 1, 1);
+		}
+		return out;
+	}
+
+	private static Matrix4f local(Key k) {
+		return new Matrix4f().translate(k.pos()[0], k.pos()[1], k.pos()[2])
+				.rotateXYZ((float) Math.toRadians(k.rot()[0]), (float) Math.toRadians(k.rot()[1]), (float) Math.toRadians(k.rot()[2]))
+				.scale(k.scale()[0], k.scale()[1], k.scale()[2]);
+	}
+
+	/** A part's own frame in the player's frame, under its parent if it has one. */
+	private static Matrix4f partMatrix(Playback p, Part part, int t, Set<String> seen) {
+		Matrix4f base = parentMatrix(p, part.parent(), t, seen.add(part.id()) ? seen : null);
+		Matrix4f m = base.mul(local(sample(part.keys(), t)));
+		if (part.kind().equals("rig")) {
+			m.scale(RIG_SCALE);
+		}
+		return m;
+	}
+
+	private static Matrix4f parentMatrix(Playback p, String parent, int t, Set<String> seen) {
+		if (parent == null || parent.isBlank() || seen == null) {
+			return new Matrix4f();
+		}
+		int dot = parent.indexOf('.');
+		Part target = p.byId.get(dot < 0 ? parent : parent.substring(0, dot));
+		if (target == null || seen.contains(target.id())) {
+			return new Matrix4f();
+		}
+		if (dot >= 0 && target.kind().equals("rig") && BONES.contains(parent.substring(dot + 1))) {
+			return boneMatrix(p, target, parent.substring(dot + 1), t, seen);
+		}
+		return partMatrix(p, target, t, seen);
+	}
+
+	/** A bone's frame: the rig's, moved to the joint (in pixels) and turned by the bone's keys. */
+	private static Matrix4f boneMatrix(Playback p, Part rig, String bone, int t, Set<String> seen) {
+		Matrix4f m = partMatrix(p, rig, t, seen).scale(1 / 16F);
+		float[] pivot = PIVOTS.get(bone);
+		m.translate(pivot[0], pivot[1], pivot[2]);
+		List<Key> keys = rig.bones().get(bone);
+		if (keys != null && !keys.isEmpty()) {
+			m.mul(local(sample(keys, t)));
+		}
+		// Back to blocks: bone models and children measure in blocks (16 pixels).
+		return m.scale(16F);
+	}
+
+	/** The pose at tick {@code t}, eased between keyframes. */
+	private static Key sample(List<Key> keys, int t) {
 		Key a = keys.get(0);
 		Key b = a;
 		for (Key k : keys) {
@@ -312,12 +566,7 @@ final class Animations {
 		}
 		float f = b.t() == a.t() ? 0 : (float) (t - a.t()) / (b.t() - a.t());
 		f = ease(b.ease(), Math.max(0, Math.min(1, f)));
-		float[] pos = lerp(a.pos(), b.pos(), f);
-		float[] rot = lerp(a.rot(), b.rot(), f);
-		float[] scale = lerp(a.scale(), b.scale(), f);
-		// The studio's x points to the player's right; the entity's own +x is their left.
-		Quaternionf q = new Quaternionf().rotationXYZ((float) Math.toRadians(rot[0]), (float) Math.toRadians(-rot[1]), (float) Math.toRadians(-rot[2]));
-		return new Transformation(new Vector3f(-pos[0], pos[1], pos[2]), q, new Vector3f(scale[0], scale[1], scale[2]), new Quaternionf());
+		return new Key(t, lerp(a.pos(), b.pos(), f), lerp(a.rot(), b.rot(), f), lerp(a.scale(), b.scale(), f), "linear");
 	}
 
 	private static float[] lerp(float[] a, float[] b, float f) {
@@ -365,6 +614,33 @@ final class Animations {
 			  "events": [
 			    {"t": 0, "type": "sound", "sound": "entity.player.attack.sweep"},
 			    {"t": 20, "type": "effect", "effect": "example_red_slash"}
+			  ]
+			}
+			""";
+
+	/** A rig standing in for the player: raises the right arm and swings down, the weapon in hand. */
+	private static final String EXAMPLE_RIG = """
+			{
+			  "name": "example_rig_slash",
+			  "length": 30,
+			  "parts": [
+			    {"id": "actor", "kind": "rig", "skin": "player", "hide_player": true,
+			     "keys": [{"t": 0, "pos": [0, 0, 0]}, {"t": 12, "pos": [0, 0, 0.4], "ease": "out"}, {"t": 30, "pos": [0, 0, 0.4]}],
+			     "bones": {
+			       "right_arm": [{"t": 0, "rot": [0, 0, 0]}, {"t": 10, "rot": [-160, 0, -10], "ease": "out"},
+			                     {"t": 14, "rot": [-30, 0, 0], "ease": "in"}, {"t": 30, "rot": [0, 0, 0], "ease": "inout"}],
+			       "body": [{"t": 0, "rot": [0, 0, 0]}, {"t": 10, "rot": [0, -20, 0], "ease": "out"}, {"t": 14, "rot": [15, 15, 0], "ease": "in"},
+			                {"t": 30, "rot": [0, 0, 0], "ease": "inout"}],
+			       "left_leg": [{"t": 0, "rot": [0, 0, 0]}, {"t": 12, "rot": [-25, 0, 0], "ease": "out"}, {"t": 30, "rot": [0, 0, 0]}],
+			       "right_leg": [{"t": 0, "rot": [0, 0, 0]}, {"t": 12, "rot": [20, 0, 0], "ease": "out"}, {"t": 30, "rot": [0, 0, 0]}]
+			     }},
+			    {"id": "weapon", "kind": "item", "item": "minecraft:stick", "model": "index_prescript:laevatein", "data": ["release_3"],
+			     "transform": "thirdperson_righthand", "parent": "actor.right_arm",
+			     "keys": [{"t": 0, "pos": [0.0625, -0.625, 0.125], "rot": [90, 0, 0]}]}
+			  ],
+			  "events": [
+			    {"t": 10, "type": "sound", "sound": "entity.player.attack.sweep", "pitch": 0.7},
+			    {"t": 14, "type": "effect", "effect": "example_red_slash"}
 			  ]
 			}
 			""";

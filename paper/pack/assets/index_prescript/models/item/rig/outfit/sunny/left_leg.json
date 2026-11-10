@@ -1,0 +1,6 @@
+{
+ "parent": "index_prescript:item/rig/base/left_leg_wide",
+ "textures": {
+  "skin": "minecraft:entity/player/wide/sunny"
+ }
+}

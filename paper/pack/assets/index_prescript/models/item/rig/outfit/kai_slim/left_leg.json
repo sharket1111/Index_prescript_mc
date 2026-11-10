@@ -1,0 +1,6 @@
+{
+ "parent": "index_prescript:item/rig/base/left_leg_slim",
+ "textures": {
+  "skin": "minecraft:entity/player/slim/kai"
+ }
+}

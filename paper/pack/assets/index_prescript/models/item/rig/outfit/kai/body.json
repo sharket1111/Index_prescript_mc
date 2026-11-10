@@ -1,0 +1,6 @@
+{
+ "parent": "index_prescript:item/rig/base/body_wide",
+ "textures": {
+  "skin": "minecraft:entity/player/wide/kai"
+ }
+}
