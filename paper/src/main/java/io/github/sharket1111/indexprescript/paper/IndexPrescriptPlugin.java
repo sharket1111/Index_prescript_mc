@@ -59,6 +59,11 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		getServer().getPluginManager().registerEvents(new MimicryWeapon(), this);
 		getServer().getPluginManager().registerEvents(new Bleed(), this);
 		getServer().getPluginManager().registerEvents(new MimicrySkill.Events(), this);
+		// Made in the mod studio: keyframe animations, particle effects and skill numbers, reloadable in game.
+		getLogger().info(SkillTuning.load(this));
+		StudioEffects.load(this);
+		Animations.load(this);
+		Bukkit.getScheduler().runTaskTimer(this, Animations::tick, 1L, 1L);
 		Bukkit.getScheduler().runTask(this, ClashDummy::scan);
 		Bukkit.getScheduler().runTaskTimer(this, PrescriptTracker::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Laevatein::tick, 1L, 1L);
@@ -92,6 +97,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 
 	@Override
 	public void onDisable() {
+		Animations.stop(null);
 		RenoirSkill.endAll();
 		BlackGodRevive.endAll();
 		BlackGodSkill.endAll();
@@ -117,6 +123,9 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 	public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 		if (args.length >= 1 && args[0].equalsIgnoreCase("laevatein")) {
 			return setLaevateinStage(sender, args);
+		}
+		if (args.length >= 1 && (args[0].equalsIgnoreCase("anim") || args[0].equalsIgnoreCase("fx") || args[0].equalsIgnoreCase("skills"))) {
+			return studio(sender, args);
 		}
 		if (args.length >= 1 && args[0].equalsIgnoreCase("mang")) {
 			return mang(sender, args);
@@ -327,6 +336,52 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		return true;
 	}
 
+	/**
+	 * The mod studio's files: /ip anim [이름|list|reload|stop], /ip fx [이름|list|reload],
+	 * /ip skills [reload]. Files go in plugins/IndexPrescript/animations, effects and skills.yml.
+	 */
+	private boolean studio(CommandSender sender, String[] args) {
+		String what = args[0].toLowerCase(Locale.ROOT);
+		String sub = args.length >= 2 ? args[1] : "list";
+		NamedTextColor ok = NamedTextColor.GREEN;
+		switch (what) {
+			case "skills" -> {
+				if (sub.equalsIgnoreCase("reload")) {
+					sender.sendMessage(Component.text(SkillTuning.load(this), ok));
+				} else {
+					sender.sendMessage(Component.text("스킬 수치 파일: " + SkillTuning.file().getPath() + " — 고친 뒤 /ip skills reload", NamedTextColor.YELLOW));
+				}
+			}
+			case "fx" -> {
+				if (sub.equalsIgnoreCase("reload")) {
+					sender.sendMessage(Component.text("이펙트 " + StudioEffects.load(this) + "개를 읽었어요.", ok));
+				} else if (sub.equalsIgnoreCase("list")) {
+					sender.sendMessage(Component.text("이펙트: " + String.join(", ", StudioEffects.names()) + " (" + StudioEffects.folder().getPath() + ")", NamedTextColor.YELLOW));
+				} else if (!(sender instanceof Player player)) {
+					sender.sendMessage(Messages.get(sender, "command.players_only"));
+				} else if (!StudioEffects.play(sub, player.getLocation())) {
+					sender.sendMessage(Component.text("'" + sub + "' 이펙트가 없어요. /ip fx list", NamedTextColor.RED));
+				}
+			}
+			default -> {
+				if (sub.equalsIgnoreCase("reload")) {
+					int fx = StudioEffects.load(this);
+					sender.sendMessage(Component.text("애니메이션 " + Animations.load(this) + "개, 이펙트 " + fx + "개를 읽었어요.", ok));
+				} else if (sub.equalsIgnoreCase("list")) {
+					sender.sendMessage(Component.text("애니메이션: " + String.join(", ", Animations.names()) + " (" + Animations.folder().getPath() + ")",
+							NamedTextColor.YELLOW));
+				} else if (sub.equalsIgnoreCase("stop")) {
+					sender.sendMessage(Component.text(Animations.stop(sender instanceof Player p ? p : null) + "개를 멈췄어요.", ok));
+				} else if (!(sender instanceof Player player)) {
+					sender.sendMessage(Messages.get(sender, "command.players_only"));
+				} else if (!Animations.play(player, sub)) {
+					sender.sendMessage(Component.text("'" + sub + "' 애니메이션이 없어요. /ip anim list", NamedTextColor.RED));
+				}
+			}
+		}
+		return true;
+	}
+
 	/** The clash dummy the player looks at, or the nearest within 16 blocks. */
 	private static LivingEntity nearDummy(Player player) {
 		if (player.getTargetEntity(16) instanceof LivingEntity living && ClashDummy.is(living)) {
@@ -343,16 +398,25 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		return best;
 	}
 
+	private static List<String> join(List<String> a, List<String> b) {
+		List<String> out = new java.util.ArrayList<>(a);
+		out.addAll(b);
+		return out;
+	}
+
 	@Override
 	public List<String> onTabComplete(CommandSender sender, Command command, String label, String[] args) {
 		return switch (args.length) {
-			case 1 -> List.of("give", "pack", "laevatein", "sanity", "mang", "renoir", "blackgod", "dummy");
+			case 1 -> List.of("give", "pack", "laevatein", "sanity", "mang", "renoir", "blackgod", "dummy", "anim", "fx", "skills");
 			case 2 -> switch (args[0].toLowerCase(Locale.ROOT)) {
 				case "give" -> List.of("caduceus", "terminal", "laevatein", "hammer", "mimicry", "blackgod");
 				case "laevatein" -> List.of("0", "1", "2", "3");
 				case "mang" -> List.of("1", "2", "3", "4", "5", "6");
 				case "renoir" -> List.of("0", "50", "100");
 				case "dummy" -> List.of("4", "set", "info", "remove", "removeall");
+				case "anim" -> join(List.of("list", "reload", "stop"), Animations.names());
+				case "fx" -> join(List.of("list", "reload"), StudioEffects.names());
+				case "skills" -> List.of("reload");
 				default -> List.of();
 			};
 			case 3 -> args[0].equalsIgnoreCase("dummy") && args[1].equalsIgnoreCase("set")

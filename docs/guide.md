@@ -490,6 +490,25 @@
 | `/ip dummy [기본] [코인위력] [코인수] [유형] [정신력]` | 합 테스트 더미를 세워요 (예: `/ip dummy 4 3 3 NRG 10`). 유형은 코인마다 N(일반)/R(빨강)/G(초록) |
 | `/ip dummy set <base\|power\|coins\|types\|sanity\|damage> <값>` | 바라보는(또는 가장 가까운) 더미의 설정 변경. damage는 코인당 피해(마크 체력) |
 | `/ip dummy info` / `remove` / `removeall` | 더미 설정 보기 / 없애기 / 전부 없애기 |
+| `/ip anim <이름>` / `list` / `reload` / `stop` | 작업실에서 만든 애니메이션 재생 / 목록 / 파일 다시 읽기 / 멈추기 |
+| `/ip fx <이름>` / `list` / `reload` | 작업실에서 만든 파티클 이펙트 재생 / 목록 / 다시 읽기 |
+| `/ip skills [reload]` | 스킬 수치 파일(skills.json 또는 skills.yml) 다시 읽기. 재시작 없이 바로 바뀌어요 |
+
+### 처방전 작업실 (웹 도구)
+
+애니메이션·무기 모델·이펙트·스킬 수치를 웹에서 만들고 파일로 저장해 서버에 넣는 도구예요. 저장한 파일을 아래 폴더에 올리고 `reload` 명령을 치면 재시작 없이 바뀌어요.
+
+| 탭 | 저장 파일 | 서버에 넣는 곳 | 적용 |
+| --- | --- | --- | --- |
+| 애니메이션 | `<이름>.json` | `plugins/IndexPrescript/animations/` | `/ip anim reload` 후 `/ip anim <이름>` |
+| 이펙트 | `<이름>.json` | `plugins/IndexPrescript/effects/` | `/ip fx reload` 후 `/ip fx <이름>` |
+| 스킬 수치 | `skills.json` (바꾼 스킬만) | `plugins/IndexPrescript/` | `/ip skills reload` |
+| 무기 모델 | `<모델>.json` | 리소스팩 `assets/index_prescript/models/item/` | 팩 다시 만들기 |
+
+- 애니메이션은 아이템/블록 디스플레이 부품을 키프레임(위치·회전·크기, 이징)으로 움직이고, 정한 틱에 소리나 이펙트를 내요. 위치는 플레이어 기준(x 오른쪽, y 위, z 앞)이라 보는 방향을 따라 돌아가요.
+- `skills.json`이 있으면 `skills.yml`보다 먼저 읽어요. 지우면 기본값으로 돌아가요. 미미크리의 `coin-damage`는 코인 수와 개수가 같아야 해요.
+- `ticks`(스킬 길이)는 연출과 맞춰 둔 값이라 바꾸면 애니메이션과 어긋날 수 있어요.
+- 무기 모델 중 `tools/`의 파이썬 스크립트로 만드는 모델은 스크립트를 다시 돌리면 덮어써져요. 배드락용은 `tools/bedrock.py`로 다시 만들어요.
 
 ---
 

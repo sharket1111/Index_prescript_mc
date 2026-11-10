@@ -24,7 +24,7 @@
 	"prescript.sink_twice": "Stab an enemy %s times with the stiletto",
 	"prescript.untouched": "Strike an enemy %s times without taking damage",
 	"message.prescript_reveal": "%s",
-	"command.usage": "Usage: /indexprescript give <caduceus|terminal|laevatein|hammer|blackgod> [player], /indexprescript laevatein <0-3>, /indexprescript pack, /indexprescript sanity [value], /indexprescript mang [1-6], /indexprescript blackgod",
+	"command.usage": "Usage: /indexprescript give <caduceus|terminal|laevatein|hammer|blackgod> [player], /indexprescript laevatein <0-3>, /indexprescript pack, /indexprescript sanity [value], /indexprescript mang [1-6], /indexprescript blackgod, /indexprescript anim <name|list|reload|stop>, /indexprescript fx <name|list|reload>, /indexprescript skills reload",
 	"command.given": "Gave %2$s to %1$s.",
 	"command.no_player": "Player not found: %s",
 	"command.pack_sent": "Resource pack sent again.",

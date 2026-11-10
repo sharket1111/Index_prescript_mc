@@ -24,7 +24,7 @@
 	"prescript.sink_twice": "스틸레토로 적을 %s번 찔러라",
 	"prescript.untouched": "피해를 입지 않고 적을 %s번 공격하라",
 	"message.prescript_reveal": "%s",
-	"command.usage": "사용법: /indexprescript give <caduceus|terminal|laevatein|hammer|blackgod> [플레이어], /indexprescript laevatein <0-3>, /indexprescript pack, /indexprescript sanity [값], /indexprescript mang [1~6], /indexprescript blackgod",
+	"command.usage": "사용법: /indexprescript give <caduceus|terminal|laevatein|hammer|blackgod> [플레이어], /indexprescript laevatein <0-3>, /indexprescript pack, /indexprescript sanity [값], /indexprescript mang [1~6], /indexprescript blackgod, /indexprescript anim <이름|list|reload|stop>, /indexprescript fx <이름|list|reload>, /indexprescript skills reload",
 	"command.given": "%s에게 %s을(를) 주었다.",
 	"command.no_player": "플레이어를 찾을 수 없다: %s",
 	"command.pack_sent": "리소스팩을 다시 보냈다.",

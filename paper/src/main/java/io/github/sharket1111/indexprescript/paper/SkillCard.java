@@ -9,6 +9,9 @@ import net.kyori.adventure.text.format.TextColor;
  * as the videos show them: round coins plain, red octagons unbreakable,
  * green octagons execution coins. {@code clashes} is false for counters and guards, which
  * never clash.
+ *
+ * The cards below are the defaults; plugins/IndexPrescript/skills.yml may
+ * change their numbers and text ({@link SkillTuning}), so they are not final.
  */
 record SkillCard(String name, TextColor colour, int base, int coinPower, int coins, String description, int ticks,
 		boolean clashes, String types) {
@@ -42,7 +45,7 @@ record SkillCard(String name, TextColor colour, int base, int coinPower, int coi
 	}
 
 	// --- Caduceus ---------------------------------------------------------------------
-	static final SkillCard FURIOSO = new SkillCard("Furioso-Replica", WRATH, 10, 1, 2,
+	static SkillCard FURIOSO = new SkillCard("Furioso-Replica", WRATH, 10, 1, 2,
 			"합 위력 +5. 매 타격마다 새 무기를 형성하고, 두 번째 코인이 7번 더 쏟아진다(모두 9타). 마지막은 대낫의 대각선 일격.", 250, true, "RR");
 
 	// --- Rien's right-click skills, by [Hermes] (RienSkill) -------------------------------
@@ -59,33 +62,33 @@ record SkillCard(String name, TextColor colour, int base, int coinPower, int coi
 	};
 
 	// --- Laevatein ----------------------------------------------------------------------
-	static final SkillCard RELEASE_1 = new SkillCard("포장 하나 뜯는다!", ENVY, 15, 1, 3,
+	static SkillCard RELEASE_1 = new SkillCard("포장 하나 뜯는다!", ENVY, 15, 1, 3,
 			"회색 휘두르기 2번 뒤 껍데기를 깨뜨리고 1단계로 해방, 화염 베기.", 110, true, "RRR");
-	static final SkillCard RELEASE_2 = new SkillCard("두 번째 포장지까지 벗기게 되는군.", ENVY, 14, 1, 4,
+	static SkillCard RELEASE_2 = new SkillCard("두 번째 포장지까지 벗기게 되는군.", ENVY, 14, 1, 4,
 			"화염 초승달 연타 뒤 거대 폭발과 함께 2단계로 해방.", 172, true, "RRRR");
-	static final SkillCard RELEASE_3 = new SkillCard("레바테인 - 여기까지 꺼내는 것도 오랜만이군!", ENVY, 19, 1, 4,
+	static SkillCard RELEASE_3 = new SkillCard("레바테인 - 여기까지 꺼내는 것도 오랜만이군!", ENVY, 19, 1, 4,
 			"보라 낙뢰와 화염 베기 뒤 초대형 화염과 함께 완전 해방.", 175, true, "RRRR");
-	static final SkillCard STOMP = new SkillCard("짓밟기", WRATH, 11, 3, 2,
+	static SkillCard STOMP = new SkillCard("짓밟기", WRATH, 11, 3, 2,
 			"돌진해 두 번 짓밟는다. 출혈. 대상이 출혈 중이면 피해 증가.", 48, true, "NR");
-	static final SkillCard HEATED = new SkillCard("후끈해지지 않나?!", PRIDE, 15, 1, 3,
+	static SkillCard HEATED = new SkillCard("후끈해지지 않나?!", PRIDE, 15, 1, 3,
 			"화염 호, 찌르기, 화염 초승달과 폭발. 화상, 속박, 마비.", 110, true, "RRR");
-	static final SkillCard MELT = new SkillCard("슬슬 녹아 죽을 차례다", PRIDE, 15, 1, 3,
+	static SkillCard MELT = new SkillCard("슬슬 녹아 죽을 차례다", PRIDE, 15, 1, 3,
 			"분홍 베기, 화염 호와 찌르기, 거대 화염 초승달. 화상, 속박, 마비.", 115, true, "RRR");
-	static final SkillCard STAB = new SkillCard("칼빵[레바테인]", PRIDE, 15, 1, 5,
+	static SkillCard STAB = new SkillCard("칼빵[레바테인]", PRIDE, 15, 1, 5,
 			"불타는 5연타와 넓은 초승달. 화상 10.", 160, true, "RRRRR");
-	static final SkillCard RULE_VIOLATION = new SkillCard("규칙 위반", ENVY, 14, 2, 2,
+	static SkillCard RULE_VIOLATION = new SkillCard("규칙 위반", ENVY, 14, 2, 2,
 			"반격: 회색 호 2번. 출혈, 체력 회복.", 104, false, "NN");
-	static final SkillCard EXECUTION = new SkillCard("즉결처형[레바테인]", ENVY, 20, 1, 5,
+	static SkillCard EXECUTION = new SkillCard("즉결처형[레바테인]", ENVY, 20, 1, 5,
 			"반격: 베기, 발차기, 칼 던지기, 드롭킥, 사슬로 회수해 흰 초승달.", 250, false, "RRRRR");
 
 	// --- the Renoir hammer --------------------------------------------------------------
-	static final SkillCard NAIL = new SkillCard("못박히라", PRIDE, 3, 4, 2,
+	static SkillCard NAIL = new SkillCard("못박히라", PRIDE, 3, 4, 2,
 			"대상의 못 4개당 최종 위력 +1(최대 3). 보존 위력 3 이상이면 코인 위력 +1, 피해 +40%. 2타 적중 시 보존 횟수 +6. 진동 2, 진동 2·횟수 +1.", 56, true, "NN");
-	static final SkillCard BORN = new SkillCard("못생기라", ENVY, 6, 5, 2,
+	static SkillCard BORN = new SkillCard("못생기라", ENVY, 6, 5, 2,
 			"대상의 못 4개당 최종 위력 +1(최대 3). 보존 위력 3 이상이면 코인 위력 +1, 피해 +30%. 1타 약속된 못 1·진동 3, 2타 진동 폭발·보존 횟수 +8.", 72, true, "NN");
-	static final SkillCard SEVER = new SkillCard("탄생을 끊으리라", SLOTH, 4, 3, 3,
+	static SkillCard SEVER = new SkillCard("탄생을 끊으리라", SLOTH, 4, 3, 3,
 			"못 두 개를 떨어뜨리고 빛기둥, 금빛 휘두르기, 도약해 내려찍기. 진동 3, 진동 횟수 +2, 진동 폭발. 보존 +4.", 137, true, "NNN");
-	static final SkillCard AGAIN = new SkillCard("거듭 내리쳐, 탄생을 끊으리라", SLOTH, 5, 4, 3,
+	static SkillCard AGAIN = new SkillCard("거듭 내리쳐, 탄생을 끊으리라", SLOTH, 5, 4, 3,
 			"주변 8블록의 적에게 못비와 휘두르기, 높이 도약해 내려찍는다. 못 3개 이상이면 피해 증가. 진동 4, 진동 횟수 +3, 진동 폭발.", 180, true, "NNN");
 
 	// --- the Black God (docs/black_god.md) ----------------------------------------------

@@ -98,15 +98,16 @@ final class MimicrySkill {
 
 		final String name;
 		final DamageKind type;
-		final int base;
-		final int coinPower;
-		final double[] dice;
+		// Tunable from skills.yml (SkillTuning): base, coin power, coin damage, cooldown, text.
+		int base;
+		int coinPower;
+		double[] dice;
 		final int[] coins;
 		final int length;
-		final int cooldown;
+		int cooldown;
 		final String icon;
 		final boolean egoOnly;
-		final String ability;
+		String ability;
 
 		Kind(String name, DamageKind type, int base, int coinPower, double[] dice, int[] coins, int length, int cooldown, String icon,
 				boolean egoOnly, String ability) {
