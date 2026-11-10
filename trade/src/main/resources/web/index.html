@@ -873,6 +873,7 @@ mark { background: color-mix(in srgb, var(--accent) 50%, transparent); color: in
   }
   /** The share of the full server price paid now for an item (1 = full). */
   function drop(id) { return PUB && PUB.drops && PUB.drops[id] || 1; }
+  function fixedPrice(id) { return !!(PUB && PUB.fixedPrices && PUB.fixedPrices.indexOf(id) >= 0); }
   var curveCache = {};
   /** Draws an item's server price over the last two days from its sales and purchases (the price recovers between them). */
   function serverCurve(id, base, canvas, note) {
@@ -893,6 +894,7 @@ mark { background: color-mix(in srgb, var(--accent) 50%, transparent); color: in
       var pts = times.map(function (tm) { return [tm, Math.round(at(tm) * 100) / 100]; });
       requestAnimationFrame(function () { drawChart(canvas, { recent: pts, avg: base, dots: false, time: true }); });
       var m = d.multiplier;
+      if (d.fixed) { note.textContent = "관리자가 시세를 고정한 아이템이에요. 많이 팔아도 항상 제값이에요."; return; }
       note.textContent = (m < 0.995 ? "지금 기본값의 " + Math.round(m * 100) + "% (" + money(base * m) + " " + sym() + "). " : "지금 제값이에요. ")
         + "팔수록 떨어지고, " + (Math.round(half / 360e3) / 10) + "시간마다 떨어진 만큼의 절반이 회복돼요. 다른 플레이어에게서 사면 더 빨리 회복돼요. (점선: 기본값)";
     };
@@ -919,7 +921,7 @@ mark { background: color-mix(in srgb, var(--accent) 50%, transparent); color: in
       var v = qty > 1 ? Math.floor(now1 * qty + 1e-6) : Math.round(now1 * 100) / 100;
       var info = (m < 0.995 ? "기본 " + money(r[1]) + " " + sym() + " · " : "") + (r[2] ? "도구·장비: 재료값의 절반 · " : "")
         + (t ? "플레이어 거래 " + t.count + "번" + (t.avg != null ? " · 30일 평균 개당 " + money(t.avg) + " " + sym() : "") : "플레이어 거래 기록 없음");
-      var line = row({ id: r[0], amount: 1 }, info, v, m < 0.995 ? ["bad", "시세 -" + Math.round((1 - m) * 100) + "%"] : null);
+      var line = row({ id: r[0], amount: 1 }, info, v, fixedPrice(r[0]) ? ["land", "시세 고정"] : m < 0.995 ? ["bad", "시세 -" + Math.round((1 - m) * 100) + "%"] : null);
       line.classList.add("click"); line.tabIndex = 0;
       if (openItem === r[0]) {
         var d = el("div", "detail");
@@ -1388,6 +1390,27 @@ mark { background: color-mix(in srgb, var(--accent) 50%, transparent); color: in
     var dt = el("button", "btn", "테스트 메시지 보내기"); dt.type = "button"; dt.disabled = !ADMIN.discord;
     dt.addEventListener("click", function () { act("/api/admin/discord", {}); });
     dc.appendChild(dt); grid.appendChild(dc);
+    var fx = el("form", "box"); fx.appendChild(el("h3", null, "시세 고정 아이템"));
+    fx.appendChild(el("p", "meta", "여기 넣은 아이템은 많이 팔아도 서버 판매가가 떨어지지 않아요. 게임에서는 손에 들고 /trade 시세고정"));
+    fx.appendChild(field("아이템 (이름이나 영어 id)", "fxItem", "text", { required: "", autocomplete: "off", list: "fxItems" }));
+    var fdl = el("datalist"); fdl.id = "fxItems";
+    (VALUES ? VALUES.items : []).forEach(function (r) { var o = el("option"); o.value = KO.items[r[0]] || r[0]; fdl.appendChild(o); });
+    fx.appendChild(fdl);
+    var fgo = el("button", "btn primary", "고정하기"); fgo.type = "submit"; fx.appendChild(fgo);
+    fx.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var text = $("fxItem").value.trim(), id = null;
+      (VALUES ? VALUES.items : []).forEach(function (r) { if (!id && (KO.items[r[0]] === text || r[0] === text.toLowerCase().replace(/ /g, "_"))) id = r[0]; });
+      if (!id) { toast("서버에 팔 수 있는 아이템을 목록에서 고르세요.", true); return; }
+      act("/api/admin/fixed", { item: id, fixed: true }, function (r) { if (r.ok) $("fxItem").value = ""; loadAdmin(); });
+    });
+    var fl = el("div", "ledger");
+    fill(fl, (ADMIN.fixedPrices || []).map(function (id) {
+      var r = row({ id: id, amount: 1 }, id, null, ["land", "시세 고정"]);
+      r.side.appendChild(confirmButton("해제", "해제 확인", "", function (done) { act("/api/admin/fixed", { item: id, fixed: false }, function () { done(); loadAdmin(); }); }));
+      return r;
+    }), "고정한 아이템이 없어요.");
+    fx.appendChild(fl); grid.appendChild(fx);
     body.appendChild(grid);
     body.appendChild(el("h2", null, "올라온 공지"));
     var nl = el("div", "ledger");

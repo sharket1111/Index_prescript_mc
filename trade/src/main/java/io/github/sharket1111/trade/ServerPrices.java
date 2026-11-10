@@ -53,6 +53,8 @@ final class ServerPrices {
 	/** Each item's price group (absent: a group of its own). */
 	private static final Map<Material, Material> GROUP = new EnumMap<>(Material.class);
 	private static final Map<Material, List<Material>> MEMBERS = new EnumMap<>(Material.class);
+	/** Items an admin keeps at their full price: they never fall and selling them pushes nothing down. */
+	private static final java.util.Set<Material> FIXED = java.util.EnumSet.noneOf(Material.class);
 	private static boolean dirty;
 
 	private ServerPrices() {
@@ -69,6 +71,15 @@ final class ServerPrices {
 			floor = Math.max(0.01, Math.min(1, settings.getDouble("floor", 0.1)));
 			recoverHours = Math.max(0.05, settings.getDouble("recover-hours", 3));
 			marketRecover = Math.max(0, settings.getDouble("market-recover", 0.5));
+		}
+		FIXED.clear();
+		for (String name : yaml.getStringList("fixed-items")) {
+			Material material = Material.matchMaterial(name);
+			if (material != null) {
+				FIXED.add(material);
+			} else {
+				owner.getLogger().warning("prices.yml: unknown item in fixed-items: " + name);
+			}
 		}
 		groups();
 		STATE.clear();
@@ -116,12 +127,14 @@ final class ServerPrices {
 				"settings.floor: the lowest a price goes, as a share of the full price (0.1 = 10%).",
 				"settings.recover-hours: half of a fall comes back every this many hours.",
 				"settings.market-recover: each item bought from another player (market, buy board, auction) takes back this many sold ones.",
+				"fixed-items: items that always sell at their full price (also set with /trade 시세고정 or the web admin page).",
 				"items: how much (in money) of each price group was sold lately (kept by the plugin)."));
 		yaml.set("settings.enabled", enabled);
 		yaml.set("settings.drop-worth", dropWorth);
 		yaml.set("settings.floor", floor);
 		yaml.set("settings.recover-hours", recoverHours);
 		yaml.set("settings.market-recover", marketRecover);
+		yaml.set("fixed-items", FIXED.stream().map(Material::name).sorted().toList());
 		long now = System.currentTimeMillis();
 		for (Map.Entry<Material, double[]> entry : STATE.entrySet()) {
 			double sold = decayed(entry.getValue(), now);
@@ -278,7 +291,7 @@ final class ServerPrices {
 
 	/** The share of the full price paid now for one more (1 = full). */
 	static double multiplier(Material material) {
-		if (!enabled) {
+		if (!enabled || fixed(material)) {
 			return 1;
 		}
 		return Math.max(floor, Math.exp(-soldLately(material) / dropWorth));
@@ -291,7 +304,7 @@ final class ServerPrices {
 	 */
 	static double average(Material material, double alreadyWorth, int amount) {
 		double each = value(material);
-		if (!enabled || amount <= 0 || each <= 0) {
+		if (!enabled || amount <= 0 || each <= 0 || fixed(material)) {
 			return 1;
 		}
 		double k = dropWorth;
@@ -313,7 +326,7 @@ final class ServerPrices {
 	 * their price groups (pass the same map for every stack of one sale).
 	 */
 	static double worth(ItemStack stack, double unit, Map<Material, Double> pending) {
-		if (TradeItems.isTradeDiamond(stack)) {
+		if (TradeItems.isTradeDiamond(stack) || fixed(stack.getType())) {
 			return unit * stack.getAmount();
 		}
 		Material group = group(stack.getType());
@@ -329,7 +342,7 @@ final class ServerPrices {
 
 	/** {@code stack} was sold to the server. */
 	static void sold(ItemStack stack) {
-		if (enabled && !TradeItems.isTradeDiamond(stack)) {
+		if (enabled && !TradeItems.isTradeDiamond(stack) && !fixed(stack.getType())) {
 			change(stack.getType(), value(stack.getType()) * stack.getAmount());
 		}
 	}
@@ -376,7 +389,9 @@ final class ServerPrices {
 			double m = Math.max(floor, Math.exp(-decayed(entry.getValue(), now) / dropWorth));
 			if (m < 0.995) {
 				for (Material member : members(entry.getKey())) {
-					out.addProperty(member.getKey().getKey(), Math.round(m * 1000) / 1000.0);
+					if (!fixed(member)) {
+						out.addProperty(member.getKey().getKey(), Math.round(m * 1000) / 1000.0);
+					}
 				}
 			}
 		}
@@ -394,6 +409,7 @@ final class ServerPrices {
 		out.addProperty("enabled", enabled);
 		out.addProperty("scale", dropWorth);
 		out.addProperty("group", members(material).size());
+		out.addProperty("fixed", fixed(material));
 		out.addProperty("floor", floor);
 		out.addProperty("halfLife", halfLife());
 		out.addProperty("now", System.currentTimeMillis());
@@ -411,6 +427,32 @@ final class ServerPrices {
 		}
 		out.add("events", events);
 		return GSON.toJson(out);
+	}
+
+	static synchronized boolean fixed(Material material) {
+		return FIXED.contains(material);
+	}
+
+	/** Keeps an item at its full price (or lets it move again); saved at once. */
+	static void setFixed(Material material, boolean fixed) {
+		synchronized (ServerPrices.class) {
+			if (fixed) {
+				FIXED.add(material);
+			} else {
+				FIXED.remove(material);
+			}
+		}
+		save();
+	}
+
+	static synchronized List<Material> fixedItems() {
+		return FIXED.stream().sorted(java.util.Comparator.comparing(Material::name)).toList();
+	}
+
+	static synchronized JsonArray fixedJson() {
+		JsonArray out = new JsonArray();
+		FIXED.stream().map(m -> m.getKey().getKey()).sorted().forEach(out::add);
+		return out;
 	}
 
 	static boolean enabled() {

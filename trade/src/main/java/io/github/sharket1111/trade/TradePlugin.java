@@ -94,6 +94,8 @@ public final class TradePlugin extends JavaPlugin {
 		if (args.length >= 2 && args[0].equals("공지") && player.hasPermission(AdminMenu.PERMISSION)) {
 			WebNotices.post("공지", String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length)), player.getName(), false);
 			player.sendMessage(Component.text("웹 사이트에 공지를 올렸습니다.", NamedTextColor.GREEN));
+		} else if (args.length >= 1 && args[0].equals("시세고정") && player.hasPermission(AdminMenu.PERMISSION)) {
+			fixPrice(player, args.length >= 2 ? args[1] : "");
 		} else if (args.length >= 1 && args[0].equals("디스코드") && player.hasPermission(AdminMenu.PERMISSION)) {
 			player.sendMessage(Component.text(Discord.test(player.getName()), NamedTextColor.YELLOW));
 		} else if (args.length >= 1 && (args[0].equals("경매") || args[0].equalsIgnoreCase("auction"))) {
@@ -134,5 +136,26 @@ public final class TradePlugin extends JavaPlugin {
 		Money.rename(args[1], args.length >= 3 ? args[2] : null);
 		player.sendMessage(Component.text("화폐를 '" + Money.name() + "'(단위 " + Money.symbol() + ")(으)로 바꿨습니다. 예: "
 				+ Money.format(1250), NamedTextColor.GREEN));
+	}
+
+	/** /trade 시세고정 [목록|아이템 이름]: keeps the item in hand (or the named one) at its full server price, or lets it move again. */
+	private void fixPrice(Player player, String arg) {
+		if (arg.equals("목록") || arg.equalsIgnoreCase("list")) {
+			java.util.List<org.bukkit.Material> fixed = ServerPrices.fixedItems();
+			player.sendMessage(Component.text(fixed.isEmpty() ? "시세가 고정된 아이템이 없습니다."
+					: "시세 고정: " + String.join(", ", fixed.stream().map(m -> WebSite.itemText(new org.bukkit.inventory.ItemStack(m))).toList()),
+					NamedTextColor.YELLOW));
+			return;
+		}
+		org.bukkit.Material material = arg.isEmpty() ? player.getInventory().getItemInMainHand().getType() : org.bukkit.Material.matchMaterial(arg);
+		if (material == null || material.isAir() || ItemValues.value(material) == null) {
+			player.sendMessage(Component.text("서버에 팔 수 있는 아이템을 손에 들고 /trade 시세고정 을 치세요. (목록: /trade 시세고정 목록)", NamedTextColor.RED));
+			return;
+		}
+		boolean fixed = !ServerPrices.fixed(material);
+		ServerPrices.setFixed(material, fixed);
+		String name = WebSite.itemText(new org.bukkit.inventory.ItemStack(material));
+		player.sendMessage(Component.text(fixed ? name + ": 이제 시세가 떨어지지 않고 항상 제값에 팔려요." : name + ": 다시 팔수록 시세가 떨어져요.",
+				fixed ? NamedTextColor.GREEN : NamedTextColor.YELLOW));
 	}
 }

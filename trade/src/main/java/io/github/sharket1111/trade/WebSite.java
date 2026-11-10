@@ -300,6 +300,8 @@ final class WebSite {
 					case "/api/listing/cancel" -> action(exchange, (player, body) -> WebActions.withdrawListing(player, text(body, "id")));
 					case "/api/listing/price" -> action(exchange, (player, body) -> WebActions.listingPrice(player, text(body, "id"), number(body, "price")));
 					case "/api/admin/inventory" -> admin(exchange, (player, body) -> inventoryOf(text(body, "name")));
+					case "/api/admin/fixed" -> admin(exchange, (player, body) -> WebActions.fixPrice(player, text(body, "item"),
+							body != null && body.has("fixed") && body.get("fixed").getAsBoolean()));
 					case "/api/admin/discord" -> admin(exchange, (player, body) -> {
 						String answer = Discord.test(WebActions.name(player) + "(웹)");
 						return Discord.enabled() ? WebActions.ok(answer) : WebActions.error(answer);
@@ -699,6 +701,7 @@ final class WebSite {
 		}
 		root.add("auctions", auctions);
 		root.add("drops", ServerPrices.drops());
+		root.add("fixedPrices", ServerPrices.fixedJson());
 		root.addProperty("serverTime", System.currentTimeMillis());
 		root.add("notices", notices());
 		root.addProperty("updated", System.currentTimeMillis());

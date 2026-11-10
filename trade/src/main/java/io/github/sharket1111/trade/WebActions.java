@@ -8,6 +8,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
@@ -377,6 +378,7 @@ final class WebActions {
 		root.addProperty("online", Bukkit.getOnlinePlayers().size());
 		root.addProperty("everyone", GiveAllMenu.recipients(true).size());
 		root.addProperty("discord", Discord.enabled());
+		root.add("fixedPrices", ServerPrices.fixedJson());
 		return GSON.toJson(root);
 	}
 
@@ -414,6 +416,17 @@ final class WebActions {
 		}
 		GiveAllMenu.give(ids, amount, text, name(admin) + "(웹)", everyone);
 		return ok(ids.size() + "명에게 " + Money.format(amount) + "씩 지급했습니다.");
+	}
+
+	/** Keeps an item at its full server price, or lets it move with sales again. */
+	static String fixPrice(UUID admin, String itemId, boolean fixed) {
+		Material material = itemId.isBlank() ? null : Material.matchMaterial(itemId);
+		if (material == null || ItemValues.value(material) == null) {
+			return error("서버에 팔 수 있는 아이템을 고르세요.");
+		}
+		ServerPrices.setFixed(material, fixed);
+		Bukkit.getLogger().info("[PlayerTrade] " + name(admin) + " (web) " + (fixed ? "fixed" : "unfixed") + " the price of " + material);
+		return ok(WebSite.itemText(new org.bukkit.inventory.ItemStack(material)) + (fixed ? ": 이제 시세가 떨어지지 않아요." : ": 다시 팔수록 시세가 떨어져요."));
 	}
 
 	static String shopPrice(UUID admin, String productId, long price) {
