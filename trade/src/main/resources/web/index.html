@@ -201,6 +201,14 @@ dialog.sheet[open] .sheet-in { animation: pop .45s var(--ease) both; }
 .badges { display: flex; flex-wrap: wrap; gap: 6px; }
 .badge { background: var(--accent-soft); color: var(--accent-ink); border-radius: 999px; padding: 3px 11px; font-size: 13px; font-weight: 650; }
 .badge.gold { background: #fdf0c7; color: #8a5a00; } @media (prefers-color-scheme: dark) { .badge.gold { background: #3a2e12; color: #f3cf6b; } }
+.ico { display: inline-block; flex: none; width: 32px; height: 32px; background-image: var(--icons); background-size: var(--icons-size); background-repeat: no-repeat; image-rendering: pixelated; }
+.row.has-ico { grid-template-columns: 34px minmax(0, 1fr) auto; }
+.row.has-ico > .ico { transition: transform .25s var(--ease); }
+.row.has-ico:hover > .ico { transform: scale(1.12) rotate(-3deg); }
+.slot.has-ico { padding: 0; }
+.slot .ico { position: absolute; inset: 10%; width: auto; height: auto; }
+.slot.has-ico b { z-index: 1; background: none; text-shadow: 0 1px 0 var(--surface), 0 0 3px var(--surface); }
+@media (max-width: 520px) { .row.has-ico { grid-template-columns: 28px minmax(0, 1fr) auto; } .row .ico { width: 28px; height: 28px; } }
 .seg { display: inline-flex; gap: 2px; padding: 4px; border-radius: 12px; background: var(--chip); }
 .seg button { font: 600 13.5px var(--font); color: var(--muted); background: none; border: 0; border-radius: 9px; padding: 7px 13px; cursor: pointer; transition: background .25s, color .25s; }
 .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
@@ -387,8 +395,18 @@ mark { background: color-mix(in srgb, var(--accent) 50%, transparent); color: in
     return img;
   }
   function priceCell(v) { var d = el("div", "price", money(v)); d.appendChild(el("span", "u", sym())); return d; }
+  // --- item pictures (drawn by the plugin; names only until they are ready) ------
+  var ICONS = null;
+  function icon(id) {
+    if (!ICONS || ICONS.ids[id] == null) return null;
+    var k = ICONS.ids[id], col = k % ICONS.columns, line = Math.floor(k / ICONS.columns);
+    var s = el("span", "ico"); s.setAttribute("aria-hidden", "true");
+    s.style.backgroundPosition = (ICONS.columns > 1 ? col / (ICONS.columns - 1) * 100 : 0) + "% " + (ICONS.rows > 1 ? line / (ICONS.rows - 1) * 100 : 0) + "%";
+    return s;
+  }
   function row(it, details, price, tag) {
-    var r = el("div", "row"), main = el("div", "main");
+    var r = el("div", "row"), main = el("div", "main"), pic = icon(it.id);
+    if (pic) { r.classList.add("has-ico"); r.appendChild(pic); }
     var title = el("strong", null, itemName(it) + (it.amount > 1 ? " ×" + it.amount : ""));
     if (tag) title.appendChild(el("span", "tag " + tag[0], tag[1]));
     main.appendChild(title);
@@ -988,8 +1006,10 @@ mark { background: color-mix(in srgb, var(--accent) 50%, transparent); color: in
     var g = el("div", "slots" + (cls ? " " + cls : ""));
     items.forEach(function (it, i) {
       var s = el(it && pick ? "button" : "div", "slot" + (it && it.ench ? " ench" : "") + (it && pick ? " click" : ""));
+      var pic = it && icon(it.id);
       if (it) {
-        s.textContent = itemName(it); s.title = itemName(it) + (it.amount > 1 ? " ×" + it.amount : "") + (enchText(it) ? " · " + enchText(it) : "") + (it.wear ? " · 내구도 " + (100 - it.wear) + "%" : "");
+        if (pic) { s.classList.add("has-ico"); s.appendChild(pic); s.setAttribute("aria-label", itemName(it) + (it.amount > 1 ? " ×" + it.amount : "")); } else s.textContent = itemName(it);
+        s.title = itemName(it) + (it.amount > 1 ? " ×" + it.amount : "") + (enchText(it) ? " · " + enchText(it) : "") + (it.wear ? " · 내구도 " + (100 - it.wear) + "%" : "");
         if (it.amount > 1) s.appendChild(el("b", null, String(it.amount)));
         if (pick) { s.type = "button"; s.style.font = "inherit"; s.style.color = "inherit"; s.style.textAlign = "left"; s.addEventListener("click", function () { pick(indexes ? indexes[i] : i, it); }); }
       } else if (labels) s.appendChild(el("span", "lbl", labels[i]));
@@ -1409,6 +1429,14 @@ mark { background: color-mix(in srgb, var(--accent) 50%, transparent); color: in
   $("pq").addEventListener("input", drawPrices); $("psort").addEventListener("change", drawPrices); $("pqty").addEventListener("input", drawPrices);
 
   call("GET", "/ko.json").then(function (r) { KO = r.body || KO; route(); }).catch(function () { route(); });
+  call("GET", "/icons.json").then(function (r) {
+    if (!r.ok || !r.body.ids) return;
+    ICONS = r.body; ICONS.rows = Math.max(1, Math.ceil(Object.keys(ICONS.ids).length / ICONS.columns));
+    var root = document.documentElement.style;
+    root.setProperty("--icons", "url(/icons.png?v=" + ICONS.version + ")");
+    root.setProperty("--icons-size", ICONS.columns * 100 + "% " + ICONS.rows * 100 + "%");
+    route();
+  }).catch(function () {});
   call("GET", "/api/values").then(function (r) { VALUES = r.body; if (view === "prices") drawPrices(); }).catch(function () {});
   loadPublic(); loadStats();
   if (key) loadMe();

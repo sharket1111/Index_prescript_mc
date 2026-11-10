@@ -95,7 +95,8 @@ final class WebSite {
 					"link-hours: how long a quick link from /trade 웹 works.",
 					"session-days: how long a login with name and password lasts on a device.",
 					"trade-enabled: whether logged-in players may buy and send money from the page.",
-					"max-per-action / max-per-day: the most a player may spend from the page at once / in a day."));
+					"max-per-action / max-per-day: the most a player may spend from the page at once / in a day.",
+					"item-icons: draw item pictures for the page (downloads the game's files from Mojang once)."));
 			yaml.set("enabled", false);
 			yaml.set("port", 0);
 			yaml.set("address", "");
@@ -104,6 +105,7 @@ final class WebSite {
 			yaml.set("trade-enabled", true);
 			yaml.set("max-per-action", 100000);
 			yaml.set("max-per-day", 300000);
+			yaml.set("item-icons", true);
 			try {
 				owner.getDataFolder().mkdirs();
 				yaml.save(file);
@@ -135,6 +137,9 @@ final class WebSite {
 			owner.getLogger().warning("web.yml: set 'port' to the extra port your host gave you; the web page stays off.");
 			enabled = false;
 			return;
+		}
+		if (yaml.getBoolean("item-icons", true)) {
+			ItemIcons.start(owner);
 		}
 		indexPage = resource("/web/index.html");
 		guideMd = resource("/web/guide.md");
@@ -320,6 +325,22 @@ final class WebSite {
 				case "/api/economy" -> json(exchange, 200, WebData.economy());
 				case "/api/player" -> profile(exchange);
 				case "/guide.md" -> send(exchange, 200, "text/markdown", guideMd);
+				case "/icons.json" -> json(exchange, 200, ItemIcons.index());
+				case "/icons.png" -> {
+					byte[] png = ItemIcons.sheet();
+					if (png == null) {
+						send(exchange, 404, "text/plain", "Not ready".getBytes(StandardCharsets.UTF_8));
+					} else {
+						// The page asks for it with the sheet's version in the address, so it may be kept a week.
+						exchange.getResponseHeaders().add("Content-Type", "image/png");
+						exchange.getResponseHeaders().add("Cache-Control", "public, max-age=604800");
+						exchange.getResponseHeaders().add("X-Content-Type-Options", "nosniff");
+						exchange.sendResponseHeaders(200, png.length);
+						try (OutputStream out = exchange.getResponseBody()) {
+							out.write(png);
+						}
+					}
+				}
 				case "/api/notices" -> json(exchange, 200, GSON.toJson(notices()));
 				case "/api/admin" -> admin(exchange, (player, body) -> WebActions.adminData());
 				default -> send(exchange, 404, "text/plain", "Not found".getBytes(StandardCharsets.UTF_8));
