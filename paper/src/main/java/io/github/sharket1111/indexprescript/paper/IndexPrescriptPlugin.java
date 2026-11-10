@@ -372,6 +372,10 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 							NamedTextColor.YELLOW));
 				} else if (sub.equalsIgnoreCase("stop")) {
 					sender.sendMessage(Component.text(Animations.stop(sender instanceof Player p ? p : null) + "개를 멈췄어요.", ok));
+				} else if (sub.equalsIgnoreCase("rig") && sender instanceof Player player) {
+					String outfit = args.length >= 3 ? args[2] : "player";
+					Animations.testRig(player, outfit);
+					sender.sendMessage(Component.text("앞에 인형(" + outfit + ")을 10초 동안 세웠어요. 몸이 안 보이면 다른 옷으로도 해 보세요: /ip anim rig suit, /ip anim rig steve", ok));
 				} else if (!(sender instanceof Player player)) {
 					sender.sendMessage(Messages.get(sender, "command.players_only"));
 				} else if (!Animations.play(player, sub)) {
@@ -414,13 +418,15 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 				case "mang" -> List.of("1", "2", "3", "4", "5", "6");
 				case "renoir" -> List.of("0", "50", "100");
 				case "dummy" -> List.of("4", "set", "info", "remove", "removeall");
-				case "anim" -> join(List.of("list", "reload", "stop"), Animations.names());
+				case "anim" -> join(List.of("list", "reload", "stop", "rig"), Animations.names());
 				case "fx" -> join(List.of("list", "reload"), StudioEffects.names());
 				case "skills" -> List.of("reload");
 				default -> List.of();
 			};
 			case 3 -> args[0].equalsIgnoreCase("dummy") && args[1].equalsIgnoreCase("set")
-					? List.of("base", "power", "coins", "types", "sanity", "damage") : List.of();
+					? List.of("base", "power", "coins", "types", "sanity", "damage")
+					: args[0].equalsIgnoreCase("anim") && args[1].equalsIgnoreCase("rig")
+							? List.of("player", "suit", "suit_slim", "steve", "steve_slim", "alex", "alex_slim") : List.of();
 			default -> List.of();
 		};
 	}

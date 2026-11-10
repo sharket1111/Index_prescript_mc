@@ -1,0 +1,6 @@
+{
+ "parent": "index_prescript:item/rig/base/head_slim",
+ "textures": {
+  "skin": "index_prescript:item/rig/suit_slim"
+ }
+}

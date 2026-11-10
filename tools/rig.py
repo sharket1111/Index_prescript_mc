@@ -15,6 +15,8 @@ Run from the repository root: python3 tools/rig.py
 import json
 import os
 
+from PIL import Image, ImageDraw
+
 PACK = "paper/pack/assets"
 NS = os.path.join(PACK, "index_prescript")
 DEFAULTS = ["steve", "alex", "ari", "efe", "kai", "makena", "noor", "sunny", "zuri"]
@@ -68,8 +70,49 @@ def write(path, data):
         f.write("\n")
 
 
+def draw_suit(path, slim):
+    """Our own outfit (a dark suit with a crimson tie), in the skin layout. It lives in the item atlas like every other mod texture."""
+    img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    g = ImageDraw.Draw(img)
+
+    def box(u, v, w, h, d, col):
+        g.rectangle([u + d, v, u + d + 2 * w - 1, v + d - 1], fill=col)
+        g.rectangle([u, v + d, u + 2 * (w + d) - 1, v + d + h - 1], fill=col)
+
+    aw = 3 if slim else 4
+    skin, hair, suit, shade, shirt, tie, pants, shoe = (201, 154, 116), (52, 38, 30), (34, 31, 38), (26, 24, 30), (226, 222, 214), (178, 44, 38), (40, 37, 46), (18, 16, 20)
+    box(0, 0, 8, 8, 8, skin)
+    g.rectangle([8, 0, 15, 7], fill=hair)
+    g.rectangle([0, 8, 31, 9], fill=hair)
+    g.rectangle([24, 8, 31, 15], fill=hair)
+    for x, y, c in ((9, 12, (255, 255, 255)), (10, 12, (60, 70, 110)), (13, 12, (60, 70, 110)), (14, 12, (255, 255, 255))):
+        img.putpixel((x, y), c + (255,))
+    g.rectangle([11, 14, 12, 14], fill=(140, 92, 72))
+    # Body: jacket, a shirt and tie down the front.
+    box(16, 16, 8, 12, 4, suit)
+    g.rectangle([22, 20, 25, 23], fill=shirt)
+    g.rectangle([23, 20, 24, 27], fill=tie)
+    g.rectangle([20, 20, 21, 31], fill=shade)
+    g.rectangle([26, 20, 27, 31], fill=shade)
+    # Arms: sleeves, hands at the bottom.
+    for u, v in ((40, 16), (32, 48)):
+        box(u, v, aw, 12, 4, suit)
+        g.rectangle([u, v + 14, u + 2 * (aw + 4) - 1, v + 15], fill=skin)
+        g.rectangle([u + 4 + aw, v, u + 4 + 2 * aw - 1, v + 3], fill=skin)
+    # Legs: trousers and shoes.
+    for u, v in ((0, 16), (16, 48)):
+        box(u, v, 4, 12, 4, pants)
+        g.rectangle([u, v + 13, u + 15, v + 15], fill=shoe)
+        g.rectangle([u + 8, v, u + 11, v + 3], fill=shoe)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    img.save(path)
+
+
 def main():
-    outfits = {}
+    custom_dir = os.path.join(NS, "textures/item/rig")
+    draw_suit(os.path.join(custom_dir, "suit.png"), False)
+    draw_suit(os.path.join(custom_dir, "suit_slim.png"), True)
+    outfits = {"suit": ("index_prescript:item/rig/suit", False), "suit_slim": ("index_prescript:item/rig/suit_slim", True)}
     for name in DEFAULTS:
         outfits[name] = ("minecraft:entity/player/wide/" + name, False)
         outfits[name + "_slim"] = ("minecraft:entity/player/slim/" + name, True)
@@ -97,8 +140,11 @@ def main():
                                                          "cases": cases, "fallback": cases[0]["model"]}})
     # The default skins live outside the item atlas; add them (to both, item models may read either).
     src = {"sources": [{"type": "minecraft:directory", "source": "entity/player", "prefix": "entity/player/"}]}
-    for atlas in ("blocks", "items"):
-        write(os.path.join(PACK, "minecraft/atlases", atlas + ".json"), src)
+    # One atlas only: a sprite in two atlases is a duplicate the game warns about.
+    write(os.path.join(PACK, "minecraft/atlases/items.json"), src)
+    stale = os.path.join(PACK, "minecraft/atlases/blocks.json")
+    if os.path.exists(stale):
+        os.remove(stale)
     print(len(outfits), "outfits:", ", ".join(outfits))
 
 

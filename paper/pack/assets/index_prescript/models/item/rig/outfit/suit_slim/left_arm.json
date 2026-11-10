@@ -1,0 +1,6 @@
+{
+ "parent": "index_prescript:item/rig/base/left_arm_slim",
+ "textures": {
+  "skin": "index_prescript:item/rig/suit_slim"
+ }
+}

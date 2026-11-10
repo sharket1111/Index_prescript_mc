@@ -5,6 +5,118 @@
   "index": 0,
   "cases": [
    {
+    "when": "suit",
+    "model": {
+     "type": "minecraft:select",
+     "property": "minecraft:custom_model_data",
+     "index": 1,
+     "cases": [
+      {
+       "when": "head",
+       "model": {
+        "type": "minecraft:model",
+        "model": "index_prescript:item/rig/outfit/suit/head"
+       }
+      },
+      {
+       "when": "body",
+       "model": {
+        "type": "minecraft:model",
+        "model": "index_prescript:item/rig/outfit/suit/body"
+       }
+      },
+      {
+       "when": "right_arm",
+       "model": {
+        "type": "minecraft:model",
+        "model": "index_prescript:item/rig/outfit/suit/right_arm"
+       }
+      },
+      {
+       "when": "left_arm",
+       "model": {
+        "type": "minecraft:model",
+        "model": "index_prescript:item/rig/outfit/suit/left_arm"
+       }
+      },
+      {
+       "when": "right_leg",
+       "model": {
+        "type": "minecraft:model",
+        "model": "index_prescript:item/rig/outfit/suit/right_leg"
+       }
+      },
+      {
+       "when": "left_leg",
+       "model": {
+        "type": "minecraft:model",
+        "model": "index_prescript:item/rig/outfit/suit/left_leg"
+       }
+      }
+     ],
+     "fallback": {
+      "type": "minecraft:model",
+      "model": "index_prescript:item/rig/outfit/suit/body"
+     }
+    }
+   },
+   {
+    "when": "suit_slim",
+    "model": {
+     "type": "minecraft:select",
+     "property": "minecraft:custom_model_data",
+     "index": 1,
+     "cases": [
+      {
+       "when": "head",
+       "model": {
+        "type": "minecraft:model",
+        "model": "index_prescript:item/rig/outfit/suit_slim/head"
+       }
+      },
+      {
+       "when": "body",
+       "model": {
+        "type": "minecraft:model",
+        "model": "index_prescript:item/rig/outfit/suit_slim/body"
+       }
+      },
+      {
+       "when": "right_arm",
+       "model": {
+        "type": "minecraft:model",
+        "model": "index_prescript:item/rig/outfit/suit_slim/right_arm"
+       }
+      },
+      {
+       "when": "left_arm",
+       "model": {
+        "type": "minecraft:model",
+        "model": "index_prescript:item/rig/outfit/suit_slim/left_arm"
+       }
+      },
+      {
+       "when": "right_leg",
+       "model": {
+        "type": "minecraft:model",
+        "model": "index_prescript:item/rig/outfit/suit_slim/right_leg"
+       }
+      },
+      {
+       "when": "left_leg",
+       "model": {
+        "type": "minecraft:model",
+        "model": "index_prescript:item/rig/outfit/suit_slim/left_leg"
+       }
+      }
+     ],
+     "fallback": {
+      "type": "minecraft:model",
+      "model": "index_prescript:item/rig/outfit/suit_slim/body"
+     }
+    }
+   },
+   {
     "when": "steve",
     "model": {
      "type": "minecraft:select",
@@ -1022,48 +1134,48 @@
      "when": "head",
      "model": {
       "type": "minecraft:model",
-      "model": "index_prescript:item/rig/outfit/steve/head"
+      "model": "index_prescript:item/rig/outfit/suit/head"
      }
     },
     {
      "when": "body",
      "model": {
       "type": "minecraft:model",
-      "model": "index_prescript:item/rig/outfit/steve/body"
+      "model": "index_prescript:item/rig/outfit/suit/body"
      }
     },
     {
      "when": "right_arm",
      "model": {
       "type": "minecraft:model",
-      "model": "index_prescript:item/rig/outfit/steve/right_arm"
+      "model": "index_prescript:item/rig/outfit/suit/right_arm"
      }
     },
     {
      "when": "left_arm",
      "model": {
       "type": "minecraft:model",
-      "model": "index_prescript:item/rig/outfit/steve/left_arm"
+      "model": "index_prescript:item/rig/outfit/suit/left_arm"
      }
     },
     {
      "when": "right_leg",
      "model": {
       "type": "minecraft:model",
-      "model": "index_prescript:item/rig/outfit/steve/right_leg"
+      "model": "index_prescript:item/rig/outfit/suit/right_leg"
      }
     },
     {
      "when": "left_leg",
      "model": {
       "type": "minecraft:model",
-      "model": "index_prescript:item/rig/outfit/steve/left_leg"
+      "model": "index_prescript:item/rig/outfit/suit/left_leg"
      }
     }
    ],
    "fallback": {
     "type": "minecraft:model",
-    "model": "index_prescript:item/rig/outfit/steve/body"
+    "model": "index_prescript:item/rig/outfit/suit/body"
    }
   }
  }

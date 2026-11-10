@@ -305,6 +305,27 @@ final class Animations {
 	}
 
 	/**
+	 * A rig standing two blocks in front of the player for 10 seconds, facing
+	 * them and waving, to check that an outfit shows ("player" for their own head
+	 * on the default outfit).
+	 */
+	static void testRig(Player player, String outfit) {
+		Key k = new Key(0, new float[] {0, 0, 2}, new float[] {0, 180, 0}, new float[] {1, 1, 1}, "linear");
+		Map<String, List<Key>> bones = new HashMap<>();
+		bones.put("right_arm", List.of(new Key(0, new float[3], new float[] {0, 0, 0}, new float[] {1, 1, 1}, "linear"),
+				new Key(20, new float[3], new float[] {0, 0, 150}, new float[] {1, 1, 1}, "out"),
+				new Key(40, new float[3], new float[] {0, 0, 110}, new float[] {1, 1, 1}, "inout"),
+				new Key(60, new float[3], new float[] {0, 0, 150}, new float[] {1, 1, 1}, "inout"),
+				new Key(80, new float[3], new float[] {0, 0, 110}, new float[] {1, 1, 1}, "inout"),
+				new Key(100, new float[3], new float[] {0, 0, 0}, new float[] {1, 1, 1}, "inout")));
+		bones.put("head", List.of(new Key(0, new float[3], new float[] {0, -20, 0}, new float[] {1, 1, 1}, "linear"),
+				new Key(100, new float[3], new float[] {0, 20, 0}, new float[] {1, 1, 1}, "inout")));
+		Part rig = new Part("test", "rig", "", null, List.of(), "", "none", false, -1, List.of(k), "",
+				outfit == null || outfit.isBlank() ? "player" : outfit, "", false, false, bones);
+		PLAYING.add(new Playback(new Anim("rig_test", 200, false, List.of(rig), List.of()), player, null));
+	}
+
+	/**
 	 * Plays a skill's body motion (skill_*.json) on {@code actor}, if the file
 	 * exists and skill motions are on (config: skill-motions). Replaces the
 	 * player's previous skill motion; ends with {@link #stopSkill} or its length.
@@ -572,7 +593,7 @@ final class Animations {
 				slim = json.contains("\"slim\"");
 			}
 		}
-		return slim ? "steve_slim" : "steve";
+		return slim ? "suit_slim" : "suit";
 	}
 
 	private static ItemStack modelled(Material material, String model, List<String> data) {
