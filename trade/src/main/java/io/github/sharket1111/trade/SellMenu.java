@@ -69,7 +69,9 @@ final class SellMenu extends Menu {
 				bedrock() ? "위 칸의 아이템을 누르면 돌려받습니다." : "",
 				"아래 금 블록에 넣은 아이템의 값이 나옵니다.",
 				"'판매'를 누르면 팔 수 있는 것만 팔고,", "나머지는 그대로 남습니다.", "메뉴를 닫으면 남은 아이템을 돌려받습니다.",
-				"도구·무기·방어구는 재료값의 절반이고,", "닳은 만큼 더 깎입니다."));
+				"도구·무기·방어구는 재료값의 절반이고,", "닳은 만큼 더 깎입니다.",
+				ServerPrices.enabled() ? "같은 아이템을 많이 팔수록 값이 떨어지고," : "",
+				ServerPrices.enabled() ? "시간이 지나면(" + ItemValues.show(ServerPrices.recoverHours()) + "시간마다 절반씩) 회복합니다." : ""));
 		Summary summary = summary();
 		List<String> lore = new ArrayList<>(summary.lines);
 		if (summary.lines.isEmpty()) {
@@ -93,6 +95,7 @@ final class SellMenu extends Menu {
 	private Summary summary() {
 		Map<String, double[]> kinds = new LinkedHashMap<>();
 		Map<String, String> refused = new LinkedHashMap<>();
+		Map<Material, Double> already = new java.util.EnumMap<>(Material.class);
 		double value = 0;
 		int unsellable = 0;
 		for (int slot = 0; slot < BOX; slot++) {
@@ -107,11 +110,13 @@ final class SellMenu extends Menu {
 				refused.put(name, appraisal.reason());
 				continue;
 			}
-			double worth = appraisal.unit() * stack.getAmount();
+			// The price falls as more of the same kind is sold.
+			double worth = ServerPrices.worth(stack, appraisal.unit(), already);
 			value += worth;
-			double[] kind = kinds.computeIfAbsent(name, key -> new double[2]);
+			double[] kind = kinds.computeIfAbsent(name, key -> new double[3]);
 			kind[0] += stack.getAmount();
 			kind[1] += worth;
+			kind[2] += appraisal.unit() * stack.getAmount();
 		}
 		List<String> lines = new ArrayList<>();
 		for (Map.Entry<String, double[]> entry : kinds.entrySet()) {
@@ -119,7 +124,9 @@ final class SellMenu extends Menu {
 				lines.add("... 외 " + (kinds.size() - SHOWN_LINES) + "종류");
 				break;
 			}
-			lines.add(entry.getKey() + " x" + (int) entry.getValue()[0] + " = " + ItemValues.show(entry.getValue()[1]));
+			double[] kind = entry.getValue();
+			int drop = kind[2] > 0 ? (int) Math.round(100 * (1 - kind[1] / kind[2])) : 0;
+			lines.add(entry.getKey() + " x" + (int) kind[0] + " = " + ItemValues.show(kind[1]) + (drop > 0 ? " (시세 -" + drop + "%)" : ""));
 		}
 		for (Map.Entry<String, String> entry : refused.entrySet()) {
 			lines.add("✕ " + entry.getKey() + " (" + entry.getValue() + ")");
@@ -237,6 +244,7 @@ final class SellMenu extends Menu {
 		double value = 0;
 		int items = 0;
 		List<Integer> slots = new ArrayList<>();
+		Map<Material, Double> already = new java.util.EnumMap<>(Material.class);
 		for (int slot = 0; slot < BOX; slot++) {
 			ItemStack stack = inventory.getItem(slot);
 			if (stack == null || stack.isEmpty()) {
@@ -244,7 +252,7 @@ final class SellMenu extends Menu {
 			}
 			ItemValues.Appraisal appraisal = ItemValues.appraise(stack);
 			if (appraisal.sellable()) {
-				value += appraisal.unit() * stack.getAmount();
+				value += ServerPrices.worth(stack, appraisal.unit(), already);
 				items += stack.getAmount();
 				slots.add(slot);
 			}
@@ -256,6 +264,7 @@ final class SellMenu extends Menu {
 			return;
 		}
 		for (int slot : slots) {
+			ServerPrices.sold(inventory.getItem(slot));
 			inventory.setItem(slot, null);
 		}
 		Money.add(player.getUniqueId(), total);

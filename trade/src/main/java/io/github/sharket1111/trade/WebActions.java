@@ -242,12 +242,13 @@ final class WebActions {
 		if (!appraisal.sellable()) {
 			return error("서버에 팔 수 없습니다: " + appraisal.reason());
 		}
-		long total = (long) Math.floor(appraisal.unit() * stack.getAmount() + 1.0E-6);
+		long total = (long) Math.floor(ServerPrices.worth(stack, appraisal.unit()) + 1.0E-6);
 		if (total <= 0) {
 			return error("값이 0이라 팔 수 없습니다.");
 		}
 		String what = WebSite.itemText(stack);
 		online.getInventory().setItem(slotIndex, null);
+		ServerPrices.sold(stack);
 		Money.add(player, total);
 		online.sendMessage(Component.text("웹에서 " + what + "을(를) 서버에 팔아 " + Money.format(total) + "을(를) 받았습니다.", NamedTextColor.GOLD));
 		return ok(what + "을(를) " + Money.format(total) + "에 팔았습니다.");

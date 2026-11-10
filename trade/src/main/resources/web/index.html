@@ -316,11 +316,11 @@ mark { background: color-mix(in srgb, var(--accent) 50%, transparent); color: in
     <div class="tools">
       <input type="search" id="pq" placeholder="아이템 이름으로 찾기 (예: 다이아, 철)" aria-label="시세에서 찾기" autocomplete="off">
       <label class="muted" for="pqty">수량</label><input type="number" id="pqty" min="1" max="99999" value="1" style="width:84px">
-      <select id="psort" aria-label="정렬"><option value="high">서버 판매가 비싼 순</option><option value="low">서버 판매가 싼 순</option><option value="traded">거래 많은 순</option><option value="name">이름 순</option></select>
+      <select id="psort" aria-label="정렬"><option value="high">서버 판매가 비싼 순</option><option value="low">서버 판매가 싼 순</option><option value="drop">많이 떨어진 순</option><option value="traded">거래 많은 순</option><option value="name">이름 순</option></select>
     </div>
     <p class="muted" id="pcount"></p>
     <div class="ledger" id="list-prices"></div>
-    <p class="muted">오른쪽은 서버에 팔 때 받는 값입니다. 줄을 누르면 플레이어끼리 실제로 거래된 가격 그래프가 나옵니다. 도구·무기·방어구는 재료값의 절반이고, 마법이 부여된 책은 마법 레벨 1당 20을 더 받습니다.</p>
+    <p class="muted">오른쪽은 지금 서버에 팔 때 받는 값이에요. 같은 아이템을 많이 팔수록 값이 떨어지고, 시간이 지나거나 플레이어끼리 사고팔면 다시 올라요. 줄을 누르면 서버 판매가와 플레이어 거래 가격 그래프가 나와요. 도구·무기·방어구는 재료값의 절반이고, 마법이 부여된 책은 마법 레벨 1당 20을 더 받습니다.</p>
   </section>
 
   <section id="v-economy" hidden>
@@ -329,6 +329,8 @@ mark { background: color-mix(in srgb, var(--accent) 50%, transparent); color: in
       <div class="box"><h3>하루 거래액 (최근 30일)</h3><canvas class="chart tall" id="econDays" aria-label="최근 30일 하루 거래액 막대 그래프"></canvas><p class="muted" id="econDaysNote"></p></div>
       <div class="box"><h3>서버 전체 골드</h3><canvas class="chart tall" id="econSupply" aria-label="날마다 서버 전체 골드 그래프"></canvas><p class="muted">플레이어들이 가진 돈을 모두 더한 값이에요. 하루에 한 번 기록해요.</p></div>
     </div>
+    <h2>서버 판매가가 떨어진 아이템</h2>
+    <div class="ledger" id="econDrops"></div>
     <h2>많이 거래된 아이템 (최근 30일)</h2>
     <div class="ledger" id="econItems"></div>
     <p class="muted" id="econUpdated"></p>
@@ -714,6 +716,14 @@ mark { background: color-mix(in srgb, var(--accent) 50%, transparent); color: in
     $("econDaysNote").textContent = "30일 동안 플레이어끼리 " + total + "번 거래했어요. (시장·삽니다·경매)";
     var supply = E.supplyDays.map(function (d) { return [Date.parse(d[0]), d[1]]; });
     requestAnimationFrame(function () { if (supply.length) drawChart($("econSupply"), { recent: supply, avg: null }); });
+    var drops = Object.keys((PUB && PUB.drops) || {}).sort(function (a, b) { return PUB.drops[a] - PUB.drops[b]; }).slice(0, 10);
+    var baseOf = {}; (VALUES ? VALUES.items : []).forEach(function (r) { baseOf[r[0]] = r[1]; });
+    fill($("econDrops"), drops.map(function (id) {
+      var m = PUB.drops[id], b = baseOf[id] || 0;
+      var r = row({ id: id, amount: 1 }, "기본 " + money(b) + " " + sym() + " → 지금 " + money(b * m) + " " + sym(), Math.round(b * m * 100) / 100, ["bad", "-" + Math.round((1 - m) * 100) + "%"]);
+      r.classList.add("click"); r.addEventListener("click", function () { $("pq").value = KO.items[id] || id; openItem = id; location.hash = "#prices"; });
+      return r;
+    }), "지금은 모든 아이템이 제값이에요.");
     fill($("econItems"), E.topItems.map(function (x) { return row({ id: x.id, amount: 1 }, "30일 동안 " + x.amount.toLocaleString("ko-KR") + "개 거래", x.volume); }),
       "아직 거래 기록이 없어요.");
     $("econUpdated").textContent = "1분마다 새로 계산해요. 마지막: " + new Date(E.updated).toLocaleTimeString("ko-KR");
@@ -841,9 +851,54 @@ mark { background: color-mix(in srgb, var(--accent) 50%, transparent); color: in
     if (t.avg != null) { c.setLineDash([4, 4]); c.strokeStyle = ink; c.beginPath(); c.moveTo(L, y(t.avg)); c.lineTo(w - R, y(t.avg)); c.stroke(); c.setLineDash([]); }
     c.strokeStyle = gold; c.lineWidth = 2; c.beginPath();
     pts.forEach(function (p, i) { if (i) c.lineTo(x(i), y(p[1])); else c.moveTo(x(i), y(p[1])); }); c.stroke();
-    c.fillStyle = gold; pts.forEach(function (p, i) { c.beginPath(); c.arc(x(i), y(p[1]), 3, 0, Math.PI * 2); c.fill(); });
-    c.fillStyle = ink; c.textAlign = "left"; c.fillText(new Date(pts[0][0]).toLocaleDateString("ko-KR"), L, h - 6);
-    c.textAlign = "right"; c.fillText(new Date(pts[pts.length - 1][0]).toLocaleDateString("ko-KR"), w - R, h - 6);
+    if (t.dots !== false) { c.fillStyle = gold; pts.forEach(function (p, i) { c.beginPath(); c.arc(x(i), y(p[1]), 3, 0, Math.PI * 2); c.fill(); }); }
+    if (t.time) {
+      // Points spread by time (not evenly): redraw the line along the real time axis.
+      var t0 = pts[0][0], t1 = pts[pts.length - 1][0] || t0 + 1;
+      c.clearRect(L + 1, T - 2, W + R, H + 4);
+      [lo, (lo + hi) / 2, hi].forEach(function (v) { c.strokeStyle = line; c.lineWidth = 1; c.beginPath(); c.moveTo(L, y(v)); c.lineTo(w - R, y(v)); c.stroke(); });
+      var tx = function (tm) { return L + (t1 > t0 ? W * (tm - t0) / (t1 - t0) : W / 2); };
+      if (t.avg != null) { c.setLineDash([4, 4]); c.strokeStyle = ink; c.beginPath(); c.moveTo(L, y(t.avg)); c.lineTo(w - R, y(t.avg)); c.stroke(); c.setLineDash([]); }
+      var fillG = c.createLinearGradient(0, T, 0, T + H); fillG.addColorStop(0, gold + "55"); fillG.addColorStop(1, gold + "00");
+      c.beginPath(); pts.forEach(function (p, i) { if (i) c.lineTo(tx(p[0]), y(p[1])); else c.moveTo(tx(p[0]), y(p[1])); });
+      c.lineTo(tx(pts[pts.length - 1][0]), T + H); c.lineTo(tx(pts[0][0]), T + H); c.closePath(); c.fillStyle = fillG; c.fill();
+      c.strokeStyle = gold; c.lineWidth = 2; c.beginPath();
+      pts.forEach(function (p, i) { if (i) c.lineTo(tx(p[0]), y(p[1])); else c.moveTo(tx(p[0]), y(p[1])); }); c.stroke();
+      c.fillStyle = gold; c.beginPath(); c.arc(tx(pts[pts.length - 1][0]), y(pts[pts.length - 1][1]), 4, 0, Math.PI * 2); c.fill();
+    }
+    var label = t.time ? function (tm) { return new Date(tm).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "numeric" }); }
+      : function (tm) { return new Date(tm).toLocaleDateString("ko-KR"); };
+    c.fillStyle = ink; c.textAlign = "left"; c.fillText(label(pts[0][0]), L, h - 6);
+    c.textAlign = "right"; c.fillText(t.time ? "지금" : label(pts[pts.length - 1][0]), w - R, h - 6);
+  }
+  /** The share of the full server price paid now for an item (1 = full). */
+  function drop(id) { return PUB && PUB.drops && PUB.drops[id] || 1; }
+  var curveCache = {};
+  /** Draws an item's server price over the last two days from its sales and purchases (the price recovers between them). */
+  function serverCurve(id, base, canvas, note) {
+    var cached = curveCache[id];
+    var draw = function (d) {
+      if (d.error) { note.textContent = d.error; return; }
+      var now2 = Date.now() + serverOffset, start = now2 - 48 * 3600e3, half = d.halfLife;
+      var at = function (time) {
+        var s = 0, last = null;
+        d.events.forEach(function (e) { if (e[0] <= time) last = e; });
+        if (last) s = last[1] * Math.pow(0.5, (time - last[0]) / half);
+        return base * Math.max(d.floor, Math.exp(-s / d.scale));
+      };
+      var times = [];
+      for (var tm = start; tm < now2; tm += 30 * 60e3) times.push(tm);
+      d.events.forEach(function (e) { if (e[0] > start) { times.push(e[0] - 1); times.push(e[0]); } });
+      times.push(now2); times.sort(function (a, b) { return a - b; });
+      var pts = times.map(function (tm) { return [tm, Math.round(at(tm) * 100) / 100]; });
+      requestAnimationFrame(function () { drawChart(canvas, { recent: pts, avg: base, dots: false, time: true }); });
+      var m = d.multiplier;
+      note.textContent = (m < 0.995 ? "지금 기본값의 " + Math.round(m * 100) + "% (" + money(base * m) + " " + sym() + "). " : "지금 제값이에요. ")
+        + "팔수록 떨어지고, " + (Math.round(half / 360e3) / 10) + "시간마다 떨어진 만큼의 절반이 회복돼요. 다른 플레이어에게서 사면 더 빨리 회복돼요. (점선: 기본값)";
+    };
+    if (cached && Date.now() - cached.at < 20000) { draw(cached.data); return; }
+    call("GET", "/api/price?item=" + encodeURIComponent(id)).then(function (r) { curveCache[id] = { at: Date.now(), data: r.body }; draw(r.body); })
+      .catch(function () { note.textContent = "불러오지 못했어요."; });
   }
   function drawPrices() {
     if (!VALUES) return;
@@ -851,23 +906,34 @@ mark { background: color-mix(in srgb, var(--accent) 50%, transparent); color: in
     var qty = Math.max(1, Math.min(99999, Math.floor(Number($("pqty").value) || 1)));
     var list = VALUES.items.filter(function (r) { return !q || ((KO.items[r[0]] || "") + " " + r[0] + " " + r[0].replace(/_/g, " ")).toLowerCase().indexOf(q) >= 0; });
     function count(r) { var t = trades(r[0]); return t ? t.count : 0; }
-    var cmp = { low: function (a, b) { return a[1] - b[1]; }, name: function (a, b) { return (KO.items[a[0]] || a[0]).localeCompare(KO.items[b[0]] || b[0], "ko"); },
-      traded: function (a, b) { return count(b) - count(a) || b[1] - a[1]; }, high: function (a, b) { return b[1] - a[1]; } };
+    function cur(r) { return r[1] * drop(r[0]); }
+    var cmp = { low: function (a, b) { return cur(a) - cur(b); }, name: function (a, b) { return (KO.items[a[0]] || a[0]).localeCompare(KO.items[b[0]] || b[0], "ko"); },
+      traded: function (a, b) { return count(b) - count(a) || cur(b) - cur(a); }, high: function (a, b) { return cur(b) - cur(a); },
+      drop: function (a, b) { return drop(a[0]) - drop(b[0]) || cur(b) - cur(a); } };
     list.sort(cmp[sort] || cmp.high);
     $("pcount").textContent = list.length + "개" + (qty > 1 ? " · " + qty + "개 기준" : " · 1개 가격");
     var shown = list.slice(0, 300);
     fill($("list-prices"), shown.map(function (r) {
       var t = trades(r[0]);
-      var v = qty > 1 ? Math.floor(r[1] * qty + 1e-6) : r[1];
-      var info = (r[2] ? "도구·장비: 재료값의 절반 · " : "") + (t ? "플레이어 거래 " + t.count + "번" + (t.avg != null ? " · 30일 평균 개당 " + money(t.avg) + " " + sym() : "") : "플레이어 거래 기록 없음");
-      var line = row({ id: r[0], amount: 1 }, info, v);
+      var m = drop(r[0]), now1 = r[1] * m;
+      var v = qty > 1 ? Math.floor(now1 * qty + 1e-6) : Math.round(now1 * 100) / 100;
+      var info = (m < 0.995 ? "기본 " + money(r[1]) + " " + sym() + " · " : "") + (r[2] ? "도구·장비: 재료값의 절반 · " : "")
+        + (t ? "플레이어 거래 " + t.count + "번" + (t.avg != null ? " · 30일 평균 개당 " + money(t.avg) + " " + sym() : "") : "플레이어 거래 기록 없음");
+      var line = row({ id: r[0], amount: 1 }, info, v, m < 0.995 ? ["bad", "시세 -" + Math.round((1 - m) * 100) + "%"] : null);
       line.classList.add("click"); line.tabIndex = 0;
       if (openItem === r[0]) {
         var d = el("div", "detail");
+        var g2 = el("div", "grid2");
+        var sv = el("div"); sv.appendChild(el("h3", null, "서버 판매가 (최근 2일)"));
+        var svc = el("canvas", "chart"), svn = el("p", "muted", "불러오는 중...");
+        sv.append(svc, svn); g2.appendChild(sv);
+        serverCurve(r[0], r[1], svc, svn);
+        var pv = el("div"); pv.appendChild(el("h3", null, "플레이어끼리 거래된 개당 가격"));
         if (t && t.recent.length) {
-          d.appendChild(el("p", "muted", "최근 거래 " + t.recent.length + "번의 개당 가격 (점선: 30일 평균)"));
-          var cv = el("canvas", "chart"); d.appendChild(cv); requestAnimationFrame(function () { drawChart(cv, t); });
-        } else d.appendChild(el("p", "muted", "아직 플레이어끼리 거래된 기록이 없습니다."));
+          var cv = el("canvas", "chart"); pv.append(cv, el("p", "muted", "최근 거래 " + t.recent.length + "번 (점선: 30일 평균)"));
+          requestAnimationFrame(function () { drawChart(cv, t); });
+        } else pv.appendChild(el("p", "muted", "아직 플레이어끼리 거래된 기록이 없습니다."));
+        g2.appendChild(pv); d.appendChild(g2);
         line.appendChild(d);
       }
       function toggle() { openItem = openItem === r[0] ? null : r[0]; drawPrices(); }

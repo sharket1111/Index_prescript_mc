@@ -32,6 +32,7 @@ public final class TradePlugin extends JavaPlugin {
 			getLogger().info("Converted saved trade diamond prices to " + Money.name() + " (1 diamond = " + Money.DIAMOND_RATE + ").");
 		}
 		ItemValues.load(this);
+		ServerPrices.load(this);
 		getLogger().info(ItemValues.count() + " items can be sold to the server.");
 		Land.load(this);
 		ChatPrompt.init(this);
@@ -77,6 +78,7 @@ public final class TradePlugin extends JavaPlugin {
 		WebSite.stop();
 		Auctions.save();
 		InventorySnapshots.saveAll();
+		ServerPrices.save();
 		Discord.serverStopping();
 		AnvilPrompt.closeAll();
 		DirectTrade.cancelAll();

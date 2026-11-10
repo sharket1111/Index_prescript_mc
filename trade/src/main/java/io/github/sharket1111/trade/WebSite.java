@@ -324,6 +324,11 @@ final class WebSite {
 				case "/api/map" -> json(exchange, 200, WebData.map());
 				case "/api/economy" -> json(exchange, 200, WebData.economy());
 				case "/api/player" -> profile(exchange);
+				case "/api/price" -> {
+					String query = exchange.getRequestURI().getRawQuery();
+					String item = query != null && query.startsWith("item=") ? java.net.URLDecoder.decode(query.substring(5), StandardCharsets.UTF_8) : "";
+					json(exchange, 200, ServerPrices.history(item.replaceAll("[^a-z0-9_]", "")));
+				}
 				case "/guide.md" -> send(exchange, 200, "text/markdown", guideMd);
 				case "/icons.json" -> json(exchange, 200, ItemIcons.index());
 				case "/icons.png" -> {
@@ -693,6 +698,7 @@ final class WebSite {
 			auctions.add(auction(auction));
 		}
 		root.add("auctions", auctions);
+		root.add("drops", ServerPrices.drops());
 		root.addProperty("serverTime", System.currentTimeMillis());
 		root.add("notices", notices());
 		root.addProperty("updated", System.currentTimeMillis());
@@ -891,7 +897,7 @@ final class WebSite {
 					JsonObject slot = inventory.get(i).getAsJsonObject();
 					ItemValues.Appraisal appraisal = ItemValues.appraise(stack);
 					if (appraisal.sellable()) {
-						slot.addProperty("sell", (long) Math.floor(appraisal.unit() * stack.getAmount() + 1.0E-6));
+						slot.addProperty("sell", (long) Math.floor(ServerPrices.worth(stack, appraisal.unit()) + 1.0E-6));
 					} else {
 						slot.addProperty("noSell", appraisal.reason());
 					}

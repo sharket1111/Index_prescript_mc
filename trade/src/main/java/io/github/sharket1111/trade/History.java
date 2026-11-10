@@ -80,6 +80,7 @@ final class History {
 		if (how != null) {
 			Discord.trade(WebSite.itemText(item), price, sellerName, buyerName, how);
 		}
+		ServerPrices.bought(item.getType(), item.getAmount());
 		ENTRIES.add(new Entry(buyer, buyerName, seller, sellerName, item.clone(), price, System.currentTimeMillis()));
 		while (ENTRIES.size() > MAX_ENTRIES) {
 			ENTRIES.remove(0);
@@ -94,6 +95,9 @@ final class History {
 	/** A sale at {@code paid} (the listed price less any group discount). */
 	static void record(Listing listing, UUID buyer, String buyerName, int paid) {
 		Discord.trade(WebSite.itemText(listing.item), paid, Market.name(listing.seller), buyerName, "시장");
+		if (Land.deedChunk(listing.item) == null) {
+			ServerPrices.bought(listing.item.getType(), listing.item.getAmount());
+		}
 		ENTRIES.add(new Entry(buyer, buyerName, listing.seller, Market.name(listing.seller), listing.item.clone(), paid,
 				System.currentTimeMillis()));
 		while (ENTRIES.size() > MAX_ENTRIES) {

@@ -107,7 +107,7 @@ final class ListingEditor extends Menu {
 	/** What the server would pay for the item, as a guide to the price. */
 	private String serverValue() {
 		ItemValues.Appraisal appraisal = ItemValues.appraise(item);
-		return appraisal.sellable() ? Money.format((long) Math.floor(appraisal.unit() * item.getAmount())) : "없음 (" + appraisal.reason() + ")";
+		return appraisal.sellable() ? Money.format((long) Math.floor(ServerPrices.worth(item, appraisal.unit()) + 1.0E-6)) : "없음 (" + appraisal.reason() + ")";
 	}
 
 	/** The inventory cannot change while a price is being set. */
