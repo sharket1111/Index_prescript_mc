@@ -170,6 +170,7 @@ final class RienSkill {
 	}
 
 	private void open() {
+		Animations.playSkill(player, "skill_rien_" + kind.name().toLowerCase(java.util.Locale.ROOT), this::actor);
 		if (!(target instanceof Player)) {
 			target.setAI(false);
 		}
@@ -375,6 +376,7 @@ final class RienSkill {
 	}
 
 	private void finish() {
+		Animations.stopSkill(player);
 		if (kind.family == 2) {
 			TotalDamage.finish(player);
 		} else {

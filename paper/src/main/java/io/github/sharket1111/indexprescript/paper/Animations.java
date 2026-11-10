@@ -1,6 +1,8 @@
 package io.github.sharket1111.indexprescript.paper;
 
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
@@ -14,6 +16,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 
 import org.bukkit.Bukkit;
@@ -24,6 +27,7 @@ import org.bukkit.SoundCategory;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.ItemDisplay;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -103,6 +107,7 @@ final class Animations {
 		}
 		writeExample(dir, "example_spin.json", EXAMPLE);
 		writeExample(dir, "example_rig_slash.json", EXAMPLE_RIG);
+		syncBundled(dir);
 		File[] files = dir.listFiles((d, name) -> name.endsWith(".json"));
 		if (files != null) {
 			for (File file : files) {
@@ -126,6 +131,53 @@ final class Animations {
 			Files.writeString(file.toPath(), text, StandardCharsets.UTF_8);
 		} catch (IOException e) {
 			plugin.getLogger().log(Level.WARNING, "Could not write the example animation " + name, e);
+		}
+	}
+
+	/**
+	 * Copies the skill motions bundled with the plugin (animations/index.txt) into
+	 * the folder: new ones, and newer versions of files still marked "auto" (a file
+	 * saved from the studio drops the mark and is kept as it is).
+	 */
+	private static void syncBundled(File dir) {
+		InputStream index = plugin.getResource("animations/index.txt");
+		if (index == null) {
+			return;
+		}
+		try (index) {
+			for (String name : new String(index.readAllBytes(), StandardCharsets.UTF_8).split("\\R")) {
+				name = name.trim();
+				if (name.isEmpty()) {
+					continue;
+				}
+				InputStream in = plugin.getResource("animations/" + name + ".json");
+				if (in == null) {
+					continue;
+				}
+				byte[] bundled;
+				try (in) {
+					bundled = in.readAllBytes();
+				}
+				File file = new File(dir, name + ".json");
+				if (file.exists()) {
+					JsonObject mine;
+					try (Reader reader = Files.newBufferedReader(file.toPath(), StandardCharsets.UTF_8)) {
+						mine = GSON.fromJson(reader, JsonObject.class);
+					} catch (RuntimeException e) {
+						continue;
+					}
+					JsonObject theirs = GSON.fromJson(new InputStreamReader(new java.io.ByteArrayInputStream(bundled), StandardCharsets.UTF_8), JsonObject.class);
+					boolean auto = mine != null && mine.has("auto") && mine.get("auto").getAsBoolean();
+					int have = mine != null && mine.has("version") ? mine.get("version").getAsInt() : 0;
+					int now = theirs.has("version") ? theirs.get("version").getAsInt() : 0;
+					if (!auto || have >= now) {
+						continue;
+					}
+				}
+				Files.write(file.toPath(), bundled);
+			}
+		} catch (IOException | RuntimeException e) {
+			plugin.getLogger().log(Level.WARNING, "Could not copy the bundled skill motions", e);
 		}
 	}
 
@@ -213,17 +265,28 @@ final class Animations {
 		/** Per part: one display, or for a rig one per bone (BONES order). */
 		final Display[][] displays;
 		final Map<String, Part> byId = new HashMap<>();
-		boolean hidden;
-		boolean addedInvisibility;
+		/** For a skill's motion: the body it stands in for (the player, or the cinematic stand-in), followed each tick. */
+		final Supplier<LivingEntity> actor;
+		/** Entities hidden behind the rig, with whether this playback made them invisible. */
+		final Map<LivingEntity, Boolean> hidden = new HashMap<>();
+		/** The hand item shown by each "@mainhand" part. */
+		final Map<Integer, ItemStack> hands = new HashMap<>();
 		int tick;
 
-		Playback(Anim anim, Player player) {
+		Playback(Anim anim, Player player, Supplier<LivingEntity> actor) {
 			this.anim = anim;
 			this.player = player;
-			this.origin = flat(player.getLocation());
+			this.actor = actor;
+			this.origin = flat(body(this).getLocation());
 			this.displays = new Display[anim.parts().size()][];
 			anim.parts().forEach(p -> byId.put(p.id(), p));
 		}
+	}
+
+	/** The body the animation is about: the skill's actor when it has one, else the player. */
+	private static LivingEntity body(Playback p) {
+		LivingEntity a = p.actor == null ? null : p.actor.get();
+		return a != null && a.isValid() ? a : p.player;
 	}
 
 	private static Location flat(Location at) {
@@ -237,8 +300,34 @@ final class Animations {
 		if (anim == null) {
 			return false;
 		}
-		PLAYING.add(new Playback(anim, player));
+		PLAYING.add(new Playback(anim, player, null));
 		return true;
+	}
+
+	/**
+	 * Plays a skill's body motion (skill_*.json) on {@code actor}, if the file
+	 * exists and skill motions are on (config: skill-motions). Replaces the
+	 * player's previous skill motion; ends with {@link #stopSkill} or its length.
+	 */
+	static void playSkill(Player player, String name, Supplier<LivingEntity> actor) {
+		if (plugin == null || !plugin.getConfig().getBoolean("skill-motions", true)) {
+			return;
+		}
+		stopSkill(player);
+		Anim anim = ANIMS.get(name.toLowerCase(Locale.ROOT));
+		if (anim != null) {
+			PLAYING.add(new Playback(anim, player, actor));
+		}
+	}
+
+	static void stopSkill(Player player) {
+		for (Iterator<Playback> it = PLAYING.iterator(); it.hasNext();) {
+			Playback p = it.next();
+			if (p.actor != null && p.player.equals(player)) {
+				remove(p);
+				it.remove();
+			}
+		}
 	}
 
 	/** Stops every animation of {@code player} (all, when null). */
@@ -265,25 +354,30 @@ final class Animations {
 				}
 			}
 		}
-		if (p.hidden) {
-			p.hidden = false;
-			if (p.addedInvisibility) {
-				p.player.removePotionEffect(PotionEffectType.INVISIBILITY);
-			}
-			if (p.player.isOnline()) {
-				Map<EquipmentSlot, ItemStack> real = new HashMap<>();
-				for (EquipmentSlot slot : EquipmentSlot.values()) {
-					if (p.player.canUseEquipmentSlot(slot)) {
-						real.put(slot, p.player.getEquipment().getItem(slot));
-					}
-				}
-				for (Player viewer : p.player.getWorld().getPlayers()) {
-					if (!viewer.equals(p.player)) {
-						viewer.sendEquipmentChange(p.player, real);
-					}
+		p.hidden.forEach((entity, madeInvisible) -> {
+			if (madeInvisible) {
+				if (entity instanceof Player player) {
+					player.removePotionEffect(PotionEffectType.INVISIBILITY);
+				} else if (entity.isValid()) {
+					entity.setInvisible(false);
 				}
 			}
-		}
+			if (!entity.isValid()) {
+				return;
+			}
+			Map<EquipmentSlot, ItemStack> real = new HashMap<>();
+			for (EquipmentSlot slot : EquipmentSlot.values()) {
+				if (entity.canUseEquipmentSlot(slot) && entity.getEquipment() != null) {
+					real.put(slot, entity.getEquipment().getItem(slot));
+				}
+			}
+			for (Player viewer : entity.getWorld().getPlayers()) {
+				if (!viewer.equals(entity)) {
+					viewer.sendEquipmentChange(entity, real);
+				}
+			}
+		});
+		p.hidden.clear();
 	}
 
 	static void tick() {
@@ -294,8 +388,9 @@ final class Animations {
 				it.remove();
 				continue;
 			}
-			if (p.anim.follow()) {
-				p.origin = flat(p.player.getLocation());
+			boolean follow = p.anim.follow() || p.actor != null;
+			if (follow) {
+				p.origin = flat(body(p).getLocation());
 			}
 			for (int i = 0; i < p.anim.parts().size(); i++) {
 				Part part = p.anim.parts().get(i);
@@ -311,8 +406,14 @@ final class Animations {
 					if (part.hidePlayer()) {
 						hide(p);
 					}
-					if (part.drivePlayer()) {
+					if (part.drivePlayer() && p.actor == null) {
 						drive(p, part);
+					}
+				} else if (part.item().equals("@mainhand") && ds[0] instanceof ItemDisplay item) {
+					ItemStack hand = hand(p);
+					if (!hand.equals(p.hands.get(i))) {
+						p.hands.put(i, hand.clone());
+						item.setItemStack(hand.clone());
 					}
 				}
 				boolean send = p.tick > first && (p.tick - first) % STEP == 0;
@@ -322,7 +423,7 @@ final class Animations {
 					if (d == null || !d.isValid()) {
 						continue;
 					}
-					if (p.anim.follow()) {
+					if (follow) {
 						d.teleport(p.origin);
 					}
 					if (send) {
@@ -341,26 +442,40 @@ final class Animations {
 		}
 	}
 
-	/** Hides the real player while a rig stands in: invisible, and their equipment shown as empty to everyone else. */
+	/** Hides the body a rig stands in for: invisible, and its equipment shown as empty to everyone else. */
 	private static void hide(Playback p) {
-		if (!p.hidden) {
-			p.hidden = true;
-			if (!p.player.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
-				p.addedInvisibility = true;
-				p.player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, p.anim.length() + 20, 0, false, false, false));
+		LivingEntity body = body(p);
+		if (!p.hidden.containsKey(body)) {
+			boolean made = false;
+			if (body instanceof Player player) {
+				if (!player.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
+					player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, p.anim.length() + 20, 0, false, false, false));
+					made = true;
+				}
+			} else if (!body.isInvisible()) {
+				body.setInvisible(true);
+				made = true;
 			}
+			p.hidden.put(body, made);
 		}
 		Map<EquipmentSlot, ItemStack> empty = new HashMap<>();
 		for (EquipmentSlot slot : EquipmentSlot.values()) {
-			if (p.player.canUseEquipmentSlot(slot)) {
+			if (body.canUseEquipmentSlot(slot)) {
 				empty.put(slot, ItemStack.empty());
 			}
 		}
-		for (Player viewer : p.player.getWorld().getPlayers()) {
-			if (!viewer.equals(p.player) && viewer.getLocation().distanceSquared(p.player.getLocation()) < 128 * 128) {
-				viewer.sendEquipmentChange(p.player, empty);
+		for (Player viewer : body.getWorld().getPlayers()) {
+			if (!viewer.equals(body) && viewer.getLocation().distanceSquared(body.getLocation()) < 128 * 128) {
+				viewer.sendEquipmentChange(body, empty);
 			}
 		}
+	}
+
+	/** What the body holds, for "@mainhand" parts. */
+	private static ItemStack hand(Playback p) {
+		LivingEntity body = body(p);
+		ItemStack held = body.getEquipment() == null ? null : body.getEquipment().getItemInMainHand();
+		return held == null ? ItemStack.empty() : held;
 	}
 
 	/** Moves the player to where the rig's feet are, keeping where they look. */
@@ -409,8 +524,14 @@ final class Animations {
 			out = new Display[] {at.getWorld().spawn(at, BlockDisplay.class, b -> b.setBlock((material != null && material.isBlock() ? material
 					: Material.GLOWSTONE).createBlockData()))};
 		} else {
-			Material material = Material.matchMaterial(part.item());
-			ItemStack stack = modelled(material != null && material.isItem() ? material : Material.IRON_SWORD, part.model(), part.data());
+			ItemStack stack;
+			if (part.item().equals("@mainhand")) {
+				stack = hand(p).clone();
+				p.hands.put(p.anim.parts().indexOf(part), stack.clone());
+			} else {
+				Material material = Material.matchMaterial(part.item());
+				stack = modelled(material != null && material.isItem() ? material : Material.IRON_SWORD, part.model(), part.data());
+			}
 			out = new Display[] {at.getWorld().spawn(at, ItemDisplay.class, d -> {
 				d.setItemStack(stack);
 				d.setItemDisplayTransform(transform(part.transform()));

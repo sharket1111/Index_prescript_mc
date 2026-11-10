@@ -161,6 +161,7 @@ final class Furioso {
 	}
 
 	private void open() {
+		Animations.playSkill(player, "skill_furioso", this::actor);
 		long now = CaduceusListener.now();
 		freeze(target);
 		// [Shin] is reckoned from the health lost when the skill starts.
@@ -614,6 +615,7 @@ final class Furioso {
 	}
 
 	private void finish() {
+		Animations.stopSkill(player);
 		if (scythe != null) {
 			scythe.remove();
 			scythe = null;

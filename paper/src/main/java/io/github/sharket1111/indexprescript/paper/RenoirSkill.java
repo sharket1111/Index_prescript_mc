@@ -174,6 +174,7 @@ final class RenoirSkill {
 	}
 
 	private void open() {
+		Animations.playSkill(player, "skill_renoir_" + kind.name().toLowerCase(java.util.Locale.ROOT), this::actor);
 		for (LivingEntity foe : held.keySet()) {
 			if (!(foe instanceof Player)) {
 				hadAi.put(foe, foe.hasAI());
@@ -808,6 +809,7 @@ final class RenoirSkill {
 	}
 
 	private void finish() {
+		Animations.stopSkill(player);
 		dropHammer();
 		if (kind == Kind.AGAIN) {
 			TotalDamage.finish(player);

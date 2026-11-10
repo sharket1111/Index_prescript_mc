@@ -24,3 +24,7 @@ bedrock-pack:
   # custom_mappings folder on startup, so Bedrock players see the items as
   # Java players do. Needs Geyser installed as a plugin on this server.
   install: true
+
+# Body motions for the weapon skills (plugins/IndexPrescript/animations/skill_*.json, editable in the mod studio).
+# While a skill plays, a player-shaped rig stands in for the wielder and moves its arms and legs.
+skill-motions: true

@@ -489,6 +489,7 @@ final class Laevatein implements Listener {
 		}
 
 		void start() {
+			Animations.playSkill(player, "skill_laevatein_release_" + stage, this::actor);
 			if (!(target instanceof Player)) {
 				target.setAI(false);
 			}
@@ -659,6 +660,7 @@ final class Laevatein implements Listener {
 		}
 
 		private void finish() {
+			Animations.stopSkill(player);
 			TotalDamage.finish(player);
 			if (camera != null) {
 				camera.end();

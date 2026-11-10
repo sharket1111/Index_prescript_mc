@@ -128,6 +128,7 @@ final class LaevateinSkill {
 	}
 
 	private void open(int stage) {
+		Animations.playSkill(player, "skill_laevatein_" + kind.name().toLowerCase(java.util.Locale.ROOT), this::actor);
 		if (!(target instanceof Player)) {
 			target.setAI(false);
 		}
@@ -682,6 +683,7 @@ final class LaevateinSkill {
 	}
 
 	private void finish() {
+		Animations.stopSkill(player);
 		if (kind == Kind.STAB || kind == Kind.EXECUTION) {
 			// The big skill screen leaves together with the TOTAL counter.
 			TotalDamage.finish(player);

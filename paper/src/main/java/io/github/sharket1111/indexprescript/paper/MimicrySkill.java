@@ -561,6 +561,7 @@ final class MimicrySkill {
 	}
 
 	private void open() {
+		Animations.playSkill(player, "skill_mimicry_" + kind.name().toLowerCase(java.util.Locale.ROOT), this::actor);
 		if (!(target instanceof Player)) {
 			target.setAI(false);
 		}
@@ -1021,6 +1022,7 @@ final class MimicrySkill {
 	}
 
 	private void finish() {
+		Animations.stopSkill(player);
 		ACTIVE.remove(player.getUniqueId(), this);
 		if (kind.big()) {
 			TotalDamage.finish(player);
