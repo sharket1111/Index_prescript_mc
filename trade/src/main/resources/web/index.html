@@ -201,6 +201,14 @@ dialog.sheet[open] .sheet-in { animation: pop .45s var(--ease) both; }
 .badges { display: flex; flex-wrap: wrap; gap: 6px; }
 .badge { background: var(--accent-soft); color: var(--accent-ink); border-radius: 999px; padding: 3px 11px; font-size: 13px; font-weight: 650; }
 .badge.gold { background: #fdf0c7; color: #8a5a00; } @media (prefers-color-scheme: dark) { .badge.gold { background: #3a2e12; color: #f3cf6b; } }
+.seg { display: inline-flex; gap: 2px; padding: 4px; border-radius: 12px; background: var(--chip); }
+.seg button { font: 600 13.5px var(--font); color: var(--muted); background: none; border: 0; border-radius: 9px; padding: 7px 13px; cursor: pointer; transition: background .25s, color .25s; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
+.inv-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.inv-pane { display: grid; gap: 10px; max-width: 620px; animation: fade .35s var(--ease) both; }
+.slots.hotbar { padding-top: 8px; border-top: 1px dashed var(--line); }
+.slots.gear { grid-template-columns: repeat(5, minmax(0, 1fr)); max-width: 360px; }
+.slot .lbl { color: var(--muted); font-size: 10px; }
 .slot.click { cursor: pointer; } .slot.click:hover { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .slot .val { position: absolute; left: 3px; top: 2px; font-size: 9.5px; font-weight: 700; color: var(--accent-ink); }
 .codex-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
@@ -975,20 +983,57 @@ mark { background: color-mix(in srgb, var(--accent) 50%, transparent); color: in
     });
     return f;
   }
-  /** A grid of slots; with {@code pick}, a filled slot is a button that calls pick(index, item) (index = indexes[i] or i). */
-  function slotGrid(title, items, note, pick, indexes) {
-    var wrap = el("div", "box"); wrap.appendChild(el("h3", null, title));
-    var g = el("div", "slots");
+  /** Slot cells; with {@code pick}, a filled slot is a button that calls pick(index, item) (index = indexes[i] or i); labels name empty slots. */
+  function slotCells(items, pick, indexes, labels, cls) {
+    var g = el("div", "slots" + (cls ? " " + cls : ""));
     items.forEach(function (it, i) {
       var s = el(it && pick ? "button" : "div", "slot" + (it && it.ench ? " ench" : "") + (it && pick ? " click" : ""));
       if (it) {
-        s.textContent = itemName(it); s.title = itemName(it) + (it.amount > 1 ? " ×" + it.amount : "") + (enchText(it) ? " · " + enchText(it) : "");
+        s.textContent = itemName(it); s.title = itemName(it) + (it.amount > 1 ? " ×" + it.amount : "") + (enchText(it) ? " · " + enchText(it) : "") + (it.wear ? " · 내구도 " + (100 - it.wear) + "%" : "");
         if (it.amount > 1) s.appendChild(el("b", null, String(it.amount)));
         if (pick) { s.type = "button"; s.style.font = "inherit"; s.style.color = "inherit"; s.style.textAlign = "left"; s.addEventListener("click", function () { pick(indexes ? indexes[i] : i, it); }); }
-      }
+      } else if (labels) s.appendChild(el("span", "lbl", labels[i]));
       g.appendChild(s);
     });
-    wrap.appendChild(g); if (note) wrap.appendChild(el("p", "muted", note)); return wrap;
+    return g;
+  }
+  var invTab = "inv";
+  /** Inventory, ender chest and armor of {@code d} (live or as last saved), in tabs. */
+  function invPanel(d, pick, title) {
+    var box = el("div", "box"), top = el("div", "inv-head"), left = el("div", "tools");
+    left.appendChild(el("h3", null, title || "인벤토리 · 엔더 상자"));
+    top.appendChild(left); box.appendChild(top);
+    if (!d.inventory) { box.appendChild(el("p", "muted", "아직 저장된 인벤토리가 없어요. 게임에 한 번 접속했다 나가면 접속하지 않을 때도 여기서 볼 수 있어요.")); return box; }
+    left.appendChild(el("span", "tag" + (d.inventoryLive ? " good" : ""), d.inventoryLive ? "실시간" : "마지막 저장 " + ago(d.inventoryTime)));
+    var seg = el("div", "seg"), pane = el("div");
+    var used = function (list) { return list.filter(function (x) { return x; }).length; };
+    var tabs = [["inv", "인벤토리 " + used(d.inventory) + "/36"], ["ender", "엔더 상자 " + used(d.enderChest) + "/27"], ["gear", "장비"]];
+    function show() {
+      seg.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.t === invTab)); });
+      pane.replaceChildren(); var inner = el("div", "inv-pane"); pane.appendChild(inner);
+      if (invTab === "inv") {
+        var main = [], bar = [];
+        for (var k = 9; k < 36; k++) main.push(k);
+        for (k = 0; k < 9; k++) bar.push(k);
+        inner.append(slotCells(main.map(function (k) { return d.inventory[k]; }), pick, main),
+          slotCells(bar.map(function (k) { return d.inventory[k]; }), pick, bar, null, "hotbar"));
+        var worth = d.inventory.reduce(function (a, x) { return a + (x && x.sell ? x.sell : 0); }, 0);
+        inner.appendChild(el("p", "muted", (pick ? "아이템을 누르면 서버에 팔거나 시장·경매에 올릴 수 있어요. " : "") + "점선 아래가 단축바예요."
+          + (worth ? " 서버에 모두 팔면 약 " + money(worth) + " " + sym() + "." : "")));
+      } else if (invTab === "ender") {
+        inner.appendChild(slotCells(d.enderChest, null));
+      } else {
+        inner.appendChild(slotCells(d.gear, null, null, ["머리", "몸통", "다리", "발", "왼손"], "gear"));
+      }
+    }
+    tabs.forEach(function (t) {
+      var b = el("button", null, t[1]); b.type = "button"; b.dataset.t = t[0];
+      b.addEventListener("click", function () { invTab = t[0]; show(); });
+      seg.appendChild(b);
+    });
+    top.appendChild(seg); box.appendChild(pane); show();
+    if (!d.inventoryLive) box.appendChild(el("p", "muted", "게임에 접속하지 않은 동안은 마지막으로 저장된 모습이에요 (나갈 때와 접속 중 5분마다 저장)."));
+    return box;
   }
   function payForm() {
     var f = el("form", "box");
@@ -1097,16 +1142,7 @@ mark { background: color-mix(in srgb, var(--accent) 50%, transparent); color: in
     var sb = el("button", "btn", sound ? "알림 소리 끄기" : "알림 소리 켜기");
     sb.addEventListener("click", function () { sound = !sound; try { localStorage.setItem(SOUND_STORE, sound ? "1" : "0"); } catch (e) {} if (sound) beep(); drawMe(); });
     alerts.appendChild(sb); two.appendChild(alerts); body.appendChild(two);
-    if (ME.inventory) {
-      var inv = el("div", "grid2"), order = [];
-      for (var k = 9; k < 36; k++) order.push(k);
-      for (k = 0; k < 9; k++) order.push(k);
-      inv.appendChild(slotGrid("인벤토리", order.map(function (k) { return ME.inventory[k]; }),
-        canTrade() ? "아이템을 누르면 서버에 팔거나 시장·경매에 올릴 수 있어요. 아래 줄이 단축바예요." : "아래 줄이 단축바입니다. 파란 테두리는 마법이 부여된 아이템.",
-        canTrade() ? sellSheet : null, order));
-      inv.appendChild(slotGrid("엔더 상자", ME.enderChest));
-      body.appendChild(inv);
-    } else body.appendChild(el("p", "muted", "인벤토리와 엔더 상자는 게임에 접속해 있을 때 보입니다."));
+    body.appendChild(invPanel(ME, canTrade() && ME.inventoryLive ? sellSheet : null));
     section(body, "우편함", ME.mail.map(function (x) { return row(x.item, x.note + " · " + ago(x.time), null); }), "우편함이 비어 있습니다.");
     section(body, "내가 판매 중인 물품 (" + ME.listings.length + "/" + ME.max.listings + ")", ME.listings.map(function (x) {
       var r = row(x.item, "올린 때 " + ago(x.time), x.price);
@@ -1247,6 +1283,19 @@ mark { background: color-mix(in srgb, var(--accent) 50%, transparent); color: in
     nf.addEventListener("submit", function (e) { e.preventDefault(); act("/api/admin/notice", { title: $("nTitle").value, body: $("nBody").value }, function (r) { if (r.ok) { $("nTitle").value = ""; $("nBody").value = ""; } }); });
     nf.appendChild(el("p", "muted", "게임에서는 /trade 공지 <내용>"));
     grid.appendChild(nf);
+    var lf = el("form", "box"); lf.appendChild(el("h3", null, "플레이어 인벤토리 조회"));
+    lf.appendChild(field("닉네임", "invName", "text", { required: "", autocomplete: "off", list: "aPlayers" }));
+    var lgo = el("button", "btn primary", "조회"); lgo.type = "submit"; lf.appendChild(lgo);
+    lf.appendChild(el("p", "muted", "접속 중이면 실시간, 아니면 마지막으로 저장된 인벤토리·엔더 상자·장비를 봐요. (보기만 가능)"));
+    lf.addEventListener("submit", function (e) {
+      e.preventDefault(); lgo.disabled = true;
+      call("POST", "/api/admin/inventory", { name: $("invName").value }, true).then(function (r) {
+        lgo.disabled = false;
+        if (!r.ok) { toast(r.body.error || "조회하지 못했습니다.", true); return; }
+        sheet(function (b) { var t = el("div", "tools"); t.append(head(r.body.uuid, true), el("h2", null, r.body.name)); b.append(t, invPanel(r.body, null, "인벤토리 · 엔더 상자")); });
+      }).catch(function () { lgo.disabled = false; toast("서버에 연결할 수 없습니다.", true); });
+    });
+    grid.appendChild(lf);
     var dc = el("div", "box"); dc.appendChild(el("h3", null, "디스코드 연동"));
     dc.appendChild(el("p", "meta", ADMIN.discord ? "켜져 있어요. 공지, 전체 지급, 큰 거래, 경매, 서버 켜짐/꺼짐이 채널에 올라가요."
       : "꺼져 있어요. plugins/PlayerTrade/discord.yml 의 webhook 에 디스코드 웹후크 주소를 넣고 서버를 재시작하세요."));

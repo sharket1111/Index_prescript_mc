@@ -41,6 +41,7 @@ public final class TradePlugin extends JavaPlugin {
 		SharedStorage.load(this);
 		Discord.load(this);
 		Auctions.load(this);
+		InventorySnapshots.start(this);
 		getServer().getPluginManager().registerEvents(new Menu.Events(), this);
 		getServer().getPluginManager().registerEvents(new Tickets(), this);
 		getServer().getPluginManager().registerEvents(new LandListener(), this);
@@ -75,6 +76,7 @@ public final class TradePlugin extends JavaPlugin {
 		}
 		WebSite.stop();
 		Auctions.save();
+		InventorySnapshots.saveAll();
 		Discord.serverStopping();
 		AnvilPrompt.closeAll();
 		DirectTrade.cancelAll();

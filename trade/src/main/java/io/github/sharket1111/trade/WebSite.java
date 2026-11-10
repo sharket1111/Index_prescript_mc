@@ -294,6 +294,7 @@ final class WebSite {
 							text(body, "item"), number(body, "amount"), number(body, "price")));
 					case "/api/listing/cancel" -> action(exchange, (player, body) -> WebActions.withdrawListing(player, text(body, "id")));
 					case "/api/listing/price" -> action(exchange, (player, body) -> WebActions.listingPrice(player, text(body, "id"), number(body, "price")));
+					case "/api/admin/inventory" -> admin(exchange, (player, body) -> inventoryOf(text(body, "name")));
 					case "/api/admin/discord" -> admin(exchange, (player, body) -> {
 						String answer = Discord.test(WebActions.name(player) + "(웹)");
 						return Discord.enabled() ? WebActions.ok(answer) : WebActions.error(answer);
@@ -774,28 +775,7 @@ final class WebSite {
 		stats.addProperty("lastSeen", offline.getLastSeen());
 		root.add("stats", stats);
 		Player online = Bukkit.getPlayer(id);
-		if (online != null) {
-			JsonArray inventory = slots(online.getInventory().getStorageContents());
-			ItemStack[] storage = online.getInventory().getStorageContents();
-			for (int i = 0; i < storage.length; i++) {
-				if (storage[i] != null && !storage[i].isEmpty()) {
-					JsonObject slot = inventory.get(i).getAsJsonObject();
-					ItemValues.Appraisal appraisal = ItemValues.appraise(storage[i]);
-					if (appraisal.sellable()) {
-						slot.addProperty("sell", (long) Math.floor(appraisal.unit() * storage[i].getAmount() + 1.0E-6));
-					} else {
-						slot.addProperty("noSell", appraisal.reason());
-					}
-					slot.addProperty("tool", TradeTools.toolOf(storage[i]) != null);
-				}
-			}
-			root.add("inventory", inventory);
-			ItemStack[] worn = online.getInventory().getArmorContents();
-			ItemStack[] gear = java.util.Arrays.copyOf(worn, worn.length + 1);
-			gear[worn.length] = online.getInventory().getItemInOffHand();
-			root.add("gear", slots(gear));
-			root.add("enderChest", slots(online.getEnderChest().getContents()));
-		}
+		addInventory(root, id, online, true);
 		root.addProperty("online", Bukkit.getPlayer(id) != null);
 		root.addProperty("balance", Money.balance(id));
 		root.add("currency", currency());
@@ -869,6 +849,56 @@ final class WebSite {
 			groups.add(row);
 		}
 		root.add("groups", groups);
+		return GSON.toJson(root);
+	}
+
+	/**
+	 * A player's inventory, armor and ender chest: live while they are online,
+	 * otherwise as last saved ({@link InventorySnapshots}). With {@code appraise},
+	 * live inventory items carry what the server pays for them (for selling from the page).
+	 */
+	private static boolean addInventory(JsonObject root, UUID id, Player online, boolean appraise) {
+		InventorySnapshots.Snapshot snap = online != null ? InventorySnapshots.take(online) : InventorySnapshots.of(id);
+		if (snap == null) {
+			return false;
+		}
+		JsonArray inventory = slots(snap.storage());
+		if (appraise && online != null) {
+			for (int i = 0; i < snap.storage().length; i++) {
+				ItemStack stack = snap.storage()[i];
+				if (stack != null) {
+					JsonObject slot = inventory.get(i).getAsJsonObject();
+					ItemValues.Appraisal appraisal = ItemValues.appraise(stack);
+					if (appraisal.sellable()) {
+						slot.addProperty("sell", (long) Math.floor(appraisal.unit() * stack.getAmount() + 1.0E-6));
+					} else {
+						slot.addProperty("noSell", appraisal.reason());
+					}
+					slot.addProperty("tool", TradeTools.toolOf(stack) != null);
+				}
+			}
+		}
+		root.add("inventory", inventory);
+		root.add("gear", slots(snap.gear()));
+		root.add("enderChest", slots(snap.ender()));
+		root.addProperty("inventoryLive", online != null);
+		root.addProperty("inventoryTime", snap.time());
+		return true;
+	}
+
+	/** An admin's look at any player's inventory and ender chest. */
+	static String inventoryOf(String name) {
+		org.bukkit.OfflinePlayer cached = Bukkit.getOfflinePlayerIfCached(name.trim());
+		UUID id = cached != null ? cached.getUniqueId() : WebData.byName(name.trim());
+		if (id == null) {
+			return WebActions.error("'" + name + "' 플레이어를 찾을 수 없습니다.");
+		}
+		JsonObject root = new JsonObject();
+		root.addProperty("name", WebActions.name(id));
+		root.addProperty("uuid", id.toString());
+		if (!addInventory(root, id, Bukkit.getPlayer(id), false)) {
+			return WebActions.error(WebActions.name(id) + "님의 저장된 인벤토리가 아직 없습니다. 한 번 접속했다 나가면 저장돼요.");
+		}
 		return GSON.toJson(root);
 	}
 
