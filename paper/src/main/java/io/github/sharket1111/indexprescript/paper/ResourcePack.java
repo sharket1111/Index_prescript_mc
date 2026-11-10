@@ -10,6 +10,11 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.UUID;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+
+import org.bukkit.Bukkit;
 
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
@@ -39,6 +44,8 @@ final class ResourcePack implements Listener {
 	private String sha1 = "";
 	private boolean required;
 	private HttpServer server;
+	/** Players' own skins for the rig (only with the built-in web server). */
+	private SkinPack skins;
 
 	ResourcePack(IndexPrescriptPlugin plugin) {
 		this.plugin = plugin;
@@ -82,12 +89,31 @@ final class ResourcePack implements Listener {
 			server.start();
 			uri = URI.create("http://" + address + ":" + port + BUNDLED);
 			plugin.getLogger().info("Serving the resource pack at " + uri);
+			if (config.getBoolean("player-skins", true)) {
+				byte[] meta = packMeta(pack);
+				if (meta != null) {
+					skins = SkinPack.start(plugin, server, "http://" + address + ":" + port, meta);
+				}
+			}
 		} catch (IOException | NoSuchAlgorithmException e) {
 			plugin.getLogger().warning("Could not host the resource pack: " + e.getMessage());
 		}
 	}
 
+	/** The main pack's pack.mcmeta, reused by the skin pack. */
+	private static byte[] packMeta(byte[] pack) throws IOException {
+		try (ZipInputStream zip = new ZipInputStream(new java.io.ByteArrayInputStream(pack))) {
+			for (ZipEntry entry; (entry = zip.getNextEntry()) != null;) {
+				if (entry.getName().equals("pack.mcmeta")) {
+					return zip.readAllBytes();
+				}
+			}
+		}
+		return null;
+	}
+
 	void stop() {
+		SkinPack.stop();
 		if (server != null) {
 			server.stop(0);
 		}
@@ -97,14 +123,26 @@ final class ResourcePack implements Listener {
 		if (uri == null || player.getUniqueId().toString().startsWith(FLOODGATE_PREFIX)) {
 			return;
 		}
+		ResourcePackInfo main = ResourcePackInfo.resourcePackInfo(PACK_ID, uri, sha1);
 		player.sendResourcePacks(ResourcePackRequest.resourcePackRequest()
-				.packs(ResourcePackInfo.resourcePackInfo(PACK_ID, uri, sha1))
+				.packs(skins != null ? java.util.List.of(main, skins.info()) : java.util.List.of(main))
 				.required(required)
 				.prompt(Component.text(Messages.get(player, "resource_pack.prompt"))));
 	}
 
 	@EventHandler
 	public void onJoin(PlayerJoinEvent event) {
-		send(event.getPlayer());
+		Player player = event.getPlayer();
+		if (skins == null || uri == null || player.getUniqueId().toString().startsWith(FLOODGATE_PREFIX)) {
+			send(player);
+			return;
+		}
+		// Their own skin goes into the skin pack first (fetched once per skin), so the packs they get have it.
+		skins.ensure(player).completeOnTimeout(null, 5, TimeUnit.SECONDS).exceptionally(e -> null)
+				.thenRun(() -> Bukkit.getScheduler().runTask(plugin, () -> {
+					if (player.isOnline()) {
+						send(player);
+					}
+				}));
 	}
 }

@@ -12,6 +12,10 @@ resource-pack:
   # Built-in web server, used when "url" is empty. The port must be reachable
   # by players (open it in your host's firewall/panel).
   host-port: 8164
+  # Put each player's own skin on the body, arms and legs of the studio rig (skill motions):
+  # their skin is fetched from Mojang's texture server when they join and sent in a small
+  # second pack from the built-in web server. Needs the built-in server (url empty).
+  player-skins: true
   # Address players use to reach this server, e.g. "play.example.com" or an IP.
   # Required for the built-in web server.
   host-address: ""

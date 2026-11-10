@@ -524,7 +524,7 @@ final class Animations {
 		Location at = p.origin.clone();
 		Display[] out;
 		if (part.kind().equals("rig")) {
-			String outfit = outfit(p, part);
+			String[] look = look(p, part);
 			out = new Display[BONES.size()];
 			for (int b = 0; b < BONES.size(); b++) {
 				String bone = BONES.get(b);
@@ -533,7 +533,7 @@ final class Animations {
 					stack = new ItemStack(Material.PLAYER_HEAD);
 					stack.editMeta(SkullMeta.class, meta -> meta.setPlayerProfile(p.player.getPlayerProfile()));
 				} else {
-					stack = modelled(Material.STICK, "index_prescript:rig", List.of(outfit, bone));
+					stack = modelled(Material.STICK, look[0], List.of(look[1], bone));
 				}
 				out[b] = at.getWorld().spawn(at, ItemDisplay.class, d -> {
 					d.setItemStack(stack);
@@ -577,13 +577,20 @@ final class Animations {
 		return out;
 	}
 
-	/** The outfit of a rig: the one named, else for the player's own skin a default body with matching arm width. */
-	private static String outfit(Playback p, Part part) {
+	/**
+	 * The item model and outfit of a rig's bones: the outfit named; else for the
+	 * player's own skin, their skin from the skin pack, or the suit with their arm width.
+	 */
+	private static String[] look(Playback p, Part part) {
 		if (!part.skin().equals("player")) {
-			return part.skin();
+			return new String[] {"index_prescript:rig", part.skin()};
 		}
 		if (!part.outfit().isBlank()) {
-			return part.outfit();
+			return new String[] {"index_prescript:rig", part.outfit()};
+		}
+		String own = SkinPack.outfit(p.player.getUniqueId());
+		if (own != null) {
+			return new String[] {SkinPack.MODEL, own};
 		}
 		boolean slim = false;
 		PlayerProfile profile = p.player.getPlayerProfile();
@@ -593,7 +600,7 @@ final class Animations {
 				slim = json.contains("\"slim\"");
 			}
 		}
-		return slim ? "suit_slim" : "suit";
+		return new String[] {"index_prescript:rig", slim ? "suit_slim" : "suit"};
 	}
 
 	private static ItemStack modelled(Material material, String model, List<String> data) {
