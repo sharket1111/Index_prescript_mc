@@ -1,0 +1,6 @@
+{
+ "parent": "index_prescript:item/rig/base/right_leg_wide",
+ "textures": {
+  "skin": "index_prescript:item/rig/md_abno_pride"
+ }
+}

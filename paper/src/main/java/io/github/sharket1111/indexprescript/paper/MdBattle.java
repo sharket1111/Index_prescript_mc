@@ -63,6 +63,18 @@ final class MdBattle {
 		int offenseDown;
 		int defenseDown;
 		long debuffUntil;
+		/** For a part of an Abnormality: which part (its own HP, stagger and resistances). */
+		MdData.Part part;
+		/** The original's own statuses on it (Ember, Bloodfeast...), by name. */
+		final Map<String, Integer> stacks = new java.util.LinkedHashMap<>();
+		/** Resistance changes from new patterns (+0.5 is weaker). */
+		final Map<String, Double> resistBonus = new HashMap<>();
+
+		/** Its resistance multiplier to an attack kind or sin (1 = normal). */
+		double resist(String key) {
+			Map<String, Double> base = part != null ? part.resist() : data != null ? data.resist() : Map.of();
+			return base.getOrDefault(key, 1.0) + resistBonus.getOrDefault(key, 0.0);
+		}
 
 		Foe(MdBattle battle, String name, double damage, double taken, String keyword, int potency, boolean boss) {
 			this.battle = battle;
@@ -179,27 +191,17 @@ final class MdBattle {
 		}
 	}
 
-	private static final EntityType[] HUMAN = {EntityType.ZOMBIE, EntityType.HUSK, EntityType.VINDICATOR, EntityType.SKELETON, EntityType.PILLAGER,
-		EntityType.STRAY, EntityType.WITHER_SKELETON, EntityType.PIGLIN_BRUTE};
-	private static final EntityType[] MONSTER = {EntityType.SPIDER, EntityType.CAVE_SPIDER, EntityType.WITCH, EntityType.ZOGLIN, EntityType.BLAZE};
-
 	private LivingEntity spawn(MdData.Enemy enemy, Kind kind) {
 		MdData.EnemyData data = MdData.enemy(enemy.name());
-		boolean human = data != null ? data.risk().isEmpty() : enemy.risk().equals("human");
-		EntityType entity;
-		if (kind == Kind.BOSS) {
-			entity = human ? List.of(EntityType.VINDICATOR, EntityType.WITHER_SKELETON, EntityType.PIGLIN_BRUTE).get(run.random.nextInt(3))
-					: List.of(EntityType.RAVAGER, EntityType.ZOGLIN).get(run.random.nextInt(2));
-		} else if (human) {
-			entity = HUMAN[run.random.nextInt(Math.min(HUMAN.length, 3 + run.floor))];
-		} else {
-			entity = MONSTER[run.random.nextInt(Math.min(MONSTER.length, 2 + run.floor))];
-		}
 		Location at = MdWorld.spawnSpot(run.slot, room(), run.random);
 		if (kind == Kind.BOSS || kind == Kind.FOCUSED || kind == Kind.ABNO) {
 			at = MdWorld.centre(run.slot).add(0, 0, room().half / 2.0);
 		}
-		LivingEntity mob = (LivingEntity) at.getWorld().spawnEntity(at, entity);
+		// The mob is only a hitbox under the enemy's drawn body (MdLooks); a husk does not burn in daylight.
+		LivingEntity mob = (LivingEntity) at.getWorld().spawnEntity(at, EntityType.HUSK);
+		if (mob instanceof org.bukkit.entity.Ageable age) {
+			age.setAdult();
+		}
 		int players = Math.max(1, run.fighters().size());
 		double trialHp = MdGifts.trialStat(run, "max_hp") / 100.0;
 		int level = level();
@@ -210,10 +212,6 @@ final class MdBattle {
 		if (max != null) {
 			max.setBaseValue(Math.min(2048, health));
 			mob.setHealth(max.getValue());
-		}
-		AttributeInstance scale = mob.getAttribute(Attribute.SCALE);
-		if (scale != null && kind.scale != 1.0F) {
-			scale.setBaseValue(kind.scale);
 		}
 		AttributeInstance follow = mob.getAttribute(Attribute.FOLLOW_RANGE);
 		if (follow != null) {
@@ -234,14 +232,6 @@ final class MdBattle {
 		if (mob instanceof PiglinAbstract piglin) {
 			piglin.setImmuneToZombification(true);
 		}
-		EntityEquipment eq = mob.getEquipment();
-		if (eq != null) {
-			if (entity == EntityType.ZOMBIE || entity == EntityType.HUSK || entity == EntityType.WITHER_SKELETON || entity == EntityType.VINDICATOR) {
-				eq.setItemInMainHand(new ItemStack(run.floor >= 4 ? Material.DIAMOND_SWORD : run.floor >= 2 ? Material.IRON_SWORD : Material.STONE_SWORD));
-			}
-			eq.setItemInMainHandDropChance(0);
-			eq.setHelmetDropChance(0);
-		}
 		double trialDamage = MdGifts.trialStat(run, "damage_dealt") + 2 * MdGifts.trialStat(run, "offense_level") + 5 * (MdGifts.trialStat(run, "clash_power")
 				+ MdGifts.trialStat(run, "final_power") + MdGifts.trialStat(run, "base_power") + MdGifts.trialStat(run, "plus_coin_power"));
 		double damage = kind.damage * (1 + 0.2 * (run.floor - 1)) * (run.floorHard ? 1.2 : 1.0) * (1 + trialDamage / 100.0) * (1 + 0.02 * run.trials.size());
@@ -255,7 +245,34 @@ final class MdBattle {
 		foe.data = data;
 		foe.level = level;
 		FOES.put(mob.getUniqueId(), foe);
-		MdFoes.setup(this, mob, foe, kind);
+		MdLooks.dress(mob, foe, kind);
+		MdFoes.setup(this, mob, foe, kind, null);
+		// An Abnormality's other parts (wings, arms, head...): hitboxes of their own that follow the core.
+		if (data != null && data.parts().size() > 1) {
+			double share = health / Math.max(1, data.hpAt(level) / TotalDamage.SCALE);
+			for (MdData.Part partData : data.parts().subList(1, data.parts().size())) {
+				LivingEntity part = (LivingEntity) at.getWorld().spawnEntity(mob.getLocation(), EntityType.HUSK);
+				if (part instanceof org.bukkit.entity.Mob pm) {
+					pm.setAI(false);
+				}
+				part.setGravity(false);
+				part.setCollidable(false);
+				part.setRemoveWhenFarAway(false);
+				part.setPersistent(true);
+				AttributeInstance pmax = part.getAttribute(Attribute.MAX_HEALTH);
+				if (pmax != null) {
+					pmax.setBaseValue(Math.min(2048, Math.max(1, partData.hpAt(level, data.level()) / TotalDamage.SCALE * share)));
+					part.setHealth(pmax.getValue());
+				}
+				Foe pf = new Foe(this, enemy.name() + " · " + partData.name(), foe.damage, taken, keyword, foe.potency, foe.boss);
+				pf.data = data;
+				pf.level = level;
+				pf.part = partData;
+				FOES.put(part.getUniqueId(), pf);
+				MdLooks.dressPart(part, mob, partData.icon(), run.theme.color());
+				MdFoes.setup(this, part, pf, kind, mob);
+			}
+		}
 		mob.getWorld().spawnParticle(Particle.REVERSE_PORTAL, mob.getLocation().add(0, 1, 0), 40, 0.4, 0.8, 0.4, 0.05);
 		mobs.add(mob);
 		return mob;

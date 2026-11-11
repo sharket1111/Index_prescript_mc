@@ -1,0 +1,12 @@
+{
+ "model": {
+  "type": "minecraft:model",
+  "model": "index_prescript:item/md_tail",
+  "tints": [
+   {
+    "type": "minecraft:dye",
+    "default": 16777215
+   }
+  ]
+ }
+}

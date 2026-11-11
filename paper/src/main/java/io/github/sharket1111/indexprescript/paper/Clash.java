@@ -665,6 +665,7 @@ final class Clash {
 	}
 
 	private static void win(Duel duel, Side winner, Side loser) {
+		MdFoes.clashResult(winner.player, loser.player);
 		int rounds = Math.max(1, duel.rounds);
 		// The original: a win gives 10, 20% more per round from the second; a loss takes 2, 5% more per round.
 		int gain = (int) Math.round(10 * (1 + 0.2 * (rounds - 1)));

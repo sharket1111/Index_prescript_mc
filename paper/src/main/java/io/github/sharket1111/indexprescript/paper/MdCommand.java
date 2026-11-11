@@ -75,6 +75,11 @@ final class MdCommand implements TabExecutor, Listener {
 			sender.sendMessage(msg("진행 중인 던전을 모두 끝냈어요.", NamedTextColor.YELLOW));
 			return true;
 		}
+		if (args.length >= 1 && (args[0].equals("적스킨") || args[0].equalsIgnoreCase("enemyskins")) && sender.hasPermission("indexprescript.command")) {
+			int n = SkinPack.reloadEnemySkins();
+			sender.sendMessage(msg("적 스킨 " + n + "개를 다시 읽었어요 (plugins/IndexPrescript/enemy_skins/). 다시 접속하면 보여요.", NamedTextColor.GREEN));
+			return true;
+		}
 		if (args.length >= 2 && args[0].equals("미리보기") && sender.hasPermission("indexprescript.command")) {
 			MdRun.NodeType type = args.length >= 3 && args[2].equalsIgnoreCase("boss") ? MdRun.NodeType.BOSS : MdRun.NodeType.NORMAL;
 			org.bukkit.Location at = MdRun.preview(args[1], type);

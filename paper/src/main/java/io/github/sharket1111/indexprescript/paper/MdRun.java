@@ -943,6 +943,7 @@ final class MdRun {
 	}
 
 	static void tickAll() {
+		MdLooks.tick();
 		for (MdRun run : List.copyOf(RUNS)) {
 			if (run.battle != null) {
 				run.battle.tick();

@@ -565,6 +565,69 @@ def coin_effects(text):
         mm = re.search(r"heal\s+(\d+)\s*(%)?\s*HP", c, re.I)
         if mm:
             out.append({"on": trig, "act": "heal", "amount": int(mm.group(1)), "pct": bool(mm.group(2))})
+        # The original's own statuses (Ember, Bloodfeast...): gains are kept as named stacks on the enemy.
+        for mm in re.finditer(r"\b(?:[Gg]ain|[Gg]ains)\s+(\d+)\s+((?:[A-Z][\w'\-]*)(?:\s+(?:of\s+)?[A-Z][\w'\-]*){0,3})", c):
+            name = mm.group(2).strip()
+            if not re.fullmatch(STATUS_RE + r"(\s+Count)?", name, re.I) and not re.match(r"(?:Count|HP|SP|Speed|Power|Coin|Final)\b", name):
+                out.append({"on": trig, "act": "gain", "status": "u:" + name, "potency": int(mm.group(1)), "count": 0})
+    return out
+
+
+def passive_lines(raw):
+    """A passive's text split at its line breaks (the wiki writes them as <br> or newlines)."""
+    return [clean(x) for x in re.split(r"<br\s*/?>|\n", raw) if clean(x)]
+
+
+PASSIVE_TRIGGERS = [(r"^combat start", "combat_start"), (r"^turn start|start of the turn", "turn_start"), (r"^turn end|end of the turn", "turn_end"),
+                    (r"when (?:this unit is |this unit gets )?staggered|upon (?:being )?stagger", "stagger"),
+                    (r"(?:is|are|gets|get) (?:destroyed|severed)|upon (?:part )?(?:destruction|severance)|when a part", "part_break"),
+                    (r"^on clash win|clash win:", "clash_win"), (r"^on clash lose|clash lose:", "clash_lose")]
+
+
+def parse_passive(name, raw):
+    """A passive: its text, and what of it the plugin plays: effects on a trigger, and a new pattern (phase) at HP% or on a turn."""
+    lines = passive_lines(raw)
+    text = " ".join(lines)
+    low = text.lower()
+    out = {"name": name, "text": text, "effects": []}
+    phase_lines = False
+    for line in lines:
+        l = line.lower()
+        if "new pattern" in l and not out.get("phase"):
+            pct = [int(x) for x in re.findall(r"(\d+)\s*%", line)]
+            turn = re.search(r"turn\s+(\d+)", l)
+            if pct:
+                out["phase"] = {"at": sorted({x / 100.0 for x in pct if 0 < x < 100}, reverse=True)}
+            elif turn:
+                out["phase"] = {"turn": int(turn.group(1))}
+        if "pattern change" in l or "new pattern" in l:
+            phase_lines = True
+            trig = "phase"
+        elif phase_lines and line.startswith("-"):
+            trig = "phase"
+        else:
+            phase_lines = False
+            trig = None
+            for pat, t in PASSIVE_TRIGGERS:
+                if re.search(pat, l):
+                    trig = t
+                    break
+            # Effects under a condition the plugin cannot check are only shown.
+            if trig is None or re.search(r"\bif\b|for each|whenever|\bwhile\b", l):
+                continue
+        for e in coin_effects(" " + line):
+            e["on"] = trig
+            out["effects"].append(e)
+        if trig == "phase":
+            mm = re.search(r"Speed values? by (\d+)", line, re.I)
+            if mm:
+                out["effects"].append({"on": "phase", "act": "gain", "status": "haste", "potency": int(mm.group(1)), "count": 0})
+            if re.search(r"powerful skill", line, re.I):
+                out["effects"].append({"on": "phase", "act": "power_skill"})
+            mm = re.search(r"Resistances? against ([A-Za-z ,]+?)\s*\(([+-]?[\d.]+)\)", line)
+            if mm:
+                kinds = [k for k in ("slash", "pierce", "blunt", "wrath", "lust", "sloth", "gluttony", "gloom", "pride", "envy") if k in mm.group(1).lower()]
+                out["effects"].append({"on": "phase", "act": "resist", "kinds": kinds, "delta": float(mm.group(2))})
     return out
 
 
@@ -584,7 +647,14 @@ def parse_enemy(body, enemies_by_id):
             staggers.append(num(v))
     speed = re.findall(r"\d+", stat("speed", "2~4") or "2~4")
     skills = []
-    for sk in templates(body, "Skill"):
+    # Skills numbered skill1.. with skillparts1.. naming the part (Abnormalities); else every Skill template in order.
+    numbered = [(f.get("skill%d" % i), clean(f.get("skillparts%d" % i, ""))) for i in range(1, 40) if f.get("skill%d" % i)]
+    found = numbered if numbered else [("{{" + x + "}}", "") for x in templates(body, "Skill")]
+    for raw_skill, part in found:
+        inner = templates(raw_skill, "Skill")
+        if not inner:
+            continue
+        sk = inner[0]
         if sk.startswith("SkillCon") or not sk.startswith("Skill\n") and not sk.startswith("Skill|"):
             continue
         k = template_fields(sk)
@@ -594,26 +664,34 @@ def parse_enemy(body, enemies_by_id):
         skills.append({"name": clean(k.get("name", "")), "sin": (k.get("sin") or "").lower(), "type": (k.get("type") or "").lower(),
                        "base": int(num(k.get("spower"), 3)), "coin_power": int(num(k.get("cpower"), 2)), "coins": coins,
                        "weight": int(num(k.get("atkweight"), 1)) or 1, "text": clean(k.get("se", "")),
-                       "coin_text": [clean(k.get("ce%d" % i, "")) for i in range(1, coins + 1)], "effects": effects, "coin_effects": coin_fx})
+                       "coin_text": [clean(k.get("ce%d" % i, "")) for i in range(1, coins + 1)], "effects": effects, "coin_effects": coin_fx,
+                       "part": re.sub(r"^\s*Abno Part \w+(?: \w+)?\s*", "", part).strip()})
     passives = []
     for ps in templates(body, "Passive"):
-        bits = ps.split("|")
+        bits = [x for x in ps.split("|") if not re.match(r"\s*hint\s*=", x)]
         if len(bits) >= 3:
-            text = clean("|".join(bits[2:]))
-            low = text.lower()
-            when = "turn_start" if "start of the turn" in low or "turn start" in low else "turn_end" if "end of the turn" in low or "turn end" in low else None
-            effects = []
-            # Only passives on a turn's start or end, without other conditions, are played; the rest are shown as text.
-            if when and not re.search(r"\bif\b|for each|when |whenever", low):
-                for e in coin_effects(" " + "|".join(bits[2:])):
-                    e["on"] = when
-                    effects.append(e)
-            passives.append({"name": clean(bits[1]), "text": text, "effects": effects})
+            passives.append(parse_passive(clean(bits[1]), "|".join(bits[2:])))
+    # An Abnormality's parts: each with its own HP, stagger, resistances, and how it breaks.
+    part_list = []
+    for i in range(1, 10):
+        raw_part = f.get("abnoparts%d" % i)
+        if not raw_part:
+            continue
+        inner = templates(raw_part, "AbnormalitiesParts") + templates(raw_part, "ABPage/Parts")
+        if not inner:
+            continue
+        pf = template_fields(inner[0])
+        st = [num(pf.get("stagger%d" % j)) for j in range(1, 6) if pf.get("stagger%d" % j) not in (None, "") and num(pf.get("stagger%d" % j), -999) > 0]
+        part_list.append({"name": clean(pf.get("partsname", "")) or "Body", "icon": clean(pf.get("partsicon", "")) or "Body",
+                          "break": (pf.get("breaktype") or "destroy").strip().lower(), "regen": int(num(pf.get("regen"), 0)),
+                          "hp": num(pf.get("hp"), 50), "hp_growth": num(pf.get("hpgrowth"), 1), "stagger": st,
+                          "resist": {k: num(pf.get(k), 1.0) for k in ["slash", "pierce", "blunt", "wrath", "lust", "sloth", "gluttony", "gloom", "pride", "envy"]}})
     resist = {k: num(stat(k), 1.0) for k in ["slash", "pierce", "blunt", "wrath", "lust", "sloth", "gluttony", "gloom", "pride", "envy"]}
     return {"name": clean(f.get("name", "")), "hp": num(f.get("hp") or stat("hp"), 50), "hp_growth": num(f.get("hpgrowth") or stat("hpgrowth"), 1),
             "level": int(num(f.get("level") or stat("level"), 1)), "speed": [int(x) for x in speed[:2]] or [2, 4],
             "defense": int(num(stat("defmod"), 0)), "stagger": staggers, "resist": resist, "max_actions": int(num(f.get("maxactions"), 1)) or 1,
-            "risk": (f.get("abnorisk") or "").split("-")[0].lower(), "skills": skills, "passives": passives}
+            "risk": (f.get("abnorisk") or "").split("-")[0].lower(), "skills": skills, "passives": passives,
+            "faction": clean(f.get("faction", "")), "parts": part_list if len(part_list) > 1 else []}
 
 
 def build_enemies(dirs, names):

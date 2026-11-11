@@ -204,7 +204,7 @@ final class UnitHud {
 		return statuses == null ? top : top.appendNewline().append(statuses);
 	}
 
-	private static Component statuses(LivingEntity player, long now) {
+	static Component statuses(LivingEntity player, long now) {
 		CombatState state = CombatState.of(player);
 		boolean staggered = state.staggered(now);
 		Component line = Component.empty();

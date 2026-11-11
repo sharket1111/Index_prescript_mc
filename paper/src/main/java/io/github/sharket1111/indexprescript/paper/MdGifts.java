@@ -348,8 +348,8 @@ final class MdGifts implements Listener {
 			mult *= foe.taken * (foe.debuffUntil > now ? 1 + 0.1 * foe.defenseDown : 1);
 			// The original's resistances: by the attack's kind (Slash/Pierce/Blunt) and by its sin.
 			if (foe.data != null) {
-				mult *= foe.data.resist().getOrDefault(kind.name().toLowerCase(java.util.Locale.ROOT), 1.0);
-				mult *= foe.data.resist().getOrDefault(MdEvent.sinOf(p), 1.0);
+				mult *= Math.max(0, foe.resist(kind.name().toLowerCase(java.util.Locale.ROOT)));
+				mult *= Math.max(0, foe.resist(MdEvent.sinOf(p)));
 			}
 			if (foe.buffUntil > now) {
 				mult *= Math.max(0.3, 1 - 0.1 * foe.protection);
@@ -523,23 +523,37 @@ final class MdGifts implements Listener {
 	}
 
 	/**
-	 * Last word on a plain attack's damage, after every other listener (weapon
-	 * passives that scale the swing) and with armour and resistance taken out:
-	 * exactly 1.
+	 * Last word on damage to a dungeon enemy, after every other listener: a
+	 * plain attack (weapon passives that scale the swing, armour and
+	 * resistance taken out) does exactly 1; a part of an Abnormality does not
+	 * die but breaks at 0 (MdFoes.partDamage).
 	 */
 	@SuppressWarnings("deprecation")
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-	public void onBasicHit(EntityDamageByEntityEvent event) {
-		if (!MdWorld.in(event.getEntity()) || !(event.getEntity() instanceof LivingEntity victim) || victim instanceof Player || MdBattle.foe(victim) == null
-				|| playerOf(event.getDamager()) == null || !basic(event)) {
+	public void onFinalDamage(EntityDamageEvent event) {
+		if (!MdWorld.in(event.getEntity()) || !(event.getEntity() instanceof LivingEntity victim) || victim instanceof Player || MdBattle.foe(victim) == null) {
 			return;
 		}
-		event.setDamage(1.0);
-		for (EntityDamageEvent.DamageModifier m : EntityDamageEvent.DamageModifier.values()) {
-			if (m != EntityDamageEvent.DamageModifier.BASE && event.isApplicable(m)) {
-				event.setDamage(m, 0);
+		if (event instanceof EntityDamageByEntityEvent byEntity && playerOf(byEntity.getDamager()) != null && basic(byEntity)) {
+			event.setDamage(1.0);
+			for (EntityDamageEvent.DamageModifier m : EntityDamageEvent.DamageModifier.values()) {
+				if (m != EntityDamageEvent.DamageModifier.BASE && event.isApplicable(m)) {
+					event.setDamage(m, 0);
+				}
 			}
 		}
+		double through = MdFoes.partDamage(victim, event.getFinalDamage());
+		if (through <= 0) {
+			event.setCancelled(true);
+			return;
+		}
+		if (through < event.getFinalDamage()) {
+			event.setDamage(event.getDamage() - (event.getFinalDamage() - through));
+		}
+		MdLooks.hurt(victim);
+		// Any damage (statuses too) can cross a stagger threshold or bring a new pattern.
+		Player by = event instanceof EntityDamageByEntityEvent byEntity ? playerOf(byEntity.getDamager()) : null;
+		Bukkit.getScheduler().runTask(IndexPrescriptPlugin.instance(), () -> MdFoes.checkStagger(victim, by));
 	}
 
 	@EventHandler(priority = EventPriority.HIGH)

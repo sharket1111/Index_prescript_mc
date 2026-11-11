@@ -71,10 +71,14 @@ final class SkinPack {
 	private volatile String sha1 = "";
 	/** The skins in the pack being served. */
 	private volatile java.util.Set<String> served = java.util.Set.of();
+	/** Enemy skins (enemy_skins/<name>.png): slug -> slim arms. */
+	private final Map<String, Boolean> enemies = new ConcurrentHashMap<>();
+	private final File enemyDir;
 
 	private SkinPack(IndexPrescriptPlugin plugin, byte[] packMeta, String base) {
 		this.plugin = plugin;
 		this.dir = new File(plugin.getDataFolder(), "skins");
+		this.enemyDir = new File(plugin.getDataFolder(), "enemy_skins");
 		this.packMeta = packMeta;
 		this.base = base;
 	}
@@ -83,6 +87,7 @@ final class SkinPack {
 	static SkinPack start(IndexPrescriptPlugin plugin, HttpServer server, String base, byte[] packMeta) {
 		SkinPack pack = new SkinPack(plugin, packMeta, base);
 		pack.load();
+		pack.loadEnemies();
 		pack.rebuild();
 		server.createContext(PATH, exchange -> {
 			byte[] body = pack.zip;
@@ -108,6 +113,58 @@ final class SkinPack {
 		}
 		String hash = pack.players.get(player);
 		return hash != null && pack.served.contains(hash) ? "s_" + hash : null;
+	}
+
+	/**
+	 * The outfit of a Mirror Dungeon enemy's own skin, if an admin put one in
+	 * plugins/IndexPrescript/enemy_skins/ (named after the enemy, e.g.
+	 * "Kurokumo Clan Captain Jun.png"; "_slim" at the end for thin arms).
+	 */
+	static String enemyOutfit(String enemy) {
+		SkinPack pack = instance;
+		if (pack == null) {
+			return null;
+		}
+		String slug = slug(enemy);
+		return pack.served.contains("e_" + slug) ? "s_e_" + slug : null;
+	}
+
+	static String slug(String name) {
+		return name.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]+", "_").replaceAll("^_|_$", "");
+	}
+
+	/** Reads enemy_skins/ again and rebuilds the pack. Returns how many skins are there. */
+	static int reloadEnemySkins() {
+		SkinPack pack = instance;
+		if (pack == null) {
+			return 0;
+		}
+		pack.loadEnemies();
+		pack.rebuild();
+		return pack.enemies.size();
+	}
+
+	private void loadEnemies() {
+		enemies.clear();
+		enemyDir.mkdirs();
+		File[] files = enemyDir.listFiles((d, n) -> n.toLowerCase(java.util.Locale.ROOT).endsWith(".png"));
+		if (files == null) {
+			return;
+		}
+		for (File f : files) {
+			String base = f.getName().substring(0, f.getName().length() - 4);
+			boolean slim = base.toLowerCase(java.util.Locale.ROOT).endsWith("_slim");
+			if (slim) {
+				base = base.substring(0, base.length() - 5);
+			}
+			try {
+				byte[] png = normalise(Files.readAllBytes(f.toPath()));
+				Files.write(new File(dir, "e_" + slug(base) + ".png").toPath(), png);
+				enemies.put(slug(base), slim);
+			} catch (IOException e) {
+				plugin.getLogger().warning("enemy_skins/" + f.getName() + ": " + e.getMessage() + " (a 64x64 or 64x32 skin is needed)");
+			}
+		}
 	}
 
 	ResourcePackInfo info() {
@@ -238,6 +295,7 @@ final class SkinPack {
 	/** Writes the pack: one texture and six bone models per skin, and the rig_skin item definition. */
 	private synchronized void rebuild() {
 		Map<String, Boolean> now = new LinkedHashMap<>(skins);
+		enemies.forEach((slug, slim) -> now.put("e_" + slug, slim));
 		ByteArrayOutputStream bytes = new ByteArrayOutputStream();
 		try (ZipOutputStream out = new ZipOutputStream(bytes)) {
 			put(out, "pack.mcmeta", packMeta);

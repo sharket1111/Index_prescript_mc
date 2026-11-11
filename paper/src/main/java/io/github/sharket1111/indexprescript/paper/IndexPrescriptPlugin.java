@@ -112,6 +112,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 	public void onDisable() {
 		Animations.stop(null);
 		MdRun.stopAll();
+		MdLooks.removeAll();
 		RenoirSkill.endAll();
 		BlackGodRevive.endAll();
 		BlackGodSkill.endAll();

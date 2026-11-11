@@ -1,0 +1,1856 @@
+{
+ "about": "Enemy looks (tools/md_looks.py): outfit md_<look> on the player rig, a form (scale and bone proportions), a weapon item.",
+ "forms": {
+  "human": {
+   "scale": 1.0,
+   "bones": {}
+  },
+  "small": {
+   "scale": 0.7,
+   "bones": {
+    "head": [
+     1.2,
+     1.2,
+     1.2
+    ]
+   }
+  },
+  "wide": {
+   "scale": 0.95,
+   "bones": {
+    "body": [
+     1.4,
+     0.9,
+     1.4
+    ],
+    "right_arm": [
+     1.4,
+     1.0,
+     1.4
+    ],
+    "left_arm": [
+     1.4,
+     1.0,
+     1.4
+    ],
+    "head": [
+     1.2,
+     0.9,
+     1.2
+    ]
+   }
+  },
+  "brute": {
+   "scale": 1.25,
+   "bones": {
+    "body": [
+     1.25,
+     1.05,
+     1.25
+    ],
+    "right_arm": [
+     1.3,
+     1.15,
+     1.3
+    ],
+    "left_arm": [
+     1.3,
+     1.15,
+     1.3
+    ]
+   }
+  },
+  "creature": {
+   "scale": 1.6,
+   "bones": {
+    "right_arm": [
+     1.1,
+     1.5,
+     1.1
+    ],
+    "left_arm": [
+     1.1,
+     1.5,
+     1.1
+    ],
+    "head": [
+     1.25,
+     1.25,
+     1.25
+    ],
+    "body": [
+     1.15,
+     1.0,
+     1.15
+    ]
+   }
+  },
+  "titan": {
+   "scale": 2.1,
+   "bones": {
+    "right_arm": [
+     1.2,
+     1.6,
+     1.2
+    ],
+    "left_arm": [
+     1.2,
+     1.6,
+     1.2
+    ],
+    "head": [
+     1.3,
+     1.3,
+     1.3
+    ],
+    "body": [
+     1.25,
+     1.05,
+     1.25
+    ]
+   }
+  }
+ },
+ "enemies": {
+  "???": {
+   "look": "named",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Adept Kurokumo Henchwoman": {
+   "look": "kurokumo",
+   "form": "human",
+   "weapon": "netherite_sword"
+  },
+  "Aggressive Bloodbag Passenger": {
+   "look": "bloodfiend",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Aggressive Gear Fanatic": {
+   "look": "gear",
+   "form": "human",
+   "weapon": "iron_pickaxe"
+  },
+  "Aggressive Yurodivy": {
+   "look": "yurodivy",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Agile Twinhooks Pirate": {
+   "look": "pirate",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Ahab": {
+   "look": "pequod",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "Aida": {
+   "look": "mariachi",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Alleyway Watchdog": {
+   "look": "abno_envy",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Ambling Pearl": {
+   "look": "abno_gluttony",
+   "form": "titan",
+   "weapon": ""
+  },
+  "Annette the Alterationist": {
+   "look": "le_noir",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Ardor Blossom Moth": {
+   "look": "abno_pride",
+   "form": "titan",
+   "weapon": ""
+  },
+  "Awkward Tri-axe Office Fixer": {
+   "look": "fixer",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Bandana-wearing Twinhooks Pirate": {
+   "look": "pirate",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Bayonet Artillery Crab": {
+   "look": "crab",
+   "form": "wide",
+   "weapon": ""
+  },
+  "Bean-hating Tingtanger": {
+   "look": "tingtang",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Become Strong? Genuinely?": {
+   "look": "abno_pride",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Blinded Pequod Town Villager": {
+   "look": "pequod",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "Bloodbag Prosthetic Fixer": {
+   "look": "bloodfiend",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Bloodbag of the Painful Parade": {
+   "look": "bloodbag",
+   "form": "human",
+   "weapon": ""
+  },
+  "Bloodbag of the Rear Parade": {
+   "look": "bloodbag",
+   "form": "human",
+   "weapon": ""
+  },
+  "Bloodfiend of the Happy Parade": {
+   "look": "bloodfiend",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Bloodfiend of the Joyful Parade": {
+   "look": "bloodfiend",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Bloomed Bloodfiend": {
+   "look": "bloodfiend",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Blooming Failure": {
+   "look": "abno_sloth",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Blossomed Bloodfiend": {
+   "look": "bloodfiend",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Blubbering Toad": {
+   "look": "abno_gloom",
+   "form": "creature",
+   "weapon": ""
+  },
+  "BongBong [Orange]": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Brazen Bull - Tearful": {
+   "look": "abno_wrath",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Budding Bloodbag": {
+   "look": "bloodbag",
+   "form": "human",
+   "weapon": ""
+  },
+  "Budding Bloodfiend": {
+   "look": "bloodfiend",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "BunBun [Juicy Squeezer - Orange]": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Calm K Corp. Checkpoint Security": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Cannoneer Crab": {
+   "look": "crab",
+   "form": "wide",
+   "weapon": ""
+  },
+  "Casino Security Chief": {
+   "look": "casino",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Cassetti": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Censored Lobotomy Corp. L3 Agent": {
+   "look": "lobotomy",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Ch'unokkun - Bind": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Ch'unokkun - Incapacitate": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Cherry Gnome": {
+   "look": "gnome",
+   "form": "small",
+   "weapon": "iron_hoe"
+  },
+  "Chest-puffing Tingtanger": {
+   "look": "tingtang",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Clippity-cloppity? Tap Away!": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Collected Casino Security": {
+   "look": "casino",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Combative Fanghunt Office Fixer": {
+   "look": "fixer",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Complete Sawblade Bot": {
+   "look": "bot",
+   "form": "brute",
+   "weapon": "iron_axe"
+  },
+  "Complete Wrecking Ball Bot": {
+   "look": "bot",
+   "form": "brute",
+   "weapon": "iron_axe"
+  },
+  "Compliant N Corp. Inquisitor": {
+   "look": "n_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Confident Casino Security": {
+   "look": "casino",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Confident Rosespanner Workshop Fixer": {
+   "look": "rosespanner",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Confused K Corp. Checkpoint Security": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Craving Bloodbag Passenger": {
+   "look": "bloodfiend",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Crawling Inquisitor": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Crooked Veteran": {
+   "look": "soldier",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Crude Sawblade Bot": {
+   "look": "bot",
+   "form": "brute",
+   "weapon": "iron_axe"
+  },
+  "Crude Wrecking Ball Bot": {
+   "look": "bot",
+   "form": "brute",
+   "weapon": "iron_axe"
+  },
+  "Da Boingy Empworoar": {
+   "look": "named",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Dawn of Green - Doubt - α": {
+   "look": "bot",
+   "form": "brute",
+   "weapon": "iron_axe"
+  },
+  "Dawn of Green - Doubt - β": {
+   "look": "bot",
+   "form": "brute",
+   "weapon": "iron_axe"
+  },
+  "Dawn of Green - Doubt - γ": {
+   "look": "bot",
+   "form": "brute",
+   "weapon": "iron_axe"
+  },
+  "Dawn of Green - Doubt - δ": {
+   "look": "bot",
+   "form": "brute",
+   "weapon": "iron_axe"
+  },
+  "Dead Rabbits Boss": {
+   "look": "rabbits",
+   "form": "human",
+   "weapon": "iron_axe"
+  },
+  "Deceitful Tri-axe Office Fixer": {
+   "look": "fixer",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Despairing Bloodbag": {
+   "look": "bloodbag",
+   "form": "human",
+   "weapon": ""
+  },
+  "Determined Kurokumo Henchman": {
+   "look": "kurokumo",
+   "form": "human",
+   "weapon": "netherite_sword"
+  },
+  "Disgraced Bloodbag": {
+   "look": "bloodbag",
+   "form": "human",
+   "weapon": ""
+  },
+  "Distorted Hohenheim": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "District 20 Yurodiviye Captain": {
+   "look": "yurodivy",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Don Quixote": {
+   "look": "bloodfiend",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Dongbaek E.G.O::Spicebush": {
+   "look": "named",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Dongrang, Who Denies All": {
+   "look": "abno_gloom",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Doomsday Calendar": {
+   "look": "abno_sloth",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Downcast Veteran": {
+   "look": "soldier",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Dream-Devouring Siltcurrent": {
+   "look": "abno_pride",
+   "form": "titan",
+   "weapon": ""
+  },
+  "Dreaming Electric Sheep": {
+   "look": "abno_gloom",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Drenched Gossypium": {
+   "look": "abno_gluttony",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Drifting Fox": {
+   "look": "abno_sloth",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Dulcinea": {
+   "look": "bloodfiend",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Ebony Queen's Apple": {
+   "look": "abno_gluttony",
+   "form": "titan",
+   "weapon": ""
+  },
+  "Eerie Bloodbag": {
+   "look": "bloodbag",
+   "form": "human",
+   "weapon": ""
+  },
+  "Effloresced E.G.O::Farmwatch": {
+   "look": "named",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Effloresced E.G.O::GasHarpoon": {
+   "look": "pequod",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "Embellished Bloodbag": {
+   "look": "bloodbag",
+   "form": "human",
+   "weapon": ""
+  },
+  "Embittered Veteran": {
+   "look": "soldier",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Enamored Researcher of the Ring?": {
+   "look": "ring",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Entangled Failure": {
+   "look": "abno_sloth",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Entangled Jar Monster": {
+   "look": "jar",
+   "form": "wide",
+   "weapon": ""
+  },
+  "Erlking Heathcliff": {
+   "look": "wild_hunt",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Everything There of an Inquisitor": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Evil-possessed Deathrite Monk": {
+   "look": "monk",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Faelantern": {
+   "look": "abno_gluttony",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Fairy Gentleman": {
+   "look": "abno_gluttony",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Fairy Mass": {
+   "look": "abno_gluttony",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Fairy Queen": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Fairy-Long-Legs": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Famished Hooligan": {
+   "look": "street",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Fast Edgar Family Butler": {
+   "look": "butler",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Fearless N Corp. Inquisitor": {
+   "look": "n_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Feral Bloodbag Cleanup Agent": {
+   "look": "bloodfiend",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Feral Fauvist Student of the Ring": {
+   "look": "ring",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Fierce Dead Rabbits Henchman": {
+   "look": "rabbits",
+   "form": "human",
+   "weapon": "iron_axe"
+  },
+  "Fiery Veteran": {
+   "look": "soldier",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Flannel": {
+   "look": "le_noir",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Flexing Tieqiu Crewman": {
+   "look": "tieqiu",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Four-Legged Beast": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Four-hundred Roses": {
+   "look": "abno_lust",
+   "form": "titan",
+   "weapon": ""
+  },
+  "Freezing Miner Slave": {
+   "look": "abno_gloom",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Fruit of Understanding": {
+   "look": "abno_envy",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Furtive Podao Assailant": {
+   "look": "podao",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Gagged Pequod Town Villager": {
+   "look": "pequod",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "Golden Apple": {
+   "look": "abno_gluttony",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Grant Us Love": {
+   "look": "abno_envy",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Grown Powerful! For Realsies?": {
+   "look": "abno_pride",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Guido the Persistent": {
+   "look": "n_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Hacked K Corp. Regen Drone": {
+   "look": "k_drone",
+   "form": "small",
+   "weapon": ""
+  },
+  "Hard Trash Crab": {
+   "look": "crab",
+   "form": "wide",
+   "weapon": ""
+  },
+  "Hardened Veteran": {
+   "look": "soldier",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Hateful Blade Lineage Salsu": {
+   "look": "lineage",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Hazed K Corp. Checkpoint Security": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Head Hooligan": {
+   "look": "street",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Headchicken a.k.a. Bongy": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Headless Ichthys": {
+   "look": "abno_gloom",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Heathcliff, The Heartbroken": {
+   "look": "abno_envy",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Heathcliff?": {
+   "look": "rabbits",
+   "form": "human",
+   "weapon": "iron_axe"
+  },
+  "Heavy Shi Family Mercenary": {
+   "look": "shi",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Hefty Dead Rabbits Henchman": {
+   "look": "rabbits",
+   "form": "human",
+   "weapon": "iron_axe"
+  },
+  "Heishou Pack - Mao: Featherstriker": {
+   "look": "heishou",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Heishou Pack - Mao: Umbrastriker": {
+   "look": "heishou",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Heishou Pack - Si : Depthstriker": {
+   "look": "heishou",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Heishou Pack - Si : Shadestriker": {
+   "look": "heishou",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Heishou Pack - Si : Veilstriker": {
+   "look": "heishou",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Hindley": {
+   "look": "butler",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Hindley of the Wild Hunt": {
+   "look": "wild_hunt",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Hostile Wuthering Heights Butler": {
+   "look": "butler",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Hungering Bloodbag Cleanup Agent": {
+   "look": "bloodfiend",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Hungry Kaki": {
+   "look": "kaki",
+   "form": "small",
+   "weapon": ""
+  },
+  "Hurting Teddy Bear": {
+   "look": "abno_sloth",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Icy N Corp. Class 2 Staff": {
+   "look": "n_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Imagined Im Gyeong-eop": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Imagined T Corp. Class 3 Collector": {
+   "look": "t_corp",
+   "form": "human",
+   "weapon": "iron_axe"
+  },
+  "Impaled Failure": {
+   "look": "abno_sloth",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Impulsive Fauvist Student of the Ring": {
+   "look": "ring",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Insane Fashionista Bloodfiend": {
+   "look": "bloodfiend",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Instinctive Fauvist Student of the Ring": {
+   "look": "ring",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Interrogative N Corp. Inquisitor": {
+   "look": "n_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Jia Mu": {
+   "look": "heishou",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Jia Qiu": {
+   "look": "heishou",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Josephine": {
+   "look": "butler",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Josephine of the Wild Hunt": {
+   "look": "wild_hunt",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Joyous N Corp. Inquisitor": {
+   "look": "n_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "K Corp. Arrest Drone": {
+   "look": "k_drone",
+   "form": "small",
+   "weapon": ""
+  },
+  "K Corp. Class 3 Empowered Staff": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "K Corp. Class 3 Excision Staff": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "K Corp. Class 3 Staff": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "K Corp. Filming Drone": {
+   "look": "k_drone",
+   "form": "small",
+   "weapon": ""
+  },
+  "King Trash Crab": {
+   "look": "crab",
+   "form": "wide",
+   "weapon": ""
+  },
+  "King of Needleworks": {
+   "look": "needle",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "Kkomi and Vergilius?": {
+   "look": "named",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Kromer": {
+   "look": "abno_pride",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Kurokumo Clan Captain Jun": {
+   "look": "kurokumo",
+   "form": "human",
+   "weapon": "netherite_sword"
+  },
+  "L'Inamovible": {
+   "look": "le_rouge",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Large Podao Assailant": {
+   "look": "podao",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Le Noir Sales Associate Gustave": {
+   "look": "le_noir",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Le Noir Sales Associate [Sunshone]": {
+   "look": "le_noir",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Le Noir's Brand Manager": {
+   "look": "le_noir",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Le Rouge Sales Associate Mimosa": {
+   "look": "le_rouge",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Le Rouge Sales Associate [Sunshone]": {
+   "look": "le_rouge",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Le Rouge Senior Staff": {
+   "look": "le_rouge",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Leafy Gnome": {
+   "look": "gnome",
+   "form": "small",
+   "weapon": "iron_hoe"
+  },
+  "Leather Wallet": {
+   "look": "street",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Lei Heng": {
+   "look": "thumb",
+   "form": "human",
+   "weapon": "crossbow"
+  },
+  "Linton of the Wild Hunt": {
+   "look": "wild_hunt",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Little Brother Werner": {
+   "look": "middle",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Lobotomy E.G.O::Red Sheet": {
+   "look": "lobotomy",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Lobotomy E.G.O::Red Sheet - Marile": {
+   "look": "lobotomy",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Lobotomy E.G.O::Sloshing": {
+   "look": "lobotomy",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Mad Fashionista Bloodfiend": {
+   "look": "bloodfiend",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Mad Researcher of the Ring?": {
+   "look": "ring",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Maison du Noir": {
+   "look": "le_noir",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Manager Gnome": {
+   "look": "gnome",
+   "form": "small",
+   "weapon": "iron_hoe"
+  },
+  "Mariachi Alegre": {
+   "look": "mariachi",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Mariachi Vivaz": {
+   "look": "mariachi",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Merciless Bloodbag Cleanup Agent": {
+   "look": "bloodfiend",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Moustachioed Twinhooks Pirate": {
+   "look": "pirate",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "My Form Empties": {
+   "look": "abno_lust",
+   "form": "titan",
+   "weapon": ""
+  },
+  "N Corp. E.G.O::Contempt, Awe Jia Huan": {
+   "look": "n_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "N Corp. E.G.O::Fell Bullet Gubo": {
+   "look": "n_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Nailed Jar Monster": {
+   "look": "jar",
+   "form": "wide",
+   "weapon": ""
+  },
+  "Nelly": {
+   "look": "butler",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Nimble Gear Worshipper": {
+   "look": "gear",
+   "form": "human",
+   "weapon": "iron_pickaxe"
+  },
+  "Number-nuts Hooligan": {
+   "look": "street",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Obsessive N Corp. Inquisitor": {
+   "look": "n_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Old G Corp. Head Manager": {
+   "look": "soldier",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "One-leg": {
+   "look": "le_noir",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Pallid Blue Mermaid": {
+   "look": "mermaid",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "Pallid Entwined Mermaid": {
+   "look": "mermaid",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "Pallid White Mermaid": {
+   "look": "mermaid",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "Pallid and Blue Mermaid": {
+   "look": "mermaid",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "Pallidified Thing-Hook": {
+   "look": "pequod",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "Pallidified Thing-Pirate": {
+   "look": "pirate",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Pallidified Thing-Shield": {
+   "look": "pequod",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "Papa Bongy": {
+   "look": "abno_wrath",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Peccatulum Gulae Class 1": {
+   "look": "peccatulum_gluttony",
+   "form": "human",
+   "weapon": ""
+  },
+  "Peccatulum Gulae Class 2": {
+   "look": "peccatulum_gluttony",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Peccatulum Irae Class 1": {
+   "look": "peccatulum_wrath",
+   "form": "human",
+   "weapon": ""
+  },
+  "Peccatulum Irae Class 2": {
+   "look": "peccatulum_wrath",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Peccatulum Irae Class 3": {
+   "look": "peccatulum_wrath",
+   "form": "brute",
+   "weapon": ""
+  },
+  "Peccatulum Luxuriae Class 1": {
+   "look": "peccatulum_lust",
+   "form": "human",
+   "weapon": ""
+  },
+  "Peccatulum Luxuriae Class 2": {
+   "look": "peccatulum_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Peccatulum Morositatis Class 1": {
+   "look": "peccatulum_gloom",
+   "form": "human",
+   "weapon": ""
+  },
+  "Peccatulum Morositatis Class 2": {
+   "look": "peccatulum_gloom",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Peccatulum Morositatis Class 3": {
+   "look": "peccatulum_gloom",
+   "form": "brute",
+   "weapon": ""
+  },
+  "Peccatulum Pigritiae Class 1": {
+   "look": "peccatulum_sloth",
+   "form": "human",
+   "weapon": ""
+  },
+  "Peccatulum Pigritiae Class 2": {
+   "look": "peccatulum_sloth",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Peccatulum Pigritiae Class 3": {
+   "look": "peccatulum_sloth",
+   "form": "brute",
+   "weapon": ""
+  },
+  "Peccatulum Superbiae Class 1": {
+   "look": "peccatulum_pride",
+   "form": "human",
+   "weapon": ""
+  },
+  "Peccatulum Superbiae Class 2": {
+   "look": "peccatulum_pride",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Pink Shoes Enchantee": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Pink Shoes Possessee": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Pointillist Researcher of the Ring?": {
+   "look": "ring",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Pointy Trash Crab": {
+   "look": "crab",
+   "form": "wide",
+   "weapon": ""
+  },
+  "Portrait of a Certain Day": {
+   "look": "abno_gloom",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Prescript-chasing Proselyte of the Index": {
+   "look": "index",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Prescript-conforming Proselyte of the Index": {
+   "look": "index",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Prideful Fanghunt Office Fixer": {
+   "look": "fixer",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Prideful Rosespanner Workshop Fixer": {
+   "look": "rosespanner",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Proceeding Inquisitor": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Putty": {
+   "look": "street",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Puzzled Veteran": {
+   "look": "soldier",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Quick-witted Yurodivy": {
+   "look": "yurodivy",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Quiet K Corp. Checkpoint Security": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Razor-sharp Veteran": {
+   "look": "soldier",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Recollected Awry Soldier": {
+   "look": "soldier",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Recollected Overtaken Soldier": {
+   "look": "soldier",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Recollected Wallowing Soldier": {
+   "look": "soldier",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Refracted Alleyway Watchdog": {
+   "look": "abno_envy",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Refracted Dreaming Electric Sheep": {
+   "look": "abno_gloom",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Refracted Headless Ichthys": {
+   "look": "abno_gloom",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Reliable K Corp. Checkpoint Security": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Resentful Blade Lineage Salsu": {
+   "look": "lineage",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Reticent N Corp. Class 2 Staff": {
+   "look": "n_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Revived K Corp. Class 1 Staff (Axe)": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Revived K Corp. Class 1 Staff (Staff)": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Revived K Corp. Class 3 Empowered Staff": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Revived K Corp. Class 3 Staff": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Revived K Corp. Security (Baton)": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Revived K Corp. Security (Shield)": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Ricardo": {
+   "look": "middle",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Rigid Casino Security": {
+   "look": "casino",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Rigid Soldato of the Thumb": {
+   "look": "thumb",
+   "form": "human",
+   "weapon": "crossbow"
+  },
+  "Rose Hunter": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Rosespanner Workshop Rep Niko": {
+   "look": "rosespanner",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Rufo": {
+   "look": "named",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Rustic-sounding Tingtanger": {
+   "look": "tingtang",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Sadistic N Corp. Inquisitor": {
+   "look": "n_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Sancho": {
+   "look": "bloodfiend",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Santata": {
+   "look": "named",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Scared T Corp. Gangster": {
+   "look": "t_corp",
+   "form": "human",
+   "weapon": "iron_axe"
+  },
+  "Scourging N Corp. Inquisitor": {
+   "look": "n_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Scruffy Veteran": {
+   "look": "soldier",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Servile N Corp. Inquisitor": {
+   "look": "n_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Shadowy Gnome": {
+   "look": "gnome",
+   "form": "small",
+   "weapon": "iron_hoe"
+  },
+  "Shaking K Corp. Checkpoint Security": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Shaking Rosespanner Workshop Fixer": {
+   "look": "rosespanner",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Sharp Dead Rabbits Henchman": {
+   "look": "rabbits",
+   "form": "human",
+   "weapon": "iron_axe"
+  },
+  "Sharp Hooligan": {
+   "look": "street",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Sharp Trash Crab": {
+   "look": "crab",
+   "form": "wide",
+   "weapon": ""
+  },
+  "Sharp-looking Stranger": {
+   "look": "street",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Shi Huazhen": {
+   "look": "shi",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Shi Sijing": {
+   "look": "shi",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Shi Yihua": {
+   "look": "shi",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Shifty Edgar Family Butler": {
+   "look": "butler",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Shivering Miner Slave": {
+   "look": "abno_gloom",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Shock Centipede": {
+   "look": "abno_envy",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Sign of Roses": {
+   "look": "abno_lust",
+   "form": "titan",
+   "weapon": ""
+  },
+  "Sinister Bloodbag": {
+   "look": "bloodbag",
+   "form": "human",
+   "weapon": ""
+  },
+  "Skin Prophet": {
+   "look": "abno_wrath",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Slave": {
+   "look": "casino",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Slithering Inquisitor": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Slow Dead Rabbits Henchman": {
+   "look": "rabbits",
+   "form": "human",
+   "weapon": "iron_axe"
+  },
+  "So That No One Will Cry": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Solid Combined Bot": {
+   "look": "bot",
+   "form": "brute",
+   "weapon": "iron_axe"
+  },
+  "Sous Chef": {
+   "look": "chef",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Spiced-up Papa Bongy": {
+   "look": "abno_wrath",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Spiral of Contempt": {
+   "look": "abno_lust",
+   "form": "titan",
+   "weapon": ""
+  },
+  "Spontaneous Fauvist Student of the Ring": {
+   "look": "ring",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Steam Transport Machine": {
+   "look": "abno_pride",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Stern K Corp. Checkpoint Security": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Stern Little Brother of the Middle": {
+   "look": "middle",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Stern Soldato of the Thumb": {
+   "look": "thumb",
+   "form": "human",
+   "weapon": "crossbow"
+  },
+  "Stiffened K Corp. Checkpoint Security": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Stunned K Corp. Checkpoint Security": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Sturdy Little Brother of the Middle": {
+   "look": "middle",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Swamped K Corp. Checkpoint Security": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Swift Edgar Family Butler": {
+   "look": "butler",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Swift Podao Assailant": {
+   "look": "podao",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Swift Shi Family Mercenary": {
+   "look": "shi",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "T Corp. Class 2 Collection Staff": {
+   "look": "t_corp",
+   "form": "human",
+   "weapon": "iron_axe"
+  },
+  "T Corp. Class 3 Collector - Neutralize": {
+   "look": "t_corp",
+   "form": "human",
+   "weapon": "iron_axe"
+  },
+  "T Corp. Class 3 Collector - Suppress": {
+   "look": "t_corp",
+   "form": "human",
+   "weapon": "iron_axe"
+  },
+  "Talisman Jar Monster": {
+   "look": "jar",
+   "form": "wide",
+   "weapon": ""
+  },
+  "Tense Kurokumo Henchman": {
+   "look": "kurokumo",
+   "form": "human",
+   "weapon": "netherite_sword"
+  },
+  "Terrified K Corp. Checkpoint Security": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "The Barber": {
+   "look": "named",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "The City's Sweeper A": {
+   "look": "sweeper",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "The City's Sweeper B": {
+   "look": "sweeper",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "The City's Sweeper C": {
+   "look": "sweeper",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "The City's Sweeper D": {
+   "look": "sweeper",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "The Crimson God [Inchoate Life]": {
+   "look": "le_rouge",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "The King in Binds": {
+   "look": "abno_pride",
+   "form": "titan",
+   "weapon": ""
+  },
+  "The Knight of Despair": {
+   "look": "abno_gloom",
+   "form": "titan",
+   "weapon": ""
+  },
+  "The Priest": {
+   "look": "monk",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "The Reaved Lamenter of the Wild Hunt": {
+   "look": "abno_pride",
+   "form": "creature",
+   "weapon": ""
+  },
+  "The Ring Apprentice - Albina": {
+   "look": "ring",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "The Ring Corporist Automanikin - Combatant": {
+   "look": "automanikin",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "The Ring Corporist Automanikin - Researcher": {
+   "look": "automanikin",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "The Ring Corporist Automanikin - Roseate Desire Corrosion": {
+   "look": "automanikin",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "The Thumb Apprentice - Lucio": {
+   "look": "thumb",
+   "form": "human",
+   "weapon": "crossbow"
+  },
+  "The Time Ripper": {
+   "look": "abno_sloth",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Thirsty Kaki": {
+   "look": "kaki",
+   "form": "small",
+   "weapon": ""
+  },
+  "Threatened K Corp. Class 1 Staff": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Threatening Gear Worshipper": {
+   "look": "gear",
+   "form": "human",
+   "weapon": "iron_pickaxe"
+  },
+  "Threatening Tieqiu Crewman": {
+   "look": "tieqiu",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Timid K Corp. Checkpoint Security": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Tingtang Boss": {
+   "look": "tingtang",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Tired Kurokumo Henchwoman": {
+   "look": "kurokumo",
+   "form": "human",
+   "weapon": "netherite_sword"
+  },
+  "Tough Twinhooks Pirate": {
+   "look": "pirate",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Tough-looking Stranger": {
+   "look": "street",
+   "form": "human",
+   "weapon": "iron_shovel"
+  },
+  "Trained Edgar Family Butler": {
+   "look": "butler",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Trained Wuthering Heights Butler": {
+   "look": "butler",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Twinhook Pirates First Mate Smee": {
+   "look": "pirate",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Unnerved K Corp. Class 1 Staff": {
+   "look": "k_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Urgent T Corp. Gangster": {
+   "look": "t_corp",
+   "form": "human",
+   "weapon": "iron_axe"
+  },
+  "Veteran Shi Family Mercenary": {
+   "look": "shi",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Violent Bloodbag Passenger": {
+   "look": "bloodfiend",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Vulgar Veteran": {
+   "look": "soldier",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Warp Needlekin": {
+   "look": "needle",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "Wayward Passenger": {
+   "look": "abno_envy",
+   "form": "creature",
+   "weapon": ""
+  },
+  "Weft Needlekin": {
+   "look": "needle",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "Wei": {
+   "look": "heishou",
+   "form": "human",
+   "weapon": "iron_sword"
+  },
+  "Well-dressed Bloodbag": {
+   "look": "bloodbag",
+   "form": "human",
+   "weapon": ""
+  },
+  "Whale of the Porous Hand Mermaid": {
+   "look": "mermaid",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "Whale of the Porous Hand Soldier Mermaid": {
+   "look": "mermaid",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "Whale of the Thousand Strands Mermaid": {
+   "look": "mermaid",
+   "form": "human",
+   "weapon": "trident"
+  },
+  "Wicked Deathrite Monk": {
+   "look": "monk",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Worshipping N Corp. Inquisitor": {
+   "look": "n_corp",
+   "form": "human",
+   "weapon": "mace"
+  },
+  "Wriggling Beast": {
+   "look": "abno_lust",
+   "form": "creature",
+   "weapon": ""
+  },
+  "You Want To Get Beat? Hurtily?": {
+   "look": "abno_pride",
+   "form": "creature",
+   "weapon": ""
+  },
+  "kqe-1j-23": {
+   "look": "abno_envy",
+   "form": "creature",
+   "weapon": ""
+  }
+ }
+}

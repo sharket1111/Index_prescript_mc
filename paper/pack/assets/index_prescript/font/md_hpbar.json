@@ -1,0 +1,52 @@
+{
+	"providers": [
+		{
+			"type": "space",
+			"advances": {
+				"\ue850": 1,
+				"\ue860": -1,
+				"\ue851": 2,
+				"\ue861": -2,
+				"\ue852": 4,
+				"\ue862": -4,
+				"\ue853": 8,
+				"\ue863": -8,
+				"\ue854": 16,
+				"\ue864": -16,
+				"\ue855": 32,
+				"\ue865": -32,
+				"\ue856": 64,
+				"\ue866": -64,
+				"\ue857": 128,
+				"\ue867": -128
+			}
+		},
+		{
+			"type": "bitmap",
+			"file": "index_prescript:font/md_hpbar.png",
+			"height": 5,
+			"ascent": 5,
+			"chars": [
+				"\ue800\ue801\ue802\ue803\ue804\ue805\ue806\ue807\ue808\ue809\ue80a\ue80b\ue80c\ue80d\ue80e\ue80f\ue810\ue811\ue812\ue813\ue814\ue815\ue816\ue817\ue818\ue819\ue81a\ue81b\ue81c\ue81d\ue81e\ue81f\ue820\ue821\ue822\ue823\ue824\ue825\ue826\ue827\ue828\ue829\ue82a\ue82b\ue82c\ue82d\ue82e\ue82f\ue830\ue831\ue832"
+			]
+		},
+		{
+			"type": "bitmap",
+			"file": "index_prescript:font/md_tick.png",
+			"height": 7,
+			"ascent": 6,
+			"chars": [
+				"\ue840"
+			]
+		},
+		{
+			"type": "bitmap",
+			"file": "index_prescript:font/md_badge.png",
+			"height": 13,
+			"ascent": 9,
+			"chars": [
+				"\ue841"
+			]
+		}
+	]
+}

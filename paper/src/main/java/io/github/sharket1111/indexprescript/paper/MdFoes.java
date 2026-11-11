@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
@@ -61,13 +62,27 @@ final class MdFoes {
 		final List<MdData.EnemySkill> skills = new ArrayList<>();
 		final List<MdData.EnemySkill> defences = new ArrayList<>();
 		final List<Double> thresholds = new ArrayList<>();
+		/** For a part: the core it belongs to (null for the core itself); for a core: its parts. */
+		final LivingEntity core;
+		final List<LivingEntity> parts = new ArrayList<>();
+		/** A broken part, regrowing at this tick (0: never). */
+		boolean broken;
+		long regrowAt;
+		/** New patterns already taken (passive name @ HP fraction or turn). */
+		final Set<String> phases = new java.util.HashSet<>();
 		long nextSkill;
 		boolean acting;
 
-		Ai(LivingEntity mob, MdBattle.Foe foe, MdBattle.Kind kind) {
+		Ai(LivingEntity mob, MdBattle.Foe foe, MdBattle.Kind kind, LivingEntity core) {
 			this.mob = mob;
 			this.foe = foe;
 			this.kind = kind;
+			this.core = core;
+		}
+
+		/** Who moves for its skills: the core (a part strikes from where it sits on it). */
+		LivingEntity anchor() {
+			return core != null ? core : mob;
 		}
 
 		/** Health fraction at or under which the next stagger comes (Tremor raises it). */
@@ -97,12 +112,17 @@ final class MdFoes {
 			"rupture", List.of("파쇄", "꿰뚫기", "균열"),
 			"sinking", List.of("가라앉히기", "침전", "검은 물결"));
 
-	static void setup(MdBattle battle, LivingEntity mob, MdBattle.Foe foe, MdBattle.Kind kind) {
-		Ai ai = new Ai(mob, foe, kind);
+	static void setup(MdBattle battle, LivingEntity mob, MdBattle.Foe foe, MdBattle.Kind kind, LivingEntity core) {
+		Ai ai = new Ai(mob, foe, kind, core);
 		TextColor colour = TextColor.color(battle.run.theme.color());
 		MdData.EnemyData data = foe.data;
+		// An Abnormality with parts: each part uses the skills the original gives that part.
+		String partName = data == null || data.parts().isEmpty() ? null : foe.part != null ? foe.part.name() : data.parts().get(0).name();
 		if (data != null) {
 			for (MdData.EnemySkill s : data.skills()) {
+				if (partName != null && !s.part().isEmpty() && !s.part().equalsIgnoreCase(partName)) {
+					continue;
+				}
 				if (!s.attack()) {
 					ai.defences.add(s);
 					continue;
@@ -118,14 +138,14 @@ final class MdFoes {
 				ai.skills.add(s);
 				ai.cards.add(new SkillCard(s.name(), colour, s.base(), s.coinPower(), coins, text.toString(), coins * 8 + 10, true, "N".repeat(coins)));
 			}
-			for (double t : data.stagger()) {
+			for (double t : foe.part != null ? foe.part.stagger() : data.stagger()) {
 				if (t > 0 && t < 100) {
 					ai.thresholds.add(t / 100.0);
 				}
 			}
 			ai.thresholds.sort((a, b) -> Double.compare(b, a));
 		}
-		if (ai.cards.isEmpty()) {
+		if (ai.cards.isEmpty() && core == null) {
 			// No numbers from the original: skills made for the Theme Pack's keyword.
 			ai.skills.clear();
 			int floor = Math.max(1, battle.run.floor);
@@ -148,35 +168,66 @@ final class MdFoes {
 		}
 		ai.nextSkill = CaduceusListener.now() + 40 + MdRun.rng().nextInt(80);
 		AI.put(mob.getUniqueId(), ai);
+		if (core != null) {
+			Ai coreAi = of(core);
+			if (coreAi != null) {
+				coreAi.parts.add(mob);
+			}
+		} else {
+			passives(battle, ai, "combat_start");
+		}
 		label(ai);
 	}
 
+	/** An enemy is gone: its parts go with it, and its drawn body. */
 	static void forget(LivingEntity mob) {
-		AI.remove(mob.getUniqueId());
+		Ai ai = AI.remove(mob.getUniqueId());
+		MdLooks.remove(mob);
+		if (ai != null) {
+			for (LivingEntity part : List.copyOf(ai.parts)) {
+				MdBattle.forget(part);
+				part.remove();
+			}
+			ai.parts.clear();
+		}
 	}
 
 	// --- every tick ----------------------------------------------------------------------------------
 
 	static void tick(MdBattle battle, List<Player> fighters, long now, int turn, boolean turnStart) {
-		for (LivingEntity mob : List.copyOf(battle.mobs)) {
+		List<LivingEntity> units = new ArrayList<>();
+		for (LivingEntity mob : battle.mobs) {
+			units.add(mob);
+			Ai ai = of(mob);
+			if (ai != null) {
+				units.addAll(ai.parts);
+			}
+		}
+		for (LivingEntity mob : units) {
 			Ai ai = of(mob);
 			if (ai == null || !mob.isValid()) {
 				continue;
 			}
+			if (ai.broken) {
+				if (ai.regrowAt > 0 && now >= ai.regrowAt) {
+					regrow(ai);
+				}
+				continue;
+			}
 			boolean staggered = CombatState.of(mob).staggered(now);
-			if (mob instanceof Mob m) {
+			if (mob instanceof Mob m && ai.core == null) {
 				m.setAware(!staggered && !ai.acting);
 			}
-			if (now % 10 == 0) {
-				label(ai);
+			if (ai.core == null) {
+				if (turnStart && turn > 1) {
+					passives(battle, ai, "turn_end");
+				}
+				if (turnStart) {
+					passives(battle, ai, "turn_start");
+					turnPhase(ai, turn);
+				}
 			}
-			if (turnStart && turn > 1) {
-				passives(battle, ai, "turn_end");
-			}
-			if (turnStart) {
-				passives(battle, ai, "turn_start");
-			}
-			if (staggered || ai.acting || now < ai.nextSkill || Clash.busy(mob)) {
+			if (ai.cards.isEmpty() || staggered || ai.acting || now < ai.nextSkill || Clash.busy(mob)) {
 				continue;
 			}
 			// Now and then a guard or evade skill instead of an attack.
@@ -286,7 +337,8 @@ final class MdFoes {
 
 	private static void attack(MdBattle battle, Ai ai, SkillCard card, LivingEntity target) {
 		LivingEntity mob = ai.mob;
-		if (card == null || !(target instanceof Player victim) || !mob.isValid()) {
+		LivingEntity body = ai.anchor();
+		if (card == null || !(target instanceof Player victim) || !mob.isValid() || ai.broken) {
 			ai.acting = false;
 			return;
 		}
@@ -294,13 +346,17 @@ final class MdFoes {
 		if (skill != null) {
 			apply(ai, skill.effects(), USE, victim, true);
 		}
-		// Close in: appear beside the target in a streak of the theme's colour.
-		Vector dir = victim.getLocation().toVector().subtract(mob.getLocation().toVector()).setY(0);
+		// Close in: appear beside the target in a streak of the theme's colour (a part's core moves for it).
+		Vector dir = victim.getLocation().toVector().subtract(body.getLocation().toVector()).setY(0);
 		if (dir.lengthSquared() > 4) {
 			Location to = victim.getLocation().clone().subtract(dir.normalize().multiply(1.6));
 			to.setDirection(victim.getLocation().toVector().subtract(to.toVector()));
-			Effects.dashTrail(mob.getWorld(), mob.getLocation().toVector(), to.toVector());
-			mob.teleport(to);
+			Effects.dashTrail(body.getWorld(), body.getLocation().toVector(), to.toVector());
+			body.teleport(to);
+		} else {
+			Location face = body.getLocation();
+			face.setDirection(victim.getLocation().toVector().subtract(face.toVector()));
+			body.setRotation(face.getYaw(), 0);
 		}
 		new BukkitRunnable() {
 			int tick;
@@ -308,7 +364,7 @@ final class MdFoes {
 
 			@Override
 			public void run() {
-				if (!mob.isValid() || mob.isDead() || !victim.isOnline() || CombatState.of(mob).staggered(CaduceusListener.now()) || coin >= card.coins()) {
+				if (!mob.isValid() || mob.isDead() || ai.broken || !victim.isOnline() || CombatState.of(mob).staggered(CaduceusListener.now()) || coin >= card.coins()) {
 					if (skill != null && coin >= card.coins()) {
 						apply(ai, skill.effects(), Set.of("attack end"), victim, true);
 					}
@@ -329,12 +385,13 @@ final class MdFoes {
 
 	private static void strike(MdBattle battle, Ai ai, Player victim, MdData.EnemySkill skill, int coin, boolean heads) {
 		LivingEntity mob = ai.mob;
-		mob.swingMainHand();
+		MdLooks.swing(ai.anchor());
 		Location at = victim.getLocation().add(0, 1, 0);
 		at.getWorld().spawnParticle(Particle.SWEEP_ATTACK, at, 1);
 		at.getWorld().spawnParticle(Particle.DUST, at, 14, 0.4, 0.5, 0.4, 0, new Particle.DustOptions(Color.fromRGB(battle.run.theme.color()), 1.4F));
 		at.getWorld().playSound(at, heads ? Sound.ENTITY_PLAYER_ATTACK_CRIT : Sound.ENTITY_PLAYER_ATTACK_STRONG, SoundCategory.HOSTILE, 0.9F, 0.8F);
-		if (victim.getLocation().distanceSquared(mob.getLocation()) > 16 || battle.run.downed.contains(victim.getUniqueId())) {
+		if (victim.getLocation().distanceSquared(ai.anchor().getLocation()) > 16 * ai.anchor().getAttribute(Attribute.SCALE).getValue()
+				|| battle.run.downed.contains(victim.getUniqueId())) {
 			return;
 		}
 		double amount;
@@ -397,6 +454,13 @@ final class MdFoes {
 					mob.setHealth(Math.min(m, mob.getHealth() + amount));
 				}
 			}
+			case "power_skill" -> powerSkill(ai);
+			case "resist" -> {
+				double delta = e.get("delta").getAsDouble();
+				for (JsonElement k : e.getAsJsonArray("kinds")) {
+					ai.foe.resistBonus.merge(k.getAsString(), delta, Double::sum);
+				}
+			}
 			case "inflict", "gain" -> {
 				if (!e.has("status") || e.get("status").isJsonNull()) {
 					return;
@@ -419,6 +483,10 @@ final class MdFoes {
 	private static void gain(Ai ai, String status, int amount) {
 		MdBattle.Foe foe = ai.foe;
 		long now = CaduceusListener.now();
+		if (status.startsWith("u:")) {
+			foe.stacks.merge(status.substring(2), amount, Integer::sum);
+			return;
+		}
 		switch (status) {
 			case "damage_up", "power_up", "attack_power_up", "offense_level_up", "clash_power_up" -> {
 				foe.damageUp = Math.min(10, (foe.buffUntil > now ? foe.damageUp : 0) + amount);
@@ -469,12 +537,12 @@ final class MdFoes {
 	/** After a hit: staggers the enemy if its health crossed the next threshold. */
 	static void checkStagger(LivingEntity mob, Player by) {
 		Ai ai = of(mob);
-		if (ai == null || !mob.isValid() || mob.isDead() || ai.thresholds.isEmpty()) {
+		if (ai == null || !mob.isValid() || mob.isDead() || ai.broken) {
 			return;
 		}
+		checkPhases(ai);
 		double hp = health(mob);
-		if (hp > ai.nextThreshold()) {
-			label(ai);
+		if (ai.thresholds.isEmpty() || hp > ai.nextThreshold()) {
 			return;
 		}
 		while (!ai.thresholds.isEmpty() && hp <= ai.thresholds.get(0)) {
@@ -502,23 +570,171 @@ final class MdFoes {
 		checkStagger(mob, null);
 	}
 
-	/** The name tag: name, level, health, and where the next stagger is. */
+	/** The hitbox's name (not shown: the health bar above shows it; clash messages use it). */
 	private static void label(Ai ai) {
+		ai.mob.customName(Component.text(ai.foe.name, ai.kind == MdBattle.Kind.BOSS ? TextColor.color(0xE5574B)
+				: ai.kind == MdBattle.Kind.NORMAL ? NamedTextColor.WHITE : NamedTextColor.GOLD));
+	}
+
+	// --- new patterns, parts, clashes -----------------------------------------------------------------------
+
+	/** The original's "gains a new pattern at X% HP": once each, when the core's health falls to it. */
+	static void checkPhases(Ai ai) {
+		if (ai.core != null || ai.foe.data == null) {
+			return;
+		}
+		double hp = health(ai.mob);
+		for (MdData.Passive p : ai.foe.data.passives()) {
+			if (p.phase() == null || !p.phase().has("at")) {
+				continue;
+			}
+			for (JsonElement at : p.phase().getAsJsonArray("at")) {
+				double f = at.getAsDouble();
+				if (hp <= f && ai.phases.add(p.name() + "@" + f)) {
+					phase(ai, p);
+				}
+			}
+		}
+	}
+
+	/** "On Turn N: gains a new pattern". */
+	private static void turnPhase(Ai ai, int turn) {
+		if (ai.foe.data == null) {
+			return;
+		}
+		for (MdData.Passive p : ai.foe.data.passives()) {
+			if (p.phase() != null && p.phase().has("turn") && p.phase().get("turn").getAsInt() == turn && ai.phases.add(p.name() + "#" + turn)) {
+				phase(ai, p);
+			}
+		}
+	}
+
+	/** A new pattern: announced, then its effects (speed, its own statuses, resistances, a powerful skill at once). */
+	private static void phase(Ai ai, MdData.Passive p) {
+		MdRun run = ai.foe.battle.run;
 		LivingEntity mob = ai.mob;
-		int hp = (int) Math.round(health(mob) * 100);
-		Component name = Component.text(ai.foe.name, ai.kind == MdBattle.Kind.BOSS ? TextColor.color(0xE5574B)
-				: ai.kind == MdBattle.Kind.NORMAL ? NamedTextColor.WHITE : NamedTextColor.GOLD)
-				.append(Component.text(" Lv." + ai.foe.level, NamedTextColor.GRAY))
-				.append(Component.text("  ♥" + hp + "%", NamedTextColor.RED));
-		if (!ai.thresholds.isEmpty()) {
-			name = name.append(Component.text("  ⚡" + Math.round(ai.nextThreshold() * 100) + "%", NamedTextColor.AQUA));
+		for (Player viewer : run.players()) {
+			viewer.showTitle(net.kyori.adventure.title.Title.title(Component.text("새로운 패턴", NamedTextColor.RED),
+					Component.text(ai.foe.name + " - " + p.name(), NamedTextColor.GOLD),
+					net.kyori.adventure.title.Title.Times.times(java.time.Duration.ofMillis(150), java.time.Duration.ofMillis(1600), java.time.Duration.ofMillis(400))));
+			viewer.playSound(viewer.getLocation(), Sound.ENTITY_WITHER_SPAWN, SoundCategory.HOSTILE, 0.6F, 1.3F);
 		}
-		long now = CaduceusListener.now();
-		if (CombatState.of(mob).staggered(now)) {
-			name = name.append(Component.text("  흐트러짐", NamedTextColor.YELLOW));
-		} else if (ai.foe.guardUntil > now) {
-			name = name.append(Component.text(ai.foe.evading ? "  회피" : "  수비", NamedTextColor.GRAY));
+		run.broadcast(Component.text("[" + p.name() + "] ", NamedTextColor.GOLD).append(Component.text(p.text(), NamedTextColor.GRAY)));
+		mob.getWorld().spawnParticle(Particle.SONIC_BOOM, mob.getLocation().add(0, mob.getHeight() / 2, 0), 1);
+		mob.getWorld().spawnParticle(Particle.DUST, mob.getLocation().add(0, mob.getHeight() / 2, 0), 60, 0.8, 1.0, 0.8, 0,
+				new Particle.DustOptions(Color.fromRGB(run.theme.color()), 2.0F));
+		Player any = nearest(mob, run.fighters(), 64);
+		for (JsonElement el : p.effects()) {
+			JsonObject e = el.getAsJsonObject();
+			if (e.get("on").getAsString().equals("phase")) {
+				effect(ai, e, any);
+			}
 		}
-		mob.customName(name);
+	}
+
+	/** "Uses a powerful Skill": its strongest skill, aimed at once at the nearest member. */
+	private static void powerSkill(Ai ai) {
+		if (ai.cards.isEmpty()) {
+			return;
+		}
+		SkillCard best = ai.cards.get(0);
+		for (SkillCard c : ai.cards) {
+			if (c.base() + c.coinPower() * c.coins() > best.base() + best.coinPower() * best.coins()) {
+				best = c;
+			}
+		}
+		Player target = nearest(ai.anchor(), ai.foe.battle.run.fighters(), 64);
+		if (target == null || Clash.busy(ai.mob)) {
+			return;
+		}
+		SkillCard card = best;
+		ai.acting = true;
+		ai.nextSkill = CaduceusListener.now() + cooldown(ai);
+		ai.foe.battle.run.broadcast(Component.text(ai.foe.name + "이(가) [" + card.name() + "]를 준비합니다!", NamedTextColor.RED));
+		boolean started = Clash.requestFrom(ai.mob, target, card, outcome -> attack(ai.foe.battle, ai, card, outcome.target()));
+		if (!started) {
+			ai.acting = false;
+		} else {
+			Bukkit.getScheduler().runTaskLater(IndexPrescriptPlugin.instance(), () -> ai.acting = false, Clash.WINDOW + card.ticks() + 60L);
+		}
+	}
+
+	/**
+	 * Damage about to land on a part: a part does not die; at 0 it breaks
+	 * (destroyed, or severed for good; a "none" part holds at 1). Returns the
+	 * damage to let through (0: none, the hit is cancelled).
+	 */
+	static double partDamage(LivingEntity part, double damage) {
+		Ai ai = of(part);
+		if (ai == null || ai.core == null) {
+			return damage;
+		}
+		if (ai.broken) {
+			return 0;
+		}
+		if (damage < part.getHealth()) {
+			return damage;
+		}
+		if (ai.foe.part != null && ai.foe.part.breaks().equals("none")) {
+			return Math.max(0, part.getHealth() - 1);
+		}
+		Bukkit.getScheduler().runTask(IndexPrescriptPlugin.instance(), () -> breakPart(ai));
+		return Math.max(0, part.getHealth() - 0.5);
+	}
+
+	private static void breakPart(Ai ai) {
+		if (ai.broken || !ai.mob.isValid()) {
+			return;
+		}
+		MdData.Part part = ai.foe.part;
+		boolean sever = part != null && part.breaks().equals("sever");
+		ai.broken = true;
+		ai.acting = false;
+		ai.regrowAt = !sever && part != null && part.regen() > 0 ? CaduceusListener.now() + (long) part.regen() * CombatState.TURN_TICKS + 40 : 0;
+		MdLooks.partShown(ai.mob, false);
+		Location at = ai.mob.getLocation().add(0, ai.mob.getHeight() / 2, 0);
+		at.getWorld().spawnParticle(Particle.BLOCK, at, 40, 0.4, 0.4, 0.4, Material.REDSTONE_BLOCK.createBlockData());
+		at.getWorld().playSound(at, sever ? Sound.ENTITY_PLAYER_ATTACK_SWEEP : Sound.ENTITY_ITEM_BREAK, SoundCategory.HOSTILE, 1.2F, 0.6F);
+		MdRun run = ai.foe.battle.run;
+		run.broadcast(Component.text(ai.foe.name + (sever ? " 절단!" : " 파괴!") + (ai.regrowAt > 0 ? " (" + part.regen() + "턴 뒤 재생)" : ""), NamedTextColor.AQUA));
+		Ai core = of(ai.core);
+		if (core != null) {
+			passives(ai.foe.battle, core, "part_break");
+		}
+	}
+
+	private static void regrow(Ai ai) {
+		ai.broken = false;
+		ai.regrowAt = 0;
+		var max = ai.mob.getAttribute(Attribute.MAX_HEALTH);
+		if (max != null) {
+			ai.mob.setHealth(max.getValue());
+		}
+		MdLooks.partShown(ai.mob, true);
+		ai.foe.battle.run.broadcast(Component.text(ai.foe.name + " 재생!", NamedTextColor.RED));
+	}
+
+	/** After a clash: the original's "Clash Win" / "Clash Lose" effects of the enemy's skill and passives. */
+	static void clashResult(LivingEntity winner, LivingEntity loser) {
+		for (LivingEntity unit : new LivingEntity[] {winner, loser}) {
+			Ai ai = of(unit);
+			if (ai == null) {
+				continue;
+			}
+			String on = unit == winner ? "clash_win" : "clash_lose";
+			LivingEntity other = unit == winner ? loser : winner;
+			Player victim = other instanceof Player p ? p : null;
+			MdData.EnemySkill skill = ai.skillOf(Clash.cardOf(unit));
+			if (skill != null) {
+				apply(ai, skill.effects(), Set.of(on), victim, true);
+				for (JsonArray coin : skill.coinEffects()) {
+					apply(ai, coin, Set.of(on), victim, true);
+				}
+			}
+			Ai core = ai.core == null ? ai : of(ai.core);
+			if (core != null) {
+				passives(ai.foe.battle, core, on);
+			}
+		}
 	}
 }

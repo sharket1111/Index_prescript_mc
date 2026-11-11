@@ -1,0 +1,6 @@
+{
+ "parent": "index_prescript:item/rig/base/left_arm_wide",
+ "textures": {
+  "skin": "index_prescript:item/rig/md_heishou"
+ }
+}
