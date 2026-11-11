@@ -59,12 +59,24 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		getServer().getPluginManager().registerEvents(new MimicryWeapon(), this);
 		getServer().getPluginManager().registerEvents(new Bleed(), this);
 		getServer().getPluginManager().registerEvents(new Rupture(), this);
+		MdMeta.load(this);
+		MdData.load(this);
+		MdCommand mirror = new MdCommand();
+		getServer().getPluginManager().registerEvents(mirror, this);
+		getServer().getPluginManager().registerEvents(new MdGifts(), this);
+		getServer().getPluginManager().registerEvents(new MdGui.Events(), this);
+		var md = getCommand("md");
+		if (md != null) {
+			md.setExecutor(mirror);
+			md.setTabCompleter(mirror);
+		}
 		getServer().getPluginManager().registerEvents(new MimicrySkill.Events(), this);
 		// Made in the mod studio: keyframe animations, particle effects and skill numbers, reloadable in game.
 		getLogger().info(SkillTuning.load(this));
 		StudioEffects.load(this);
 		Animations.load(this);
 		Bukkit.getScheduler().runTaskTimer(this, Animations::tick, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, MdRun::tickAll, 1L, 1L);
 		Bukkit.getScheduler().runTask(this, ClashDummy::scan);
 		Bukkit.getScheduler().runTaskTimer(this, PrescriptTracker::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Laevatein::tick, 1L, 1L);
@@ -99,6 +111,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 	@Override
 	public void onDisable() {
 		Animations.stop(null);
+		MdRun.stopAll();
 		RenoirSkill.endAll();
 		BlackGodRevive.endAll();
 		BlackGodSkill.endAll();

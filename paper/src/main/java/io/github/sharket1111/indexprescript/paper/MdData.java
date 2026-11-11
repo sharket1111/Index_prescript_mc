@@ -1,0 +1,261 @@
+package io.github.sharket1111.indexprescript.paper;
+
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+
+/**
+ * The Mirror Dungeon's data, made from the original's by tools/md_data.py and
+ * bundled in the jar (md/*.json): E.G.O Gifts with their effects, Theme Packs
+ * with their enemies and bosses, Abnormality events, and Mounting Trials.
+ */
+final class MdData {
+	static final List<String> KEYWORDS = List.of("burn", "bleed", "tremor", "rupture", "sinking", "poise", "charge", "slash", "pierce", "blunt");
+	static final Map<String, String> KEYWORD_KO = Map.of("burn", "화상", "bleed", "출혈", "tremor", "진동", "rupture", "파열", "sinking", "침잠",
+			"poise", "호흡", "charge", "충전", "slash", "참격", "pierce", "관통", "blunt", "타격");
+	static final Map<String, String> SIN_KO = Map.of("wrath", "분노", "lust", "색욕", "sloth", "나태", "gluttony", "탐식", "gloom", "우울",
+			"pride", "오만", "envy", "질투");
+	/** Gift tiers as numbers (V and EX count as 5). */
+	static final Map<String, Integer> TIER = Map.of("I", 1, "II", 2, "III", 3, "IV", 4, "V", 5, "EX", 5);
+
+	record Level(String text, JsonArray effects, List<String> ko, boolean generic) {
+	}
+
+	record Gift(String id, String name, String tier, int tierNumber, String sin, String keyword, int cost, int enhance, boolean themeOnly,
+			boolean fusionOnly, List<Level> levels) {
+		/** Can turn up in shops, rewards and random fusions (not theme-only, not a fixed fusion's result, not priceless). */
+		boolean common() {
+			return !themeOnly && !fusionOnly && cost < 999 && tierNumber <= 4;
+		}
+
+		Level level(int n) {
+			return levels.get(Math.max(0, Math.min(levels.size() - 1, n)));
+		}
+
+		String keywordKo() {
+			return KEYWORD_KO.getOrDefault(keyword, "범용");
+		}
+	}
+
+	record Enemy(String name, String risk) {
+	}
+
+	record Theme(String id, String name, String category, int[] normal, int[] hard, int length, String layout, String boss,
+			List<Enemy> bosses, Map<String, List<Enemy>> enemies, int color, String keyword, String sin, List<String> unique, List<String> events) {
+		boolean on(int floor, boolean hardMode) {
+			int[] range = hardMode ? hard : normal;
+			return range != null && floor >= range[0] && floor <= range[1];
+		}
+	}
+
+	record Result(String what, int amount, String who, String gift, List<String> gifts) {
+	}
+
+	record Check(String prompt, List<String> sins, int adv, int disadv, String passText, List<Result> pass, String passResult, String failText,
+			List<Result> fail, String failResult) {
+	}
+
+	record Choice(String label, String desc, String story, List<Result> result, String resultText, Check check) {
+	}
+
+	record Event(String id, String name, String abnormality, String kr, String theme, String story, List<Choice> choices) {
+	}
+
+	record Trial(int floor, String name, String text, Map<String, Double> stats) {
+	}
+
+	private static final Map<String, Gift> GIFTS = new LinkedHashMap<>();
+	private static final Map<String, Theme> THEMES = new LinkedHashMap<>();
+	private static final Map<String, Event> EVENTS = new LinkedHashMap<>();
+	private static final List<Trial> TRIALS = new ArrayList<>();
+	/** Fixed fusions: the ingredients (as a set) and the result. */
+	private static final Map<java.util.Set<String>, String> RECIPES = new LinkedHashMap<>();
+
+	private MdData() {
+	}
+
+	static void load(IndexPrescriptPlugin plugin) {
+		Gson gson = new Gson();
+		try {
+			for (JsonElement e : read(plugin, gson, "gifts").getAsJsonArray("gifts")) {
+				JsonObject o = e.getAsJsonObject();
+				List<Level> levels = new ArrayList<>();
+				for (JsonElement l : o.getAsJsonArray("levels")) {
+					JsonObject lo = l.getAsJsonObject();
+					List<String> ko = new ArrayList<>();
+					lo.getAsJsonArray("ko").forEach(k -> ko.add(k.getAsString()));
+					levels.add(new Level(lo.get("text").getAsString(), lo.getAsJsonArray("effects"), ko, lo.has("generic")));
+				}
+				String tier = o.get("tier").getAsString();
+				Gift gift = new Gift(o.get("id").getAsString(), o.get("name").getAsString(), tier, TIER.getOrDefault(tier, 1), str(o, "sin", "wrath"),
+						str(o, "keyword", "none"), o.get("cost").getAsInt(), o.get("enhance").getAsInt(), o.get("theme_only").getAsBoolean(),
+						o.has("fusion_only") && o.get("fusion_only").getAsBoolean(), levels);
+				GIFTS.put(gift.id(), gift);
+			}
+			for (JsonElement e : read(plugin, gson, "events").getAsJsonArray("events")) {
+				Event ev = event(e.getAsJsonObject());
+				EVENTS.put(ev.id(), ev);
+			}
+			for (JsonElement e : read(plugin, gson, "themes").getAsJsonArray("themes")) {
+				JsonObject o = e.getAsJsonObject();
+				Map<String, List<Enemy>> enemies = new LinkedHashMap<>();
+				for (Map.Entry<String, JsonElement> pool : o.getAsJsonObject("enemies").entrySet()) {
+					enemies.put(pool.getKey(), enemies(pool.getValue().getAsJsonArray()));
+				}
+				List<String> unique = strings(o.getAsJsonArray("unique"));
+				Theme theme = new Theme(o.get("id").getAsString(), o.get("name").getAsString(), o.get("category").getAsString(), range(o.get("normal")),
+						range(o.get("hard")), o.get("length").getAsInt(), o.get("layout").getAsString(), o.get("boss").getAsString(),
+						enemies(o.getAsJsonArray("bosses")), enemies, Integer.parseInt(o.get("color").getAsString().substring(1), 16), str(o, "keyword", null),
+						str(o, "sin", null), unique, strings(o.getAsJsonArray("events")));
+				THEMES.put(theme.id(), theme);
+			}
+			for (JsonElement e : read(plugin, gson, "trials").getAsJsonArray("trials")) {
+				JsonObject o = e.getAsJsonObject();
+				Map<String, Double> stats = new LinkedHashMap<>();
+				o.getAsJsonObject("stats").entrySet().forEach(s -> stats.put(s.getKey(), s.getValue().getAsDouble()));
+				TRIALS.add(new Trial(o.get("floor").getAsInt(), o.get("name").getAsString(), o.get("text").getAsString(), stats));
+			}
+			for (JsonElement e : read(plugin, gson, "recipes").getAsJsonArray("recipes")) {
+				JsonObject o = e.getAsJsonObject();
+				RECIPES.put(java.util.Set.copyOf(strings(o.getAsJsonArray("ingredients"))), o.get("result").getAsString());
+			}
+			plugin.getLogger().info("Mirror Dungeon: " + RECIPES.size() + " fusion recipes, " + GIFTS.size() + " gifts, " + THEMES.size() + " theme packs, " + EVENTS.size() + " events, "
+					+ TRIALS.size() + " trials");
+		} catch (RuntimeException | java.io.IOException e) {
+			plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could not read the Mirror Dungeon data", e);
+		}
+	}
+
+	private static JsonObject read(IndexPrescriptPlugin plugin, Gson gson, String name) throws java.io.IOException {
+		try (InputStream in = plugin.getResource("md/" + name + ".json")) {
+			if (in == null) {
+				throw new java.io.IOException("md/" + name + ".json missing from the jar");
+			}
+			return gson.fromJson(new InputStreamReader(in, StandardCharsets.UTF_8), JsonObject.class);
+		}
+	}
+
+	private static String str(JsonObject o, String key, String fallback) {
+		return o.has(key) && !o.get(key).isJsonNull() ? o.get(key).getAsString() : fallback;
+	}
+
+	private static List<String> strings(JsonArray array) {
+		List<String> out = new ArrayList<>();
+		if (array != null) {
+			array.forEach(x -> out.add(x.getAsString()));
+		}
+		return out;
+	}
+
+	private static int[] range(JsonElement e) {
+		if (e == null || e.isJsonNull()) {
+			return null;
+		}
+		JsonArray a = e.getAsJsonArray();
+		return new int[] {a.get(0).getAsInt(), a.get(1).getAsInt()};
+	}
+
+	private static List<Enemy> enemies(JsonArray array) {
+		List<Enemy> out = new ArrayList<>();
+		if (array != null) {
+			for (JsonElement x : array) {
+				JsonObject o = x.getAsJsonObject();
+				out.add(new Enemy(o.get("name").getAsString(), str(o, "risk", "human")));
+			}
+		}
+		return out;
+	}
+
+	private static List<Result> results(JsonArray array) {
+		List<Result> out = new ArrayList<>();
+		if (array == null) {
+			return out;
+		}
+		for (JsonElement x : array) {
+			JsonObject o = x.getAsJsonObject();
+			out.add(new Result(o.get("do").getAsString(), o.has("amount") ? o.get("amount").getAsInt() : 0, str(o, "who", "all"), str(o, "name", null),
+					o.has("gifts") ? strings(o.getAsJsonArray("gifts")) : List.of()));
+		}
+		return out;
+	}
+
+	private static Event event(JsonObject o) {
+		List<Choice> choices = new ArrayList<>();
+		for (JsonElement c : o.getAsJsonArray("choices")) {
+			JsonObject co = c.getAsJsonObject();
+			Check check = null;
+			if (co.has("check")) {
+				JsonObject k = co.getAsJsonObject("check");
+				JsonObject pass = k.getAsJsonObject("pass");
+				JsonObject fail = k.getAsJsonObject("fail");
+				check = new Check(str(k, "prompt", ""), strings(k.getAsJsonArray("sins")), k.get("adv").getAsInt(),
+						k.has("disadv") && !k.get("disadv").isJsonNull() ? k.get("disadv").getAsInt() : k.get("adv").getAsInt() + 8,
+						str(pass, "text", ""), results(pass.getAsJsonArray("result")), str(pass, "result_text", ""), str(fail, "text", ""),
+						results(fail.getAsJsonArray("result")), str(fail, "result_text", ""));
+			}
+			choices.add(new Choice(str(co, "label", ""), str(co, "desc", ""), str(co, "story", ""), results(co.getAsJsonArray("result")),
+					str(co, "result_text", ""), check));
+		}
+		return new Event(o.get("id").getAsString(), o.get("name").getAsString(), str(o, "abnormality", null), str(o, "kr", ""), str(o, "theme", null),
+				str(o, "story", ""), choices);
+	}
+
+	// --- lookups -----------------------------------------------------------------------------
+
+	static Gift gift(String id) {
+		return GIFTS.get(id);
+	}
+
+	/** A gift by its name as events write it (quotes and "(MD)" vary). */
+	static Gift giftByName(String name) {
+		String id = name.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "_").replaceAll("^_|_$", "");
+		Gift gift = GIFTS.get(id);
+		return gift != null ? gift : GIFTS.get(id + "_md");
+	}
+
+	static List<Gift> gifts() {
+		return Collections.unmodifiableList(new ArrayList<>(GIFTS.values()));
+	}
+
+	static Theme theme(String id) {
+		return THEMES.get(id);
+	}
+
+	static List<Theme> themes() {
+		return List.copyOf(THEMES.values());
+	}
+
+	static Event event(String id) {
+		return EVENTS.get(id);
+	}
+
+	/** Events that belong to no Theme Pack (the Abnormality events). */
+	static List<Event> commonEvents() {
+		return EVENTS.values().stream().filter(e -> e.theme() == null).toList();
+	}
+
+	/** The fixed fusion result for these ingredients, or null. */
+	static Gift recipe(java.util.Collection<String> ingredients) {
+		String result = RECIPES.get(java.util.Set.copyOf(ingredients));
+		return result == null ? null : GIFTS.get(result);
+	}
+
+	static List<Trial> trials(int floor) {
+		return TRIALS.stream().filter(t -> t.floor() == floor).toList();
+	}
+
+	static boolean loaded() {
+		return !GIFTS.isEmpty() && !THEMES.isEmpty();
+	}
+}

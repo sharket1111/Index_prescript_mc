@@ -10,6 +10,10 @@ commands:
     usage: /indexprescript <give|laevatein|pack> ...
     aliases: [ip]
     permission: indexprescript.command
+  md:
+    description: Mirror Dungeon (alone or as a party).
+    usage: /md [초대|수락|시작|나가기|기프트]
+    aliases: [거울던전, mirror]
 permissions:
   indexprescript.command:
     description: Use /indexprescript give.

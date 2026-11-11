@@ -210,7 +210,7 @@ final class UnitHud {
 		Component line = Component.empty();
 		int shown = 0;
 		int[] values = new int[14];
-		values[BURN] = (player.getFireTicks() + 19) / 20;
+		values[BURN] = Math.max((player.getFireTicks() + 19) / 20, state.burnPotency(now));
 		values[BLEED] = Math.max(state.bleedPotency(now), level(player, PotionEffectType.WITHER));
 		values[POISE] = state.poisePotency(now);
 		values[SINKING] = state.sinkingPotency(now);

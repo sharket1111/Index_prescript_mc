@@ -32,3 +32,13 @@ bedrock-pack:
 # Body motions for the weapon skills (plugins/IndexPrescript/animations/skill_*.json, editable in the mod studio).
 # While a skill plays, a player-shaped rig stands in for the wielder and moves its arms and legs.
 skill-motions: true
+
+# Mirror Dungeon (/md): five floors after Limbus Company's, alone or as a party.
+mirror-dungeon:
+  # Most players in one party.
+  party-size: 4
+  # Commands run for each member when they use one of their 3 weekly reward claims
+  # (at the end of a run with at least one floor cleared). %player% and %floors% are filled in.
+  rewards:
+    normal: []
+    hard: []

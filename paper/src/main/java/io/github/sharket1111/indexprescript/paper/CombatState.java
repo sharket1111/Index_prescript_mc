@@ -41,6 +41,10 @@ final class CombatState {
 	private int tremorCount;
 	private long tremorDecayAt;
 
+	private int burnPotency;
+	private int burnCount;
+	private long burnDecayAt;
+
 	private int rupturePotency;
 	private int ruptureCount;
 	private long ruptureUntil;
@@ -227,6 +231,51 @@ final class CombatState {
 		}
 	}
 
+	// --- Burn (the original's, used in the Mirror Dungeon): at each turn end the unit takes fixed
+	// damage by potency and the count drops by one. Elsewhere the plugin shows Burn as fire.
+
+	void addBurn(int potency, int count, long now) {
+		if (burnCount == 0) {
+			burnDecayAt = now + TURN_TICKS;
+		}
+		burnPotency = Math.min(MAX_COUNT, burnPotency + potency);
+		burnCount = Math.min(MAX_COUNT, Math.max(burnCount + count, burnPotency > 0 ? 1 : 0));
+	}
+
+	int burnPotency(long now) {
+		return burnCount > 0 ? burnPotency : 0;
+	}
+
+	int burnCount(long now) {
+		return burnCount;
+	}
+
+	/** The Burn damage due at the turn ends passed since last asked (0 for none); counts drop as they pass. */
+	int tickBurn(long now) {
+		int damage = 0;
+		while (burnCount > 0 && now >= burnDecayAt) {
+			damage += burnPotency;
+			burnCount--;
+			burnDecayAt += TURN_TICKS;
+		}
+		if (burnCount == 0) {
+			burnPotency = 0;
+		}
+		return damage;
+	}
+
+	/** Burn set off at once (an effect "activates Burn"): its damage now, one count used. */
+	int activateBurn() {
+		if (burnCount <= 0) {
+			return 0;
+		}
+		int damage = burnPotency;
+		if (--burnCount == 0) {
+			burnPotency = 0;
+		}
+		return damage;
+	}
+
 	// --- Rupture: each hit taken deals extra fixed damage by potency and uses up one count (see Rupture).
 	// It wears off RUPTURE_TICKS after it was last given or triggered.
 
@@ -381,7 +430,7 @@ final class CombatState {
 	}
 
 	private boolean idle(long now) {
-		if (poiseCount(now) > 0 || tremorCount(now) > 0 || rupturePotency(now) > 0 || chargeCount(now) > 0 || chargeMax != DEFAULT_MAX_CHARGE || bleedPotency(now) > 0 || (sinkingCount > 0 && now < sinkingUntil) || now < staggerResetAt || staggered(now)
+		if (poiseCount(now) > 0 || tremorCount(now) > 0 || burnCount > 0 || rupturePotency(now) > 0 || chargeCount(now) > 0 || chargeMax != DEFAULT_MAX_CHARGE || bleedPotency(now) > 0 || (sinkingCount > 0 && now < sinkingUntil) || now < staggerResetAt || staggered(now)
 				|| attackLevel(now) > 0 || defenseDown(now) > 0) {
 			return false;
 		}
