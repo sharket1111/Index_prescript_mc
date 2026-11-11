@@ -244,7 +244,7 @@ final class Clash {
 		Side side = new Side(user, card, target, start);
 		side.panel = panel(user);
 		Player defender = card.clashes() && target instanceof Player player && canAnswer(player) ? player : null;
-		if (defender == null && card.clashes() && ClashDummy.is(target) && !MimicrySkill.sealed(target) && !DUELS.containsKey(target.getUniqueId())
+		if (defender == null && card.clashes() && answers(target) && !MimicrySkill.sealed(target) && !DUELS.containsKey(target.getUniqueId())
 				&& !RUNS.containsKey(target.getUniqueId())) {
 			// A clash dummy answers with its fixed skill a moment later.
 			Duel duel = new Duel(side, null);
@@ -268,6 +268,53 @@ final class Clash {
 				Title.Times.times(Duration.ZERO, Duration.ofMillis(1600), Duration.ofMillis(300))));
 		defender.playSound(defender.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.PLAYERS, 1.0F, 1.6F);
 		draw(side);
+		return true;
+	}
+
+	/** Units that answer a skill on their own: clash dummies, and Mirror Dungeon enemies with a skill ready. */
+	private static boolean answers(LivingEntity target) {
+		return ClashDummy.is(target) || target != null && MdFoes.canAnswer(target);
+	}
+
+	/** The skill card {@code unit} is using now (its attack or clash), or null. */
+	static SkillCard cardOf(LivingEntity unit) {
+		Side side = RUNS.get(unit.getUniqueId());
+		if (side != null) {
+			return side.card;
+		}
+		Duel duel = DUELS.get(unit.getUniqueId());
+		if (duel != null) {
+			return duel.attacker.player == unit ? duel.attacker.card : duel.answer != null ? duel.answer.card : null;
+		}
+		return null;
+	}
+
+	/**
+	 * A skill from a unit that is not a player (a Mirror Dungeon enemy) aimed at
+	 * {@code target}: a target holding one of the plugin's weapons gets the
+	 * usual 2 seconds to answer and clash; otherwise it goes off unopposed.
+	 */
+	static boolean requestFrom(LivingEntity user, Player target, SkillCard card, Consumer<Outcome> start) {
+		if (DUELS.containsKey(user.getUniqueId()) || RUNS.containsKey(user.getUniqueId())) {
+			return false;
+		}
+		Side side = new Side(user, card, target, start);
+		side.panel = panel(user);
+		if (card.clashes() && canAnswer(target)) {
+			Duel duel = new Duel(side, target);
+			DUELS.put(user.getUniqueId(), duel);
+			DUELS.put(target.getUniqueId(), duel);
+			Component name = user.customName() != null ? user.customName() : Component.text(user.getName());
+			target.showTitle(Title.title(Component.text("합!", NamedTextColor.GOLD).decorate(TextDecoration.BOLD),
+					Component.text("2초 안에 스킬을 쓰면 [" + card.name() + "]와 합을 겨룹니다", NamedTextColor.YELLOW),
+					Title.Times.times(Duration.ZERO, Duration.ofMillis(1600), Duration.ofMillis(300))));
+			target.sendActionBar(name.append(Component.text(" 의 [" + card.name() + "]", NamedTextColor.GOLD)));
+			target.playSound(target.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.PLAYERS, 1.0F, 1.6F);
+			draw(side);
+			return true;
+		}
+		draw(side);
+		launch(side, target);
 		return true;
 	}
 
@@ -435,7 +482,8 @@ final class Clash {
 				end(duel);
 				launch(a, a.target);
 			} else if (duel.tick >= DUMMY_ANSWER) {
-				duel.answer = new Side(dummy, ClashDummy.card(dummy), a.player, outcome -> ClashDummy.attack(dummy, outcome.target()));
+				duel.answer = ClashDummy.is(dummy) ? new Side(dummy, ClashDummy.card(dummy), a.player, outcome -> ClashDummy.attack(dummy, outcome.target()))
+						: new Side(dummy, MdFoes.answerCard(dummy), a.player, outcome -> MdFoes.attack(dummy, outcome.target()));
 				duel.answer.panel = panel(dummy);
 				duel.waiting = false;
 				duel.tick = 0;

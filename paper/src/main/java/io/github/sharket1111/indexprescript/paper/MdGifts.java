@@ -60,8 +60,7 @@ final class MdGifts implements Listener {
 			for (JsonElement e : gift.level(owned.getValue()).effects()) {
 				JsonObject effect = e.getAsJsonObject();
 				String when = effect.get("on").getAsString();
-				if (when.equals(on) || on.equals("hit") && when.equals("clash_win") && MdRun.rng().nextInt(4) == 0
-						|| on.equals("kill") && when.equals("stagger")) {
+				if (when.equals(on) || on.equals("hit") && when.equals("clash_win") && MdRun.rng().nextInt(4) == 0) {
 					run(run, effect, actor, target);
 				}
 			}
@@ -341,6 +340,10 @@ final class MdGifts implements Listener {
 		double mult = 1 + pct / 100.0;
 		if (foe != null) {
 			mult *= foe.taken * (foe.debuffUntil > now ? 1 + 0.1 * foe.defenseDown : 1);
+			// A staggered enemy takes double damage.
+			if (CombatState.of(target).staggered(now)) {
+				mult *= 2;
+			}
 		}
 		return mult;
 	}
@@ -358,7 +361,7 @@ final class MdGifts implements Listener {
 				* (1 - MdGrace.protection(run));
 		MdBattle.Foe foe = MdBattle.foe(attacker);
 		if (foe != null) {
-			mult *= foe.damage * (foe.debuffUntil > now ? Math.max(0.3, 1 - 0.1 * foe.offenseDown) : 1);
+			mult *= foe.damage * foe.rage * (foe.debuffUntil > now ? Math.max(0.3, 1 - 0.1 * foe.offenseDown) : 1);
 		}
 		return mult;
 	}
@@ -449,6 +452,7 @@ final class MdGifts implements Listener {
 			victim.getWorld().playSound(victim.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 0.8F, 1.2F);
 		}
 		event.setDamage(damage);
+		Bukkit.getScheduler().runTask(IndexPrescriptPlugin.instance(), () -> MdFoes.checkStagger(victim, attacker));
 		boolean fresh = !Damage.dealing() || Damage.countsAsHit();
 		Long last = LAST_HIT.get(attacker.getUniqueId());
 		if (!fresh || last != null && now - last < HIT_GAP) {

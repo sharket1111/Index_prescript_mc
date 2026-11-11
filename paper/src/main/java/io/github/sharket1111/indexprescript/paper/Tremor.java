@@ -74,6 +74,12 @@ final class Tremor {
 			return false;
 		}
 		state.consumeTremor(now);
+		if (MdFoes.of(target) != null) {
+			// A Mirror Dungeon enemy: the burst raises its next stagger threshold.
+			MdFoes.tremorBurst(target, potency);
+			play(target, potency);
+			return CombatState.of(target).staggered(now);
+		}
 		float threshold = (float) Math.max(10.0, maxHealth(target) * 0.5);
 		boolean staggered = state.addStagger(potency, threshold, now);
 		if (staggered) {

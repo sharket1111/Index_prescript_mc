@@ -50,6 +50,8 @@ final class MdBattle {
 		final String keyword;
 		final int potency;
 		final boolean boss;
+		/** The boss's enrage multiplier on its damage. */
+		double rage = 1.0;
 		int offenseDown;
 		int defenseDown;
 		long debuffUntil;
@@ -235,7 +237,9 @@ final class MdBattle {
 		if (keyword == null || keyword.equals("poise") || keyword.equals("charge")) {
 			keyword = List.of("burn", "bleed", "tremor", "rupture", "sinking").get(Math.floorMod(run.theme.id().hashCode() + mobs.size(), 5));
 		}
-		FOES.put(mob.getUniqueId(), new Foe(this, enemy.name(), damage, taken, keyword, 1 + run.floor / 2 + (kind == Kind.BOSS ? 2 : 0), kind == Kind.BOSS));
+		Foe foe = new Foe(this, enemy.name(), damage, taken, keyword, 1 + run.floor / 2 + (kind == Kind.BOSS ? 2 : 0), kind == Kind.BOSS);
+		FOES.put(mob.getUniqueId(), foe);
+		MdFoes.setup(this, mob, foe, kind);
 		mob.getWorld().spawnParticle(Particle.REVERSE_PORTAL, mob.getLocation().add(0, 1, 0), 40, 0.4, 0.8, 0.4, 0.05);
 		mobs.add(mob);
 		return mob;
@@ -271,17 +275,17 @@ final class MdBattle {
 		for (Player p : fighters) {
 			burn(p, now);
 		}
+		boolean turnStart = false;
 		if (now >= nextTurn) {
 			nextTurn = now + CombatState.TURN_TICKS;
 			if (turn > 0) {
 				MdGifts.trigger(run, "turn_end", null, null);
 			}
 			turn++;
+			turnStart = true;
 			MdGifts.trigger(run, "turn_start", null, null);
-			if (boss != null && boss.isValid() && turn % 2 == 0) {
-				slam(boss, fighters);
-			}
 		}
+		MdFoes.tick(this, fighters, now, turn, turnStart);
 		updateBar();
 		if (mobs.isEmpty()) {
 			if (wave < waves) {
@@ -313,24 +317,6 @@ final class MdBattle {
 		return best;
 	}
 
-	/** The boss strikes the ground: everyone near is hit and takes the Theme Pack's keyword. */
-	private void slam(LivingEntity boss, List<Player> players) {
-		Foe foe = foe(boss);
-		Location at = boss.getLocation();
-		at.getWorld().playSound(at, Sound.ENTITY_RAVAGER_ROAR, SoundCategory.HOSTILE, 1.4F, 0.8F);
-		at.getWorld().spawnParticle(Particle.EXPLOSION, at, 6, 2, 0.2, 2, 0);
-		at.getWorld().spawnParticle(Particle.DUST, at.clone().add(0, 0.3, 0), 120, 3, 0.1, 3, 0,
-				new Particle.DustOptions(org.bukkit.Color.fromRGB(run.theme.color()), 2.0F));
-		for (Player p : players) {
-			if (p.getLocation().distanceSquared(at) <= 25) {
-				Damage.deal(p, 4 * (foe == null ? 1 : foe.damage), boss, true);
-				if (foe != null) {
-					MdGifts.inflictKeyword(p, foe.keyword, foe.potency + 1, 1);
-				}
-			}
-		}
-	}
-
 	private void updateBar() {
 		if (bar == null) {
 			return;
@@ -356,10 +342,18 @@ final class MdBattle {
 		run.battleWon(type, eventGifts);
 	}
 
+	/** A boss calls {@code count} of the Theme Pack's plain enemies (no more than 8 enemies at once). */
+	void reinforce(int count) {
+		for (int i = 0; i < count && mobs.size() < 8; i++) {
+			spawn(pick("normal", "risky"), Kind.NORMAL);
+		}
+	}
+
 	void stop() {
 		over = true;
 		for (LivingEntity m : mobs) {
 			FOES.remove(m.getUniqueId());
+			MdFoes.forget(m);
 			m.remove();
 		}
 		mobs.clear();
@@ -394,5 +388,6 @@ final class MdBattle {
 
 	static void forget(LivingEntity entity) {
 		FOES.remove(entity.getUniqueId());
+		MdFoes.forget(entity);
 	}
 }
