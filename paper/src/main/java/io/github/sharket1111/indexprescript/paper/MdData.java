@@ -51,6 +51,25 @@ final class MdData {
 	record Enemy(String name, String risk) {
 	}
 
+	/** An original skill: power, coins, and effects as [on, act, status, potency, count] objects (skill-wide and per coin). */
+	record EnemySkill(String name, String sin, String type, int base, int coinPower, int coins, int weight, String text, List<String> coinText,
+			JsonArray effects, List<JsonArray> coinEffects) {
+		boolean attack() {
+			return type.equals("slash") || type.equals("pierce") || type.equals("blunt");
+		}
+	}
+
+	record Passive(String name, String text, JsonArray effects) {
+	}
+
+	/** An original enemy's numbers (Limbus Company Wiki): HP at a level, stagger thresholds (%), resistances, skills, passives. */
+	record EnemyData(String name, double hp, double hpGrowth, int level, int[] speed, int defense, List<Double> stagger, Map<String, Double> resist,
+			int maxActions, String risk, List<EnemySkill> skills, List<Passive> passives) {
+		double hpAt(int lv) {
+			return Math.max(1, hp + hpGrowth * (lv - level));
+		}
+	}
+
 	record Theme(String id, String name, String category, int[] normal, int[] hard, int length, String layout, String boss,
 			List<Enemy> bosses, Map<String, List<Enemy>> enemies, int color, String keyword, String sin, List<String> unique, List<String> events) {
 		boolean on(int floor, boolean hardMode) {
@@ -79,6 +98,7 @@ final class MdData {
 	private static final Map<String, Theme> THEMES = new LinkedHashMap<>();
 	private static final Map<String, Event> EVENTS = new LinkedHashMap<>();
 	private static final List<Trial> TRIALS = new ArrayList<>();
+	private static final Map<String, EnemyData> ENEMIES = new LinkedHashMap<>();
 	/** Fixed fusions: the ingredients (as a set) and the result. */
 	private static final Map<java.util.Set<String>, String> RECIPES = new LinkedHashMap<>();
 
@@ -126,11 +146,36 @@ final class MdData {
 				o.getAsJsonObject("stats").entrySet().forEach(s -> stats.put(s.getKey(), s.getValue().getAsDouble()));
 				TRIALS.add(new Trial(o.get("floor").getAsInt(), o.get("name").getAsString(), o.get("text").getAsString(), stats));
 			}
+			for (Map.Entry<String, JsonElement> e : read(plugin, gson, "enemies").getAsJsonObject("enemies").entrySet()) {
+				JsonObject o = e.getValue().getAsJsonObject();
+				List<EnemySkill> skills = new ArrayList<>();
+				for (JsonElement sk : o.getAsJsonArray("skills")) {
+					JsonObject k = sk.getAsJsonObject();
+					List<JsonArray> coinEffects = new ArrayList<>();
+					k.getAsJsonArray("coin_effects").forEach(c -> coinEffects.add(c.getAsJsonArray()));
+					skills.add(new EnemySkill(k.get("name").getAsString(), k.get("sin").getAsString(), k.get("type").getAsString(), k.get("base").getAsInt(),
+							k.get("coin_power").getAsInt(), k.get("coins").getAsInt(), k.get("weight").getAsInt(), k.get("text").getAsString(),
+							strings(k.getAsJsonArray("coin_text")), k.getAsJsonArray("effects"), coinEffects));
+				}
+				List<Passive> passives = new ArrayList<>();
+				for (JsonElement ps : o.getAsJsonArray("passives")) {
+					JsonObject k = ps.getAsJsonObject();
+					passives.add(new Passive(k.get("name").getAsString(), k.get("text").getAsString(), k.getAsJsonArray("effects")));
+				}
+				Map<String, Double> resist = new LinkedHashMap<>();
+				o.getAsJsonObject("resist").entrySet().forEach(r -> resist.put(r.getKey(), r.getValue().getAsDouble()));
+				List<Double> stagger = new ArrayList<>();
+				o.getAsJsonArray("stagger").forEach(x -> stagger.add(x.getAsDouble()));
+				JsonArray sp = o.getAsJsonArray("speed");
+				ENEMIES.put(e.getKey(), new EnemyData(e.getKey(), o.get("hp").getAsDouble(), o.get("hp_growth").getAsDouble(), o.get("level").getAsInt(),
+						new int[] {sp.get(0).getAsInt(), sp.size() > 1 ? sp.get(1).getAsInt() : sp.get(0).getAsInt()}, o.get("defense").getAsInt(), stagger,
+						resist, o.get("max_actions").getAsInt(), o.get("risk").getAsString(), skills, passives));
+			}
 			for (JsonElement e : read(plugin, gson, "recipes").getAsJsonArray("recipes")) {
 				JsonObject o = e.getAsJsonObject();
 				RECIPES.put(java.util.Set.copyOf(strings(o.getAsJsonArray("ingredients"))), o.get("result").getAsString());
 			}
-			plugin.getLogger().info("Mirror Dungeon: " + RECIPES.size() + " fusion recipes, " + GIFTS.size() + " gifts, " + THEMES.size() + " theme packs, " + EVENTS.size() + " events, "
+			plugin.getLogger().info("Mirror Dungeon: " + ENEMIES.size() + " enemies, " + RECIPES.size() + " fusion recipes, " + GIFTS.size() + " gifts, " + THEMES.size() + " theme packs, " + EVENTS.size() + " events, "
 					+ TRIALS.size() + " trials");
 		} catch (RuntimeException | java.io.IOException e) {
 			plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could not read the Mirror Dungeon data", e);
@@ -243,6 +288,10 @@ final class MdData {
 	/** Events that belong to no Theme Pack (the Abnormality events). */
 	static List<Event> commonEvents() {
 		return EVENTS.values().stream().filter(e -> e.theme() == null).toList();
+	}
+
+	static EnemyData enemy(String name) {
+		return ENEMIES.get(name);
 	}
 
 	/** The fixed fusion result for these ingredients, or null. */

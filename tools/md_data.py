@@ -539,6 +539,102 @@ def build_trials(sisyphe):
     return out
 
 
+# --- the original's enemies ------------------------------------------------------------------
+
+STATUS_RE = r"(Burn|Bleed|Tremor|Rupture|Sinking|Poise|Charge|Bind|Paralyze|Paralysis|Fragile|Damage Up|Protection|Power Up|Haste|Offense Level Up|Defense Level Up|Defense Level Down|Offense Level Down|Attack Power Up|Clash Power Up)"
+TRIGGERS = {"on hit": "hit", "heads hit": "heads", "tails hit": "tails", "on use": "use", "clash win": "clash_win", "clash lose": "clash_lose",
+            "on crit": "crit", "on kill": "kill", "on evade": "evade"}
+
+
+def coin_effects(text):
+    """A skill's or coin's text as actions: [trigger, act, status, potency, count, to]."""
+    out = []
+    for part in re.split(r"<br\s*/?>|\n", text):
+        m = re.search(r"\{\{SkillCon\|([^}|]+)\}\}", part)
+        trig = TRIGGERS.get(m.group(1).strip().lower(), m.group(1).strip().lower()) if m else "use"
+        c = clean(part)
+        for mm in re.finditer(r"(Inflict|Gain)\s+(\+)?(\d+)\s+" + STATUS_RE + r"(\s+Count)?", c, re.I):
+            act = mm.group(1).lower()
+            status = mm.group(4).lower().replace(" ", "_").replace("paralysis", "paralyze")
+            n = int(mm.group(3))
+            count = bool(mm.group(5)) or bool(mm.group(2))
+            out.append({"on": trig, "act": "inflict" if act == "inflict" else "gain", "status": status,
+                        "potency": 0 if count else n, "count": n if count else 0})
+        if re.search(r"Trigger Tremor Burst", c, re.I):
+            out.append({"on": trig, "act": "tremor_burst"})
+        mm = re.search(r"heal\s+(\d+)\s*(%)?\s*HP", c, re.I)
+        if mm:
+            out.append({"on": trig, "act": "heal", "amount": int(mm.group(1)), "pct": bool(mm.group(2))})
+    return out
+
+
+def num(v, default=0.0):
+    mm = re.search(r"-?\d+(?:\.\d+)?", (v or "").replace("+ ", "+").replace("- ", "-"))
+    return float(mm.group(0)) if mm else default
+
+
+def parse_enemy(body, enemies_by_id):
+    f = template_fields(body)
+    parts = [template_fields(x) for x in templates(body, "ABPage/Parts") + templates(body, "AbnormalitiesParts")]
+    stat = lambda k, d=None: f.get(k) if f.get(k) not in (None, "") else (parts[0].get(k) if parts and parts[0].get(k) not in (None, "") else d)
+    staggers = []
+    for i in range(1, 6):
+        v = stat("stagger%d" % i)
+        if v is not None and num(v, -999) > 0:
+            staggers.append(num(v))
+    speed = re.findall(r"\d+", stat("speed", "2~4") or "2~4")
+    skills = []
+    for sk in templates(body, "Skill"):
+        if sk.startswith("SkillCon") or not sk.startswith("Skill\n") and not sk.startswith("Skill|"):
+            continue
+        k = template_fields(sk)
+        effects = coin_effects(k.get("se", ""))
+        coins = int(num(k.get("coin"), 1)) or 1
+        coin_fx = [coin_effects(k.get("ce%d" % i, "")) for i in range(1, coins + 1)]
+        skills.append({"name": clean(k.get("name", "")), "sin": (k.get("sin") or "").lower(), "type": (k.get("type") or "").lower(),
+                       "base": int(num(k.get("spower"), 3)), "coin_power": int(num(k.get("cpower"), 2)), "coins": coins,
+                       "weight": int(num(k.get("atkweight"), 1)) or 1, "text": clean(k.get("se", "")),
+                       "coin_text": [clean(k.get("ce%d" % i, "")) for i in range(1, coins + 1)], "effects": effects, "coin_effects": coin_fx})
+    passives = []
+    for ps in templates(body, "Passive"):
+        bits = ps.split("|")
+        if len(bits) >= 3:
+            text = clean("|".join(bits[2:]))
+            low = text.lower()
+            when = "turn_start" if "start of the turn" in low or "turn start" in low else "turn_end" if "end of the turn" in low or "turn end" in low else None
+            effects = []
+            # Only passives on a turn's start or end, without other conditions, are played; the rest are shown as text.
+            if when and not re.search(r"\bif\b|for each|when |whenever", low):
+                for e in coin_effects(" " + "|".join(bits[2:])):
+                    e["on"] = when
+                    effects.append(e)
+            passives.append({"name": clean(bits[1]), "text": text, "effects": effects})
+    resist = {k: num(stat(k), 1.0) for k in ["slash", "pierce", "blunt", "wrath", "lust", "sloth", "gluttony", "gloom", "pride", "envy"]}
+    return {"name": clean(f.get("name", "")), "hp": num(f.get("hp") or stat("hp"), 50), "hp_growth": num(f.get("hpgrowth") or stat("hpgrowth"), 1),
+            "level": int(num(f.get("level") or stat("level"), 1)), "speed": [int(x) for x in speed[:2]] or [2, 4],
+            "defense": int(num(stat("defmod"), 0)), "stagger": staggers, "resist": resist, "max_actions": int(num(f.get("maxactions"), 1)) or 1,
+            "risk": (f.get("abnorisk") or "").split("-")[0].lower(), "skills": skills, "passives": passives}
+
+
+def build_enemies(dirs, names):
+    blocks = {}
+    for d in dirs:
+        if not os.path.isdir(d):
+            continue
+        for fn in sorted(os.listdir(d)):
+            text = open(os.path.join(d, fn), encoding="utf-8").read()
+            for tname in ("ENPage", "ABPage", "ABInfo", "AbnormalitiesInfo"):
+                for body in templates(text, tname):
+                    if body.startswith(tname + "/"):
+                        continue
+                    e = parse_enemy(body, None)
+                    if e["name"] and e["skills"] and e["name"] not in blocks:
+                        blocks[e["name"]] = e
+    out = {n: blocks[n] for n in names if n in blocks}
+    print("enemies", len(out), "of", len(names), "missing", sorted(set(names) - set(out))[:12])
+    return out
+
+
 def gid(name):
     return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
 
@@ -573,7 +669,9 @@ def main(raw):
     for g in gifts:
         g["fusion_only"] = g["id"] in results
     note = "From the Limbus Company Wiki (limbuscompany.wiki.gg), CC BY-SA 4.0. Generated by tools/md_data.py."
-    for name, data in (("gifts", gifts), ("themes", themes), ("events", events), ("trials", trials), ("recipes", recipes)):
+    names = sorted({b["name"] for t in themes for b in t["bosses"]} | {e["name"] for t in themes for pool in t["enemies"].values() for e in pool})
+    enemies = build_enemies([os.path.join(raw, "enemies"), os.path.join(raw, "enemies_tab")], names)
+    for name, data in (("gifts", gifts), ("themes", themes), ("events", events), ("trials", trials), ("recipes", recipes), ("enemies", enemies)):
         with open(os.path.join(OUT, name + ".json"), "w", encoding="utf-8") as fh:
             json.dump({"about": note, name: data}, fh, ensure_ascii=False, separators=(",", ":"))
 

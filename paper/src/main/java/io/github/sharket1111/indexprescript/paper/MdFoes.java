@@ -3,6 +3,7 @@ package io.github.sharket1111.indexprescript.paper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -16,68 +17,67 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.SmallFireball;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 
 /**
- * The Mirror Dungeon's enemies fight like the original's:
- * <ul>
- * <li><b>Skills and clashes.</b> Risky, focused, Abnormality and boss enemies
- * have skills with coins. They aim one at a member every few seconds; a member
- * holding one of the plugin's weapons has 2 seconds to answer with a skill and
- * clash (the plugin's own clash: coins, power, broken coins). Unanswered, the
- * enemy closes in and strikes coin by coin. They also answer the members'
- * skills aimed at them, like a clash dummy.</li>
- * <li><b>Boss patterns.</b> Each boss has three of seven patterns (fixed by its
- * name), each shown on the ground a second before it lands, every other turn,
- * and becomes enraged once at half health.</li>
- * <li><b>Stagger.</b> Enemies stagger as their health crosses thresholds
- * (50% for plain enemies; 75/50/25% for bosses): for a turn they cannot act
- * and take double damage. A Tremor Burst raises the next threshold by its
- * potency (%), so they stagger sooner. The name tag shows health and the next
- * threshold.</li>
- * </ul>
+ * The Mirror Dungeon's enemies, with the original's numbers (from the Limbus
+ * Company Wiki): every enemy uses its own skills (name, base power, coin
+ * power, coins, and each coin's effects such as "On Hit inflict 3 Bleed",
+ * "Heads Hit inflict Tremor", "Trigger Tremor Burst"), as often as the
+ * original lets it act in a turn; its guard and evade skills raise its
+ * defence for a moment. It aims a skill at a member, who may answer within 2
+ * seconds with one of the plugin's weapons and clash. Unanswered, it closes
+ * in and strikes coin by coin, each hit's damage following the power so far
+ * (a tenth of it in the plugin's health, raised or lowered by the level
+ * difference, as the original does). Enemies answer members' skills too.
+ * Passives on a turn's start or end are played. Stagger thresholds and
+ * resistances are the original's. Enemies the wiki has no numbers for get
+ * skills made for their Theme Pack's keyword.
  */
 final class MdFoes {
 	private static final Map<UUID, Ai> AI = new ConcurrentHashMap<>();
-
-	enum Pattern {
-		SLAM("대지 강타"), CHARGE("돌진"), SPIN("회전 베기"), VOLLEY("탄막"), SUMMON("소환"), LEAP("도약 강타"), NOVA("키워드 폭발");
-
-		final String ko;
-
-		Pattern(String ko) {
-			this.ko = ko;
-		}
-	}
+	/** The level the members count as against the enemies' levels (the original's Identity level cap in the Mirror Dungeon era). */
+	private static final int MEMBER_LEVEL = 65;
+	/** The original's triggers read as "when the coin hits". */
+	private static final Set<String> HIT = Set.of("hit", "on hit without cracking", "hit after clash win");
+	private static final Set<String> USE = Set.of("use", "combat start", "before attack");
 
 	static final class Ai {
 		final LivingEntity mob;
 		final MdBattle.Foe foe;
 		final MdBattle.Kind kind;
 		final List<SkillCard> cards = new ArrayList<>();
-		final List<Pattern> patterns = new ArrayList<>();
+		final List<MdData.EnemySkill> skills = new ArrayList<>();
+		final List<MdData.EnemySkill> defences = new ArrayList<>();
 		final List<Double> thresholds = new ArrayList<>();
 		long nextSkill;
 		boolean acting;
-		boolean enraged;
-		int patternIndex;
-		/** Health fraction at or under which the next stagger comes (Tremor raises it). */
-		double nextThreshold() {
-			return thresholds.isEmpty() ? -1 : thresholds.get(0);
-		}
 
 		Ai(LivingEntity mob, MdBattle.Foe foe, MdBattle.Kind kind) {
 			this.mob = mob;
 			this.foe = foe;
 			this.kind = kind;
+		}
+
+		/** Health fraction at or under which the next stagger comes (Tremor raises it). */
+		double nextThreshold() {
+			return thresholds.isEmpty() ? -1 : thresholds.get(0);
+		}
+
+		MdData.EnemySkill skillOf(SkillCard card) {
+			int i = cards.indexOf(card);
+			return i >= 0 && i < skills.size() ? skills.get(i) : null;
 		}
 	}
 
@@ -91,47 +91,62 @@ final class MdFoes {
 	// --- setting up -------------------------------------------------------------------------------
 
 	private static final Map<String, List<String>> NAMES = Map.of(
-			"burn", List.of("불꽃 베기", "잿더미", "작열", "타오르는 일격"),
-			"bleed", List.of("찢어발기기", "피의 연격", "난도질", "베어 가르기"),
-			"tremor", List.of("진동 강타", "울림", "땅 울리기", "떨림"),
-			"rupture", List.of("파쇄", "꿰뚫기", "균열", "부수기"),
-			"sinking", List.of("가라앉히기", "침전", "검은 물결", "잠식"));
-	private static final List<String> GENERIC = List.of("강타", "연속 공격", "돌진 베기", "내려치기");
+			"burn", List.of("불꽃 베기", "잿더미", "작열"),
+			"bleed", List.of("찢어발기기", "피의 연격", "난도질"),
+			"tremor", List.of("진동 강타", "울림", "땅 울리기"),
+			"rupture", List.of("파쇄", "꿰뚫기", "균열"),
+			"sinking", List.of("가라앉히기", "침전", "검은 물결"));
 
 	static void setup(MdBattle battle, LivingEntity mob, MdBattle.Foe foe, MdBattle.Kind kind) {
 		Ai ai = new Ai(mob, foe, kind);
-		int floor = Math.max(1, battle.run.floor);
-		switch (kind) {
-			case NORMAL -> ai.thresholds.add(0.5);
-			case RISKY -> ai.thresholds.add(0.6);
-			case FOCUSED -> ai.thresholds.addAll(List.of(0.65, 0.3));
-			case ABNO -> ai.thresholds.addAll(List.of(0.7, 0.4));
-			case BOSS -> ai.thresholds.addAll(List.of(0.75, 0.5, 0.25));
+		TextColor colour = TextColor.color(battle.run.theme.color());
+		MdData.EnemyData data = foe.data;
+		if (data != null) {
+			for (MdData.EnemySkill s : data.skills()) {
+				if (!s.attack()) {
+					ai.defences.add(s);
+					continue;
+				}
+				StringBuilder text = new StringBuilder(s.text().replace('\n', ' ').trim());
+				for (int i = 0; i < s.coinText().size(); i++) {
+					String c = s.coinText().get(i).replaceAll("\\s+", " ").trim();
+					if (!c.isEmpty()) {
+						text.append(text.length() > 0 ? " / " : "").append("코인").append(i + 1).append(": ").append(c);
+					}
+				}
+				int coins = Math.max(1, s.coins());
+				ai.skills.add(s);
+				ai.cards.add(new SkillCard(s.name(), colour, s.base(), s.coinPower(), coins, text.toString(), coins * 8 + 10, true, "N".repeat(coins)));
+			}
+			for (double t : data.stagger()) {
+				if (t > 0 && t < 100) {
+					ai.thresholds.add(t / 100.0);
+				}
+			}
+			ai.thresholds.sort((a, b) -> Double.compare(b, a));
 		}
-		if (kind != MdBattle.Kind.NORMAL) {
-			List<String> names = new ArrayList<>(NAMES.getOrDefault(foe.keyword, GENERIC));
-			names.addAll(GENERIC);
-			int count = kind == MdBattle.Kind.RISKY ? 1 : kind == MdBattle.Kind.BOSS ? 3 : 2;
-			int seed = Math.floorMod(foe.name.hashCode(), 97);
+		if (ai.cards.isEmpty()) {
+			// No numbers from the original: skills made for the Theme Pack's keyword.
+			ai.skills.clear();
+			int floor = Math.max(1, battle.run.floor);
+			List<String> names = NAMES.getOrDefault(foe.keyword, List.of("강타", "연속 공격", "내려치기"));
+			int count = kind == MdBattle.Kind.BOSS ? 3 : kind == MdBattle.Kind.NORMAL ? 1 : 2;
 			for (int i = 0; i < count; i++) {
-				int coins = kind == MdBattle.Kind.BOSS ? 3 + (i == 2 ? 1 : 0) : kind == MdBattle.Kind.RISKY ? 2 : 2 + i;
-				int base = (kind == MdBattle.Kind.BOSS ? 5 : kind == MdBattle.Kind.RISKY ? 3 : 4) + floor / 2 + i;
-				int power = (kind == MdBattle.Kind.BOSS ? 3 : 2) + floor / 3;
-				String types = kind == MdBattle.Kind.BOSS ? (i == 2 ? "RNRN" : "NRN") : "N".repeat(coins);
-				String name = names.get((seed + i * 3) % names.size());
-				ai.cards.add(new SkillCard(name, TextColor.color(battle.run.theme.color()), base, power, coins,
-						"적중 시 " + MdData.KEYWORD_KO.getOrDefault(foe.keyword, "") + " 위력 " + foe.potency, coins * 8 + 10, true, types));
+				int coins = kind == MdBattle.Kind.BOSS ? 3 : 2;
+				ai.cards.add(new SkillCard(names.get(i % names.size()), colour, 3 + floor / 2 + i, 2 + floor / 3, coins,
+						"적중 시 " + MdData.KEYWORD_KO.getOrDefault(foe.keyword, "") + " 위력 " + foe.potency, coins * 8 + 10, true, "N".repeat(coins)));
 			}
 		}
-		if (kind == MdBattle.Kind.BOSS) {
-			List<Pattern> all = new ArrayList<>(List.of(Pattern.values()));
-			int seed = Math.floorMod(foe.name.hashCode(), 1 << 20);
-			for (int i = 0; i < 3 && !all.isEmpty(); i++) {
-				ai.patterns.add(all.remove(seed % all.size()));
-				seed = seed / 7 + 13;
+		if (ai.thresholds.isEmpty() && data == null) {
+			switch (kind) {
+				case NORMAL -> ai.thresholds.add(0.5);
+				case RISKY -> ai.thresholds.add(0.6);
+				case FOCUSED -> ai.thresholds.addAll(List.of(0.65, 0.3));
+				case ABNO -> ai.thresholds.addAll(List.of(0.7, 0.4));
+				case BOSS -> ai.thresholds.addAll(List.of(0.75, 0.5, 0.25));
 			}
 		}
-		ai.nextSkill = CaduceusListener.now() + 60 + MdRun.rng().nextInt(60);
+		ai.nextSkill = CaduceusListener.now() + 40 + MdRun.rng().nextInt(80);
 		AI.put(mob.getUniqueId(), ai);
 		label(ai);
 	}
@@ -155,29 +170,23 @@ final class MdFoes {
 			if (now % 10 == 0) {
 				label(ai);
 			}
-			if (staggered || ai.acting) {
+			if (turnStart && turn > 1) {
+				passives(battle, ai, "turn_end");
+			}
+			if (turnStart) {
+				passives(battle, ai, "turn_start");
+			}
+			if (staggered || ai.acting || now < ai.nextSkill || Clash.busy(mob)) {
 				continue;
 			}
-			if (ai.kind == MdBattle.Kind.BOSS) {
-				double hp = health(mob);
-				if (!ai.enraged && hp <= 0.5) {
-					ai.enraged = true;
-					ai.foe.rage = 1.25;
-					mob.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, PotionEffect.INFINITE_DURATION, 0, false, false));
-					battle.run.broadcast(Component.text(ai.foe.name + "이(가) 광폭해졌어요! (주는 피해 +25%)", NamedTextColor.RED));
-					mob.getWorld().playSound(mob.getLocation(), Sound.ENTITY_WITHER_SPAWN, SoundCategory.HOSTILE, 0.8F, 1.2F);
-				}
-				if (turnStart && turn % 2 == 0 && !ai.patterns.isEmpty()) {
-					Pattern p = ai.patterns.get(ai.patternIndex++ % ai.patterns.size());
-					pattern(battle, ai, p, fighters);
-					continue;
-				}
+			// Now and then a guard or evade skill instead of an attack.
+			if (!ai.defences.isEmpty() && MdRun.rng().nextInt(100) < 18) {
+				defend(ai, ai.defences.get(MdRun.rng().nextInt(ai.defences.size())));
+				continue;
 			}
-			if (!ai.cards.isEmpty() && now >= ai.nextSkill && !Clash.busy(mob)) {
-				Player target = nearest(mob, fighters, 12);
-				if (target != null) {
-					useSkill(battle, ai, target);
-				}
+			Player target = nearest(mob, fighters, 14);
+			if (target != null) {
+				useSkill(battle, ai, target);
 			}
 		}
 	}
@@ -200,29 +209,52 @@ final class MdFoes {
 		return best;
 	}
 
+	/** Ticks between actions: a turn and a half shared out over as many actions as the original allows it (at least 2.5 s). */
 	private static int cooldown(Ai ai) {
-		return switch (ai.kind) {
-			case BOSS -> 120;
-			case FOCUSED, ABNO -> 170;
-			default -> 240;
-		};
+		int actions = ai.foe.data == null ? (ai.kind == MdBattle.Kind.BOSS ? 2 : 1) : Math.max(1, ai.foe.data.maxActions());
+		return Math.max(50, CombatState.TURN_TICKS * 3 / 2 / actions);
+	}
+
+	private static void defend(Ai ai, MdData.EnemySkill skill) {
+		long now = CaduceusListener.now();
+		ai.nextSkill = now + cooldown(ai);
+		ai.foe.guardUntil = now + 60;
+		ai.foe.evading = skill.type().equals("evade");
+		LivingEntity mob = ai.mob;
+		mob.getWorld().spawnParticle(ai.foe.evading ? Particle.CLOUD : Particle.ENCHANTED_HIT, mob.getLocation().add(0, 1, 0), 16, 0.4, 0.6, 0.4, 0.05);
+		mob.getWorld().playSound(mob.getLocation(), ai.foe.evading ? Sound.ENTITY_BREEZE_JUMP : Sound.ITEM_SHIELD_BLOCK, SoundCategory.HOSTILE, 0.8F, 1.0F);
+		apply(ai, skill.effects(), USE, null, true);
+		label(ai);
 	}
 
 	// --- skills ------------------------------------------------------------------------------------------
 
+	/** A skill by the original's weights (how many copies of it the enemy has). */
 	private static SkillCard nextCard(Ai ai) {
+		if (ai.skills.size() == ai.cards.size() && !ai.skills.isEmpty()) {
+			int total = 0;
+			for (MdData.EnemySkill s : ai.skills) {
+				total += Math.max(1, s.weight());
+			}
+			int roll = MdRun.rng().nextInt(total);
+			for (int i = 0; i < ai.skills.size(); i++) {
+				roll -= Math.max(1, ai.skills.get(i).weight());
+				if (roll < 0) {
+					return ai.cards.get(i);
+				}
+			}
+		}
 		return ai.cards.get(MdRun.rng().nextInt(ai.cards.size()));
 	}
 
 	private static void useSkill(MdBattle battle, Ai ai, Player target) {
 		SkillCard card = nextCard(ai);
-		ai.nextSkill = CaduceusListener.now() + cooldown(ai) + MdRun.rng().nextInt(40);
+		ai.nextSkill = CaduceusListener.now() + cooldown(ai) + MdRun.rng().nextInt(30);
 		ai.acting = true;
 		boolean started = Clash.requestFrom(ai.mob, target, card, outcome -> attack(battle, ai, card, outcome.target()));
 		if (!started) {
 			ai.acting = false;
 		} else {
-			// The clash (if any) or the attack ends the action; a safety release in case neither comes.
 			Bukkit.getScheduler().runTaskLater(IndexPrescriptPlugin.instance(), () -> ai.acting = false, Clash.WINDOW + card.ticks() + 60L);
 		}
 	}
@@ -243,7 +275,7 @@ final class MdFoes {
 		return card;
 	}
 
-	/** The enemy's skill goes off at {@code target}: it closes in and strikes coin by coin. */
+	/** The enemy's skill (an answer that won its clash) goes off at {@code target}. */
 	static void attack(LivingEntity unit, LivingEntity target) {
 		Ai ai = of(unit);
 		if (ai == null) {
@@ -258,7 +290,11 @@ final class MdFoes {
 			ai.acting = false;
 			return;
 		}
-		// Close in: appear at the target's side in a streak of the theme's colour.
+		MdData.EnemySkill skill = ai.skillOf(card);
+		if (skill != null) {
+			apply(ai, skill.effects(), USE, victim, true);
+		}
+		// Close in: appear beside the target in a streak of the theme's colour.
 		Vector dir = victim.getLocation().toVector().subtract(mob.getLocation().toVector()).setY(0);
 		if (dir.lengthSquared() > 4) {
 			Location to = victim.getLocation().clone().subtract(dir.normalize().multiply(1.6));
@@ -273,13 +309,16 @@ final class MdFoes {
 			@Override
 			public void run() {
 				if (!mob.isValid() || mob.isDead() || !victim.isOnline() || CombatState.of(mob).staggered(CaduceusListener.now()) || coin >= card.coins()) {
+					if (skill != null && coin >= card.coins()) {
+						apply(ai, skill.effects(), Set.of("attack end"), victim, true);
+					}
 					ai.acting = false;
 					cancel();
 					return;
 				}
 				if (tick % 8 == 4) {
 					if (Clash.coin(mob, coin)) {
-						strike(battle, ai, victim, card);
+						strike(battle, ai, victim, skill, coin, Clash.heads(mob, coin));
 					}
 					coin++;
 				}
@@ -288,160 +327,139 @@ final class MdFoes {
 		}.runTaskTimer(IndexPrescriptPlugin.instance(), 4L, 1L);
 	}
 
-	private static void strike(MdBattle battle, Ai ai, Player victim, SkillCard card) {
+	private static void strike(MdBattle battle, Ai ai, Player victim, MdData.EnemySkill skill, int coin, boolean heads) {
 		LivingEntity mob = ai.mob;
 		mob.swingMainHand();
 		Location at = victim.getLocation().add(0, 1, 0);
 		at.getWorld().spawnParticle(Particle.SWEEP_ATTACK, at, 1);
 		at.getWorld().spawnParticle(Particle.DUST, at, 14, 0.4, 0.5, 0.4, 0, new Particle.DustOptions(Color.fromRGB(battle.run.theme.color()), 1.4F));
-		at.getWorld().playSound(at, Sound.ENTITY_PLAYER_ATTACK_STRONG, SoundCategory.HOSTILE, 0.9F, 0.8F);
+		at.getWorld().playSound(at, heads ? Sound.ENTITY_PLAYER_ATTACK_CRIT : Sound.ENTITY_PLAYER_ATTACK_STRONG, SoundCategory.HOSTILE, 0.9F, 0.8F);
 		if (victim.getLocation().distanceSquared(mob.getLocation()) > 16 || battle.run.downed.contains(victim.getUniqueId())) {
 			return;
 		}
-		double amount = (2.0 + battle.run.floor * 0.6 + card.coinPower() * 0.3) * MdGifts.taken(battle.run, victim, mob);
-		Damage.deal(victim, amount, mob, true);
-		MdGifts.inflictKeyword(victim, ai.foe.keyword, ai.foe.potency, 1);
+		double amount;
+		if (skill != null) {
+			// The original: a coin's damage is the skill's power so far, raised or lowered by the level difference.
+			int power = Math.max(1, Clash.power(mob));
+			int diff = ai.foe.level - MEMBER_LEVEL;
+			double levelFactor = Math.max(0.2, 1 + diff / (double) (Math.abs(diff) + 25));
+			long now = CaduceusListener.now();
+			double up = ai.foe.buffUntil > now ? 1 + 0.1 * ai.foe.damageUp : 1;
+			amount = power / (double) TotalDamage.SCALE * levelFactor * up;
+		} else {
+			amount = 1.5 + battle.run.floor * 0.6;
+		}
+		amount *= MdGifts.taken(battle.run, victim, mob);
+		// Damage.deal multiplies by the coin's scale again; the power above already counts the heads.
+		Damage.deal(victim, amount / Math.max(0.1, Clash.scale(mob)), mob, true);
+		if (skill != null) {
+			apply(ai, skill.effects(), HIT, victim, heads);
+			if (coin < skill.coinEffects().size()) {
+				apply(ai, skill.coinEffects().get(coin), HIT, victim, heads);
+			}
+		} else {
+			MdGifts.inflictKeyword(victim, ai.foe.keyword, ai.foe.potency, 1);
+		}
 	}
 
-	// --- boss patterns --------------------------------------------------------------------------------------
+	/** Runs the effects whose trigger is one of {@code moments}; "heads"/"tails"/"crit" go with the coin's face on a hit. */
+	private static void apply(Ai ai, JsonArray effects, Set<String> moments, Player victim, boolean heads) {
+		boolean hit = moments == HIT;
+		for (JsonElement el : effects) {
+			JsonObject e = el.getAsJsonObject();
+			String on = e.get("on").getAsString();
+			boolean fits = moments.contains(on) || hit && (on.equals("heads") && heads || on.equals("crit") && heads || on.equals("tails") && !heads);
+			if (fits) {
+				effect(ai, e, victim);
+			}
+		}
+	}
 
-	private static void pattern(MdBattle battle, Ai ai, Pattern p, List<Player> fighters) {
-		LivingEntity boss = ai.mob;
-		ai.acting = true;
-		battle.run.broadcast(Component.text(ai.foe.name + ": ", NamedTextColor.RED).append(Component.text(p.ko, NamedTextColor.GOLD)));
-		boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_EVOKER_PREPARE_ATTACK, SoundCategory.HOSTILE, 1.2F, 0.7F);
-		Color colour = Color.fromRGB(battle.run.theme.color());
-		Player target = nearest(boss, fighters, 64);
-		Location centre = boss.getLocation();
-		Location aim = target == null ? centre : target.getLocation();
-		// The warning: where it will land, for a second.
-		new BukkitRunnable() {
-			int tick;
+	private static int num(JsonObject e, String key) {
+		return e.has(key) && !e.get(key).isJsonNull() ? e.get(key).getAsInt() : 0;
+	}
 
-			@Override
-			public void run() {
-				if (!boss.isValid() || CombatState.of(boss).staggered(CaduceusListener.now())) {
-					ai.acting = false;
-					cancel();
+	private static void effect(Ai ai, JsonObject e, Player victim) {
+		String act = e.get("act").getAsString();
+		LivingEntity mob = ai.mob;
+		switch (act) {
+			case "tremor_burst" -> {
+				if (victim != null) {
+					Tremor.burst(victim);
+				}
+			}
+			case "heal" -> {
+				var max = mob.getAttribute(Attribute.MAX_HEALTH);
+				double m = max == null ? mob.getHealth() : max.getValue();
+				boolean pct = e.has("pct") && e.get("pct").getAsBoolean();
+				double amount = pct ? m * num(e, "amount") / 100.0 : num(e, "amount") / (double) TotalDamage.SCALE;
+				if (amount > 0 && !mob.isDead()) {
+					mob.setHealth(Math.min(m, mob.getHealth() + amount));
+				}
+			}
+			case "inflict", "gain" -> {
+				if (!e.has("status") || e.get("status").isJsonNull()) {
 					return;
 				}
-				if (tick < 20) {
-					warn(p, boss, centre, aim, tick);
-				} else {
-					land(battle, ai, p, centre, aim, colour);
-					ai.acting = false;
-					cancel();
-				}
-				tick++;
-			}
-		}.runTaskTimer(IndexPrescriptPlugin.instance(), 0L, 1L);
-	}
-
-	private static void warn(Pattern p, LivingEntity boss, Location centre, Location aim, int tick) {
-		Particle.DustOptions red = new Particle.DustOptions(Color.fromRGB(0xE02020), 1.3F);
-		switch (p) {
-			case SLAM, SPIN, NOVA -> ring(boss.getLocation(), p == Pattern.SPIN ? 4.5 : p == Pattern.NOVA ? 8 : 5, red);
-			case CHARGE -> {
-				Vector d = aim.toVector().subtract(centre.toVector()).setY(0);
-				for (double s = 0; s < d.length(); s += 0.7) {
-					centre.getWorld().spawnParticle(Particle.DUST, centre.clone().add(d.clone().normalize().multiply(s)).add(0, 0.1, 0), 1, 0, 0, 0, 0, red);
+				String status = e.get("status").getAsString();
+				int potency = num(e, "potency");
+				int count = num(e, "count");
+				if (act.equals("gain")) {
+					gain(ai, status, Math.max(1, Math.max(potency, count)));
+				} else if (victim != null) {
+					inflict(victim, status, potency, count);
 				}
 			}
-			case LEAP -> ring(aim, 3.5, red);
-			case VOLLEY, SUMMON -> {
-				if (tick % 4 == 0) {
-					boss.getWorld().spawnParticle(Particle.WITCH, boss.getLocation().add(0, 2, 0), 10, 0.5, 0.5, 0.5, 0);
-				}
+			default -> {
 			}
 		}
 	}
 
-	private static void ring(Location at, double r, Particle.DustOptions dust) {
-		for (int i = 0; i < 28; i++) {
-			double a = i * Math.PI * 2 / 28;
-			at.getWorld().spawnParticle(Particle.DUST, at.clone().add(Math.cos(a) * r, 0.15, Math.sin(a) * r), 1, 0, 0, 0, 0, dust);
-		}
-	}
-
-	private static void land(MdBattle battle, Ai ai, Pattern p, Location centre, Location aim, Color colour) {
-		LivingEntity boss = ai.mob;
-		MdRun run = battle.run;
-		Particle.DustOptions dust = new Particle.DustOptions(colour, 2.0F);
-		switch (p) {
-			case SLAM -> {
-				boss.getWorld().spawnParticle(Particle.EXPLOSION, boss.getLocation(), 6, 2, 0.2, 2, 0);
-				hitAround(run, ai, boss.getLocation(), 5, 4.0, 1);
+	/** The enemy's own buffs: Damage Up and offence raise its damage, Protection and defence lower what it takes. */
+	private static void gain(Ai ai, String status, int amount) {
+		MdBattle.Foe foe = ai.foe;
+		long now = CaduceusListener.now();
+		switch (status) {
+			case "damage_up", "power_up", "attack_power_up", "offense_level_up", "clash_power_up" -> {
+				foe.damageUp = Math.min(10, (foe.buffUntil > now ? foe.damageUp : 0) + amount);
+				foe.buffUntil = now + CombatState.TURN_TICKS;
 			}
-			case SPIN -> {
-				for (int i = 0; i < 36; i++) {
-					double a = i * Math.PI / 18;
-					boss.getWorld().spawnParticle(Particle.SWEEP_ATTACK, boss.getLocation().add(Math.cos(a) * 2.5, 1, Math.sin(a) * 2.5), 1);
-				}
-				boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.HOSTILE, 1.4F, 0.6F);
-				hitAround(run, ai, boss.getLocation(), 4.5, 3.0, 1);
+			case "protection", "defense_level_up" -> {
+				foe.protection = Math.min(10, (foe.buffUntil > now ? foe.protection : 0) + amount);
+				foe.buffUntil = now + CombatState.TURN_TICKS;
 			}
-			case NOVA -> {
-				boss.getWorld().spawnParticle(Particle.DUST, boss.getLocation().add(0, 1, 0), 200, 4, 1, 4, 0, dust);
-				boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WARDEN_SONIC_BOOM, SoundCategory.HOSTILE, 0.8F, 1.2F);
-				for (Player pl : run.fighters()) {
-					if (pl.getLocation().distanceSquared(boss.getLocation()) <= 64) {
-						MdGifts.inflictKeyword(pl, ai.foe.keyword, ai.foe.potency + 3, 2);
-						Damage.deal(pl, 1.5 * MdGifts.taken(run, pl, boss), boss, true);
-					}
-				}
-			}
-			case CHARGE -> {
-				Vector d = aim.toVector().subtract(centre.toVector()).setY(0);
-				if (d.lengthSquared() < 0.01) {
-					return;
-				}
-				Location to = centre.clone().add(d.clone().normalize().multiply(Math.min(14, d.length() + 2)));
-				Effects.dashTrail(boss.getWorld(), centre.toVector(), to.toVector());
-				boss.teleport(to);
-				for (Player pl : run.fighters()) {
-					if (distanceToSegment(pl.getLocation().toVector(), centre.toVector(), to.toVector()) < 1.6) {
-						Damage.deal(pl, 4.0 * MdGifts.taken(run, pl, boss), boss, true);
-						pl.setVelocity(d.clone().normalize().multiply(0.9).setY(0.4));
-					}
-				}
-			}
-			case LEAP -> {
-				boss.teleport(aim);
-				boss.getWorld().spawnParticle(Particle.EXPLOSION, aim, 4, 1.5, 0.2, 1.5, 0);
-				boss.getWorld().playSound(aim, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 1.0F, 0.8F);
-				hitAround(run, ai, aim, 3.5, 4.5, 1);
-			}
-			case VOLLEY -> {
-				for (Player pl : run.fighters()) {
-					Vector v = pl.getEyeLocation().toVector().subtract(boss.getEyeLocation().toVector()).normalize();
-					for (int i = -1; i <= 1; i++) {
-						SmallFireball ball = boss.getWorld().spawn(boss.getEyeLocation().add(v), SmallFireball.class);
-						ball.setShooter(boss);
-						ball.setIsIncendiary(false);
-						ball.setDirection(v.clone().rotateAroundY(i * 0.18).multiply(0.6));
-					}
-				}
-				boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_BLAZE_SHOOT, SoundCategory.HOSTILE, 1.2F, 0.8F);
-			}
-			case SUMMON -> {
-				battle.reinforce(2);
-				boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_EVOKER_CAST_SPELL, SoundCategory.HOSTILE, 1.2F, 0.8F);
+			case "haste" -> ai.mob.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, CombatState.TURN_TICKS, Math.min(2, amount - 1)));
+			case "poise", "charge" -> MdGifts.inflictKeyword(ai.mob, status, amount, amount);
+			default -> {
 			}
 		}
 	}
 
-	private static double distanceToSegment(Vector p, Vector a, Vector b) {
-		Vector ab = b.clone().subtract(a).setY(0);
-		Vector ap = p.clone().subtract(a).setY(0);
-		double t = Math.max(0, Math.min(1, ap.dot(ab) / Math.max(1e-6, ab.lengthSquared())));
-		return a.clone().setY(0).add(ab.multiply(t)).distance(p.clone().setY(0));
+	/** A status on a member: the keywords through the plugin's own, Bind as Slowness, Paralyze as Weakness, Fragile and defence down as damage taken. */
+	private static void inflict(Player victim, String status, int potency, int count) {
+		int n = Math.max(1, Math.max(potency, count));
+		switch (status) {
+			case "burn", "bleed", "tremor", "rupture", "sinking" -> MdGifts.inflictKeyword(victim, status, potency, count);
+			case "bind" -> victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, CombatState.TURN_TICKS, Math.min(3, n - 1)));
+			case "paralyze" -> victim.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, CombatState.TURN_TICKS, Math.min(3, n - 1)));
+			case "fragile", "defense_level_down" -> MdGifts.debuff(victim, "fragile", status.equals("fragile") ? n : (n + 1) / 2);
+			case "offense_level_down" -> MdGifts.debuff(victim, "offense_down", n);
+			default -> {
+			}
+		}
 	}
 
-	private static void hitAround(MdRun run, Ai ai, Location at, double radius, double base, int keywordCount) {
-		for (Player pl : run.fighters()) {
-			if (pl.getLocation().distanceSquared(at) <= radius * radius) {
-				Damage.deal(pl, base * MdGifts.taken(run, pl, ai.mob), ai.mob, true);
-				MdGifts.inflictKeyword(pl, ai.foe.keyword, ai.foe.potency + 1, keywordCount);
+	private static void passives(MdBattle battle, Ai ai, String when) {
+		if (ai.foe.data == null || ai.mob.isDead()) {
+			return;
+		}
+		Player any = nearest(ai.mob, battle.run.players(), 64);
+		for (MdData.Passive p : ai.foe.data.passives()) {
+			for (JsonElement el : p.effects()) {
+				JsonObject e = el.getAsJsonObject();
+				if (e.get("on").getAsString().equals(when)) {
+					effect(ai, e, any);
+				}
 			}
 		}
 	}
@@ -467,6 +485,7 @@ final class MdFoes {
 		Stagger.apply(mob, now);
 		Effects.staggered(mob);
 		ai.acting = false;
+		ai.foe.guardUntil = 0;
 		MdRun run = ai.foe.battle.run;
 		run.broadcast(Component.text(ai.foe.name + " 흐트러짐! (1턴 동안 행동 불가 · 받는 피해 2배)", NamedTextColor.AQUA));
 		MdGifts.trigger(run, "stagger", by, mob);
@@ -483,18 +502,22 @@ final class MdFoes {
 		checkStagger(mob, null);
 	}
 
-	/** The name tag: name, health, and where the next stagger is. */
+	/** The name tag: name, level, health, and where the next stagger is. */
 	private static void label(Ai ai) {
 		LivingEntity mob = ai.mob;
 		int hp = (int) Math.round(health(mob) * 100);
 		Component name = Component.text(ai.foe.name, ai.kind == MdBattle.Kind.BOSS ? TextColor.color(0xE5574B)
 				: ai.kind == MdBattle.Kind.NORMAL ? NamedTextColor.WHITE : NamedTextColor.GOLD)
+				.append(Component.text(" Lv." + ai.foe.level, NamedTextColor.GRAY))
 				.append(Component.text("  ♥" + hp + "%", NamedTextColor.RED));
 		if (!ai.thresholds.isEmpty()) {
 			name = name.append(Component.text("  ⚡" + Math.round(ai.nextThreshold() * 100) + "%", NamedTextColor.AQUA));
 		}
-		if (CombatState.of(mob).staggered(CaduceusListener.now())) {
+		long now = CaduceusListener.now();
+		if (CombatState.of(mob).staggered(now)) {
 			name = name.append(Component.text("  흐트러짐", NamedTextColor.YELLOW));
+		} else if (ai.foe.guardUntil > now) {
+			name = name.append(Component.text(ai.foe.evading ? "  회피" : "  수비", NamedTextColor.GRAY));
 		}
 		mob.customName(name);
 	}

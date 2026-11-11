@@ -50,8 +50,16 @@ final class MdBattle {
 		final String keyword;
 		final int potency;
 		final boolean boss;
-		/** The boss's enrage multiplier on its damage. */
-		double rage = 1.0;
+		/** The original's numbers for this enemy (null for the few the wiki has none of), and its level here. */
+		MdData.EnemyData data;
+		int level;
+		/** Buffs from its own skills and passives, until the next turn: damage up and protection (stacks). */
+		int damageUp;
+		int protection;
+		long buffUntil;
+		/** Guarding or evading (a Guard/Evade skill) until this tick. */
+		long guardUntil;
+		boolean evading;
 		int offenseDown;
 		int defenseDown;
 		long debuffUntil;
@@ -131,6 +139,7 @@ final class MdBattle {
 		for (Player p : run.fighters()) {
 			p.playSound(p.getLocation(), Sound.EVENT_RAID_HORN, SoundCategory.HOSTILE, 0.6F, 1.4F);
 		}
+		announce();
 		MdGifts.trigger(run, "combat_start", null, null);
 	}
 
@@ -175,7 +184,8 @@ final class MdBattle {
 	private static final EntityType[] MONSTER = {EntityType.SPIDER, EntityType.CAVE_SPIDER, EntityType.WITCH, EntityType.ZOGLIN, EntityType.BLAZE};
 
 	private LivingEntity spawn(MdData.Enemy enemy, Kind kind) {
-		boolean human = enemy.risk().equals("human");
+		MdData.EnemyData data = MdData.enemy(enemy.name());
+		boolean human = data != null ? data.risk().isEmpty() : enemy.risk().equals("human");
 		EntityType entity;
 		if (kind == Kind.BOSS) {
 			entity = human ? List.of(EntityType.VINDICATOR, EntityType.WITHER_SKELETON, EntityType.PIGLIN_BRUTE).get(run.random.nextInt(3))
@@ -192,7 +202,10 @@ final class MdBattle {
 		LivingEntity mob = (LivingEntity) at.getWorld().spawnEntity(at, entity);
 		int players = Math.max(1, run.fighters().size());
 		double trialHp = MdGifts.trialStat(run, "max_hp") / 100.0;
-		double health = kind.health * (1 + 0.45 * (run.floor - 1)) * (run.floorHard ? 1.25 : 1.0) * (1 + 0.6 * (players - 1)) * (1 + trialHp);
+		int level = level();
+		// The original's HP at this level, in the plugin's scale (a heart point is 10 of the original's HP).
+		double health = data != null ? data.hpAt(level) / TotalDamage.SCALE * (1 + 0.6 * (players - 1)) * (1 + trialHp)
+				: kind.health * (1 + 0.45 * (run.floor - 1)) * (run.floorHard ? 1.25 : 1.0) * (1 + 0.6 * (players - 1)) * (1 + trialHp);
 		AttributeInstance max = mob.getAttribute(Attribute.MAX_HEALTH);
 		if (max != null) {
 			max.setBaseValue(Math.min(2048, health));
@@ -237,12 +250,44 @@ final class MdBattle {
 		if (keyword == null || keyword.equals("poise") || keyword.equals("charge")) {
 			keyword = List.of("burn", "bleed", "tremor", "rupture", "sinking").get(Math.floorMod(run.theme.id().hashCode() + mobs.size(), 5));
 		}
-		Foe foe = new Foe(this, enemy.name(), damage, taken, keyword, 1 + run.floor / 2 + (kind == Kind.BOSS ? 2 : 0), kind == Kind.BOSS);
+		Foe foe = new Foe(this, enemy.name(), data != null ? 1 + trialDamage / 100.0 : damage, taken, keyword, 1 + run.floor / 2 + (kind == Kind.BOSS ? 2 : 0),
+				kind == Kind.BOSS);
+		foe.data = data;
+		foe.level = level;
 		FOES.put(mob.getUniqueId(), foe);
 		MdFoes.setup(this, mob, foe, kind);
 		mob.getWorld().spawnParticle(Particle.REVERSE_PORTAL, mob.getLocation().add(0, 1, 0), 40, 0.4, 0.8, 0.4, 0.05);
 		mobs.add(mob);
 		return mob;
+	}
+
+	/** Enemy level on this floor: 41 on floor 1 up to 65 on floor 5, +5 on Hard, +1.5 for each Mounting Trial (their Level Boost). */
+	int level() {
+		return 35 + 6 * Math.max(1, run.floor) + (run.floorHard ? 5 : 0) + (int) Math.round(1.5 * run.trials.size());
+	}
+
+	/** Tells the party who they face: each enemy's weaknesses and resistances (the original's multipliers). */
+	private void announce() {
+		java.util.Set<String> seen = new java.util.HashSet<>();
+		for (LivingEntity m : mobs) {
+			Foe f = foe(m);
+			if (f == null || f.data == null || !seen.add(f.name)) {
+				continue;
+			}
+			StringBuilder weak = new StringBuilder();
+			StringBuilder strong = new StringBuilder();
+			for (Map.Entry<String, Double> r : f.data.resist().entrySet()) {
+				String ko = MdData.KEYWORD_KO.getOrDefault(r.getKey(), MdData.SIN_KO.getOrDefault(r.getKey(), r.getKey()));
+				if (r.getValue() > 1.0) {
+					weak.append(weak.length() == 0 ? "" : ", ").append(ko).append(" ×").append(r.getValue());
+				} else if (r.getValue() < 1.0) {
+					strong.append(strong.length() == 0 ? "" : ", ").append(ko).append(" ×").append(r.getValue());
+				}
+			}
+			run.broadcast(Component.text(f.name + " (Lv." + f.level + ")", NamedTextColor.WHITE)
+					.append(Component.text(weak.length() > 0 ? "  약점: " + weak : "", NamedTextColor.GREEN))
+					.append(Component.text(strong.length() > 0 ? "  내성: " + strong : "", NamedTextColor.RED)));
+		}
 	}
 
 	// --- running ----------------------------------------------------------------------------------

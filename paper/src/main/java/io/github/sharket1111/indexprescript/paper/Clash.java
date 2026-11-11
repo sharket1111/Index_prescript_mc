@@ -403,6 +403,18 @@ final class Clash {
 		return side == null || CaduceusListener.now() > side.until ? 1.0 : side.scale;
 	}
 
+	/** Whether coin {@code index} of the skill {@code unit} is striking with came up heads. */
+	static boolean heads(LivingEntity unit, int index) {
+		Side side = RUNS.get(unit.getUniqueId());
+		return side != null && index >= 0 && index < side.faces.length && side.faces[index] == 1;
+	}
+
+	/** The power of the skill {@code unit} is striking with, so far (0 when none). */
+	static int power(LivingEntity unit) {
+		Side side = RUNS.get(unit.getUniqueId());
+		return side == null ? 0 : side.runPower;
+	}
+
 	private static boolean canAnswer(Player player) {
 		if (!player.isOnline() || player.isDead() || player.getGameMode() == GameMode.SPECTATOR || DUELS.containsKey(player.getUniqueId())) {
 			return false;

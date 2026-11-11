@@ -21,6 +21,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
@@ -244,6 +245,11 @@ final class MdGifts implements Listener {
 		}
 	}
 
+	/** A debuff from an enemy's skill on a member until the next turn: "fragile" (+10% damage taken each), "offense_down" (-10% dealt each). */
+	static void debuff(Player p, String kind, int amount) {
+		buff(p, kind, amount);
+	}
+
 	private static int buffOf(Player p, String kind) {
 		Map<String, int[]> map = BUFFS.get(p.getUniqueId());
 		int[] b = map == null ? null : map.get(kind);
@@ -333,13 +339,25 @@ final class MdGifts implements Listener {
 				pct += e.get("pct").getAsDouble();
 			}
 		}
-		pct += 5 * (buffOf(p, "power") + buffOf(p, "damage")) + 2 * buffOf(p, "offense_level") + run.levels;
+		pct += 5 * (buffOf(p, "power") + buffOf(p, "damage")) + 2 * buffOf(p, "offense_level") + run.levels - 10 * buffOf(p, "offense_down");
 		pct += Math.min(20, CombatState.of(p).chargeCount(now));
 		pct += MdGrace.damageBonus(run);
 		MdBattle.Foe foe = MdBattle.foe(target);
 		double mult = 1 + pct / 100.0;
 		if (foe != null) {
 			mult *= foe.taken * (foe.debuffUntil > now ? 1 + 0.1 * foe.defenseDown : 1);
+			// The original's resistances: by the attack's kind (Slash/Pierce/Blunt) and by its sin.
+			if (foe.data != null) {
+				mult *= foe.data.resist().getOrDefault(kind.name().toLowerCase(java.util.Locale.ROOT), 1.0);
+				mult *= foe.data.resist().getOrDefault(MdEvent.sinOf(p), 1.0);
+			}
+			if (foe.buffUntil > now) {
+				mult *= Math.max(0.3, 1 - 0.1 * foe.protection);
+			}
+			// A Guard skill halves what it takes.
+			if (foe.guardUntil > now && !foe.evading) {
+				mult *= 0.5;
+			}
 			// A staggered enemy takes double damage.
 			if (CombatState.of(target).staggered(now)) {
 				mult *= 2;
@@ -357,11 +375,12 @@ final class MdGifts implements Listener {
 				pct += e.get("pct").getAsDouble();
 			}
 		}
+		pct += 10 * buffOf(p, "fragile");
 		double mult = (1 + pct / 100.0) * Math.max(0.3, 1 - 0.1 * buffOf(p, "protection") - 0.02 * buffOf(p, "defense_level") - 0.01 * run.levels)
 				* (1 - MdGrace.protection(run));
 		MdBattle.Foe foe = MdBattle.foe(attacker);
 		if (foe != null) {
-			mult *= foe.damage * foe.rage * (foe.debuffUntil > now ? Math.max(0.3, 1 - 0.1 * foe.offenseDown) : 1);
+			mult *= foe.damage * (foe.debuffUntil > now ? Math.max(0.3, 1 - 0.1 * foe.offenseDown) : 1);
 		}
 		return mult;
 	}
@@ -416,11 +435,9 @@ final class MdGifts implements Listener {
 				return;
 			}
 			if (!Damage.dealing()) {
-				event.setDamage(event.getDamage() * taken(run, hurt, source));
-			}
-			MdBattle.Foe foe = MdBattle.foe(source);
-			if (MdRun.rng().nextInt(100) < 35) {
-				Bukkit.getScheduler().runTask(IndexPrescriptPlugin.instance(), () -> inflictKeyword(hurt, foe.keyword, foe.potency, 1));
+				// Enemies hurt the members only with their skills (coin by coin), not with the vanilla mob's own swings.
+				event.setCancelled(true);
+				return;
 			}
 			Bukkit.getScheduler().runTask(IndexPrescriptPlugin.instance(), () -> trigger(run, "hurt", hurt, source));
 			return;
@@ -440,6 +457,25 @@ final class MdGifts implements Listener {
 			return;
 		}
 		long now = CaduceusListener.now();
+		MdBattle.Foe hitFoe = MdBattle.foe(victim);
+		// An Evade skill: half the hits miss.
+		if (hitFoe.guardUntil > now && hitFoe.evading && MdRun.rng().nextBoolean()) {
+			event.setCancelled(true);
+			victim.getWorld().spawnParticle(Particle.CLOUD, victim.getLocation().add(0, 1, 0), 6, 0.3, 0.4, 0.3, 0.02);
+			victim.getWorld().playSound(victim.getLocation(), Sound.ENTITY_BREEZE_JUMP, SoundCategory.HOSTILE, 0.6F, 1.4F);
+			return;
+		}
+		if (basic(event)) {
+			// In the Mirror Dungeon a plain attack (a swing or a shot, not a skill) always does exactly 1 damage.
+			event.setDamage(1.0);
+			Bukkit.getScheduler().runTask(IndexPrescriptPlugin.instance(), () -> MdFoes.checkStagger(victim, attacker));
+			Long lastBasic = LAST_HIT.get(attacker.getUniqueId());
+			if (lastBasic == null || now - lastBasic >= HIT_GAP) {
+				LAST_HIT.put(attacker.getUniqueId(), now);
+				Bukkit.getScheduler().runTask(IndexPrescriptPlugin.instance(), () -> trigger(run, "hit", attacker, victim));
+			}
+			return;
+		}
 		double damage = event.getDamage() * dealt(run, attacker, victim);
 		boolean crit = false;
 		CombatState state = CombatState.of(attacker);
@@ -473,6 +509,37 @@ final class MdGifts implements Listener {
 				trigger(run, "crit", attacker, victim);
 			}
 		});
+	}
+
+	/** A player's plain attack on a dungeon enemy: a swing, sweep or shot that is not the plugin's own (skill) damage. */
+	private static boolean basic(EntityDamageByEntityEvent event) {
+		if (Damage.dealing()) {
+			return false;
+		}
+		return switch (event.getCause()) {
+			case ENTITY_ATTACK, ENTITY_SWEEP_ATTACK, PROJECTILE -> true;
+			default -> false;
+		};
+	}
+
+	/**
+	 * Last word on a plain attack's damage, after every other listener (weapon
+	 * passives that scale the swing) and with armour and resistance taken out:
+	 * exactly 1.
+	 */
+	@SuppressWarnings("deprecation")
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+	public void onBasicHit(EntityDamageByEntityEvent event) {
+		if (!MdWorld.in(event.getEntity()) || !(event.getEntity() instanceof LivingEntity victim) || victim instanceof Player || MdBattle.foe(victim) == null
+				|| playerOf(event.getDamager()) == null || !basic(event)) {
+			return;
+		}
+		event.setDamage(1.0);
+		for (EntityDamageEvent.DamageModifier m : EntityDamageEvent.DamageModifier.values()) {
+			if (m != EntityDamageEvent.DamageModifier.BASE && event.isApplicable(m)) {
+				event.setDamage(m, 0);
+			}
+		}
 	}
 
 	@EventHandler(priority = EventPriority.HIGH)
