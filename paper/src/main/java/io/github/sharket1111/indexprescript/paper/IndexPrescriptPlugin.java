@@ -58,6 +58,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		getServer().getPluginManager().registerEvents(new ClashDummy(), this);
 		getServer().getPluginManager().registerEvents(new MimicryWeapon(), this);
 		getServer().getPluginManager().registerEvents(new Bleed(), this);
+		getServer().getPluginManager().registerEvents(new Rupture(), this);
 		getServer().getPluginManager().registerEvents(new MimicrySkill.Events(), this);
 		// Made in the mod studio: keyframe animations, particle effects and skill numbers, reloadable in game.
 		getLogger().info(SkillTuning.load(this));

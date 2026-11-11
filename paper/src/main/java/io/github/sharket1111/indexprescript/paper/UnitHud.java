@@ -33,7 +33,8 @@ import net.kyori.adventure.text.format.TextDecoration;
  * through the ground) the health in the original's scale (a heart point is
  * {@link TotalDamage#SCALE} HP), the Sanity circle, and below them
  * the statuses with their potency: Burn, Bleed, Poise, Sinking, Bind,
- * Paralysis, Fragile, Mang, Stagger, attack up, defense down, Tremor. Shown while the
+ * Paralysis, Fragile, Mang, Stagger, attack up, defense down, Tremor, Rupture,
+ * Charge (its count). Shown while the
  * player is fighting, holds one of the plugin's weapons, has Sanity off 0,
  * or is the Black God. Glyphs from the pack's "clash" font (tools/clash_font.py).
  */
@@ -58,6 +59,8 @@ final class UnitHud {
 	private static final int ATTACK_UP = 9;
 	private static final int DEFENSE_DOWN = 10;
 	private static final int TREMOR = 11;
+	private static final int RUPTURE = 12;
+	private static final int CHARGE = 13;
 	private static final double BELOW = 0.6;
 	private static final Map<UUID, TextDisplay> SHOWN = new ConcurrentHashMap<>();
 
@@ -206,7 +209,7 @@ final class UnitHud {
 		boolean staggered = state.staggered(now);
 		Component line = Component.empty();
 		int shown = 0;
-		int[] values = new int[12];
+		int[] values = new int[14];
 		values[BURN] = (player.getFireTicks() + 19) / 20;
 		values[BLEED] = Math.max(state.bleedPotency(now), level(player, PotionEffectType.WITHER));
 		values[POISE] = state.poisePotency(now);
@@ -219,6 +222,8 @@ final class UnitHud {
 		values[ATTACK_UP] = state.attackLevel(now);
 		values[DEFENSE_DOWN] = state.defenseDown(now);
 		values[TREMOR] = state.tremorPotency(now);
+		values[RUPTURE] = state.rupturePotency(now);
+		values[CHARGE] = state.chargeCount(now);
 		for (int i = 0; i < values.length; i++) {
 			if (values[i] <= 0) {
 				continue;

@@ -285,7 +285,8 @@ def count_glyph(n):
 
 HP_FIRST = 0xE700
 STATUS_FIRST = 0xE720
-STATUS = ["burn", "bleed", "poise", "sinking", "bind", "paralysis", "fragile", "mang", "stagger", "attack_up", "defense_down", "tremor"]
+STATUS = ["burn", "bleed", "poise", "sinking", "bind", "paralysis", "fragile", "mang", "stagger", "attack_up", "defense_down", "tremor",
+          "rupture", "charge"]
 
 
 def hp_ring(fraction):
@@ -374,6 +375,14 @@ def status_icon(kind):
         d.arc([2, 2, 9, 9], -60, 60, fill=(255, 190, 60, 255))
         d.arc([0, 0, 11, 11], 130, 230, fill=(230, 150, 40, 255))
         d.arc([0, 0, 11, 11], -50, 50, fill=(230, 150, 40, 255))
+    elif kind == "rupture":
+        # The original's Rupture: a teal shard cracked through the middle.
+        d.polygon([(6, 0), (10, 4), (8, 11), (4, 11), (2, 4)], fill=(40, 200, 180, 255), outline=dark)
+        d.line([(6, 1), (5, 4), (7, 6), (5, 10)], fill=(200, 255, 240, 255))
+    elif kind == "charge":
+        # The original's Charge: a blue-white bolt.
+        d.polygon([(7, 0), (2, 6), (5, 6), (3, 11), (10, 4), (7, 4), (9, 0)], fill=(120, 200, 255, 255), outline=dark)
+        d.point([(6, 5)], fill=(255, 255, 255, 255))
     elif kind == "defense_down":
         d.polygon([(6, 11), (11, 5), (8, 5), (8, 0), (4, 0), (4, 5), (1, 5)], fill=(90, 120, 240, 255), outline=dark)
     img.putpixel((s - 1, s - 1), (0, 0, 0, 1))

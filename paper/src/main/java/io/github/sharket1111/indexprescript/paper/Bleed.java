@@ -60,7 +60,7 @@ final class Bleed implements Listener {
 			return 0.0;
 		}
 		double before = target.getHealth() + target.getAbsorptionAmount();
-		Damage.deal(target, potency * DAMAGE_PER_POTENCY, source, true);
+		Damage.dealFixed(target, potency * DAMAGE_PER_POTENCY, source);
 		double taken = before - (target.isDead() ? 0.0 : target.getHealth() + target.getAbsorptionAmount());
 		World world = target.getWorld();
 		Location at = target.getLocation().add(0, target.getHeight() * 0.6, 0);

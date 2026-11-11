@@ -19,6 +19,9 @@ final class CombatState {
 	private static final int MAX_TURN_STACKS = 2;
 	private static final int SINKING_TICKS = 200;
 	private static final int STAGGER_RESET_TICKS = 200;
+	private static final int RUPTURE_TICKS = 600;
+	/** Charge Count normally stops at 20 (some effects raise it). */
+	static final int DEFAULT_MAX_CHARGE = 20;
 
 	private static final Map<UUID, CombatState> STATES = new ConcurrentHashMap<>();
 
@@ -37,6 +40,15 @@ final class CombatState {
 	private int tremorPotency;
 	private int tremorCount;
 	private long tremorDecayAt;
+
+	private int rupturePotency;
+	private int ruptureCount;
+	private long ruptureUntil;
+
+	private int chargeCount;
+	private int chargePotency;
+	private int chargeMax = DEFAULT_MAX_CHARGE;
+	private long chargeDecayAt;
 
 	private float stagger;
 	private long staggerResetAt;
@@ -215,6 +227,95 @@ final class CombatState {
 		}
 	}
 
+	// --- Rupture: each hit taken deals extra fixed damage by potency and uses up one count (see Rupture).
+	// It wears off RUPTURE_TICKS after it was last given or triggered.
+
+	void addRupture(int potency, int count, long now) {
+		if (now >= ruptureUntil) {
+			rupturePotency = 0;
+			ruptureCount = 0;
+		}
+		rupturePotency = Math.min(MAX_COUNT, rupturePotency + potency);
+		ruptureCount = Math.min(MAX_COUNT, Math.max(ruptureCount + count, rupturePotency > 0 ? 1 : 0));
+		ruptureUntil = now + RUPTURE_TICKS;
+	}
+
+	int rupturePotency(long now) {
+		return ruptureCount > 0 && now < ruptureUntil ? rupturePotency : 0;
+	}
+
+	int ruptureCount(long now) {
+		return now < ruptureUntil ? ruptureCount : 0;
+	}
+
+	/** Triggers Rupture: returns the potency, using up one count (0 when none). */
+	int consumeRupture(long now) {
+		int potency = rupturePotency(now);
+		if (potency <= 0) {
+			return 0;
+		}
+		if (--ruptureCount <= 0) {
+			ruptureCount = 0;
+			rupturePotency = 0;
+		}
+		ruptureUntil = now + RUPTURE_TICKS;
+		return potency;
+	}
+
+	// --- Charge: a count that skills and E.G.O Gifts spend to strengthen their effects. The count
+	// drops by one each turn and stops at the maximum (20 unless raised). Some effects also keep a
+	// Charge potency, bought by spending count.
+
+	void addCharge(int count, long now) {
+		decayCharge(now);
+		if (chargeCount == 0) {
+			chargeDecayAt = now + TURN_TICKS;
+		}
+		chargeCount = Math.max(0, Math.min(chargeMax, chargeCount + count));
+	}
+
+	int chargeCount(long now) {
+		decayCharge(now);
+		return chargeCount;
+	}
+
+	/** Spends up to {@code count} Charge Count; returns how much was spent. */
+	int spendCharge(int count, long now) {
+		decayCharge(now);
+		int spent = Math.min(count, chargeCount);
+		chargeCount -= spent;
+		if (chargeCount == 0) {
+			chargePotency = 0;
+		}
+		return spent;
+	}
+
+	void addChargePotency(int potency, long now) {
+		decayCharge(now);
+		chargePotency = Math.min(MAX_COUNT, chargePotency + potency);
+	}
+
+	int chargePotency(long now) {
+		decayCharge(now);
+		return chargeCount > 0 ? chargePotency : 0;
+	}
+
+	/** Raises (or resets with {@link #DEFAULT_MAX_CHARGE}) the most Charge Count this unit can hold. */
+	void setMaxCharge(int max) {
+		chargeMax = Math.max(1, max);
+		chargeCount = Math.min(chargeCount, chargeMax);
+	}
+
+	private void decayCharge(long now) {
+		while (chargeCount > 0 && now >= chargeDecayAt) {
+			chargeCount--;
+			chargeDecayAt += TURN_TICKS;
+		}
+		if (chargeCount == 0) {
+			chargePotency = 0;
+		}
+	}
+
 	// --- Stagger: accumulated stagger damage; reaching the threshold staggers for one turn.
 
 	/** Adds stagger damage; returns true if this pushed the entity into the staggered state. */
@@ -280,7 +381,7 @@ final class CombatState {
 	}
 
 	private boolean idle(long now) {
-		if (poiseCount(now) > 0 || tremorCount(now) > 0 || bleedPotency(now) > 0 || (sinkingCount > 0 && now < sinkingUntil) || now < staggerResetAt || staggered(now)
+		if (poiseCount(now) > 0 || tremorCount(now) > 0 || rupturePotency(now) > 0 || chargeCount(now) > 0 || chargeMax != DEFAULT_MAX_CHARGE || bleedPotency(now) > 0 || (sinkingCount > 0 && now < sinkingUntil) || now < staggerResetAt || staggered(now)
 				|| attackLevel(now) > 0 || defenseDown(now) > 0) {
 			return false;
 		}

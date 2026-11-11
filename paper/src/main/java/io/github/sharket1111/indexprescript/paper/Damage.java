@@ -6,6 +6,8 @@ import org.bukkit.entity.Player;
 /** Extra damage dealt by the plugin itself, kept out of the Caduceus damage handler. */
 final class Damage {
 	private static boolean dealing;
+	/** True while the damage being dealt is a status's fixed damage (Rupture, Bleed), not a hit. */
+	private static boolean fixed;
 
 	private Damage() {
 	}
@@ -13,6 +15,22 @@ final class Damage {
 	/** True while the plugin is dealing its own damage (the resulting events must not be rescaled). */
 	static boolean dealing() {
 		return dealing;
+	}
+
+	/** True while the plugin's own damage is a hit (a skill coin), which sets off Rupture; false for fixed status damage. */
+	static boolean countsAsHit() {
+		return dealing && !fixed;
+	}
+
+	/** Fixed damage from a status (Rupture, Bleed): dealt like {@link #deal} but not counted as a hit. */
+	static void dealFixed(LivingEntity target, double amount, LivingEntity source) {
+		boolean was = fixed;
+		fixed = true;
+		try {
+			deal(target, amount, source, true);
+		} finally {
+			fixed = was;
+		}
 	}
 
 	static void deal(LivingEntity target, double amount, LivingEntity source, boolean ignoreHurtCooldown) {
