@@ -467,8 +467,8 @@ def valencina():
 def rien():
     black = (26, 26, 30)
     skin = (242, 230, 224)
-    face = [(0.9, 3.2, 2.2, 0.45, (20, 18, 20)), (0.9, 3.65, 2.2, 1.0, WHITE), (1.5, 3.65, 1.1, 1.0, (40, 36, 40)), (4.6, 2.6, 3.4, 2.8, (238, 238, 240)), (4.6, 2.2, 3.4, 0.4, (200, 200, 204)),
-            (0.9, 2.5, 2.2, 0.4, (20, 18, 20)), (3.4, 6.3, 1.2, 0.35, (150, 100, 100))]
+    face = [(0.9, 3.2, 2.2, 0.45, (20, 18, 20)), (0.9, 3.65, 2.2, 1.1, WHITE), (1.5, 3.65, 1.1, 1.1, (150, 150, 62)), (1.85, 3.9, 0.4, 0.6, (40, 40, 20)),
+            (0.9, 2.5, 2.2, 0.4, (20, 18, 20)), (2.6, 6.3, 1.6, 0.35, (150, 100, 100))]
     m = base("b_rien", {"skin": skin, "slim": True, "top": black, "lapels": 1, "inner": WHITE, "tie": (16, 16, 18), "pants": (22, 22, 26), "shoes": (16, 16, 18), "hands": WHITE,
                         "face": face}, 1.45, head=0.84)
     hc = (20, 20, 24)
@@ -478,7 +478,14 @@ def rien():
     m.box("head", -3.4, 32.5, -3.6, 6.8, 0.7, 6.8, sh(hc, 1.5))
     for x, w2, ln in ((-4.3, 1.6, 3.6), (-1.4, 1.2, 2.2), (1.2, 1.0, 4.4), (3.0, 1.3, 2.6)):
         m.box("head", x, 32.2 - ln, 3.8, w2, ln, 0.7, hc)
-    m.box("head", 3.9, 26.6, 0, 0.5, 0.5, 4.2, (238, 238, 240))
+    # Half his face under a cracked porcelain mask, rimmed in gold.
+    porcelain, crack = (242, 242, 246), (120, 124, 136)
+    m.box("head", -4.15, 25.6, 3.95, 4.3, 5.4, 0.5, porcelain, plain=True,
+          marks={"north": [(0, 0, 0.3, 5.4, GOLD), (0, 5.1, 1.4, 0.3, GOLD), (1.2, 0, 0.2, 2.2, crack), (1.2, 2.0, 1.6, 0.2, crack), (2.6, 2.0, 0.2, 2.2, crack), (0.4, 3.2, 1.0, 0.2, crack),
+                           (2.6, 1.0, 1.4, 0.2, crack), (3.4, 2.8, 0.2, 2.0, crack), (1.6, 4.0, 1.2, 0.2, crack), (0.5, 0.6, 0.6, 1.2, (214, 226, 246)), (3.0, 0.3, 0.8, 0.6, (250, 232, 214)),
+                           (1.8, 2.6, 0.7, 0.9, (214, 226, 246))]})
+    m.box("head", -4.25, 25.6, 1.6, 0.4, 5.4, 2.8, porcelain, plain=True)
+    m.box("head", -3.2, 25.0, 3.95, 3.3, 0.7, 0.5, porcelain, plain=True)
     # A glossy suit: gold buttons, a gold armband, gold under the soles.
     tw = 7.0
     m.box("torso", -tw / 2 - 0.05, 13.2, 1.82, tw + 0.1, 6.6, 0.3, black, marks={"north": [(3.1, 0.8, 0.8, 0.8, GOLD), (3.1, 2.8, 0.8, 0.8, GOLD), (1.0, 0, 0.5, 6.6, (60, 60, 68)), (5.6, 0, 0.5, 6.6, (60, 60, 68))]})
@@ -614,6 +621,81 @@ def kira():
     return m
 
 
+def lucio():
+    red, grey, cream = (128, 26, 34), (176, 180, 188), (240, 234, 216)
+    skin = (244, 232, 224)
+    # Eyes closed: two calm lines.
+    face = [(0.9, 4.0, 2.2, 0.4, (90, 90, 100)), (4.9, 4.0, 2.2, 0.4, (90, 90, 100)), (0.9, 3.0, 2.2, 0.35, (150, 154, 162)), (4.9, 3.0, 2.2, 0.35, (150, 154, 162)), (3.4, 6.3, 1.2, 0.35, (170, 120, 120))]
+    m = base("b_lucio", {"skin": skin, "slim": True, "top": red, "sleeve": cream, "inner": WHITE, "tie": (150, 30, 30), "pants": (112, 22, 30), "shoes": (70, 44, 34), "accent": (60, 40, 34),
+                         "face": face}, 1.3, head=0.86)
+    # Silver hair: a fringe swept aside, a ponytail down past the knees.
+    hair(m, grey, back=25, side=26.5, vol=0.5, front=1.6, fringe=((-4.4, 3.4, 3.2), (-0.8, 2.4, 2.0), (1.8, 2.6, 2.8)))
+    m.box("head", -1.2, 29, -5.8, 2.4, 2.4, 1.6, sh(grey, 0.85))
+    m.bone("ponytail", "head", (0, 29.5, -5.4), rest=(-10, 0, 0))
+    m.box("ponytail", -1.3, 14, -6.6, 2.6, 15.5, 1.6, grey)
+    m.box("ponytail", -1.0, 6, -6.4, 2.0, 8.4, 1.3, sh(grey, 0.92))
+    m.parts["Back"] = ["ponytail"]
+    # A red waistcoat with gold buttons and a badge; full white sleeves; a belt.
+    tw = 7.0
+    m.box("torso", -tw / 2 - 0.05, 13.2, 1.82, tw + 0.1, 8.2, 0.35, red, marks={"north": [(2.2, 1 + i * 1.6, 0.7, 0.7, GOLD) for i in range(4)] + [(4.2, 1 + i * 1.6, 0.7, 0.7, GOLD) for i in range(4)]
+                                                                                 + [(5.0, 6.2, 1.5, 1.5, GOLD), (0, 0, 0.3, 99, sh(red, 0.6)), (tw - 0.2, 0, 0.3, 99, sh(red, 0.6))]})
+    m.mirror_box("torso", "torso", 2.0, 16, 1.8, 0.5, 8, 0.45, (60, 40, 34))
+    m.box("root", -tw / 2 - 0.3, 11.8, -2.1, tw + 0.6, 1.5, 4.2, (60, 40, 34), marks={"north": [(3, 0.2, 1.6, 1.1, GOLD)]})
+    m.mirror_box("arm_r", "arm_l", 3.2, 18.4, -1.9, 3.6, 5.4, 3.8, cream)
+    m.mirror_box("arm_r_low", "arm_l_low", 3.1, 14.6, -2, 3.8, 3.6, 4, cream)
+    m.mirror_box("arm_r_low", "arm_l_low", 3.4, 13.6, -1.4, 2.8, 1, 2.8, sh(cream, 0.85))
+    # A red sash hanging at his side; gold on his shoes; a second sword across his back.
+    m.bone("coat", "root", (0, 13, 0))
+    m.box("coat", -4.6, 2.5, -2.6, 1, 10.5, 4.4, red, marks={"west": [(0, 9.6, 99, 0.6, GOLD)]})
+    m.box("coat", -4.4, 2.5, -3.2, 4, 10.5, 0.7, sh(red, 0.9))
+    m.mirror_box("leg_r_low", "leg_l_low", 0, 0, -2.1, 4, 0.5, 5.2, GOLD)
+    m.bone("sword_back", "torso", (0, 20, -2.6), rest=(0, 0, -24))
+    m.box("sword_back", -0.5, -9, -1.2, 1, 16, 0.8, (112, 22, 30), rel=True, marks={f: [(0, 2, 99, 0.5, GOLD), (0, 12, 99, 0.5, GOLD)] for f in SIDES})
+    m.box("sword_back", -1.6, 7, -1.4, 3.2, 0.8, 1.2, GOLD, rel=True)
+    m.box("sword_back", -0.4, 7.8, -1.2, 0.8, 3.6, 0.8, (60, 40, 34), rel=True)
+    # The sword he fights with: a straight blade, a gold hilt.
+    w = wb(m)
+    w(-0.45, -3, -0.45, 0.9, 4, 0.9, (60, 40, 34))
+    w(-1.9, 1, -0.6, 3.8, 0.8, 1.2, GOLD)
+    w(-0.6, 0.3, -0.9, 1.2, 0.8, 1.8, GOLD)
+    w(-0.6, 1.8, -0.25, 1.2, 16, 0.5, STEEL, marks={f: [(0.45, 0, 0.3, 99, (150, 154, 166))] for f in ("north", "south")})
+    w(-0.35, 17.8, -0.22, 0.7, 1.6, 0.45, STEEL)
+    return m
+
+
+def albina():
+    white, dark, hairc = (244, 244, 246), (34, 34, 40), (190, 192, 200)
+    face = eye_face((170, 170, 180), lash=(120, 122, 132), mouth=(190, 150, 150), narrow=True)
+    m = base("b_albina", {"skin": (246, 240, 238), "slim": True, "top": white, "sleeve": white, "pants": white, "shoes": white, "hands": white, "face": face}, 1.3, head=0.86)
+    # Silver hair: a straight fringe, long locks at the temples, a high ponytail.
+    hair(m, hairc, back=24.5, side=25, vol=0.5, front=1.4, fringe=((-4.4, 8.8, 2.6),))
+    m.mirror_box("head", "head", 3.6, 19, 2.2, 1, 9, 1.2, sh(hairc, 1.05))
+    m.box("head", -1.3, 32.4, -3.6, 2.6, 2.6, 2.6, hairc)
+    m.bone("ponytail", "head", (0, 33, -3.4), rest=(-16, 0, 0))
+    m.box("ponytail", -1.2, 20, -5.8, 2.4, 13, 1.5, sh(hairc, 0.92))
+    m.parts["Back"] = ["ponytail"]
+    # A white suit of armour: black at the waist and thighs, fine gold lines.
+    tw = 7.0
+    m.box("torso", -tw / 2 - 0.05, 13.2, 1.82, tw + 0.1, 10.6, 0.35, white, marks={"north": [(1.6, 6.6, 3.9, 3.2, dark), (2.9, 3.4, 1.3, 3.2, dark), (2.2, 2.2, 2.7, 0.3, GOLD), (1.6, 6.5, 3.9, 0.25, GOLD),
+                                                                                       (3.4, 0, 0.3, 3.4, (200, 200, 208)), (0.6, 1, 1.6, 1.4, (226, 226, 232)), (4.9, 1, 1.6, 1.4, (226, 226, 232))]})
+    m.box("torso", -tw / 2 - 0.2, 13.2, -2.0, tw + 0.4, 3, 4, dark, marks={"south": [(0, 0, 99, 0.3, GOLD)]})
+    m.mirror_box("arm_r", "arm_l", 3.0, 21.4, -1.8, 3.6, 2.4, 3.6, white, marks={f: [(0, 2, 99, 0.3, GOLD)] for f in SIDES})
+    m.mirror_box("arm_r_low", "arm_l_low", 3.3, 13.6, -1.5, 3, 3.4, 3, (232, 232, 238), marks={f: [(0, 0, 99, 0.3, GOLD)] for f in SIDES})
+    m.mirror_box("leg_r", "leg_l", 0.05, 8.6, -1.95, 3.9, 4.4, 3.9, dark, marks={"north": [(0, 0, 0.3, 99, GOLD), (3.6, 0, 0.3, 99, GOLD)]})
+    m.mirror_box("leg_r", "leg_l", 0.0, 6.4, -2.0, 4, 2.4, 4.1, white)
+    m.mirror_box("leg_r_low", "leg_l_low", 0.0, 1.6, -2.0, 4, 5.2, 4, white, marks={"north": [(1.8, 0, 0.3, 99, GOLD)]})
+    m.mirror_box("leg_r_low", "leg_l_low", -0.1, 0, -2.1, 4.2, 1.8, 5.6, white, marks={f: [(0, 1.3, 99, 0.3, GOLD)] for f in SIDES})
+    # A slab of a sword, dark red, banded in steel, taller than she is.
+    w = wb(m)
+    blade = (112, 22, 28)
+    w(-0.6, -6, -0.6, 1.2, 9, 1.2, (60, 30, 30), marks={f: [(0, 1 + i * 1.5, 99, 0.4, (30, 16, 16)) for i in range(5)] for f in SIDES})
+    w(-1.4, -8, -1.0, 2.8, 2, 2, (90, 20, 24))
+    w(-3.6, 3, -0.6, 7.2, 17, 1.2, blade, marks={f: [(0, 2 + i * 3.4, 99, 0.6, (150, 150, 160)) for i in range(5)] + [(1 + (i * 37 % 5), 1 + i * 2.1, 1.2, 1.0, (160, 40, 46)) for i in range(7)] for f in ("north", "south")})
+    w(-2.6, 20, -0.55, 5.2, 2, 1.1, blade)
+    w(-1.4, 22, -0.5, 2.8, 1.6, 1.0, sh(blade, 0.8))
+    return m
+
+
 def _tall(fn, legs, torso, thin):
     def build():
         return M.stretch(fn(), legs, torso, thin)
@@ -627,4 +709,5 @@ BOSSES = {"Don Quixote": don_quixote, "Sancho": sancho, "Dulcinea": _tall(dulcin
           "The Knight of Despair": _tall(knight_of_despair, 1.2, 1.05, 0.95), "Jia Mu": _tall(jia_mu, 1.35, 1.15, 0.9),
           "The Thumb Nursefather - Valencina": _tall(valencina, 1.3, 1.12, 0.9), "The Index Nursefather - Rien": _tall(rien, 1.38, 1.15, 0.85),
           "The Middle Nursefather - Matthias": _tall(matthias, 1.2, 1.08, 1.0), "The Ring Nursefather - Callisto": _tall(callisto, 1.4, 1.18, 0.84),
-          "The Middle Apprentice - Kira": _tall(kira, 1.08, 1.0, 1.0)}
+          "The Middle Apprentice - Kira": _tall(kira, 1.08, 1.0, 1.0), "The Thumb Apprentice - Lucio": _tall(lucio, 1.32, 1.12, 0.88),
+          "The Ring Apprentice - Albina": _tall(albina, 1.3, 1.1, 0.86)}
