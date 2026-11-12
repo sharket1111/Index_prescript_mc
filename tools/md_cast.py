@@ -7,6 +7,7 @@ import re
 import md_bosses as Bo
 import md_creatures as Cr
 import md_models as M
+import md_refs as Rf
 
 SIN = {"wrath": (196, 48, 40), "lust": (226, 120, 40), "sloth": (214, 178, 52), "gluttony": (120, 170, 60), "gloom": (60, 120, 190),
        "pride": (40, 64, 150), "envy": (130, 60, 160)}
@@ -248,9 +249,17 @@ def rule(name, data, looks):
         spec = dict(looks.LOOKS["gnome"][0], hat=hat, crown_h=6, brim=0.4, beard=WHITE, weapon="scythe" if "leafy" in low else "club")
         return mid, lambda: M.humanoid(mid, spec, scale=0.6)
     if "bloodbag" in low:
-        spec = dict(looks.LOOKS["bloodbag"][0], bulk=0.8, hunch=10, weapon=None, claws=(170, 30, 40))
+        spec = dict(base_spec(looks, "bloodbag"), hunch=6, weapon=None, claws=(170, 30, 40))
         return "bloodbag", lambda: M.humanoid("bloodbag", spec, scale=1.05)
     return None
+
+
+def base_spec(looks, look):
+    """A faction's outfit: md_looks' colours, its weapon, and the corrections from the reference pictures."""
+    spec = dict(looks.LOOKS[look][0])
+    spec["weapon"] = M.WEAPON_OF_ITEM.get(looks.LOOKS[look][1])
+    spec.update(Rf.LOOK_FIX.get(look, {}))
+    return spec
 
 
 def cast(enemies, looks):
@@ -260,6 +269,11 @@ def cast(enemies, looks):
         if mid not in models:
             models[mid] = build()
             assert models[mid].id == mid, (mid, models[mid].id)
+            # Parts the original names differently, on a body with arms, legs and a head.
+            parts = models[mid].parts
+            for alias, part in (("Left Stem", "Left Arm"), ("Right Stem", "Right Arm"), ("Roots", "Leg"), ("Fruit", "Head")):
+                if part in parts:
+                    parts.setdefault(alias, parts[part])
         assign[name] = mid
 
     for name, data in enemies.items():
@@ -269,17 +283,27 @@ def cast(enemies, looks):
         if base in Bo.BOSSES:
             put(name, "b_" + Bo.BOSSES[base].__name__, Bo.BOSSES[base])
             continue
+        if base in Rf.CREATURES:
+            m = Rf.CREATURES[base]()
+            put(name, m.id, lambda m=m: m)
+            continue
+        if base in Rf.PEOPLE or base in PEOPLE:
+            if base in Rf.PEOPLE:
+                look, over, sc, tall = Rf.PEOPLE[base]
+            else:
+                (look, over, sc), tall = PEOPLE[base], None
+            mid = "p_" + re.sub(r"[^a-z0-9]+", "_", base.lower()).strip("_")[:40]
+            spec = base_spec(looks, look)
+            spec.update(over)
+            put(name, mid, lambda: M.stretch(M.humanoid(mid, spec, scale=sc), *tall) if tall else M.humanoid(mid, spec, scale=sc))
+            continue
         m = abno(base, col)
         if m is not None:
             put(name, m.id, lambda m=m: m)
             continue
-        if base in PEOPLE:
-            look, over, sc = PEOPLE[base]
-            mid = "p_" + re.sub(r"[^a-z0-9]+", "_", base.lower()).strip("_")[:40]
-            spec = dict(looks.LOOKS[look][0])
-            spec["weapon"] = M.WEAPON_OF_ITEM.get(looks.LOOKS[look][1])
-            spec.update(over)
-            put(name, mid, lambda: M.humanoid(mid, spec, scale=sc))
+        r = Rf.rule(base, base.lower(), looks)
+        if r:
+            put(name, r[0], r[1])
             continue
         r = rule(base, data, looks)
         if r:
@@ -293,7 +317,6 @@ def cast(enemies, looks):
                     "glow_eyes": (250, 240, 200), "veins": sh(col, 1.2), "claws": sh(col, 0.3), "horns": sh(col, 0.4), "hunch": 16, "bulk": 1.0, "weapon": None}
             put(name, mid, lambda: M.humanoid(mid, spec, scale=1.5))
             continue
-        spec = dict(looks.LOOKS[look][0])
-        spec["weapon"] = M.WEAPON_OF_ITEM.get(looks.weapon_of(look, data))
+        spec = base_spec(looks, look)
         put(name, look, lambda: M.humanoid(look, spec, scale=looks.FORM[form]["scale"] if form in ("human", "small") else 1.0))
     return models, assign

@@ -216,7 +216,7 @@ def export(model):
         dp = b.pivot - (model.bones[b.parent].pivot if b.parent else 0)
         bones.append({"name": n, "parent": order.index(b.parent) if b.parent else -1, "at": [round(float(v), 3) for v in dp],
                       "rest": list(b.rest), "draw": bool(b.cubes), **({"s": b.scale} if b.scale != 1.0 else {})})
-    out = {"scale": model.scale, "height": model.height, "anims": model.anims, "bones": bones, "parts": model.parts}
+    out = {"scale": model.scale, "height": model.height, "anims": model.anims, "bones": bones, "parts": {k: [b for b in v if b in model.bones] for k, v in model.parts.items()}}
     if model.bright:
         out["bright"] = True
     ps = getattr(model, "pscale", 1.0)
@@ -480,7 +480,7 @@ def humanoid(mid, s, scale=1.0):
         front.append((tw / 2 - 0.5, 0, 1, 7.5, s["tie"]))
     if s.get("emblem"):
         front.append((tw / 2 + 1.6, 2, 1.5, 1.5, s["emblem"]))
-    for i, c in enumerate(s.get("splotches", [])):
+    for i, c in enumerate(s.get("splotches") or []):
         front.append((m.rng.random() * (tw - 2), m.rng.random() * 8, 2, 2, c))
     for i in range(3 if s.get("veins") else 0):
         front.append((1 + i * 1.7, 2 + i * 2.6, 3, 0.5, s["veins"]))
