@@ -4,6 +4,7 @@ rest by faction (md_looks.py's outfits, as 3D people). Shapes and colours follow
 what each enemy is known for; the models are our own."""
 import re
 
+import md_bosses as Bo
 import md_creatures as Cr
 import md_models as M
 
@@ -265,6 +266,9 @@ def cast(enemies, looks):
         base = name[len("Refracted "):] if name.startswith("Refracted ") and name[len("Refracted "):] in enemies else name
         sins = [s["sin"] for s in data["skills"] if s.get("sin") in SIN]
         col = SIN[max(set(sins), key=sins.count)] if sins else SIN["gloom"]
+        if base in Bo.BOSSES:
+            put(name, "b_" + Bo.BOSSES[base].__name__, Bo.BOSSES[base])
+            continue
         m = abno(base, col)
         if m is not None:
             put(name, m.id, lambda m=m: m)

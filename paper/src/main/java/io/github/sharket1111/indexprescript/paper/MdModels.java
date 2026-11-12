@@ -36,7 +36,7 @@ import com.google.gson.JsonObject;
  * forward, in pixels (16 to a block).
  */
 final class MdModels {
-	record Bone(String name, int parent, float[] at, float[] rest, boolean draw) {
+	record Bone(String name, int parent, float[] at, float[] rest, boolean draw, float size) {
 	}
 
 	record Clip(int length, boolean loop, Map<String, float[][]> tracks) {
@@ -80,7 +80,7 @@ final class MdModels {
 				for (JsonElement be : o.getAsJsonArray("bones")) {
 					JsonObject b = be.getAsJsonObject();
 					bones.add(new Bone(b.get("name").getAsString(), b.get("parent").getAsInt(), floats(b.getAsJsonArray("at")), floats(b.getAsJsonArray("rest")),
-							b.get("draw").getAsBoolean()));
+							b.get("draw").getAsBoolean(), b.has("s") ? b.get("s").getAsFloat() : 1F));
 				}
 				Map<String, Clip> clips = new LinkedHashMap<>(sets.getOrDefault(o.get("anims").getAsString(), Map.of()));
 				if (o.has("clips")) {
@@ -289,7 +289,7 @@ final class MdModels {
 				m.translate(bone.at()[0] + p[3], bone.at()[1] + p[4], bone.at()[2] + p[5])
 						.rotateXYZ((float) Math.toRadians(bone.rest()[0] + p[0]), (float) Math.toRadians(bone.rest()[1] + p[1]),
 								(float) Math.toRadians(bone.rest()[2] + p[2]))
-						.scale(p[6]);
+						.scale(p[6] * bone.size());
 				ItemDisplay d = displays[i];
 				if (d == null || !d.isValid()) {
 					continue;

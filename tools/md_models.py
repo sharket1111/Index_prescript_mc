@@ -67,6 +67,7 @@ class Bone:
     def __init__(self, name, parent, pivot, rest):
         self.name, self.parent, self.pivot, self.rest = name, parent, np.array(pivot, float), tuple(rest)
         self.cubes = []
+        self.scale = 1.0  # the bone's own size (a smaller head on a tall figure)
 
 
 class Model:
@@ -117,7 +118,7 @@ class Model:
             b = self.bones[n]
             r, p, s = (pose or {}).get(n, ((0, 0, 0), (0, 0, 0), 1.0))
             dp = b.pivot - (self.bones[b.parent].pivot if b.parent else 0)
-            local = trans(dp) @ trans(p) @ rot_xyz(tuple(a + c for a, c in zip(b.rest, r))) @ scale(s)
+            local = trans(dp) @ trans(p) @ rot_xyz(tuple(a + c for a, c in zip(b.rest, r))) @ scale(s * b.scale)
             out[n] = (out[b.parent] @ local) if b.parent else local
         return out
 
@@ -214,7 +215,7 @@ def export(model):
         b = model.bones[n]
         dp = b.pivot - (model.bones[b.parent].pivot if b.parent else 0)
         bones.append({"name": n, "parent": order.index(b.parent) if b.parent else -1, "at": [round(float(v), 3) for v in dp],
-                      "rest": list(b.rest), "draw": bool(b.cubes)})
+                      "rest": list(b.rest), "draw": bool(b.cubes), **({"s": b.scale} if b.scale != 1.0 else {})})
     out = {"scale": model.scale, "height": model.height, "anims": model.anims, "bones": bones, "parts": model.parts}
     if model.bright:
         out["bright"] = True
@@ -455,9 +456,10 @@ def humanoid(mid, s, scale=1.0):
     hands = s.get("hands", skin)
     accent = s.get("accent")
     bulk = s.get("bulk", 0.0)  # wider shoulders and limbs
-    tw, td = 8 + 2 * bulk, 4 + bulk
+    slim = 1 if s.get("slim") else 0
+    tw, td = 8 + 2 * bulk - slim, 4 + bulk - 0.4 * slim
     ax = tw / 2  # where the arms hang
-    aw = 3 + bulk * 0.6
+    aw = 3 + bulk * 0.6 - 0.5 * slim
     m.bone("root", None, (0, 13, 0))
     m.bone("torso", "root", (0, 13, 0), rest=(s.get("hunch", 0), 0, 0))
     m.bone("head", "torso", (0, 24, 0), rest=(-s.get("hunch", 0) * 0.7, 0, 0))
@@ -505,6 +507,8 @@ def humanoid(mid, s, scale=1.0):
     white = s.get("glow_eyes") or s.get("eye_white", (240, 240, 240))
     face = [(1.2, 3.6, 1.8, 1.4, white), (5.0, 3.6, 1.8, 1.4, white), (1.9, 3.6, 1.0, 1.4, eye), (5.0, 3.6, 1.0, 1.4, eye),
             (1.2, 3.0, 1.8, 0.5, shade(hair, 0.8)), (5.0, 3.0, 1.8, 0.5, shade(hair, 0.8)), (3.3, 6.2, 1.4, 0.5, shade(skin, 0.62))]
+    if s.get("face") is not None:
+        face = list(s["face"])
     if s.get("glasses"):
         face += [(0.7, 3.3, 2.8, 2.0, s["glasses"]), (4.5, 3.3, 2.8, 2.0, s["glasses"]), (3.5, 4.0, 1.0, 0.5, (30, 30, 34))]
     if s.get("grin"):
@@ -630,7 +634,8 @@ def humanoid(mid, s, scale=1.0):
         m.box("cape", -tw / 2 - 0.5 - cw, 8 - cw, -td / 2 - 1.0, tw + 1 + 2 * cw, 15.5 + cw, 0.7 + cw * 0.3, s["cape"],
               marks={"south": [(i * 2.2 + 0.5, 12, 1, 99, shade(s["cape"], 0.7)) for i in range(int((tw + 2 * cw) / 2.2))] if cw else []})
         if cw:
-            m.box("torso", -tw / 2 - cw, 21.5, -td / 2 - 1.6, tw + 2 * cw, 3.6, td + 2.6, s.get("cape_fur", s["cape"]))
+            m.box("torso", -tw / 2 - cw, 21.5, -td / 2 - 1.6, tw + 2 * cw, 3.6, td / 2 + 1.9, s.get("cape_fur", s["cape"]))
+            m.mirror_box("torso", "torso", tw / 2 - 0.4, 21.5, 0.3, cw + 0.4, 3.6, td / 2 + 0.5, s.get("cape_fur", s["cape"]))
             m.mirror_box("cape", "cape", tw / 2 + cw - 0.5, 9 - cw, -td / 2 - 1.0, 0.8, 13, 3.2, s["cape"])
     if s.get("tail"):
         m.bone("tail", "root", (0, 12.5, -td / 2), rest=(-50, 0, 0))
@@ -651,6 +656,34 @@ def humanoid(mid, s, scale=1.0):
         m.parts["Back"] = ["wings"]
     if s.get("pack"):
         m.parts["Back"] = m.parts["Gift Sack"] = ["pack"]
+    return m
+
+
+def stretch(m, legs=1.0, torso=1.0, thin=1.0):
+    """Taller, slimmer proportions for a humanoid: longer legs and torso (and arms with it), narrower body; the head keeps its size."""
+    hip, neck = 13 * legs, 13 * legs + 11 * torso
+
+    def fy(y, arm=False):
+        if y >= 24:
+            return neck + (y - 24)
+        if y >= 13 or arm:
+            return hip + (y - 13) * torso
+        return y * legs
+    for b in m.bones.values():
+        arm = b.name.startswith(("arm", "weapon", "offhand"))
+        head = b.name == "head"
+        fixed = b.name.startswith(("weapon", "blade", "parasol", "offhand"))
+        k = 1.0 if head or b.name.startswith(("parasol", "blade")) else thin
+        new_pivot = np.array([b.pivot[0] * (thin if not head else 1.0), fy(b.pivot[1], arm), b.pivot[2] * (thin if not head else 1.0)])
+        if not fixed:
+            for c in b.cubes:
+                lo, hi = b.pivot + c["lo"], b.pivot + c["lo"] + c["size"]
+                lo2 = np.array([lo[0] * k, fy(lo[1], arm), lo[2] * k])
+                hi2 = np.array([hi[0] * k, fy(hi[1], arm), hi[2] * k])
+                c["lo"], c["size"] = lo2 - new_pivot, np.maximum(hi2 - lo2, 0.3)
+        b.pivot = new_pivot
+    m.pscale = legs
+    m.height += 13 * (legs - 1) + 11 * (torso - 1)
     return m
 
 
