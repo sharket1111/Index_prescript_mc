@@ -103,9 +103,46 @@ final class MdCommand implements TabExecutor, Listener {
 		switch (sub) {
 			case "" -> {
 				if (run != null) {
-					run.reopen(p);
+					run.openMenu(p);
 				} else {
 					menu(p);
+				}
+			}
+			case "메뉴", "menu" -> {
+				if (run != null) {
+					run.openMenu(p);
+				} else {
+					menu(p);
+				}
+			}
+			case "화면", "screen" -> {
+				if (run != null) {
+					run.reopen(p);
+				}
+			}
+			case "진행", "진행상황", "progress" -> {
+				if (run != null) {
+					run.openProgress(p);
+				}
+			}
+			case "저장", "save" -> {
+				if (run == null) {
+					break;
+				}
+				String why = !p.getUniqueId().equals(run.leader) ? "리더만 저장할 수 있어요" : run.saveBlocked();
+				if (why != null) {
+					p.sendMessage(msg("지금은 저장할 수 없어요: " + why, NamedTextColor.RED));
+				} else {
+					run.saveAndExit();
+				}
+			}
+			case "이어하기", "resume" -> resume(p);
+			case "저장삭제", "deletesave" -> {
+				if (MdRun.hasSave(p.getUniqueId())) {
+					MdRun.deleteSave(p.getUniqueId());
+					p.sendMessage(msg("저장한 진행을 지웠어요.", NamedTextColor.YELLOW));
+				} else {
+					p.sendMessage(msg("저장한 진행이 없어요.", NamedTextColor.GRAY));
 				}
 			}
 			case "초대", "invite" -> invite(p, args.length >= 2 ? args[1] : null);
@@ -124,9 +161,24 @@ final class MdCommand implements TabExecutor, Listener {
 					MdShop.showGifts(run, p, null);
 				}
 			}
-			default -> p.sendMessage(msg("/md · /md 초대 <이름> · /md 수락 · /md 시작 [하드] · /md 나가기 · /md 기프트", NamedTextColor.GRAY));
+			default -> p.sendMessage(msg("/md · /md 초대 <이름> · /md 수락 · /md 시작 [하드] · /md 나가기 · /md 기프트 · /md 진행 · /md 저장 · /md 이어하기", NamedTextColor.GRAY));
 		}
 		return true;
+	}
+
+	private static void resume(Player p) {
+		if (MdRun.of(p) != null) {
+			p.sendMessage(msg("이미 던전 안이에요.", NamedTextColor.RED));
+			return;
+		}
+		if (!MdRun.hasSave(p.getUniqueId())) {
+			p.sendMessage(msg("저장한 진행이 없어요. (저장은 그때의 리더에게 남아요)", NamedTextColor.RED));
+			return;
+		}
+		p.closeInventory();
+		if (MdRun.resume(p) == null) {
+			p.sendMessage(msg("저장한 진행을 불러오지 못했어요.", NamedTextColor.RED));
+		}
 	}
 
 	private static void menu(Player p) {
@@ -149,6 +201,11 @@ final class MdCommand implements TabExecutor, Listener {
 		lore.add("초대: /md 초대 <이름> · 나가기: /md 나가기");
 		lore.add("최대 " + maxParty() + "명");
 		gui.set(13, MdGui.item(Material.PLAYER_HEAD, "파티", NamedTextColor.YELLOW, lore.toArray(String[]::new)), (Runnable) null);
+		String saved = MdRun.saveSummary(id);
+		if (saved != null) {
+			gui.set(22, MdGui.item(Material.WRITABLE_BOOK, "이어하기", NamedTextColor.GREEN, saved, "저장할 때 함께 있던 사람 중 지금 접속한 사람이 같이 들어가요",
+					"지우려면 /md 저장삭제"), () -> resume(p));
+		}
 		gui.set(15, MdGui.item(Material.NETHER_STAR, "별빛 " + MdMeta.starlight(id), NamedTextColor.AQUA, "별의 가호(시작 버프)와 기프트 탐색에 써요",
 				"층을 깰 때마다 쌓여요"), (Runnable) null);
 		gui.set(16, MdGui.item(Material.CLOCK, "주간 보상 " + MdMeta.claims(id) + "/" + MdMeta.WEEKLY_CLAIMS, NamedTextColor.GOLD, "매주 월요일에 초기화돼요",
@@ -259,7 +316,7 @@ final class MdCommand implements TabExecutor, Listener {
 	@Override
 	public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
 		if (args.length == 1) {
-			return List.of("초대", "수락", "시작", "나가기", "추방", "기프트");
+			return List.of("초대", "수락", "시작", "나가기", "추방", "기프트", "메뉴", "화면", "진행", "저장", "이어하기", "저장삭제");
 		}
 		if (args.length == 2 && (args[0].equals("초대") || args[0].equals("추방") || args[0].equals("invite") || args[0].equals("kick"))) {
 			return Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();

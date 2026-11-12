@@ -1039,6 +1039,338 @@ final class MdRun {
 		}
 	}
 
+	// --- the dungeon's own menu: progress, saving, leaving ---------------------------------------------
+
+	/** /md inside the dungeon: back to the current screen, the run's progress, the gifts, saving and leaving. */
+	void openMenu(Player p) {
+		boolean lead = p.getUniqueId().equals(leader);
+		MdGui gui = new MdGui(3, "거울 던전 메뉴 · " + floor + "층");
+		gui.set(10, MdGui.item(Material.COMPASS, "현재 화면 열기", NamedTextColor.WHITE, "지금 진행 중인 화면(지도, 상점, 이벤트 등)을 다시 열어요", "/md 화면 으로도 열 수 있어요"), () -> reopen(p));
+		gui.set(11, MdGui.item(Material.BOOK, "진행 상황", NamedTextColor.AQUA, "층, 테마팩, 코스트, 시련, 역경, 파티 상태"), () -> openProgress(p));
+		gui.set(12, MdGui.item(Material.CHEST, "E.G.O 기프트 " + gifts.size() + "개", NamedTextColor.GOLD, "가진 기프트를 봐요"), () -> MdShop.showGifts(this, p, null));
+		String why = !lead ? "리더만 저장할 수 있어요" : saveBlocked();
+		gui.set(14, MdGui.item(why == null ? Material.WRITABLE_BOOK : Material.GRAY_DYE, "저장하고 나가기", why == null ? NamedTextColor.GREEN : NamedTextColor.GRAY,
+				"진행 상황을 저장하고 모두 던전에서 나가요", "나중에 /md 이어하기 로 돌아와요 (저장은 리더에게 남아요)", "정산(별빛, 주간 보상)은 하지 않아요",
+				why == null ? "클릭해서 저장" : "지금은 안 돼요: " + why), () -> {
+					if (why == null) {
+						p.closeInventory();
+						saveAndExit();
+					}
+				});
+		gui.set(16, MdGui.item(Material.OAK_DOOR, "중도 퇴장", NamedTextColor.RED, "던전에서 나가요. " + floorsCleared + "층까지 깬 것으로 정산해요",
+				members.size() > 1 ? "나만 나가요. 남은 사람은 계속해요" : "혼자라서 던전이 끝나요", "클릭하면 한 번 더 물어봐요"), () -> confirmLeave(p));
+		gui.fill().open(p);
+	}
+
+	private void confirmLeave(Player p) {
+		MdGui gui = new MdGui(3, "정말 나갈까요?");
+		gui.set(11, MdGui.item(Material.RED_CONCRETE, "나가기", NamedTextColor.RED, floorsCleared + "층까지 깬 것으로 정산해요", "지금 층의 진행은 사라져요"), () -> {
+			p.closeInventory();
+			leave(p);
+		});
+		gui.set(15, MdGui.item(Material.LIME_CONCRETE, "계속하기", NamedTextColor.GREEN), () -> openMenu(p));
+		gui.fill().open(p);
+	}
+
+	/** Everything about the run so far, on one screen. */
+	void openProgress(Player p) {
+		MdGui gui = new MdGui(3, "진행 상황");
+		int column = at == null ? 0 : at.col + 1;
+		gui.set(10, MdGui.item(Material.FILLED_MAP, floor + "층 / " + goal + "층 · " + modeName(), NamedTextColor.WHITE,
+				"테마팩: " + (theme == null ? "고르는 중" : theme.name()), map.isEmpty() ? "지도: 아직 없어요" : "지도: " + column + " / " + map.size() + "번째 칸",
+				"깬 층: " + floorsCleared + " (HARD " + hardFloorsCleared + ")", "지나온 테마팩: " + visitedThemes.size() + "개",
+				goal < MAX_FLOORS ? "이 판의 목표는 " + goal + "층이에요 (HARD로 깨면 더 갈 수 있어요)" : "익스트림 거울: 15층까지"), (Runnable) null);
+		gui.set(11, MdGui.item(Material.GOLD_INGOT, "코스트 " + cost, NamedTextColor.GOLD, "기프트 " + gifts.size() + "개 (클릭해서 보기)", "레벨 보너스 +" + levels,
+				"테마팩 새로고침 " + themeRefreshes + "번 남음"), () -> MdShop.showGifts(this, p, null));
+		List<String> trialLore = new ArrayList<>();
+		for (MdData.Trial t : trials) {
+			trialLore.add(t.name() + ": " + t.text());
+		}
+		if (trialLore.isEmpty()) {
+			trialLore.add("아직 없어요");
+		}
+		gui.set(12, MdGui.item(Material.REDSTONE_TORCH, "등반 시련 " + trials.size() + "개", NamedTextColor.RED, trialLore.toArray(String[]::new)), (Runnable) null);
+		List<String> advLore = new ArrayList<>();
+		for (MdAdversity a : adversities) {
+			advLore.add(a.ko + " (+" + a.score + "): " + a.text);
+		}
+		advLore.add(adversities.isEmpty() ? "아직 없어요 (10층부터 고를 수 있어요)" : "끝나면 별빛 +" + adversityScore() * MdAdversity.STARLIGHT_PER_SCORE);
+		gui.set(13, MdGui.item(Material.WITHER_ROSE, "역경 " + adversityScore() + "점", NamedTextColor.DARK_RED, advLore.toArray(String[]::new)), (Runnable) null);
+		List<String> graceLore = new ArrayList<>();
+		for (Map.Entry<MdGrace.Buff, Integer> g : grace.entrySet()) {
+			graceLore.add(g.getKey().ko + " " + "I".repeat(Math.max(1, g.getValue())));
+		}
+		if (graceLore.isEmpty()) {
+			graceLore.add("없어요");
+		}
+		gui.set(14, MdGui.item(Material.NETHER_STAR, "별의 가호", NamedTextColor.AQUA, graceLore.toArray(String[]::new)), (Runnable) null);
+		List<String> party = new ArrayList<>();
+		for (UUID id : members) {
+			Player m = Bukkit.getPlayer(id);
+			String name = m == null ? "(접속 안 함)" : m.getName();
+			String state = m == null ? "" : downed.contains(id) ? " · 쓰러짐" : " · 체력 " + Math.round(m.getHealth() * TotalDamage.SCALE) + " · 정신력 " + Sanity.of(m);
+			party.add((id.equals(leader) ? "★ " : "· ") + name + state);
+		}
+		gui.set(15, MdGui.item(Material.PLAYER_HEAD, "파티 " + members.size() + "명", NamedTextColor.YELLOW, party.toArray(String[]::new)), (Runnable) null);
+		gui.set(16, MdGui.item(Material.PRISMARINE_CRYSTALS, "숨은 보스 " + hiddenBeaten.size() + " / " + HIDDEN_BOSSES.length, NamedTextColor.LIGHT_PURPLE,
+				hiddenBeaten.isEmpty() ? new String[] {"11~15층에서 가끔 나타나요"} : hiddenBeaten.toArray(String[]::new)), (Runnable) null);
+		gui.set(22, MdGui.item(Material.ARROW, "돌아가기", NamedTextColor.GRAY), () -> openMenu(p));
+		gui.fill().open(p);
+	}
+
+	// --- saving a run and coming back to it ---------------------------------------------------------------
+
+	private static java.io.File saveFile(UUID leader) {
+		return new java.io.File(new java.io.File(IndexPrescriptPlugin.instance().getDataFolder(), "mirror_saves"), leader + ".yml");
+	}
+
+	static boolean hasSave(UUID leader) {
+		return saveFile(leader).isFile();
+	}
+
+	static void deleteSave(UUID leader) {
+		saveFile(leader).delete();
+	}
+
+	/** A line about a saved run for the menu, or null. */
+	static String saveSummary(UUID leader) {
+		if (!hasSave(leader)) {
+			return null;
+		}
+		org.bukkit.configuration.file.YamlConfiguration y = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(saveFile(leader));
+		return y.getInt("floor") + "층 / " + y.getInt("goal") + "층 · 코스트 " + y.getInt("cost") + " · 기프트 " + y.getStringList("gift-ids").size() + "개 · " + y.getString("saved-at", "");
+	}
+
+	/** Why the run cannot be saved now, or null when it can: only between nodes (on the map) or while choosing a Theme Pack. */
+	String saveBlocked() {
+		if (phase == Phase.MAP || phase == Phase.THEME) {
+			return null;
+		}
+		return switch (phase) {
+			case BATTLE -> "전투 중이에요";
+			case SHOP -> "상점에서 나온 뒤에 저장할 수 있어요";
+			case EVENT -> "이벤트를 끝낸 뒤에 저장할 수 있어요";
+			case REWARD -> "보상을 고른 뒤에 저장할 수 있어요";
+			default -> "1층에 들어간 뒤부터 저장할 수 있어요";
+		};
+	}
+
+	/** Writes the run to the leader's save file, then sends everyone home without settling. */
+	void saveAndExit() {
+		if (saveBlocked() != null) {
+			return;
+		}
+		org.bukkit.configuration.file.YamlConfiguration y = new org.bukkit.configuration.file.YamlConfiguration();
+		y.set("saved-at", java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm")));
+		y.set("phase", phase.name());
+		y.set("hard", hard);
+		y.set("floor-hard", floorHard);
+		y.set("floor", floor);
+		y.set("floors-cleared", floorsCleared);
+		y.set("hard-floors-cleared", hardFloorsCleared);
+		y.set("goal", goal);
+		y.set("theme", theme == null ? null : theme.id());
+		y.set("visited-themes", new ArrayList<>(visitedThemes));
+		y.set("offered", offered.stream().map(MdData.Theme::id).toList());
+		y.set("cost", cost);
+		y.set("gift-ids", new ArrayList<>(gifts.keySet()));
+		y.set("gift-levels", new ArrayList<>(gifts.values()));
+		y.set("fuse-only", new ArrayList<>(fuseOnly));
+		y.set("trials", trials.stream().map(t -> t.floor() + "|" + t.name()).toList());
+		for (Map.Entry<MdGrace.Buff, Integer> g : grace.entrySet()) {
+			y.set("grace." + g.getKey().name(), g.getValue());
+		}
+		y.set("levels", levels);
+		y.set("theme-offers", themeOffers);
+		y.set("theme-refreshes", themeRefreshes);
+		y.set("observe-count", observeCount);
+		y.set("super-shop-chance", superShopChance);
+		y.set("seen-events", new ArrayList<>(seenEvents));
+		y.set("adversities", adversities.stream().map(Enum::name).toList());
+		y.set("hidden-beaten", new ArrayList<>(hiddenBeaten));
+		y.set("members", members.stream().map(UUID::toString).toList());
+		for (Map.Entry<UUID, Integer> b : bonus.entrySet()) {
+			y.set("bonus." + b.getKey(), b.getValue());
+		}
+		// The map: each column a list of "row,type,visited,hiddenRolled,next rows".
+		List<List<String>> columns = new ArrayList<>();
+		for (List<Node> col : map) {
+			List<String> out = new ArrayList<>();
+			for (Node n : col) {
+				StringBuilder next = new StringBuilder();
+				for (Node m : n.next) {
+					next.append(next.length() == 0 ? "" : "/").append(m.row);
+				}
+				out.add(n.row + "," + n.type.name() + "," + n.visited + "," + n.hiddenRolled + "," + next);
+			}
+			columns.add(out);
+		}
+		y.set("map", columns);
+		y.set("at", at == null ? "" : at.col + "," + at.row);
+		java.io.File file = saveFile(leader);
+		file.getParentFile().mkdirs();
+		try {
+			y.save(file);
+		} catch (java.io.IOException e) {
+			broadcast(Component.text("저장하지 못했어요: " + e.getMessage(), NamedTextColor.RED));
+			return;
+		}
+		broadcast(Component.text("진행 상황을 저장했어요 (" + floor + "층). 리더가 /md 이어하기 로 돌아올 수 있어요.", NamedTextColor.GREEN));
+		phase = Phase.END;
+		for (Player p : players()) {
+			BY_PLAYER.remove(p.getUniqueId());
+			p.closeInventory();
+			sendHome(p);
+		}
+		for (UUID id : members) {
+			BY_PLAYER.remove(id);
+		}
+		members.clear();
+		close();
+	}
+
+	/** Brings a saved run back: the leader, and those of its members online now and not in a dungeon. */
+	static MdRun resume(Player lead) {
+		UUID leaderId = lead.getUniqueId();
+		if (!hasSave(leaderId) || of(lead) != null || !MdData.loaded()) {
+			return null;
+		}
+		org.bukkit.configuration.file.YamlConfiguration y = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(saveFile(leaderId));
+		int slot = 1;
+		while (SLOTS.contains(slot)) {
+			slot++;
+		}
+		SLOTS.add(slot);
+		MdRun run = new MdRun(slot);
+		run.leader = leaderId;
+		run.hard = y.getBoolean("hard");
+		run.floorHard = y.getBoolean("floor-hard");
+		run.floor = y.getInt("floor");
+		run.floorsCleared = y.getInt("floors-cleared");
+		run.hardFloorsCleared = y.getInt("hard-floors-cleared");
+		run.goal = Math.max(FLOORS, y.getInt("goal", FLOORS));
+		run.theme = y.getString("theme") == null ? null : MdData.theme(y.getString("theme"));
+		run.visitedThemes.addAll(y.getStringList("visited-themes"));
+		for (String id : y.getStringList("offered")) {
+			MdData.Theme t = MdData.theme(id);
+			if (t != null) {
+				run.offered.add(t);
+			}
+		}
+		run.cost = y.getInt("cost");
+		List<String> ids = y.getStringList("gift-ids");
+		List<Integer> levels = y.getIntegerList("gift-levels");
+		for (int i = 0; i < ids.size(); i++) {
+			if (MdData.gift(ids.get(i)) != null) {
+				run.gifts.put(ids.get(i), i < levels.size() ? levels.get(i) : 0);
+			}
+		}
+		run.fuseOnly.addAll(y.getStringList("fuse-only"));
+		for (String t : y.getStringList("trials")) {
+			int bar = t.indexOf('|');
+			for (MdData.Trial trial : MdData.trials(Integer.parseInt(t.substring(0, bar)))) {
+				if (trial.name().equals(t.substring(bar + 1))) {
+					run.trials.add(trial);
+					break;
+				}
+			}
+		}
+		if (y.isConfigurationSection("grace")) {
+			for (String key : y.getConfigurationSection("grace").getKeys(false)) {
+				try {
+					run.grace.put(MdGrace.Buff.valueOf(key), y.getInt("grace." + key));
+				} catch (IllegalArgumentException ignored) {
+					// A buff that no longer exists.
+				}
+			}
+		}
+		run.levels = y.getInt("levels");
+		run.themeOffers = y.getInt("theme-offers", 3);
+		run.themeRefreshes = y.getInt("theme-refreshes", 1);
+		run.observeCount = y.getInt("observe-count");
+		run.superShopChance = y.getInt("super-shop-chance", 3);
+		run.seenEvents.addAll(y.getStringList("seen-events"));
+		for (String a : y.getStringList("adversities")) {
+			try {
+				run.adversities.add(MdAdversity.valueOf(a));
+			} catch (IllegalArgumentException ignored) {
+				// An adversity that no longer exists.
+			}
+		}
+		run.hiddenBeaten.addAll(y.getStringList("hidden-beaten"));
+		// The map.
+		List<?> columns = y.getList("map", List.of());
+		List<List<String[]>> raw = new ArrayList<>();
+		for (int c = 0; c < columns.size(); c++) {
+			List<Node> col = new ArrayList<>();
+			List<String[]> rawCol = new ArrayList<>();
+			for (Object o : (List<?>) columns.get(c)) {
+				String[] f = String.valueOf(o).split(",", -1);
+				Node n = new Node(c, Integer.parseInt(f[0]), NodeType.valueOf(f[1]));
+				n.visited = Boolean.parseBoolean(f[2]);
+				n.hiddenRolled = Boolean.parseBoolean(f[3]);
+				col.add(n);
+				rawCol.add(f);
+			}
+			run.map.add(col);
+			raw.add(rawCol);
+		}
+		for (int c = 0; c + 1 < run.map.size(); c++) {
+			for (int i = 0; i < run.map.get(c).size(); i++) {
+				for (String row : raw.get(c).get(i)[4].split("/")) {
+					for (Node m : run.map.get(c + 1)) {
+						if (!row.isEmpty() && m.row == Integer.parseInt(row)) {
+							run.map.get(c).get(i).next.add(m);
+						}
+					}
+				}
+			}
+		}
+		String at = y.getString("at", "");
+		if (!at.isEmpty()) {
+			String[] f = at.split(",");
+			for (Node n : run.map.get(Integer.parseInt(f[0]))) {
+				if (n.row == Integer.parseInt(f[1])) {
+					run.at = n;
+				}
+			}
+		}
+		// Who comes back.
+		List<Player> party = new ArrayList<>(List.of(lead));
+		for (String m : y.getStringList("members")) {
+			Player mp = Bukkit.getPlayer(UUID.fromString(m));
+			if (mp != null && !mp.equals(lead) && of(mp) == null) {
+				party.add(mp);
+			}
+		}
+		run.bar = Bukkit.createBossBar("거울 던전", BarColor.BLUE, BarStyle.SOLID);
+		RUNS.add(run);
+		int colour = run.theme == null ? 0x8E2121 : run.theme.color();
+		MdWorld.build(slot, MdWorld.Room.START, colour, run.floor + "층");
+		for (Player p : party) {
+			UUID id = p.getUniqueId();
+			run.members.add(id);
+			BY_PLAYER.put(id, run);
+			run.returnTo.put(id, p.getLocation());
+			run.modes.put(id, p.getGameMode());
+			run.bonus.put(id, y.getInt("bonus." + id, 0));
+			p.teleport(MdWorld.entrance(slot, MdWorld.Room.START));
+			p.setGameMode(GameMode.ADVENTURE);
+			run.bar.addPlayer(p);
+		}
+		run.phase = "THEME".equals(y.getString("phase")) || run.theme == null || run.map.isEmpty() ? Phase.THEME : Phase.MAP;
+		if (run.phase == Phase.THEME && run.offered.isEmpty()) {
+			run.offered = run.rollThemes(run.themeOffers);
+		}
+		run.applyFrail();
+		MdGifts.changed(run);
+		run.updateBar();
+		deleteSave(leaderId);
+		run.broadcast(Component.text("저장한 거울 던전으로 돌아왔어요: " + run.floor + "층 · " + run.modeName(), NamedTextColor.GREEN));
+		run.reopen(lead);
+		return run;
+	}
+
 	// --- leaving and ending ------------------------------------------------------------------------
 
 	/** A member leaves (or quits): they go home; the run ends when nobody is left. */
