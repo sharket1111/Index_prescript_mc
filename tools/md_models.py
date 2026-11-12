@@ -487,11 +487,17 @@ def humanoid(mid, s, scale=1.0):
     m.box("torso", -tw / 2, 13, -td / 2, tw, 11, td, body_col,
           marks={"north": front + around, "south": around, "east": around, "west": around})
     m.box("root", -tw / 2 + 0.3, 12, -td / 2 + 0.2, tw - 0.6, 1.6, td - 0.4, pants)
+    if s.get("belly"):
+        m.box("torso", -tw / 2 - 1.2, 12.5, -td / 2 - 0.8, tw + 2.4, 7.5, td + 4.2, s["belly"])
+        m.box("torso", -tw / 2 - 0.4, 14, td / 2 + 3, tw + 0.8, 4.5, 1.4, s["belly"])
     if s.get("carapace"):
         m.box("torso", -tw / 2 - 0.6, 14, -td / 2 - 1.4, tw + 1.2, 10, 1.4, s["carapace"])
     if s.get("pack"):
         m.bone("pack", "torso", (0, 18, -td / 2))
-        m.box("pack", -3, 14, -td / 2 - 3.6, 6, 8, 3.6, s["pack"])
+        if s.get("pack_big"):  # a coffin carried on the back
+            m.box("pack", -4.5, 9, -td / 2 - 5.2, 9, 22, 5, s["pack"], marks={"south": [(1, 1, 7, 0.7, GOLD), (1, 20, 7, 0.7, GOLD), (4.1, 3, 0.8, 9, GOLD), (2.4, 5.5, 4.2, 0.8, GOLD)]})
+        else:
+            m.box("pack", -3, 14, -td / 2 - 3.6, 6, 8, 3.6, s["pack"])
     if s.get("pads"):
         m.mirror_box("arm_r", "arm_l", ax - 0.4, 22.2, -2.1, aw + 1.2, 2.4, 4.2, s["pads"])
     # Head: a face, hair, and what is worn on it.
@@ -499,11 +505,36 @@ def humanoid(mid, s, scale=1.0):
     white = s.get("glow_eyes") or s.get("eye_white", (240, 240, 240))
     face = [(1.2, 3.6, 1.8, 1.4, white), (5.0, 3.6, 1.8, 1.4, white), (1.9, 3.6, 1.0, 1.4, eye), (5.0, 3.6, 1.0, 1.4, eye),
             (1.2, 3.0, 1.8, 0.5, shade(hair, 0.8)), (5.0, 3.0, 1.8, 0.5, shade(hair, 0.8)), (3.3, 6.2, 1.4, 0.5, shade(skin, 0.62))]
+    if s.get("glasses"):
+        face += [(0.7, 3.3, 2.8, 2.0, s["glasses"]), (4.5, 3.3, 2.8, 2.0, s["glasses"]), (3.5, 4.0, 1.0, 0.5, (30, 30, 34))]
+    if s.get("grin"):
+        face += [(0.8, 5.6, 6.4, 1.3, s["grin"])] + [(1.4 + i * 1.3, 5.4, 0.4, 1.7, shade(skin, 0.5)) for i in range(5)]
     if not s.get("no_head"):
         m.box("head", -4, 24, -4, 8, 8, 8, skin, marks={"north": [] if s.get("full_mask") else face})
     else:
         m.box("head", -2, 24, -2, 4, 1.2, 4, s.get("neck", (120, 40, 40)))
     style = s.get("hair_style", "short") if not s.get("no_head") else "bald"
+    if s.get("tiny_hat"):
+        m.box("head", -1.6, 32, -1.6, 3.2, 0.6, 3.2, s["tiny_hat"])
+        m.box("head", -1, 32.6, -1, 2, 2, 2, s["tiny_hat"])
+    if s.get("ears_long"):
+        m.mirror_box("head", "head", 1.8, 31.5, -1, 1.8, 5.5, 1.4, s["ears_long"])
+    if s.get("gauntlets"):
+        g = s["gauntlets"]
+        for sg, side in ((1, "r"), (-1, "l")):
+            x0 = ax if sg > 0 else -ax - aw
+            m.box("arm_%s_low" % side, x0, 13.2, -aw / 2, aw, 4.6, aw, g, grow=0.55,
+                  marks={f: [(0.5, 1, 99, 0.6, shade(g, 0.6)), (0.5, 3, 99, 0.6, shade(g, 0.6))] for f in ("north", "south", "east", "west")})
+            m.box("leg_%s_low" % side, (0.15 if sg > 0 else -3.85), 2, -1.85, 3.7, 3.6, 3.7, g, grow=0.5,
+                  marks={f: [(0.5, 1, 99, 0.6, shade(g, 0.6)), (0.5, 2.6, 99, 0.6, shade(g, 0.6))] for f in ("north", "south", "east", "west")})
+    if s.get("parasol"):
+        pc = s["parasol"]
+        m.bone("parasol", "torso", (0, 26, -4), rest=(-12, 0, 0))
+        ribs = {"north": [(i * 3.2 + 1, 0, 0.5, 99, shade(pc, 0.6)) for i in range(7)]}
+        m.box("parasol", -11, 19, -6.6, 22, 14, 0.8, pc, marks=ribs)
+        m.box("parasol", -7, 15, -6.9, 14, 22, 0.8, pc, marks=ribs)
+        m.box("parasol", -9.5, 16.5, -6.3, 19, 19, 0.8, shade(pc, 0.8))
+        m.box("parasol", -0.4, 12, -6, 0.8, 14, 0.8, (30, 26, 34))
     if s.get("ears"):
         m.mirror_box("head", "head", 2.6, 31, -1, 2.6, 2.6, 1.4, s["ears"])
     if s.get("snout"):
@@ -588,9 +619,19 @@ def humanoid(mid, s, scale=1.0):
         m.mirror_box("coat", "coat", tw / 2 - 0.3, 13 - ln, -td / 2 - 0.3, 0.7, ln, td - 0.2, c)
         if s.get("skirt"):
             m.box("coat", -tw / 2 - 0.3, 13 - ln, td / 2 - 0.2, tw + 0.6, ln, 0.7, c)
+        sw = s.get("skirt_wide", 0)
+        if sw:  # a wide dress in tiers
+            for i, (yy, grow_) in enumerate(((13 - ln * 0.45, sw * 0.5), (13 - ln * 0.75, sw * 0.8), (13 - ln, sw))):
+                m.box("coat", -tw / 2 - grow_, yy, -td / 2 - grow_, tw + 2 * grow_, ln * 0.3, td + 2 * grow_, shade(c, 1.0 - 0.12 * (i % 2)),
+                      marks={f: [(0, ln * 0.3 - 0.7, 99, 0.7, s.get("frill", shade(c, 1.4)))] for f in ("north", "south", "east", "west")})
     if s.get("cape"):
+        cw = s.get("cape_wide", 0)
         m.bone("cape", "torso", (0, 23.5, -td / 2 - 0.4), rest=(-8, 0, 0))
-        m.box("cape", -tw / 2 - 0.5, 8, -td / 2 - 1.0, tw + 1, 15.5, 0.7, s["cape"])
+        m.box("cape", -tw / 2 - 0.5 - cw, 8 - cw, -td / 2 - 1.0, tw + 1 + 2 * cw, 15.5 + cw, 0.7 + cw * 0.3, s["cape"],
+              marks={"south": [(i * 2.2 + 0.5, 12, 1, 99, shade(s["cape"], 0.7)) for i in range(int((tw + 2 * cw) / 2.2))] if cw else []})
+        if cw:
+            m.box("torso", -tw / 2 - cw, 21.5, -td / 2 - 1.6, tw + 2 * cw, 3.6, td + 2.6, s.get("cape_fur", s["cape"]))
+            m.mirror_box("cape", "cape", tw / 2 + cw - 0.5, 9 - cw, -td / 2 - 1.0, 0.8, 13, 3.2, s["cape"])
     if s.get("tail"):
         m.bone("tail", "root", (0, 12.5, -td / 2), rest=(-50, 0, 0))
         m.box("tail", -0.8, 3, -td / 2 - 0.8, 1.6, 9.5, 1.6, s["tail"])

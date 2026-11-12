@@ -34,7 +34,7 @@ def eyes(col, y, x1, x2, w=1.4, h=1.4):
 # --- four legs ----------------------------------------------------------------------------------------
 
 def quadruped(mid, c, scale=1.0, H=9, length=16, width=8, bh=7, head=(6, 6, 6), snout=3, horns=None, wool=None, ears=None, tail=9,
-              mane=None, squat=False, plates=None, extra=None):
+              mane=None, squat=False, plates=None, extra=None, no_head=False, spikes=None):
     """A beast: body, head with a jaw, four two-part legs, a tail. c: body, belly, head, eye, leg."""
     m = Model(mid, scale=scale, height=H + bh + 4, anims="none")
     body, headc, eye = c["body"], c.get("head", c["body"]), c.get("eye", GLOW)
@@ -54,11 +54,17 @@ def quadruped(mid, c, scale=1.0, H=9, length=16, width=8, bh=7, head=(6, 6, 6), 
             m.box("body", -1, H + bh, -L / 2 + 1 + i * L / 4, 2, 2.2, L / 4 - 1.2, plates)
     if mane:
         m.box("body", -Wd / 2 - 0.8, H + bh - 4, L / 2 - 4.5, Wd + 1.6, 5.2, 4.5, mane)
+    if spikes:
+        for i in range(7):
+            m.box("body", -Wd / 2 + (i * 37 % int(Wd)), H + bh, -L / 2 + 1 + i * (L - 2) / 7, 1.4, 2 + (i * 53 % 3), 1.6, spikes)
     hw, hh, hd = head
     hy = H + bh - 2 if not squat else H + bh - 4
     m.bone("head", "body", (0, hy, L / 2 - 0.5))
-    m.box("head", -hw / 2, hy - hh / 2 + 1, L / 2 - 0.5, hw, hh, hd, headc,
-          marks={"north": eyes(eye, 1.2, 0.8, hw - 2.2), "east": [(hd - 2.2, 1.2, 1.4, 1.4, eye)], "west": [(0.8, 1.2, 1.4, 1.4, eye)]})
+    if no_head:
+        snout = 0
+    else:
+        m.box("head", -hw / 2, hy - hh / 2 + 1, L / 2 - 0.5, hw, hh, hd, headc,
+              marks={"north": eyes(eye, 1.2, 0.8, hw - 2.2), "east": [(hd - 2.2, 1.2, 1.4, 1.4, eye)], "west": [(0.8, 1.2, 1.4, 1.4, eye)]})
     if snout:
         m.box("head", -hw / 2 + 1, hy - hh / 2 + 2.2, L / 2 - 0.5 + hd, hw - 2, hh / 2 - 0.6, snout, shade(headc, 0.9),
               marks={"north": [(hw / 2 - 1.6, 0.4, 1.2, 0.8, BLACK)]})
@@ -123,7 +129,7 @@ def quadruped(mid, c, scale=1.0, H=9, length=16, width=8, bh=7, head=(6, 6, 6), 
 
 # --- wings ---------------------------------------------------------------------------------------------
 
-def winged(mid, c, scale=1.0, span=14, hover=14, antennae=True, crown=None, long_legs=False):
+def winged(mid, c, scale=1.0, span=14, hover=14, antennae=True, crown=None, long_legs=False, flame=False):
     """A moth or fairy: a hovering body with four wings. c: body, wing, wing2, spot, eye."""
     m = Model(mid, scale=scale, height=hover + 14, anims="none", bright=c.get("bright", False))
     body, wing, eye = c["body"], c["wing"], c.get("eye", GLOW)
@@ -148,6 +154,13 @@ def winged(mid, c, scale=1.0, span=14, hover=14, antennae=True, crown=None, long
         m.box("wing_%su" % side, x0, -1, -0.3, span, span * 0.75, 0.6, wing, rel=True,
               marks={f: [(span * 0.45, span * 0.2, span * 0.3, span * 0.3, spot), (span * 0.55, span * 0.28, span * 0.12, span * 0.12, BLACK),
                          (0, 0, span, 0.8, shade(wing, 0.6))] for f in ("north", "south")})
+        if flame:  # wings of fire: a bright heart, tongues of flame at the edge
+            n, hot, edge = "wing_%su" % side, c.get("spot", (255, 226, 100)), c.get("wing2", wing)
+            m.box(n, sg * 1 - (0 if sg > 0 else span * 0.5), 0.5, -0.5, span * 0.5, span * 0.45, 1.0, hot, rel=True, plain=True)
+            for i, (fx, fh) in enumerate(((0.15, 0.5), (0.4, 0.75), (0.65, 0.55), (0.85, 0.3))):
+                w2 = span * 0.16
+                m.box(n, sg * span * fx - (0 if sg > 0 else w2), span * 0.75 - 1.2, -0.3, w2, span * fh, 0.6, edge if i % 2 else wing, rel=True)
+            m.box(n, sg * span - (0 if sg > 0 else span * 0.3), span * 0.2, -0.3, span * 0.3, span * 0.2, 0.6, edge, rel=True)
         m.bone("wing_%sl" % side, "body", (sg * 2.4, y, -2), rest=(0, 0, -sg * 16))
         x1 = 0 if sg > 0 else -span * 0.7
         m.box("wing_%sl" % side, x1, -span * 0.6, -0.3, span * 0.7, span * 0.62, 0.6, c.get("wing2", shade(wing, 0.82)), rel=True,
@@ -269,10 +282,25 @@ def serpent(mid, c, scale=1.0, front=3, back=6, w=5, h=4, seg=6, legs=True, fins
 
 # --- a clam -----------------------------------------------------------------------------------------------
 
-def clam(mid, c, scale=1.0):
-    m = Model(mid, scale=scale, height=18, anims="none")
+def clam(mid, c, scale=1.0, stilts=0):
+    """A shell with a pearl; with stilts, carried high on six long thin legs."""
+    m = Model(mid, scale=scale, height=18 + stilts, anims="none")
     shell, inner, pearl = c["shell"], c.get("inner", (226, 160, 170)), c.get("pearl", (250, 250, 255))
-    m.bone("root", None, (0, 3, 0))
+    m.bone("root", None, (0, 3 + stilts, 0))
+    m.bone("lift", "root", (0, 3 + stilts, 0))
+    _bone, _box = m.bone, m.box
+    if stilts:
+        legc = c.get("leg", BLACK)
+        for side, sg in (("r", 1), ("l", -1)):
+            for i, z in enumerate((6, 0, -6)):
+                n = "leg_%s%d" % (side, i + 1)
+                _bone(n, "root", (sg * 8, 5 + stilts, z), rest=(0, -sg * (i - 1) * 25, sg * 35))
+                _box(n, 0 if sg > 0 else -10, -0.5, -0.5, 10, 1, 1, legc, rel=True)
+                _bone(n + "_low", n, (sg * 18, 5 + stilts, z), rest=(0, 0, -sg * 105))
+                _box(n + "_low", 0 if sg > 0 else -(stilts + 9), -0.4, -0.4, stilts + 9, 0.8, 0.8, legc, rel=True)
+        # Everything below is drawn lifted by the stilts.
+        m.bone = lambda name, parent, pivot, rest=(0, 0, 0): _bone(name, "lift" if parent == "root" else parent, (pivot[0], pivot[1] + stilts, pivot[2]), rest)
+        m.box = lambda bone, x, y, z, w, h, d, color, **kw: _box(bone, x, y if kw.get("rel") else y + stilts, z, w, h, d, color, **kw)
     m.bone("lower", "root", (0, 3, 0))
     ridge = lambda: {"north": [(i * 3 + 1, 0, 0.8, 99, shade(shell, 0.7)) for i in range(6)]}
     m.box("lower", -9, 3, -8, 18, 4.5, 16, shell, marks=ridge())
@@ -287,6 +315,8 @@ def clam(mid, c, scale=1.0):
     m.bone("pearl", "root", (0, 10.5, 0))
     m.box("pearl", -3, 8, -3, 6, 6, 6, pearl, plain=True, marks={"north": eyes(c.get("eye", (60, 60, 90)), 2, 1, 3.6)})
     m.parts = {"Shell": ["upper"], "Pearl": ["pearl"], "Head": ["pearl"], "Body": []}
+    if stilts:
+        del m.__dict__["bone"], m.__dict__["box"]
     m.clips = {
         "idle": C(40, True, upper=W(40, 40, base=(-6, 0, 0), amp=(5, 0, 0)), pearl=W(40, 20, pamp=(0, 0.3, 0))),
         "walk": C(20, True, root=W(20, 20, amp=(0, 0, 6), pamp=(0, 0.6, 0)), upper=W(20, 10, base=(-4, 0, 0), amp=(4, 0, 0))),
@@ -299,6 +329,15 @@ def clam(mid, c, scale=1.0):
         "death": C(24, False, upper=[(0,), (12, (-100, 0, 0)), (24, (-110, 0, 0))], pearl=[(0,), (12, (0, 0, 0), (0, 2, 0)), (24, (0, 0, 60), (0, -5, 7), 0.6)],
                    root=[(0,), (24, (0, 0, 10), (0, -1.5, 0))]),
     }
+    if stilts:
+        legs = ["leg_%s%d" % (s2, i) for s2 in "rl" for i in (1, 2, 3)]
+        sgn = lambda n: 1 if "_r" in n else -1
+        m.clips["walk"] = C(16, True, lift=W(16, 8, pamp=(0, 0.5, 0)), **{n: W(16, 16, amp=(0, 16, sgn(n) * 8), phase=(int(n[-1]) % 2) * 0.5) for n in legs})
+        m.clips["idle"]["tracks"].update(C(40, True, **{n: W(40, 40, amp=(0, 0, sgn(n) * 3), phase=int(n[-1]) * 0.2) for n in legs})["tracks"])
+        for name, drop in (("stagger", stilts * 0.75), ("death", stilts * 0.95)):
+            m.clips[name]["tracks"]["lift"] = [K(0), K(12, p=(0, -drop, 0)), K(m.clips[name]["len"], p=(0, -drop, 0))]
+            for n in legs:
+                m.clips[name]["tracks"][n] = [K(0), K(12, (0, 0, sgn(n) * 40)), K(m.clips[name]["len"], (0, 0, sgn(n) * 40))]
     return m
 
 
@@ -400,6 +439,15 @@ def totem(mid, c, scale=1.0, core="slab", hover=10, hands=True, face=True, rotor
     if core == "slab":
         m.box("core", -6, y, -4, 12, 18, 8, body, marks={"north": [(1, 1, 10, 1, accent), (1, 16, 10, 1, accent)]})
         m.box("core", -7, y + 17, -5, 14, 2, 10, accent)
+    elif core == "disc":  # a great stone wheel with a face, on a mound of cloth
+        st = body
+        m.box("core", -9, y + 8, -1.5, 18, 12, 3, st)
+        m.box("core", -6, y + 5, -1.6, 12, 18, 3.2, st)
+        m.box("core", -8, y + 6.5, -1.4, 16, 15, 2.8, shade(st, 0.9), marks={"north": [(3, 2.5, 10, 10, accent), (4.5, 4, 7, 7, shade(st, 0.6))]})
+        skirt = c.get("skirt", (150, 24, 24))
+        for i, (w2, h2) in enumerate(((8, 5), (12, 4), (16, 4), (20, 3))):
+            m.box("root", -w2 / 2, y + 8 - sum(hh for _, hh in ((8, 5), (12, 4), (16, 4), (20, 3))[:i + 1]), -w2 / 2.4, w2, h2, w2 / 1.2, shade(skirt, 1.0 - 0.1 * i))
+        fz = 1.7
     elif core == "frame":
         m.box("core", -8, y, -1, 16, 20, 2, c.get("picture", (60, 70, 100)), marks={"north": [(3, 4, 10, 8, c.get("sky", (120, 140, 180))), (5, 12, 6, 6, c.get("figure", BLACK))]})
         for (x, yy, w2, h2) in ((-9, y - 1, 18, 2), (-9, y + 19, 18, 2), (-9, y - 1, 2, 22), (7, y - 1, 2, 22)):

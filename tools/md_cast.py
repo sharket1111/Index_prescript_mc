@@ -16,17 +16,17 @@ GOLD, WHITE, BLACK, BONE = (214, 180, 80), (240, 240, 240), (22, 22, 26), (226, 
 PEOPLE = {
     "Ahab": ("pequod", {"coat": (30, 40, 70), "top": (30, 40, 70), "hair": (230, 230, 230), "hair_style": "long", "hat": (24, 30, 50), "brim": 2.6, "weapon": "spear", "cape": (24, 30, 50), "bulk": 0.6}, 1.2),
     "Effloresced E.G.O::GasHarpoon": ("pequod", {"coat": (40, 50, 80), "glow_eyes": (120, 220, 255), "weapon": "spear", "weapon_tint": (120, 220, 255), "cape": (20, 26, 44), "bulk": 0.6}, 1.3),
-    "Ricardo": ("middle", {"bulk": 2.2, "hair": (20, 18, 18), "top": (26, 26, 30), "chains": GOLD, "weapon": None, "big_arm": (206, 160, 124), "inner": None}, 1.4),
-    "Kromer": ("n_corp", {"hood": None, "mask": None, "hair": (236, 226, 190), "hair_style": "long", "coat": (240, 236, 226), "top": (240, 236, 226), "accent": GOLD, "weapon": "hammer", "weapon_tint": (60, 60, 66), "halo": GOLD}, 1.15),
+    "Ricardo": ("middle", {"bulk": 2.0, "hair": (224, 50, 120), "hair_style": "spiky", "glasses": (250, 250, 255), "top": (206, 160, 124), "inner": None, "tie": None, "lapels": None, "accent": GOLD, "veins": (70, 60, 70), "sleeve": (206, 160, 124), "pants": (236, 236, 236), "shoes": (110, 50, 150), "gauntlets": GOLD, "cape": (24, 22, 28), "cape_wide": 3, "cape_fur": (20, 18, 24), "emblem": (120, 50, 160), "weapon": None}, 1.45),
+    "Kromer": ("n_corp", {"hood": None, "mask": None, "hair": (232, 224, 190), "coat": (240, 236, 222), "top": (240, 236, 222), "pants": (240, 236, 222), "coat_len": 11, "accent": GOLD, "inner": (200, 170, 90), "splotches": [(170, 30, 36), (170, 30, 36), (150, 24, 30)], "gauntlets": (90, 90, 100), "weapon": "greatsword", "weapon_tint": (50, 46, 50), "shoes": (150, 30, 34)}, 1.0),
     "Guido the Persistent": ("n_corp", {"bulk": 1.2, "weapon": "hammer", "pads": (70, 70, 76)}, 1.2),
     "Don Quixote": ("bloodfiend", {"hair": (240, 214, 120), "hair_style": "long", "top": (236, 230, 214), "coat": (236, 230, 214), "accent": GOLD, "pads": GOLD, "cape": (160, 24, 34), "weapon": "lance", "weapon_tint": (190, 30, 40), "bulk": 0.5}, 1.3),
-    "Sancho": ("bloodfiend", {"hair": (240, 214, 120), "top": (40, 20, 26), "coat": (120, 20, 30), "cape": (60, 10, 18), "weapon": "lance", "weapon_tint": (170, 26, 36)}, 1.15),
-    "Dulcinea": ("bloodfiend", {"hair": (236, 150, 170), "hair_style": "long", "top": (190, 40, 70), "coat": None, "skirt": (190, 40, 70), "coat_len": 9, "accent": GOLD, "weapon": "rapier", "crown": (190, 30, 50)}, 1.15),
+    "Sancho": ("bloodfiend", {"hair": (244, 206, 80), "hair_style": "long", "eyes": (200, 30, 40), "top": (40, 34, 36), "inner": (120, 60, 50), "tie": None, "coat": (30, 26, 30), "coat_len": 9, "accent": (150, 24, 30), "pants": (26, 24, 28), "shoes": (232, 214, 210), "cape": (200, 30, 36), "cape_wide": 3, "cape_fur": (220, 40, 44), "weapon": "lance", "weapon_tint": (190, 30, 40)}, 1.15),
+    "Dulcinea": ("bloodfiend", {"hair": (238, 228, 196), "hair_style": "long", "eyes": (150, 80, 220), "top": (34, 26, 44), "inner": (230, 226, 236), "tie": None, "lapels": None, "coat": None, "skirt": (60, 34, 96), "coat_len": 12, "skirt_wide": 5, "frill": (160, 90, 230), "accent": (150, 80, 220), "sleeve": (34, 26, 44), "parasol": (90, 50, 150), "weapon": None, "shoes": (30, 22, 40)}, 1.3),
     "The Barber": ("bloodfiend", {"hair": (170, 30, 40), "hair_style": "long", "top": (30, 20, 24), "coat": None, "skirt": (120, 20, 30), "weapon": "scissors"}, 1.15),
     "The Priest": ("bloodfiend", {"hair": (200, 200, 206), "hair_style": "long", "top": (26, 24, 28), "coat": (26, 24, 28), "coat_len": 10, "inner": WHITE, "tie": None, "accent": (170, 30, 40), "weapon": "mace"}, 1.2),
     "Cassetti": ("bloodfiend", {"hair": (236, 236, 240), "coat": (150, 24, 36), "top": (150, 24, 36), "weapon": "rapier", "cape": (40, 10, 16)}, 1.1),
     "???": ("bloodfiend", {"full_mask": (230, 226, 220), "glow_eyes": (200, 30, 40), "hair_style": "long", "hair": (60, 10, 20), "weapon": "scissors", "bulk": 0.5}, 1.25),
-    "Erlking Heathcliff": ("wild_hunt", {"hood": None, "hair": (40, 30, 40), "hair_style": "spiky", "horns": (200, 196, 210), "coat": (30, 24, 44), "top": (30, 24, 44), "cape": (20, 16, 30), "glow_eyes": (190, 120, 255), "accent": (150, 90, 230), "weapon": "greatsword", "weapon_tint": (120, 100, 160), "bulk": 0.8}, 1.3),
+    "Erlking Heathcliff": ("wild_hunt", {"hood": None, "hair": (70, 50, 40), "hair_style": "long", "glow_eyes": None, "eyes": (150, 110, 220), "coat": (40, 38, 46), "top": (56, 52, 60), "pants": (34, 32, 38), "accent": (120, 110, 120), "pads": (60, 58, 66), "pack": (22, 20, 26), "pack_big": True, "weapon": "greatsword", "weapon_tint": (150, 40, 44), "bulk": 0.6}, 1.3),
     "Heathcliff, The Heartbroken": ("wild_hunt", {"hood": None, "hair": (40, 30, 40), "hair_style": "spiky", "coat": (40, 30, 60), "glow_eyes": (190, 120, 255), "chains": (150, 150, 160), "weapon": "greatsword", "weapon_tint": (90, 70, 120), "bulk": 0.8, "hunch": 12}, 1.35),
     "Heathcliff?": ("street", {"hair": (90, 60, 40), "hair_style": "spiky", "top": (90, 60, 120), "weapon": "club", "bulk": 0.4}, 1.05),
     "The Reaved Lamenter of the Wild Hunt": ("wild_hunt", {"bulk": 1.0, "weapon": "scythe", "cape": (20, 24, 34), "horns": (180, 190, 210)}, 1.35),
@@ -72,13 +72,13 @@ PEOPLE = {
     "Kkomi and Vergilius?": ("named", {"top": (30, 20, 24), "coat": (110, 20, 26), "hair": (40, 30, 30), "glow_eyes": (255, 60, 50), "weapon": "katana", "weapon_tint": (170, 30, 36), "pack": (230, 220, 200)}, 0.9),
     "Distorted Hohenheim": ("named", {"top": (60, 70, 80), "coat": (236, 236, 230), "coat_len": 10, "hair": (200, 200, 190), "visor": (120, 255, 200), "big_arm": (90, 200, 170), "claws": (40, 120, 100), "hunch": 10, "weapon": None, "bulk": 0.5}, 1.4),
     "Imagined Im Gyeong-eop": ("soldier", {"helmet": (60, 60, 70), "top": (120, 30, 30), "pads": GOLD, "cape": (30, 40, 90), "weapon": "greatsword", "bulk": 1.0, "beard": BLACK}, 1.3),
-    "The Time Ripper": ("named", {"top": (30, 28, 34), "coat": (30, 28, 34), "coat_len": 10, "hat": (24, 22, 28), "full_mask": (226, 220, 200), "glow_eyes": (255, 200, 80), "accent": GOLD, "weapon": "scissors", "weapon_tint": (200, 200, 210), "emblem": GOLD}, 1.3),
+    "The Time Ripper": ("named", {"top": (26, 26, 30), "coat": (26, 26, 30), "coat_len": 11, "pants": (22, 22, 26), "hat": (22, 22, 26), "crown_h": 5.5, "brim": 1.8, "band": GOLD, "hair_style": "bald", "skin": (40, 38, 40), "full_mask": (30, 28, 30), "glow_eyes": GOLD, "accent": GOLD, "lapels": 1, "emblem": GOLD, "hands": GOLD, "claws": GOLD, "weapon": None}, 1.45),
     "The Knight of Despair": ("named", {"top": (30, 34, 60), "skirt": (30, 34, 60), "coat": None, "coat_len": 10, "hair": (70, 110, 200), "hair_style": "long", "eyes": (60, 120, 255), "accent": (120, 170, 255), "pads": (20, 22, 40), "weapon": "rapier", "halo": (120, 170, 255), "cape": (20, 22, 40)}, 1.35),
     "The King in Binds": ("named", {"top": (90, 70, 50), "coat": (120, 30, 30), "coat_len": 10, "crown": GOLD, "chains": (160, 160, 170), "beard": (200, 200, 200), "hair": (200, 200, 200), "bulk": 1.4, "cape": (90, 20, 24), "weapon": "greatsword", "glow_eyes": (255, 220, 120)}, 1.5),
     "Wayward Passenger": ("named", {"top": (90, 80, 76), "skin": (190, 150, 150), "hair_style": "bald", "big_arm": (170, 80, 90), "claws": BONE, "veins": (170, 40, 60), "hunch": 16, "glow_eyes": (255, 255, 255), "weapon": None, "bulk": 0.8}, 1.45),
     "Headless Ichthys": ("named", {"no_head": True, "top": (60, 90, 110), "coat": (40, 60, 80), "skin": (150, 190, 200), "weapon": "trident", "veins": (120, 200, 210), "bulk": 0.6, "tail": (120, 170, 190)}, 1.4),
     "So That No One Will Cry": ("named", {"top": (200, 196, 180), "skin": (210, 204, 190), "hair_style": "bald", "full_mask": (230, 200, 80), "glow_eyes": (120, 20, 20), "splotches": [(230, 200, 80), (230, 200, 80), (190, 40, 40)], "big_arm": (230, 200, 80), "chains": (150, 110, 60), "weapon": None, "hunch": 8}, 1.45),
-    "Fairy Gentleman": ("named", {"top": (40, 90, 60), "coat": (40, 90, 60), "inner": WHITE, "tie": (190, 40, 50), "hat": (30, 60, 44), "crown_h": 5, "brim": 1.6, "skin": (210, 230, 200), "bulk": 2.4, "wings": (200, 240, 220), "weapon": "baton", "weapon_tint": (120, 80, 40), "hair_style": "bald"}, 1.45),
+    "Fairy Gentleman": ("named", {"top": (60, 214, 150), "coat": None, "skin": (70, 226, 160), "pants": (50, 196, 136), "shoes": (40, 170, 116), "hands": (90, 236, 176), "sleeve": (60, 214, 150), "accent": None, "hair_style": "bald", "eyes": (10, 60, 40), "eye_white": (10, 60, 40), "grin": (20, 90, 60), "ears_long": (70, 226, 160), "tie": BLACK, "tiny_hat": BLACK, "bulk": 3.6, "belly": (70, 226, 160), "big_arm": (90, 236, 176), "wings": (130, 236, 240), "wing_span": 10, "veins": (150, 250, 200), "weapon": None}, 1.6),
     "Hurting Teddy Bear": ("named", {"top": (150, 104, 66), "skin": (160, 112, 72), "pants": (140, 96, 60), "shoes": (120, 80, 50), "hands": (120, 80, 50), "hair_style": "bald", "ears": (150, 104, 66), "snout": (220, 190, 150), "eyes": BLACK, "eye_white": BLACK, "bulk": 2.0, "weapon": None, "splotches": [(200, 60, 60)]}, 1.4),
     "Rose Hunter": ("named", {"top": (40, 70, 50), "coat": (150, 24, 40), "hat": (150, 24, 40), "brim": 2.6, "full_mask": (40, 70, 50), "glow_eyes": (255, 120, 150), "weapon": "rapier", "weapon_tint": (60, 120, 70), "splotches": [(220, 50, 80), (220, 50, 80)]}, 1.35),
     "Crawling Inquisitor": ("n_corp", {"hunch": 30, "claws": (200, 200, 210), "weapon": None, "glow_eyes": (255, 80, 60), "bulk": 0.5}, 1.3),
@@ -109,11 +109,28 @@ PEOPLE = {
 
 
 def telepole(m, H, L, Wd, bh, hy):
+    """Telephone poles stuck in its back, leaning."""
     m.bone("pole", "body", (0, H + bh, -2))
-    m.box("pole", -0.6, H + bh, -2.6, 1.2, 11, 1.2, (90, 80, 70))
-    m.box("pole", -3, H + bh + 8.5, -2.4, 6, 0.8, 0.8, (90, 80, 70))
-    m.box("pole", -1, H + bh + 10.5, -3, 2, 2, 2, (255, 230, 120), plain=True)
+    wood = (86, 60, 50)
+    for i, (x, z, hgt) in enumerate(((-1.5, -6, 13), (1.5, -1, 15), (-0.5, 4, 11))):
+        m.box("pole", x - 0.6, H + bh - 1, z - 0.6, 1.2, hgt, 1.2, wood)
+        m.box("pole", x - 3, H + bh + hgt - 3.5, z - 0.4, 6, 0.8, 0.8, wood)
+        m.box("pole", x - 2.2, H + bh + hgt - 5.5, z - 0.4, 4.4, 0.7, 0.7, wood)
     m.parts["Telepole"] = m.parts["Back"] = ["pole"]
+
+
+def apple_stem(m, H, L, Wd, bh, hy):
+    y = H + bh
+    m.box("body", -6, y, -6, 12, 1.2, 12, (250, 210, 70))
+    m.box("body", -0.7, y + 1, -0.7, 1.4, 3.4, 1.4, (70, 46, 30))
+    m.box("body", -0.7, y + 4, -0.7, 3, 1.2, 1.4, (70, 46, 30))
+    m.box("body", -Wd / 2 - 0.4, H + 2, -L / 2 - 0.4, 5.5, 8, 6, (30, 22, 18))
+    for sx, z in ((1, 4), (-1, -3)):
+        m.box("body", sx * (Wd / 2) - 0.6, H + 1, z, 1.2, 6, 1.2, (96, 64, 40))
+    gold = (246, 196, 40)
+    m.box("body", -Wd / 2 - 1.5, H + 3, -L / 2 + 2.5, Wd + 3, bh - 6, L - 5, gold)
+    m.box("body", -Wd / 2 + 2.5, H + 3, -L / 2 - 1.5, Wd - 5, bh - 6, L + 3, gold)
+    m.box("body", -Wd / 2 + 2, H - 1.2, -L / 2 + 2, Wd - 4, 1.4, L - 4, (226, 170, 30))
 
 
 def toad_eyes(m, H, L, Wd, bh, hy):
@@ -128,28 +145,28 @@ def abno(name, sin_col):
     """The Abnormalities and creatures, one by one. Returns a Model or None."""
     c = sin_col
     A = {
-        "Alleyway Watchdog": lambda: Cr.quadruped("watchdog", {"body": (50, 44, 48), "head": (36, 32, 36), "eye": (255, 60, 40), "jaw": (120, 30, 30), "stripe": (30, 26, 30)}, scale=1.5, head=(8, 7, 7), snout=4, mane=(30, 26, 30), ears=(36, 32, 36), extra=telepole),
+        "Alleyway Watchdog": lambda: Cr.quadruped("watchdog", {"body": (32, 36, 54), "head": (24, 26, 40), "eye": (240, 240, 250), "jaw": (16, 16, 26), "leg": (22, 24, 38), "tuft": (40, 46, 70)}, scale=1.6, length=18, head=(7, 6, 7), snout=5, mane=(22, 24, 38), ears=(24, 26, 40), spikes=(22, 24, 38), tail=12, extra=telepole),
         "Blubbering Toad": lambda: Cr.quadruped("toad", {"body": (60, 110, 150), "belly": (200, 220, 236), "eye": (255, 230, 90), "jaw": (40, 60, 110)}, scale=1.7, squat=True, H=5, length=12, width=12, bh=8, head=(10, 6, 5), snout=2, tail=0, extra=toad_eyes),
-        "Brazen Bull - Tearful": lambda: Cr.quadruped("bull", {"body": (170, 120, 60), "head": (150, 100, 50), "eye": (120, 220, 255), "leg": (130, 90, 44), "tuft": (90, 60, 30)}, scale=1.8, H=9, length=16, width=10, bh=9, head=(7, 7, 6), snout=3, horns=(230, 220, 190), plates=(200, 150, 80)),
+        "Brazen Bull - Tearful": lambda: Cr.quadruped("bull", {"body": (126, 44, 30), "head": (110, 36, 26), "eye": (70, 210, 255), "leg": (70, 26, 22), "paw": (70, 210, 255), "stripe": (244, 130, 40), "tuft": (150, 90, 50), "jaw": (190, 40, 40)}, scale=1.9, H=9, length=17, width=10, bh=10, head=(7, 7, 6), snout=3, horns=(50, 30, 30), mane=(100, 34, 26)),
         "Dreaming Electric Sheep": lambda: Cr.quadruped("sheep", {"body": (70, 70, 90), "head": (40, 40, 56), "eye": (120, 230, 255), "leg": (40, 40, 56)}, scale=1.4, H=7, length=13, width=8, bh=7, head=(5, 5, 5), snout=2, wool=(236, 236, 220), horns=(240, 220, 90), tail=3),
         "Drifting Fox": lambda: Cr.quadruped("fox", {"body": (220, 130, 50), "belly": (240, 230, 220), "head": (220, 130, 50), "eye": (255, 240, 120), "leg": (60, 40, 30), "tuft": (240, 240, 240)}, scale=1.5, H=8, length=14, width=6, bh=6, head=(5, 5, 5), snout=4, ears=(60, 40, 30), tail=11),
         "Four-Legged Beast": lambda: Cr.quadruped("beast4", {"body": (90, 40, 50), "eye": (255, 220, 90), "jaw": (200, 190, 170), "stripe": (50, 20, 30)}, scale=1.6, head=(8, 7, 7), snout=3, plates=(200, 190, 170), mane=(50, 20, 30)),
         "Wriggling Beast": lambda: Cr.serpent("wriggler", {"body": (120, 50, 60), "plate": (70, 24, 34), "eye": (255, 220, 90)}, scale=1.5, legs=False, back=7, w=6, h=5),
-        "Ardor Blossom Moth": lambda: Cr.winged("moth", {"body": (90, 36, 26), "wing": (236, 110, 36), "wing2": (200, 60, 30), "spot": (255, 226, 100), "eye": (255, 230, 120), "bright": True}, scale=1.7),
+        "Ardor Blossom Moth": lambda: Cr.winged("moth", {"body": (22, 18, 18), "abdomen": (240, 130, 30), "band": (250, 220, 90), "head": (230, 70, 30), "wing": (240, 120, 30), "wing2": (220, 56, 24), "spot": (255, 226, 100), "eye": (255, 240, 150), "antenna": (22, 18, 18), "leg": (16, 14, 14), "bright": True}, scale=1.8, long_legs=True, span=15, flame=True),
         "Fairy Mass": lambda: Cr.winged("fairy_mass", {"body": (200, 230, 190), "wing": (220, 250, 230), "spot": (160, 220, 180), "eye": (20, 60, 30)}, scale=0.9, span=9, hover=18, antennae=False),
         "Fairy Queen": lambda: Cr.winged("fairy_queen", {"body": (120, 200, 150), "wing": (200, 250, 220), "wing2": (150, 230, 190), "spot": (255, 240, 150), "eye": (20, 60, 30)}, scale=1.6, crown=GOLD, antennae=False),
         "Fairy-Long-Legs": lambda: Cr.winged("fairy_legs", {"body": (60, 80, 70), "wing": (120, 160, 150), "spot": (220, 240, 230), "eye": (255, 240, 150), "leg": (40, 50, 46)}, scale=1.5, long_legs=True, hover=18, span=11),
-        "Shock Centipede": lambda: Cr.serpent("centipede", {"body": (50, 60, 120), "plate": (240, 220, 80), "eye": (130, 230, 255), "fang": (240, 220, 80)}, scale=1.6),
+        "Shock Centipede": lambda: Cr.serpent("centipede", {"body": (34, 44, 76), "plate": (20, 26, 48), "leg": (16, 20, 36), "head": (26, 32, 56), "eye": (255, 50, 60), "fang": (120, 200, 255)}, scale=1.7, back=7, head=(8, 6, 8)),
         "Dream-Devouring Siltcurrent": lambda: Cr.serpent("siltcurrent", {"body": (36, 54, 84), "plate": (24, 36, 60), "fin": (90, 230, 200), "eye": (150, 255, 230), "bright": False}, scale=1.9, legs=False, fins=True, hover=9, mandibles=False, lure=(130, 255, 220), w=6, h=6, back=7),
-        "Ambling Pearl": lambda: Cr.clam("pearl", {"shell": (176, 150, 176), "pearl": (250, 250, 255)}, scale=1.9),
+        "Ambling Pearl": lambda: Cr.clam("pearl", {"shell": (96, 90, 84), "inner": (110, 210, 80), "pearl": (220, 240, 200), "leg": (18, 18, 20), "eye": (40, 80, 30)}, scale=1.6, stilts=12),
         "Ebony Queen's Apple": lambda: Cr.plant("ebony_apple", {"trunk": (56, 36, 46), "vine": (46, 60, 40), "bloom": (40, 16, 36), "eye": (255, 60, 70), "mouth": (200, 30, 40), "leaf": (60, 90, 50)}, scale=1.8, thorns=True, arm=9),
-        "Golden Apple": lambda: Cr.plant("golden_apple", {"trunk": (90, 70, 40), "vine": (120, 100, 50), "bloom": (236, 190, 60), "eye": BLACK, "mouth": (90, 50, 30), "rot": (110, 80, 40)}, scale=1.6),
+        "Golden Apple": lambda: Cr.quadruped("golden_apple", {"body": (246, 196, 40), "leg": (96, 64, 40), "paw": (70, 46, 30), "belly": (30, 22, 18)}, scale=1.7, H=9, length=15, width=15, bh=14, tail=0, no_head=True, extra=apple_stem),
         "Fruit of Understanding": lambda: Cr.plant("fruit_understanding", {"trunk": (120, 110, 100), "bloom": (236, 220, 230), "eye": (120, 60, 160), "leaf": (150, 120, 200)}, scale=1.4, trunk=10, arm=6),
         "Four-hundred Roses": lambda: Cr.plant("roses400", {"trunk": (40, 80, 50), "bloom": (200, 30, 56), "eye": (255, 230, 120)}, scale=1.9, bloom="rose", thorns=True, arm=9),
         "Sign of Roses": lambda: Cr.plant("rose_sign", {"trunk": (50, 90, 60), "bloom": (230, 90, 130), "eye": (255, 250, 200)}, scale=1.6, bloom="rose", thorns=True),
         "Faelantern": lambda: Cr.plant("faelantern", {"trunk": (56, 76, 56), "vine": (70, 100, 70), "bloom": (76, 60, 44), "light": (255, 236, 130)}, scale=1.7, bloom="lantern"),
         "Drenched Gossypium": lambda: Cr.plant("gossypium", {"trunk": (70, 90, 80), "bloom": (236, 240, 244), "eye": (90, 160, 220)}, scale=1.6, bloom="cotton"),
-        "Doomsday Calendar": lambda: Cr.totem("calendar", {"body": (170, 116, 84), "face": (226, 200, 170), "hand": (150, 100, 72), "accent": (110, 70, 50), "mouth": (120, 30, 30)}, scale=1.6),
+        "Doomsday Calendar": lambda: Cr.totem("calendar", {"body": (120, 60, 50), "face": (150, 90, 76), "hand": (150, 30, 30), "accent": (80, 34, 30), "skirt": (160, 26, 26), "mouth": (40, 10, 10)}, scale=1.7, core="disc", hover=14),
         "Portrait of a Certain Day": lambda: Cr.totem("portrait", {"body": (200, 166, 76), "hand": (226, 220, 200), "picture": (50, 60, 90)}, scale=1.5, core="frame"),
         "Spiral of Contempt": lambda: Cr.totem("spiral", {"body": (110, 60, 140), "accent": (50, 26, 70), "hand": (160, 110, 190), "eye": (255, 220, 120)}, scale=1.6, core="spiral"),
         "Grant Us Love": lambda: Cr.totem("grant_love", {"body": (220, 90, 130), "accent": GOLD, "hand": (240, 220, 226), "face": (250, 236, 240)}, scale=1.7, core="heart"),
