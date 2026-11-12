@@ -269,7 +269,7 @@ final class MdBattle {
 				pf.level = level;
 				pf.part = partData;
 				FOES.put(part.getUniqueId(), pf);
-				MdLooks.dressPart(part, mob, partData.icon(), run.theme.color());
+				MdLooks.dressPart(part, mob, partData.name(), partData.icon(), run.theme.color());
 				MdFoes.setup(this, part, pf, kind, mob);
 			}
 		}

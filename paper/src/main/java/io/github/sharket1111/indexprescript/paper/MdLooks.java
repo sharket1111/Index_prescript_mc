@@ -90,6 +90,8 @@ final class MdLooks {
 		String shown = "";
 		/** A broken part: its wings or tail are not drawn. */
 		boolean off;
+		/** For a part: what the core's model calls it. */
+		String key = "";
 		/** Its 3D model, if it has one (else the rig's six bones above). */
 		MdModels.Inst model;
 
@@ -151,12 +153,16 @@ final class MdLooks {
 	}
 
 	/** A part of an Abnormality ({@code icon}: Back, Tail, Head, Right Arm...): its hitbox follows the core; wings and tails are drawn. */
-	static void dressPart(LivingEntity part, LivingEntity core, String icon, int colour) {
+	static void dressPart(LivingEntity part, LivingEntity core, String name, String icon, int colour) {
 		hideHitbox(part, 0.6F);
 		Body coreBody = BODIES.get(core.getUniqueId());
 		Body body = new Body(part, core, icon, coreBody == null ? 1.0F : coreBody.scale, Map.of());
 		Location at = flat(part.getLocation());
-		boolean modelled = coreBody != null && coreBody.model != null && coreBody.model.def.parts().containsKey(icon);
+		// A model names its parts by the original's part name, or by its icon.
+		if (coreBody != null && coreBody.model != null) {
+			body.key = coreBody.model.def.parts().containsKey(name) ? name : icon;
+		}
+		boolean modelled = coreBody != null && coreBody.model != null && coreBody.model.def.parts().containsKey(body.key);
 		if (modelled) {
 			// The core's model draws this part itself.
 		} else if (icon.equals("Back")) {
@@ -193,7 +199,7 @@ final class MdLooks {
 			core.hidden[bone] = !shown;
 		}
 		if (core != null && core.model != null) {
-			core.model.show(body.icon, shown);
+			core.model.show(body.key, shown);
 		}
 	}
 
@@ -336,7 +342,7 @@ final class MdLooks {
 		};
 		Location base = flat(core.getLocation());
 		Body coreBody = BODIES.get(core.getUniqueId());
-		org.joml.Vector3f onModel = coreBody == null || coreBody.model == null ? null : coreBody.model.partAt(body.icon);
+		org.joml.Vector3f onModel = coreBody == null || coreBody.model == null ? null : coreBody.model.partAt(body.key);
 		if (onModel != null) {
 			off = new float[] {onModel.x / s, onModel.y / s, onModel.z / s};
 		}

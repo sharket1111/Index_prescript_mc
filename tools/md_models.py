@@ -185,8 +185,8 @@ def element(c, size):
     for f in FACES:
         x, y, w, h = c["uv"][f]
         e = 0.02
-        faces[f] = {"uv": [round((x + e) * 16 / size, 4), round((y + e) * 16 / size, 4), round((x + w - e) * 16 / size, 4),
-                           round((y + h - e) * 16 / size, 4)], "texture": "#t"}
+        faces[f] = {"uv": [round((x + e) * 16 / size, 3), round((y + e) * 16 / size, 3), round((x + w - e) * 16 / size, 3),
+                           round((y + h - e) * 16 / size, 3)], "texture": "#t"}
     return {"from": [round(v, 3) for v in frm], "to": [round(v, 3) for v in to], "faces": faces}
 
 
@@ -218,6 +218,11 @@ def export(model):
     out = {"scale": model.scale, "height": model.height, "anims": model.anims, "bones": bones, "parts": model.parts}
     if model.bright:
         out["bright"] = True
+    ps = getattr(model, "pscale", 1.0)
+    if ps != 1.0 and not model.clips and model.anims in ANIMSETS:
+        # A shorter or taller skeleton: the shared clips with their movements scaled.
+        model.clips = {n: {"len": c["len"], "loop": c["loop"], "tracks": {b: [[k[0], k[1], k[2], k[3], k[4] * ps, k[5] * ps, k[6] * ps, k[7]] for k in t]
+                                                                             for b, t in c["tracks"].items()}} for n, c in ANIMSETS[model.anims].items()}
     if model.clips:
         out["clips"] = model.clips
     return out
@@ -438,7 +443,7 @@ WEAPON_OF_ITEM = {"netherite_sword": "katana", "iron_sword": "sword", "mace": "m
 
 def humanoid(mid, s, scale=1.0):
     """A person with elbows and knees, clothes, headwear and a weapon, from a spec (colours and features)."""
-    m = Model(mid, scale=scale, height=33 + (3 if s.get("hat") else 0))
+    m = Model(mid, scale=scale, height=33 + (s.get("crown_h", 3) if s.get("hat") else 0))
     skin = s.get("skin", (206, 160, 124))
     top = s["top"]
     coat = s.get("coat")
@@ -454,8 +459,8 @@ def humanoid(mid, s, scale=1.0):
     ax = tw / 2  # where the arms hang
     aw = 3 + bulk * 0.6
     m.bone("root", None, (0, 13, 0))
-    m.bone("torso", "root", (0, 13, 0))
-    m.bone("head", "torso", (0, 24, 0))
+    m.bone("torso", "root", (0, 13, 0), rest=(s.get("hunch", 0), 0, 0))
+    m.bone("head", "torso", (0, 24, 0), rest=(-s.get("hunch", 0) * 0.7, 0, 0))
     for side, sg in (("r", 1), ("l", -1)):
         m.bone("arm_" + side, "torso", (sg * (ax + aw / 2), 23, 0))
         m.bone("arm_%s_low" % side, "arm_" + side, (sg * (ax + aw / 2), 18.2, 0))
@@ -485,7 +490,8 @@ def humanoid(mid, s, scale=1.0):
     if s.get("carapace"):
         m.box("torso", -tw / 2 - 0.6, 14, -td / 2 - 1.4, tw + 1.2, 10, 1.4, s["carapace"])
     if s.get("pack"):
-        m.box("torso", -2.5, 15, -td / 2 - 2.6, 5, 7, 2.6, s["pack"])
+        m.bone("pack", "torso", (0, 18, -td / 2))
+        m.box("pack", -3, 14, -td / 2 - 3.6, 6, 8, 3.6, s["pack"])
     if s.get("pads"):
         m.mirror_box("arm_r", "arm_l", ax - 0.4, 22.2, -2.1, aw + 1.2, 2.4, 4.2, s["pads"])
     # Head: a face, hair, and what is worn on it.
@@ -493,8 +499,33 @@ def humanoid(mid, s, scale=1.0):
     white = s.get("glow_eyes") or s.get("eye_white", (240, 240, 240))
     face = [(1.2, 3.6, 1.8, 1.4, white), (5.0, 3.6, 1.8, 1.4, white), (1.9, 3.6, 1.0, 1.4, eye), (5.0, 3.6, 1.0, 1.4, eye),
             (1.2, 3.0, 1.8, 0.5, shade(hair, 0.8)), (5.0, 3.0, 1.8, 0.5, shade(hair, 0.8)), (3.3, 6.2, 1.4, 0.5, shade(skin, 0.62))]
-    m.box("head", -4, 24, -4, 8, 8, 8, skin, marks={"north": face})
-    style = s.get("hair_style", "short")
+    if not s.get("no_head"):
+        m.box("head", -4, 24, -4, 8, 8, 8, skin, marks={"north": [] if s.get("full_mask") else face})
+    else:
+        m.box("head", -2, 24, -2, 4, 1.2, 4, s.get("neck", (120, 40, 40)))
+    style = s.get("hair_style", "short") if not s.get("no_head") else "bald"
+    if s.get("ears"):
+        m.mirror_box("head", "head", 2.6, 31, -1, 2.6, 2.6, 1.4, s["ears"])
+    if s.get("snout"):
+        m.box("head", -1.8, 24.6, 4, 3.6, 2.6, 1.6, s["snout"], marks={"north": [(1.2, 0.2, 1.2, 0.8, (20, 20, 24))]})
+    if s.get("wings"):
+        m.bone("wings", "torso", (0, 21, -td / 2))
+        for sg in (1, -1):
+            m.box("wings", 1 if sg > 0 else -1 - s.get("wing_span", 9), 14, -td / 2 - 1.2, s.get("wing_span", 9), 11, 0.6, s["wings"],
+                  marks={f: [(1, 1, s.get("wing_span", 9) - 2, 0.8, shade(s["wings"], 0.6)), (1, 5, s.get("wing_span", 9) - 3, 0.8, shade(s["wings"], 0.6))] for f in ("north", "south")})
+    if s.get("big_arm"):
+        m.box("arm_r_low", ax - 1, 11, -aw / 2 - 1.2, aw + 2.4, 7.6, aw + 2.4, s["big_arm"])
+    if s.get("claws"):
+        for sg, bn in ((1, "arm_r_low"), (-1, "arm_l_low")):
+            for dz in (-1.2, 0, 1.2):
+                m.box(bn, sg * (ax + aw / 2) - 0.35, 9.4, dz - 0.35, 0.7, 2.8, 0.7, s["claws"])
+    if s.get("chains"):
+        m.box("torso", -tw / 2 - 0.3, 17, -td / 2 - 0.3, tw + 0.6, 1, td + 0.6, s["chains"])
+        m.box("torso", -tw / 2 - 0.3, 20, -td / 2 - 0.3, tw + 0.6, 1, td + 0.6, s["chains"])
+    if s.get("crown"):
+        m.box("head", -3.6, 32.4, -3.6, 7.2, 1.2, 7.2, s["crown"])
+        for x, z in ((-3.6, -3.6), (2.4, -3.6), (-3.6, 2.4), (2.4, 2.4), (-0.6, 2.4), (-0.6, -3.6)):
+            m.box("head", x, 33.6, z, 1.2, 1.6, 1.2, s["crown"])
     if style != "bald":
         m.box("head", -4.3, 31.4, -4.3, 8.6, 1.1, 8.6, hair)
         m.box("head", -4.3, 26.5 if style == "short" else 17.5 if style == "long" else 24, -4.5, 8.6, 32.3 - (26.5 if style == "short" else 17.5 if style == "long" else 24), 0.8, hair)
@@ -518,8 +549,9 @@ def humanoid(mid, s, scale=1.0):
     if s.get("hat"):
         brim = s.get("brim", 2.2)
         m.box("head", -4 - brim, 31.2, -4 - brim, 8 + 2 * brim, 0.8, 8 + 2 * brim, s["hat"])
-        m.box("head", -3.7, 32, -3.7, 7.4, s.get("crown", 3), 7.4, s["hat"],
-              marks={f: [(0, s.get("crown", 3) - 1, 99, 1, s.get("band", shade(s["hat"], 0.6)))] for f in ("north", "south", "east", "west")})
+        ch = s.get("crown_h", 3)
+        m.box("head", -3.7, 32, -3.7, 7.4, ch, 7.4, s["hat"],
+              marks={f: [(0, ch - 1, 99, 1, s.get("band", shade(s["hat"], 0.6)))] for f in ("north", "south", "east", "west")})
     if s.get("mask"):
         m.box("head", -4.2, 24, 3.6, 8.4, 3.4, 0.7, s["mask"])
     if s.get("visor"):
@@ -574,6 +606,10 @@ def humanoid(mid, s, scale=1.0):
         m.parts["Back"] = ["cape"]
     if s.get("tail"):
         m.parts["Tail"] = ["tail"]
+    if s.get("wings"):
+        m.parts["Back"] = ["wings"]
+    if s.get("pack"):
+        m.parts["Back"] = m.parts["Gift Sack"] = ["pack"]
     return m
 
 
