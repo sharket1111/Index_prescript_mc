@@ -136,7 +136,9 @@ final class MdFoes {
 				}
 				int coins = Math.max(1, s.coins());
 				ai.skills.add(s);
-				ai.cards.add(new SkillCard(s.name(), colour, s.base(), s.coinPower(), coins, text.toString(), coins * 8 + 10, true, "N".repeat(coins)));
+				// Cruelty: coins two stronger (minus coins two weaker).
+				int cruel = battle.run.adv("cruelty") * (s.coinPower() < 0 ? -1 : 1);
+				ai.cards.add(new SkillCard(s.name(), colour, s.base(), s.coinPower() + cruel, coins, text.toString(), coins * 8 + 10, true, "N".repeat(coins)));
 			}
 			for (double t : foe.part != null ? foe.part.stagger() : data.stagger()) {
 				if (t > 0 && t < 100) {
@@ -144,6 +146,10 @@ final class MdFoes {
 				}
 			}
 			ai.thresholds.sort((a, b) -> Double.compare(b, a));
+			if (battle.run.adv("barrier") > 0 && !ai.thresholds.isEmpty()) {
+				// Tremor Barrier: the first stagger threshold is gone.
+				ai.thresholds.remove(0);
+			}
 		}
 		if (ai.cards.isEmpty() && core == null) {
 			// No numbers from the original: skills made for the Theme Pack's keyword.
@@ -263,7 +269,9 @@ final class MdFoes {
 	/** Ticks between actions: a turn and a half shared out over as many actions as the original allows it (at least 2.5 s). */
 	private static int cooldown(Ai ai) {
 		int actions = ai.foe.data == null ? (ai.kind == MdBattle.Kind.BOSS ? 2 : 1) : Math.max(1, ai.foe.data.maxActions());
-		return Math.max(50, CombatState.TURN_TICKS * 3 / 2 / actions);
+		// Nerve Acceleration: 15% sooner for each level taken.
+		double nerve = Math.max(0.4, 1 - 0.15 * ai.foe.battle.run.adv("nerve"));
+		return (int) Math.max(40, CombatState.TURN_TICKS * 3 / 2 / actions * nerve);
 	}
 
 	private static void defend(Ai ai, MdData.EnemySkill skill) {
@@ -506,8 +514,10 @@ final class MdFoes {
 	/** A status on a member: the keywords through the plugin's own, Bind as Slowness, Paralyze as Weakness, Fragile and defence down as damage taken. */
 	private static void inflict(Player victim, String status, int potency, int count) {
 		int n = Math.max(1, Math.max(potency, count));
+		MdRun run = MdRun.of(victim);
+		int twice = run != null && run.adv("proliferate") > 0 ? 2 : 1;
 		switch (status) {
-			case "burn", "bleed", "tremor", "rupture", "sinking" -> MdGifts.inflictKeyword(victim, status, potency, count);
+			case "burn", "bleed", "tremor", "rupture", "sinking" -> MdGifts.inflictKeyword(victim, status, potency * twice, count * twice);
 			case "bind" -> victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, CombatState.TURN_TICKS, Math.min(3, n - 1)));
 			case "paralyze" -> victim.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, CombatState.TURN_TICKS, Math.min(3, n - 1)));
 			case "fragile", "defense_level_down" -> MdGifts.debuff(victim, "fragile", status.equals("fragile") ? n : (n + 1) / 2);

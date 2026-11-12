@@ -90,6 +90,8 @@ final class MdBattle {
 	final MdRun run;
 	final MdRun.NodeType type;
 	private final String eventFoe;
+	/** For a hidden boss: who comes with it (or null). */
+	String ally;
 	private final List<String> eventGifts;
 	final List<LivingEntity> mobs = new ArrayList<>();
 	private int wave;
@@ -108,12 +110,17 @@ final class MdBattle {
 		this.eventGifts = eventGifts;
 	}
 
+	/** The enemy this battle was started for (an event's Abnormality, a hidden boss), or null. */
+	String eventFoe() {
+		return eventFoe;
+	}
+
 	static Foe foe(LivingEntity entity) {
 		return FOES.get(entity.getUniqueId());
 	}
 
 	MdWorld.Room room() {
-		return type == MdRun.NodeType.BOSS ? MdWorld.Room.BOSS : MdWorld.Room.BATTLE;
+		return type == MdRun.NodeType.BOSS || type == MdRun.NodeType.HIDDEN ? MdWorld.Room.BOSS : MdWorld.Room.BATTLE;
 	}
 
 	void start() {
@@ -121,7 +128,8 @@ final class MdBattle {
 			case NORMAL, RISKY -> 2;
 			default -> 1;
 		};
-		bar = org.bukkit.Bukkit.createBossBar(type.ko, type == MdRun.NodeType.BOSS ? BarColor.RED : BarColor.YELLOW, BarStyle.SEGMENTED_10);
+		bar = org.bukkit.Bukkit.createBossBar(type.ko, type == MdRun.NodeType.BOSS ? BarColor.RED : type == MdRun.NodeType.HIDDEN ? BarColor.PURPLE : BarColor.YELLOW,
+				BarStyle.SEGMENTED_10);
 		for (Player p : run.players()) {
 			bar.addPlayer(p);
 		}
@@ -144,6 +152,12 @@ final class MdBattle {
 						: run.theme.bosses().get(run.random.nextInt(run.theme.bosses().size()));
 				boss = spawn(b, Kind.BOSS);
 				spawnMany("normal", Math.max(1, players - 1), false);
+			}
+			case HIDDEN -> {
+				boss = spawn(new MdData.Enemy(eventFoe, "human"), Kind.BOSS);
+				if (ally != null) {
+					spawn(new MdData.Enemy(ally, "human"), Kind.FOCUSED);
+				}
 			}
 			default -> {
 			}
@@ -203,7 +217,9 @@ final class MdBattle {
 			age.setAdult();
 		}
 		int players = Math.max(1, run.fighters().size());
-		double trialHp = MdGifts.trialStat(run, "max_hp") / 100.0;
+		// Mounting Trials (bosses have more of their own) and the Vitality adversity.
+		double trialHp = (1 + (MdGifts.trialStat(run, "max_hp") + (kind == Kind.BOSS ? MdGifts.trialStat(run, "boss_max_hp") : 0)) / 100.0)
+				* (1 + run.adv("vitality") / 100.0) - 1;
 		int level = level();
 		// The original's HP at this level, in the plugin's scale (a heart point is 10 of the original's HP).
 		double health = data != null ? data.hpAt(level) / TotalDamage.SCALE * (1 + 0.6 * (players - 1)) * (1 + trialHp)
@@ -247,6 +263,15 @@ final class MdBattle {
 		FOES.put(mob.getUniqueId(), foe);
 		MdLooks.dress(mob, foe, kind);
 		MdFoes.setup(this, mob, foe, kind, null);
+		if (run.adv("shield") > 0) {
+			// Shield Generation: 3000 of the original's HP, no more than half its own.
+			double shield = Math.min(3000.0 / TotalDamage.SCALE, health * 0.5);
+			AttributeInstance cap = mob.getAttribute(Attribute.MAX_ABSORPTION);
+			if (cap != null) {
+				cap.setBaseValue(shield);
+				mob.setAbsorptionAmount(shield);
+			}
+		}
 		// An Abnormality's other parts (wings, arms, head...): hitboxes of their own that follow the core.
 		if (data != null && data.parts().size() > 1) {
 			double share = health / Math.max(1, data.hpAt(level) / TotalDamage.SCALE);
@@ -280,7 +305,10 @@ final class MdBattle {
 
 	/** Enemy level on this floor: 41 on floor 1 up to 65 on floor 5, +5 on Hard, +1.5 for each Mounting Trial (their Level Boost). */
 	int level() {
-		return 35 + 6 * Math.max(1, run.floor) + (run.floorHard ? 5 : 0) + (int) Math.round(1.5 * run.trials.size());
+		int f = Math.max(1, run.floor);
+		// 41 on floor 1 to 65 on floor 5; then 3 a floor to 80 on floor 10, and 2 a floor to 90 on floor 15.
+		int base = f <= 5 ? 35 + 6 * f : f <= 10 ? 65 + 3 * (f - 5) : 80 + 2 * (f - 10);
+		return base + (run.floorHard ? 5 : 0) + (int) Math.round(1.5 * Math.min(10, run.trials.size())) + run.adv("level");
 	}
 
 	/** Tells the party who they face: each enemy's weaknesses and resistances (the original's multipliers). */
@@ -343,6 +371,9 @@ final class MdBattle {
 			if (turn > 0) {
 				MdGifts.trigger(run, "turn_end", null, null);
 			}
+			if (turn > 0) {
+				adversities(fighters);
+			}
 			turn++;
 			turnStart = true;
 			MdGifts.trigger(run, "turn_start", null, null);
@@ -354,6 +385,37 @@ final class MdBattle {
 				spawnWave();
 			} else {
 				win();
+			}
+		}
+	}
+
+	/** A turn ends: what the adversities taken do to the members. */
+	private void adversities(List<Player> fighters) {
+		int fire = run.adv("fire");
+		int mental = run.adv("mental");
+		int cap = run.advMin("fatigue", 99);
+		boolean status = run.adv("status") > 0;
+		for (Player p : fighters) {
+			if (fire > 0) {
+				// Mark of Fire I: 5, +3 a turn, to 20; II: 10, +5 a turn, to 30 (both when both are taken).
+				double damage = 0;
+				for (MdAdversity a : run.adversities) {
+					if (a.kind.equals("fire")) {
+						damage += a.value == 1 ? Math.min(20, 5 + 3 * (turn - 1)) : Math.min(30, 10 + 5 * (turn - 1));
+					}
+				}
+				Damage.dealFixed(p, damage / TotalDamage.SCALE, null);
+				p.getWorld().spawnParticle(Particle.FLAME, p.getLocation().add(0, 1, 0), 8, 0.3, 0.5, 0.3, 0.01);
+			}
+			if (mental > 0) {
+				Sanity.lose(p, mental);
+			}
+			if (Sanity.of(p) > cap) {
+				Sanity.set(p, cap);
+			}
+			if (status) {
+				String keyword = List.of("burn", "bleed", "tremor", "rupture", "sinking").get(run.random.nextInt(5));
+				MdGifts.inflictKeyword(p, keyword, 5, 1);
 			}
 		}
 	}

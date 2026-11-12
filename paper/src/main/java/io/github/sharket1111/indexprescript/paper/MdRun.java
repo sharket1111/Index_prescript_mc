@@ -16,7 +16,10 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
@@ -41,6 +44,15 @@ import net.kyori.adventure.title.Title;
  */
 final class MdRun {
 	static final int FLOORS = 5;
+	/** The INFINITY MIRROR goes to floor 10, the EXTREME MIRROR to floor 15; each is offered on clearing the one before on Hard. */
+	static final int MAX_FLOORS = 15;
+	/** The EXTREME floors' hidden bosses: the boss, who comes with it, and the Tier IV gift it leaves. */
+	static final String[][] HIDDEN_BOSSES = {
+		{"The Thumb Nursefather - Valencina", "The Thumb Apprentice - Lucio", "Imperfect Eye of Precognition"},
+		{"The Index Nursefather - Rien", null, "The Abandoned Oracle"},
+		{"The Middle Nursefather - Matthias", "The Middle Apprentice - Kira", "The Book of Vengeance: Annex"},
+		{"The Ring Nursefather - Callisto", "The Ring Apprentice - Albina", "A Maestro's Ring-Turned-Artwork"}};
+	static final int HIDDEN_CHANCE = 10;
 	static final int BASE_COST = 200;
 	private static final Map<UUID, MdRun> BY_PLAYER = new HashMap<>();
 	private static final List<MdRun> RUNS = new ArrayList<>();
@@ -53,7 +65,9 @@ final class MdRun {
 	enum NodeType {
 		NORMAL("일반 전투", Material.IRON_SWORD, 75, 85), RISKY("위험 전투", Material.GOLD_NUGGET, 120, 150),
 		FOCUSED("집중 전투", Material.ZOMBIE_HEAD, 100, 120), ABNO("환상체 전투", Material.ENDER_EYE, 150, 180),
-		EVENT("이벤트", Material.WRITABLE_BOOK, 0, 0), SHOP("상점", Material.EMERALD, 0, 0), BOSS("보스", Material.WITHER_SKELETON_SKULL, 200, 250);
+		EVENT("이벤트", Material.WRITABLE_BOOK, 0, 0), SHOP("상점", Material.EMERALD, 0, 0), BOSS("보스", Material.WITHER_SKELETON_SKULL, 200, 250),
+		/** An optional boss that takes a node's place on the EXTREME floors. */
+		HIDDEN("숨은 보스", Material.NETHER_STAR, 1000, 1000);
 
 		final String ko;
 		final Material icon;
@@ -78,6 +92,8 @@ final class MdRun {
 		final NodeType type;
 		final List<Node> next = new ArrayList<>();
 		boolean visited;
+		/** Whether this node has had its chance of a hidden boss. */
+		boolean hiddenRolled;
 
 		Node(int col, int row, NodeType type) {
 			this.col = col;
@@ -99,6 +115,11 @@ final class MdRun {
 	int floor;
 	int floorsCleared;
 	int hardFloorsCleared;
+	/** The floor this run ends on: 5, then 10 and 15 as the party chooses to go on. */
+	int goal = FLOORS;
+	/** Adversities taken (from floor 10 on). */
+	final List<MdAdversity> adversities = new ArrayList<>();
+	final Set<String> hiddenBeaten = new HashSet<>();
 	MdData.Theme theme;
 	final Set<String> visitedThemes = new HashSet<>();
 	List<List<Node>> map = new ArrayList<>();
@@ -213,8 +234,61 @@ final class MdRun {
 
 	// --- floors ------------------------------------------------------------------------------
 
+	/** The sum of the values of the adversities of a kind taken (0: none). */
+	int adv(String kind) {
+		int sum = 0;
+		for (MdAdversity a : adversities) {
+			if (a.kind.equals(kind)) {
+				sum += a.value;
+			}
+		}
+		return sum;
+	}
+
+	/** The lowest value among the adversities of a kind taken, or {@code none}. */
+	int advMin(String kind, int none) {
+		int min = none;
+		for (MdAdversity a : adversities) {
+			if (a.kind.equals(kind)) {
+				min = Math.min(min, a.value);
+			}
+		}
+		return min;
+	}
+
+	int adversityScore() {
+		int sum = 0;
+		for (MdAdversity a : adversities) {
+			sum += a.score;
+		}
+		return sum;
+	}
+
+	/** INFINITY (floors 6-10) or EXTREME (11-15), or the floor's own difficulty. */
+	String modeName() {
+		return floor > 10 ? "EXTREME MIRROR" : floor > FLOORS ? "INFINITY MIRROR" : floorHard ? "HARD" : "NORMAL";
+	}
+
+	private static final NamespacedKey FRAIL = new NamespacedKey("index_prescript", "md_frail");
+
+	/** Frailness: each one taken lowers the members' maximum health by 10%. */
+	void applyFrail() {
+		int pct = Math.min(80, adv("frail"));
+		for (Player p : players()) {
+			AttributeInstance max = p.getAttribute(Attribute.MAX_HEALTH);
+			if (max == null) {
+				continue;
+			}
+			max.removeModifier(FRAIL);
+			if (pct > 0) {
+				max.addModifier(new AttributeModifier(FRAIL, -pct / 100.0, AttributeModifier.Operation.MULTIPLY_SCALAR_1));
+				p.setHealth(Math.min(p.getHealth(), max.getValue()));
+			}
+		}
+	}
+
 	void nextFloor() {
-		if (floor >= FLOORS) {
+		if (floor >= goal) {
 			finish(true);
 			return;
 		}
@@ -222,7 +296,9 @@ final class MdRun {
 			MdGrace.floorClear(this);
 		}
 		floor++;
-		floorHard = hard;
+		// Past floor 5 the dungeon is always Hard.
+		floorHard = hard || floor > FLOORS;
+		applyFrail();
 		theme = null;
 		map.clear();
 		at = null;
@@ -239,7 +315,7 @@ final class MdRun {
 		for (Player p : players()) {
 			p.teleport(MdWorld.entrance(slot, MdWorld.Room.START));
 			p.showTitle(Title.title(Component.text(floor + "층", NamedTextColor.WHITE).decorate(TextDecoration.BOLD),
-					Component.text(floorHard ? "HARD" : "NORMAL", floorHard ? NamedTextColor.RED : NamedTextColor.GRAY)));
+					Component.text(modeName(), floorHard ? NamedTextColor.RED : NamedTextColor.GRAY)));
 		}
 		offered = rollThemes(themeOffers);
 		updateBar();
@@ -249,9 +325,20 @@ final class MdRun {
 	/** Theme Packs for this floor and difficulty, not visited this run. */
 	List<MdData.Theme> themePool() {
 		List<MdData.Theme> pool = new ArrayList<>();
+		// Floors 6-10 draw from Hard floor 5's packs; floors 11-15 from the EXTREME packs.
+		boolean extreme = floor > 10;
+		int at = floor > FLOORS && !extreme ? FLOORS : floor;
 		for (MdData.Theme t : MdData.themes()) {
-			if (t.on(floor, floorHard) && !visitedThemes.contains(t.id()) && !t.category().contains("EXTREME")) {
+			if (t.on(at, floorHard) && !visitedThemes.contains(t.id()) && t.category().contains("EXTREME") == extreme) {
 				pool.add(t);
+			}
+		}
+		if (pool.size() < 3) {
+			// Few left unvisited this deep: packs may come again.
+			for (MdData.Theme t : MdData.themes()) {
+				if (t.on(at, floorHard) && t.category().contains("EXTREME") == extreme && !pool.contains(t)) {
+					pool.add(t);
+				}
 			}
 		}
 		return pool;
@@ -502,6 +589,63 @@ final class MdRun {
 		if (phase != Phase.MAP || !reachable().contains(n)) {
 			return;
 		}
+		if (floor > 10 && n.type != NodeType.BOSS && n.type != NodeType.SHOP && !n.hiddenRolled) {
+			n.hiddenRolled = true;
+			if (random.nextInt(100) < HIDDEN_CHANCE) {
+				offerHidden(n);
+				return;
+			}
+		}
+		proceed(n);
+	}
+
+	/** A hidden boss stands in the node's place: the leader may take it on (no leaving once in) or pass by to the node itself. */
+	private void offerHidden(Node n) {
+		Player viewer = leaderPlayer();
+		List<String[]> left = new ArrayList<>();
+		for (String[] h : HIDDEN_BOSSES) {
+			if (!hiddenBeaten.contains(h[0])) {
+				left.add(h);
+			}
+		}
+		if (viewer == null || left.isEmpty()) {
+			proceed(n);
+			return;
+		}
+		String[] boss = left.get(random.nextInt(left.size()));
+		MdGui gui = new MdGui(3, "숨은 보스가 나타났어요");
+		gui.set(11, MdGui.item(Material.NETHER_STAR, boss[0], NamedTextColor.LIGHT_PURPLE, boss[1] == null ? "혼자 나와요" : "함께: " + boss[1],
+				"이기면: 4등급 기프트 [" + boss[2] + "], 코스트 1000, 모두 완전 회복", "들어가면 전투를 포기할 수 없어요", "클릭해서 도전"), () -> {
+					viewer.closeInventory();
+					fightHidden(n, boss);
+				});
+		gui.set(15, MdGui.item(Material.OAK_DOOR, "지나가기", NamedTextColor.GRAY, "원래 노드(" + n.type.ko + ")로 가요"), () -> {
+			viewer.closeInventory();
+			proceed(n);
+		});
+		gui.fill().open(viewer);
+	}
+
+	private void fightHidden(Node n, String[] boss) {
+		if (phase != Phase.MAP) {
+			return;
+		}
+		at = n;
+		n.visited = true;
+		phase = Phase.BATTLE;
+		MdWorld.build(slot, MdWorld.Room.BOSS, 0x6A1FA8, boss[0]);
+		gather(MdWorld.Room.BOSS);
+		broadcast(Component.text("숨은 보스: " + boss[0], NamedTextColor.LIGHT_PURPLE));
+		battle = new MdBattle(this, NodeType.HIDDEN, boss[0], List.of(boss[2]));
+		battle.ally = boss[1];
+		battle.start();
+		updateBar();
+	}
+
+	private void proceed(Node n) {
+		if (phase != Phase.MAP) {
+			return;
+		}
 		at = n;
 		n.visited = true;
 		for (Player p : players()) {
@@ -556,6 +700,7 @@ final class MdRun {
 
 	/** A won battle node: Cost, a chance of an E.G.O Gift (the boss: gifts and Mounting Trials). */
 	void battleWon(NodeType type, List<String> eventGifts) {
+		String battleFoe = battle == null ? null : battle.eventFoe();
 		battle = null;
 		int gained = (int) Math.round((floorHard ? type.hardCost : type.cost) * (type == NodeType.BOSS ? 1 + 0.25 * (floor - 1) : 1)
 				* (1 + MdGrace.rewardBonus(this) + MdGifts.rewardPct(this) / 100.0));
@@ -566,6 +711,20 @@ final class MdRun {
 			if (g != null) {
 				addGift(g, false);
 			}
+		}
+		if (type == NodeType.HIDDEN) {
+			// A hidden boss: everyone back on their feet and whole.
+			for (UUID id : List.copyOf(downed)) {
+				revive(id);
+			}
+			for (Player p : players()) {
+				heal(p, 1.0);
+			}
+			if (battleFoe != null) {
+				hiddenBeaten.add(battleFoe);
+			}
+			backToMap();
+			return;
 		}
 		if (type == NodeType.BOSS) {
 			floorsCleared = floor;
@@ -626,12 +785,56 @@ final class MdRun {
 				offer.add(g);
 			}
 		}
-		List<MdData.Trial> pool = new ArrayList<>(MdData.trials(Math.min(4, floor)));
+		// Mounting Trials: Hard's for floors 1-4, the INFINITY MIRROR's for 5-9, the EXTREME MIRROR's for 10-14.
+		List<MdData.Trial> pool = new ArrayList<>(MdData.trials(Math.min(MAX_FLOORS - 1, floor)));
 		java.util.Collections.shuffle(pool, random);
-		List<MdData.Trial> trialOffer = floor >= FLOORS ? List.of() : pool.subList(0, Math.min(3, pool.size()));
+		List<MdData.Trial> trialOffer = floor >= MAX_FLOORS || floor >= goal && !canExtend() ? List.of() : pool.subList(0, Math.min(3, pool.size()));
 		Set<String> chosenGifts = new HashSet<>();
 		Set<MdData.Trial> chosenTrials = new HashSet<>();
-		openBossReward(offer, picks, trialOffer, floorHard ? 2 : 1, chosenGifts, chosenTrials);
+		// From floor 5 on a trial is a whole tier of the enemy's strength: one a floor.
+		openBossReward(offer, picks, trialOffer, floorHard && floor < FLOORS ? 2 : 1, chosenGifts, chosenTrials);
+	}
+
+	/** On clearing floor 5 or 10 on Hard the party may go on: to floor 10 (INFINITY MIRROR), then 15 (EXTREME MIRROR). */
+	boolean canExtend() {
+		return floor == goal && goal < MAX_FLOORS && floorHard;
+	}
+
+	/** After floors 10-14: the floor's adversities, as many as the leader takes (or none), then on. */
+	private void openAdversities(Set<MdAdversity> chosen) {
+		Player viewer = leaderPlayer();
+		List<MdAdversity> list = MdAdversity.of(floor);
+		if (viewer == null || list.isEmpty()) {
+			nextFloor();
+			return;
+		}
+		int now = adversityScore();
+		int add = chosen.stream().mapToInt(a -> a.score).sum();
+		MdGui gui = new MdGui(4, "역경 (제약) · 점수 " + now + " + " + add);
+		for (int i = 0; i < list.size(); i++) {
+			MdAdversity a = list.get(i);
+			ItemStack icon = MdGui.item(Material.WITHER_ROSE, a.ko + " (+" + a.score + "점)", NamedTextColor.DARK_RED, a.text, "남은 층 내내 적용돼요",
+					chosen.contains(a) ? "선택됨 (다시 누르면 취소)" : "클릭해서 받기");
+			if (chosen.contains(a)) {
+				MdGui.glow(icon);
+			}
+			gui.set(10 + i + (i >= 7 ? 2 : 0), icon, () -> {
+				if (!chosen.remove(a)) {
+					chosen.add(a);
+				}
+				openAdversities(chosen);
+			});
+		}
+		gui.set(31, MdGui.item(Material.LIME_CONCRETE, "다음 층으로", NamedTextColor.GREEN, "고르지 않아도 돼요",
+				"판이 끝나면 점수 1당 별빛 " + MdAdversity.STARLIGHT_PER_SCORE + " (지금 " + (now + add) + "점)"), () -> {
+					adversities.addAll(chosen);
+					for (MdAdversity a : chosen) {
+						broadcast(Component.text("역경: " + a.ko + " - " + a.text, NamedTextColor.DARK_RED));
+					}
+					viewer.closeInventory();
+					nextFloor();
+				});
+		gui.fill().open(viewer);
 	}
 
 	private void openBossReward(List<MdData.Gift> offer, int picks, List<MdData.Trial> trialOffer, int trialPicks, Set<String> chosen,
@@ -665,8 +868,24 @@ final class MdRun {
 				openBossReward(offer, picks, trialOffer, trialPicks, chosen, chosenTrials);
 			});
 		}
-		gui.set(40, MdGui.item(Material.LIME_CONCRETE, floor >= FLOORS ? "던전 클리어!" : "다음 층으로", NamedTextColor.GREEN,
-				"기프트를 안 고르면 시련이 무작위로 정해져요"), () -> {
+		boolean extend = canExtend();
+		if (extend) {
+			gui.set(42, MdGui.item(Material.GOLD_BLOCK, "여기서 끝내기 (던전 클리어)", NamedTextColor.GOLD, floor + "층까지의 보상을 받고 나가요"), () -> {
+				for (String id : chosen) {
+					addGift(MdData.gift(id), false);
+				}
+				viewer.closeInventory();
+				finish(true);
+			});
+		}
+		String onward = extend ? (floor == FLOORS ? "무한 거울로 (6~10층)" : "익스트림 거울로 (11~15층)") : floor >= goal ? "던전 클리어!" : "다음 층으로";
+		gui.set(extend ? 38 : 40, MdGui.item(extend ? Material.CRYING_OBSIDIAN : Material.LIME_CONCRETE, onward, extend ? NamedTextColor.LIGHT_PURPLE : NamedTextColor.GREEN,
+				"기프트를 안 고르면 시련이 무작위로 정해져요", extend ? "적이 훨씬 강해져요. 6층부터는 언제나 HARD예요" : ""), () -> {
+					if (canExtend()) {
+						goal += FLOORS;
+						broadcast(Component.text(goal == 10 ? "무한 거울: 10층까지 이어 가요." : "익스트림 거울: 15층까지 이어 가요. 층을 깰 때마다 역경(제약)을 고를 수 있어요.",
+								NamedTextColor.LIGHT_PURPLE));
+					}
 					for (String id : chosen) {
 						addGift(MdData.gift(id), false);
 					}
@@ -679,7 +898,11 @@ final class MdRun {
 					}
 					trials.addAll(picked);
 					viewer.closeInventory();
-					nextFloor();
+					if (floor >= 10 && floor < goal) {
+						openAdversities(new HashSet<>());
+					} else {
+						nextFloor();
+					}
 				});
 		gui.fill().open(viewer);
 	}
@@ -787,7 +1010,7 @@ final class MdRun {
 				+ " · 기프트 " + gifts.size() + (floorHard ? " · HARD" : "");
 		bar.setTitle(title);
 		bar.setColor(floorHard ? BarColor.RED : BarColor.BLUE);
-		bar.setProgress(Math.max(0, Math.min(1, floor / (double) FLOORS)));
+		bar.setProgress(Math.max(0, Math.min(1, floor / (double) goal)));
 		for (Player p : players()) {
 			if (!bar.getPlayers().contains(p)) {
 				bar.addPlayer(p);
@@ -822,6 +1045,10 @@ final class MdRun {
 	void leave(Player p) {
 		UUID id = p.getUniqueId();
 		if (!members.contains(id)) {
+			return;
+		}
+		if (battle != null && battle.type == NodeType.HIDDEN && !downed.contains(id) && p.isOnline()) {
+			p.sendMessage(Component.text("숨은 보스와의 전투는 포기할 수 없어요.", NamedTextColor.RED));
 			return;
 		}
 		members.remove(id);
@@ -875,6 +1102,13 @@ final class MdRun {
 		for (int f = 1; f <= hardFloorsCleared; f++) {
 			starlight += Math.min(20, 4 * f);
 		}
+		// The INFINITY and EXTREME floors, and the adversities taken.
+		for (int f = FLOORS + 1; f <= floorsCleared; f++) {
+			starlight += f > 10 ? 30 : 15;
+		}
+		if (floorsCleared >= 10) {
+			starlight += adversityScore() * MdAdversity.STARLIGHT_PER_SCORE;
+		}
 		bonus.put(id, 0);
 		if (starlight > 0) {
 			MdMeta.addStarlight(id, starlight);
@@ -897,6 +1131,10 @@ final class MdRun {
 			}
 		}
 		CombatState.of(p).setMaxCharge(CombatState.DEFAULT_MAX_CHARGE);
+		AttributeInstance maxHealth = p.getAttribute(Attribute.MAX_HEALTH);
+		if (maxHealth != null) {
+			maxHealth.removeModifier(FRAIL);
+		}
 		heal(p, 1.0);
 		if (bar != null) {
 			bar.removePlayer(p);
@@ -930,7 +1168,12 @@ final class MdRun {
 		run.floor = t.normal() != null ? t.normal()[0] : t.hard() != null ? t.hard()[0] : 1;
 		MdWorld.Room room = type == NodeType.BOSS ? MdWorld.Room.BOSS : MdWorld.Room.BATTLE;
 		MdWorld.build(0, room, t.color(), type == NodeType.BOSS ? t.boss() : t.name());
-		MdBattle battle = new MdBattle(run, type, null, List.of());
+		String[] hidden = type == NodeType.HIDDEN ? HIDDEN_BOSSES[run.random.nextInt(HIDDEN_BOSSES.length)] : null;
+		MdBattle battle = new MdBattle(run, type, hidden == null ? null : hidden[0], List.of());
+		if (hidden != null) {
+			battle.ally = hidden[1];
+			run.floor = 11;
+		}
 		battle.start();
 		Bukkit.getScheduler().runTaskLater(IndexPrescriptPlugin.instance(), battle::stop, 1200L);
 		return MdWorld.entrance(0, room);

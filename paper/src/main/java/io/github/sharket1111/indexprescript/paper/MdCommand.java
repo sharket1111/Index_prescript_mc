@@ -81,7 +81,8 @@ final class MdCommand implements TabExecutor, Listener {
 			return true;
 		}
 		if (args.length >= 2 && args[0].equals("미리보기") && sender.hasPermission("indexprescript.command")) {
-			MdRun.NodeType type = args.length >= 3 && args[2].equalsIgnoreCase("boss") ? MdRun.NodeType.BOSS : MdRun.NodeType.NORMAL;
+			MdRun.NodeType type = args.length >= 3 && args[2].equalsIgnoreCase("boss") ? MdRun.NodeType.BOSS
+					: args.length >= 3 && args[2].equalsIgnoreCase("hidden") ? MdRun.NodeType.HIDDEN : MdRun.NodeType.NORMAL;
 			org.bukkit.Location at = MdRun.preview(args[1], type);
 			if (at == null) {
 				sender.sendMessage(msg("그런 테마팩이 없어요. 예: hell_s_chicken", NamedTextColor.RED));

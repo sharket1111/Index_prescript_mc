@@ -570,6 +570,17 @@ final class MdGifts implements Listener {
 		MdBattle.Foe foe = MdBattle.foe(dead);
 		Player killer = dead.getKiller();
 		MdBattle.forget(dead);
+		if (foe != null && foe.battle.run.adv("redistribute") > 0) {
+			// Force Redistribution: the fallen's strength goes to the rest.
+			long until = CaduceusListener.now() + 2L * CombatState.TURN_TICKS;
+			for (LivingEntity other : foe.battle.mobs) {
+				MdBattle.Foe f = MdBattle.foe(other);
+				if (f != null && other != dead) {
+					f.damageUp = Math.min(10, (f.buffUntil > CaduceusListener.now() ? f.damageUp : 0) + 3);
+					f.buffUntil = until;
+				}
+			}
+		}
 		if (foe != null && killer != null) {
 			MdRun run = MdRun.of(killer);
 			if (run != null) {
