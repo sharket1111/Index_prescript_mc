@@ -685,14 +685,22 @@ def albina():
     m.mirror_box("leg_r", "leg_l", 0.0, 6.4, -2.0, 4, 2.4, 4.1, white)
     m.mirror_box("leg_r_low", "leg_l_low", 0.0, 1.6, -2.0, 4, 5.2, 4, white, marks={"north": [(1.8, 0, 0.3, 99, GOLD)]})
     m.mirror_box("leg_r_low", "leg_l_low", -0.1, 0, -2.1, 4.2, 1.8, 5.6, white, marks={f: [(0, 1.3, 99, 0.3, GOLD)] for f in SIDES})
-    # A slab of a sword, dark red, banded in steel, taller than she is.
+    # A slab of a sword, dark red, banded in steel, taller than she is: stood on its point at her side, the hilt above her head.
+    m.bones["weapon"].rest = (0, 0, 0)
+    m.weapon_flip = True
     w = wb(m)
     blade = (112, 22, 28)
-    w(-0.6, -6, -0.6, 1.2, 9, 1.2, (60, 30, 30), marks={f: [(0, 1 + i * 1.5, 99, 0.4, (30, 16, 16)) for i in range(5)] for f in SIDES})
-    w(-1.4, -8, -1.0, 2.8, 2, 2, (90, 20, 24))
-    w(-3.6, 3, -0.6, 7.2, 17, 1.2, blade, marks={f: [(0, 2 + i * 3.4, 99, 0.6, (150, 150, 160)) for i in range(5)] + [(1 + (i * 37 % 5), 1 + i * 2.1, 1.2, 1.0, (160, 40, 46)) for i in range(7)] for f in ("north", "south")})
-    w(-2.6, 20, -0.55, 5.2, 2, 1.1, blade)
-    w(-1.4, 22, -0.5, 2.8, 1.6, 1.0, sh(blade, 0.8))
+    ox = 3.4  # out from the hand, clear of her side
+    w(ox - 3.6, -13, -0.6, 7.2, 22, 1.2, blade, marks={f: [(0, 2 + i * 3.6, 99, 0.6, (150, 150, 160)) for i in range(6)] + [(1 + (i * 37 % 5), 1 + i * 2.3, 1.2, 1.0, (160, 40, 46)) for i in range(9)] for f in ("north", "south")})
+    w(ox - 2.6, -15, -0.55, 5.2, 2, 1.1, blade)
+    w(ox - 1.4, -16.6, -0.5, 2.8, 1.6, 1.0, sh(blade, 0.8))
+    w(ox - 0.5, -17.8, -0.4, 1.0, 1.2, 0.8, sh(blade, 0.7))
+    w(ox - 2.4, 9, -0.9, 4.8, 1.6, 1.8, (90, 20, 24))
+    w(ox - 0.6, 10.6, -0.6, 1.2, 9, 1.2, (60, 30, 30), marks={f: [(0, 1 + i * 1.5, 99, 0.4, (30, 16, 16)) for i in range(5)] for f in SIDES})
+    w(ox - 1.3, 19.6, -1.0, 2.6, 2, 2, (90, 20, 24))
+    w(ox - 0.5, 21.6, -0.4, 1.0, 1.8, 0.8, sh(blade, 0.8))
+    # Her hand on the blade's shoulder.
+    w(-0.4, -0.6, -0.7, ox - 3.2 + 0.6, 1.2, 1.4, (150, 150, 160))
     return m
 
 

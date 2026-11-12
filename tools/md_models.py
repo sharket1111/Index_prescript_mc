@@ -224,6 +224,21 @@ def export(model):
         # A shorter or taller skeleton: the shared clips with their movements scaled.
         model.clips = {n: {"len": c["len"], "loop": c["loop"], "tracks": {b: [[k[0], k[1], k[2], k[3], k[4] * ps, k[5] * ps, k[6] * ps, k[7]] for k in t]
                                                                              for b, t in c["tracks"].items()}} for n, c in ANIMSETS[model.anims].items()}
+    if getattr(model, "weapon_flip", False) and model.anims in ANIMSETS:
+        # A weapon held point down: turned over in the hand to strike.
+        if not model.clips:
+            model.clips = json.loads(json.dumps(ANIMSETS[model.anims]))
+        for n, c in model.clips.items():
+            if n.startswith("attack"):
+                ln = c["len"]
+                track = c["tracks"].get("weapon") or [K(0), K(ln)]
+                keys = {k[0]: list(k) for k in track}
+                for t in (3, ln - 4):
+                    keys.setdefault(t, K(t))
+                for t, k in keys.items():
+                    if 0 < t < ln:
+                        k[1] += 180
+                c["tracks"]["weapon"] = [keys[t] for t in sorted(keys)]
     if model.clips:
         out["clips"] = model.clips
     return out
