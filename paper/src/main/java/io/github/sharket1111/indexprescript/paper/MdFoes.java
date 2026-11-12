@@ -385,7 +385,7 @@ final class MdFoes {
 
 	private static void strike(MdBattle battle, Ai ai, Player victim, MdData.EnemySkill skill, int coin, boolean heads) {
 		LivingEntity mob = ai.mob;
-		MdLooks.swing(ai.anchor());
+		MdLooks.swing(ai.anchor(), skill == null ? "slash" : skill.type(), ai.foe.part == null ? null : ai.foe.part.icon());
 		Location at = victim.getLocation().add(0, 1, 0);
 		at.getWorld().spawnParticle(Particle.SWEEP_ATTACK, at, 1);
 		at.getWorld().spawnParticle(Particle.DUST, at, 14, 0.4, 0.5, 0.4, 0, new Particle.DustOptions(Color.fromRGB(battle.run.theme.color()), 1.4F));
@@ -620,6 +620,7 @@ final class MdFoes {
 			viewer.playSound(viewer.getLocation(), Sound.ENTITY_WITHER_SPAWN, SoundCategory.HOSTILE, 0.6F, 1.3F);
 		}
 		run.broadcast(Component.text("[" + p.name() + "] ", NamedTextColor.GOLD).append(Component.text(p.text(), NamedTextColor.GRAY)));
+		MdLooks.roar(mob);
 		mob.getWorld().spawnParticle(Particle.SONIC_BOOM, mob.getLocation().add(0, mob.getHeight() / 2, 0), 1);
 		mob.getWorld().spawnParticle(Particle.DUST, mob.getLocation().add(0, mob.getHeight() / 2, 0), 60, 0.8, 1.0, 0.8, 0,
 				new Particle.DustOptions(Color.fromRGB(run.theme.color()), 2.0F));

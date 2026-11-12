@@ -55,6 +55,8 @@ import net.kyori.adventure.text.format.TextDecoration;
  */
 final class MdLooks {
 	private static final Map<UUID, Body> BODIES = new ConcurrentHashMap<>();
+	/** Models playing their death before they go, with where they fell. */
+	private static final Map<MdModels.Inst, Location> DYING = new ConcurrentHashMap<>();
 	private static final List<String> BONES = Animations.BONES;
 	private static final float RIG_SCALE = 0.9375F;
 	private static final Key BAR_FONT = Key.key(Items.NAMESPACE, "md_hpbar");
@@ -88,6 +90,8 @@ final class MdLooks {
 		String shown = "";
 		/** A broken part: its wings or tail are not drawn. */
 		boolean off;
+		/** Its 3D model, if it has one (else the rig's six bones above). */
+		MdModels.Inst model;
 
 		Body(LivingEntity mob, LivingEntity core, String icon, float scale, Map<String, float[]> boneScale) {
 			this.mob = mob;
@@ -104,7 +108,8 @@ final class MdLooks {
 	/** The size an enemy is drawn at (its hitbox is scaled to match). */
 	static float scaleOf(String name, MdBattle.Kind kind) {
 		MdData.Look look = MdData.look(name);
-		float base = look == null ? 1.0F : look.scale();
+		MdModels.Def model = SkinPack.enemyOutfit(name) == null ? MdModels.of(name) : null;
+		float base = model != null ? model.scale() : look == null ? 1.0F : look.scale();
 		return base * switch (kind) {
 			case BOSS -> 1.25F;
 			case FOCUSED, ABNO -> 1.1F;
@@ -116,10 +121,18 @@ final class MdLooks {
 	static void dress(LivingEntity mob, MdBattle.Foe foe, MdBattle.Kind kind) {
 		MdData.Look look = MdData.look(foe.name);
 		float scale = scaleOf(foe.name, kind);
-		hideHitbox(mob, scale);
+		String custom = SkinPack.enemyOutfit(foe.name);
+		MdModels.Def def = custom == null ? MdModels.of(foe.name) : null;
+		hideHitbox(mob, def == null ? scale : Math.max(0.3F, scale * def.height() / 32F));
 		Body body = new Body(mob, mob, "Body", scale, look == null ? Map.of() : look.bones());
 		body.creature = foe.data != null && !foe.data.risk().isEmpty();
-		String custom = SkinPack.enemyOutfit(foe.name);
+		if (def != null) {
+			Location spot = flat(mob.getLocation());
+			body.model = new MdModels.Inst(def, scale, spot);
+			body.bar = spawnBar(spot, kind == MdBattle.Kind.BOSS ? 0.75F : 0.6F);
+			BODIES.put(mob.getUniqueId(), body);
+			return;
+		}
 		String model = custom != null ? SkinPack.MODEL : "index_prescript:rig";
 		String outfit = custom != null ? custom : "md_" + (look == null ? "named" : look.look());
 		Location at = flat(mob.getLocation());
@@ -143,7 +156,10 @@ final class MdLooks {
 		Body coreBody = BODIES.get(core.getUniqueId());
 		Body body = new Body(part, core, icon, coreBody == null ? 1.0F : coreBody.scale, Map.of());
 		Location at = flat(part.getLocation());
-		if (icon.equals("Back")) {
+		boolean modelled = coreBody != null && coreBody.model != null && coreBody.model.def.parts().containsKey(icon);
+		if (modelled) {
+			// The core's model draws this part itself.
+		} else if (icon.equals("Back")) {
 			for (int i = 0; i < 2; i++) {
 				body.extras.add(at.getWorld().spawn(at, ItemDisplay.class, d -> setup(d, dyed("index_prescript:md_wing", colour))));
 			}
@@ -176,13 +192,31 @@ final class MdLooks {
 		if (core != null && bone >= 0) {
 			core.hidden[bone] = !shown;
 		}
+		if (core != null && core.model != null) {
+			core.model.show(body.icon, shown);
+		}
 	}
 
-	/** The arm comes down on a coin's hit. */
-	static void swing(LivingEntity mob) {
+	/** A coin's strike: the attack clip for the skill's kind (slash, pierce, blunt), from the part striking if the model has one for it. */
+	static void swing(LivingEntity mob, String type, String part) {
 		Body body = BODIES.get(mob.getUniqueId());
-		if (body != null) {
-			body.swingAt = CaduceusListener.now();
+		if (body == null) {
+			return;
+		}
+		body.swingAt = CaduceusListener.now();
+		if (body.model != null) {
+			boolean played = part != null && body.model.play("attack_" + part.toLowerCase(java.util.Locale.ROOT).replace(' ', '_'));
+			if (!played && !body.model.play("attack_" + type)) {
+				body.model.play("attack_slash");
+			}
+		}
+	}
+
+	/** A new pattern: the model's roar. */
+	static void roar(LivingEntity mob) {
+		Body body = BODIES.get(mob.getUniqueId());
+		if (body != null && body.model != null) {
+			body.model.play("roar");
 		}
 	}
 
@@ -190,6 +224,9 @@ final class MdLooks {
 		Body body = BODIES.get(mob.getUniqueId());
 		if (body != null) {
 			body.hurtAt = CaduceusListener.now();
+			if (body.model != null) {
+				body.model.hurtAt = body.hurtAt;
+			}
 		}
 	}
 
@@ -211,6 +248,15 @@ final class MdLooks {
 		if (body.weapon != null) {
 			body.weapon.remove();
 		}
+		if (body.model != null) {
+			if (mob.isDead() && body.model.deathTicks() > 0) {
+				// It falls before it goes.
+				body.model.dyingAt = CaduceusListener.now();
+				DYING.put(body.model, flat(mob.getLocation()));
+			} else {
+				body.model.remove();
+			}
+		}
 		if (body.bar != null) {
 			body.bar.remove();
 		}
@@ -220,16 +266,31 @@ final class MdLooks {
 		for (Body body : List.copyOf(BODIES.values())) {
 			remove(body.mob);
 		}
+		DYING.keySet().forEach(MdModels.Inst::remove);
+		DYING.clear();
 	}
 
 	// --- every tick -------------------------------------------------------------------------------
 
 	static void tick() {
 		long now = CaduceusListener.now();
+		for (Map.Entry<MdModels.Inst, Location> dying : List.copyOf(DYING.entrySet())) {
+			MdModels.Inst inst = dying.getKey();
+			inst.tick(dying.getValue(), now, false, false);
+			if (now - inst.dyingAt > inst.deathTicks()) {
+				inst.remove();
+				DYING.remove(inst);
+			}
+		}
 		for (Body body : List.copyOf(BODIES.values())) {
 			if (!body.mob.isValid() || body.mob.isDead()) {
 				remove(body.mob);
 				continue;
+			}
+			if (body.model != null) {
+				MdBattle.Foe foe = MdBattle.foe(body.mob);
+				body.model.tick(flat(body.mob.getLocation()), now, CombatState.of(body.mob).staggered(now),
+						foe != null && foe.guardUntil > now && !foe.evading);
 			}
 			if (body.mob != body.core) {
 				follow(body);
@@ -274,6 +335,11 @@ final class MdLooks {
 			default -> new float[] {0, 1.0F, 0.4F};
 		};
 		Location base = flat(core.getLocation());
+		Body coreBody = BODIES.get(core.getUniqueId());
+		org.joml.Vector3f onModel = coreBody == null || coreBody.model == null ? null : coreBody.model.partAt(body.icon);
+		if (onModel != null) {
+			off = new float[] {onModel.x / s, onModel.y / s, onModel.z / s};
+		}
 		Location at = frame(base, off[0] * s, off[1] * s - (float) body.mob.getHeight() / 2, off[2] * s);
 		at.setYaw(base.getYaw());
 		body.mob.teleport(at);

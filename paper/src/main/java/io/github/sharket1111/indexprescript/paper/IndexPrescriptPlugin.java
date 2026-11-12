@@ -61,6 +61,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		getServer().getPluginManager().registerEvents(new Rupture(), this);
 		MdMeta.load(this);
 		MdData.load(this);
+		MdModels.load(this);
 		MdCommand mirror = new MdCommand();
 		getServer().getPluginManager().registerEvents(mirror, this);
 		getServer().getPluginManager().registerEvents(new MdGifts(), this);
