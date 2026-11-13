@@ -218,6 +218,54 @@ final class MdLooks {
 		}
 	}
 
+	/** The clip of coin {@code coin} of a boss's skill, or null (not a boss with moves of its own, or not this skill). */
+	private static String move(Body body, String skill, int coin) {
+		if (body == null || body.model == null || body.model.def.fx() == null || skill == null) {
+			return null;
+		}
+		MdModels.Skill s = body.model.def.skills().get(skill);
+		return s == null || s.clips().isEmpty() ? null : s.clips().get(Math.min(coin, s.clips().size() - 1));
+	}
+
+	private static boolean great(Body body, String skill, int coin, int coins) {
+		MdModels.Skill s = body.model.def.skills().get(skill);
+		return s != null && s.great() && coin >= coins - 1;
+	}
+
+	/** Four ticks before a boss's coin lands: its move starts and its colours gather. False if this enemy has no moves of its own. */
+	static boolean windup(LivingEntity mob, String skill, int coin, int coins, LivingEntity victim) {
+		Body body = BODIES.get(mob.getUniqueId());
+		String clip = move(body, skill, coin);
+		if (clip == null) {
+			return false;
+		}
+		body.model.play(clip);
+		MdFx.windup(body.model.def.fx(), mob, victim, clip, great(body, skill, coin, coins));
+		return true;
+	}
+
+	/** A boss's coin lands: the effect of its move. False if this enemy has no moves of its own. */
+	static boolean hit(LivingEntity mob, String skill, int coin, int coins, LivingEntity victim, boolean heads) {
+		Body body = BODIES.get(mob.getUniqueId());
+		String clip = move(body, skill, coin);
+		if (clip == null) {
+			return false;
+		}
+		MdFx.hit(body.model.def.fx(), mob, victim, clip, great(body, skill, coin, coins), heads);
+		return true;
+	}
+
+	/** A boss steps in: a roar and a burst of its colours. */
+	static void arrive(LivingEntity mob) {
+		Body body = BODIES.get(mob.getUniqueId());
+		if (body != null && body.model != null) {
+			body.model.play("roar");
+			if (body.model.def.fx() != null) {
+				MdFx.arrive(body.model.def.fx(), mob);
+			}
+		}
+	}
+
 	/** A new pattern: the model's roar. */
 	static void roar(LivingEntity mob) {
 		Body body = BODIES.get(mob.getUniqueId());

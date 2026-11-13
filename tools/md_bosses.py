@@ -719,3 +719,58 @@ BOSSES = {"Don Quixote": don_quixote, "Sancho": sancho, "Dulcinea": _tall(dulcin
           "The Middle Nursefather - Matthias": _tall(matthias, 1.2, 1.08, 1.0), "The Ring Nursefather - Callisto": _tall(callisto, 1.4, 1.18, 0.84),
           "The Middle Apprentice - Kira": _tall(kira, 1.08, 1.0, 1.0), "The Thumb Apprentice - Lucio": _tall(lucio, 1.32, 1.12, 0.88),
           "The Ring Apprentice - Albina": _tall(albina, 1.3, 1.1, 0.86)}
+
+
+# --- how each boss fights: a clip for every coin of every skill, and the colours of its effects -----------------------
+
+SLASH = ["m_slash", "m_backslash", "m_sweep", "m_slash", "m_spin", "m_backslash"]
+PIERCE = ["m_thrust", "m_lowthrust", "m_thrust", "m_lowthrust", "m_thrust"]
+BLUNT = ["m_smash", "m_sweep", "m_stomp", "m_smash"]
+FISTS = ["m_punch_r", "m_punch_l", "m_kick", "m_punch_r", "m_stomp"]
+CAST = ["m_cast", "m_cast2", "m_cast", "m_cast2", "m_cast"]
+LANCE = ["m_thrust", "m_sweep", "m_lowthrust", "m_thrust"]
+
+# The model's function name -> (colours, particle, moves by attack kind, [(words in a skill's name, moves)], words that make a skill's last coin a great one).
+STYLE = {
+    "don_quixote": ((176, 28, 38), GOLD, "CRIMSON_SPORE", {"slash": LANCE, "pierce": LANCE, "blunt": LANCE}, [], ["Eternal Festival"]),
+    "sancho": ((200, 30, 40), (246, 208, 84), "CRIMSON_SPORE", {"slash": SLASH, "pierce": LANCE, "blunt": ["m_kick", "m_sweep", "m_stomp"]}, [], ["La Aventura", "Hardblood Arts 11", "Hardblood Arts 2"]),
+    "dulcinea": ((150, 80, 220), (240, 230, 198), "WITCH", {"slash": CAST, "pierce": CAST, "blunt": CAST}, [], ["Finale", "Eternity"]),
+    "ricardo": (GOLD, (118, 52, 160), "CRIT", {"slash": FISTS, "pierce": FISTS, "blunt": FISTS}, [("Kick", ["m_kick", "m_stomp", "m_kick"]), ("Assemble", CAST), ("COUPO", ["m_smash"])], ["COUPO", "Payback"]),
+    "lei_heng": ((190, 40, 50), GOLD, "FLAME", {"slash": SLASH, "pierce": PIERCE, "blunt": BLUNT}, [], ["Blast", "Tanglecleaver", "Tigerslayer"]),
+    "ahab": ((255, 170, 60), (228, 226, 216), "FLAME", {"slash": LANCE, "pierce": PIERCE, "blunt": LANCE}, [("Exhale", CAST)], ["Burning Harpoon", "Tempering", "Be Fearless"]),
+    "kromer": ((240, 236, 222), (214, 60, 60), "END_ROD", {"slash": SLASH, "pierce": PIERCE, "blunt": ["m_smash"]}, [("Gripping", CAST)], ["Purify", "Claim Your Life", "Sin-skewering"]),
+    "erlking_heathcliff": ((150, 40, 44), (30, 26, 34), "LARGE_SMOKE", {"slash": BLUNT, "pierce": PIERCE, "blunt": ["m_smash", "m_sweep", "m_slash", "m_spin"]}, [("Glass Shard", CAST)], ["Wild Hunt", "Dullahan", "Nightmarish", "Fused Blade"]),
+    "time_ripper": ((214, 180, 84), (40, 40, 46), "ENCHANTED_HIT", {"slash": ["m_punch_r", "m_punch_l", "m_slash", "m_backslash"], "pierce": ["m_punch_r", "m_punch_l", "m_thrust"], "blunt": FISTS}, [("Time to be Saved", CAST)], ["Running Out of Time", "Extraction"]),
+    "knight_of_despair": ((70, 120, 236), (236, 244, 255), "END_ROD", {"slash": SLASH, "pierce": ["m_cast", "m_thrust", "m_cast2", "m_lowthrust", "m_cast"], "blunt": CAST}, [], ["Arcana", "River", "Violent Cascade"]),
+    "jia_mu": ((226, 190, 80), (246, 242, 230), "WAX_ON", {"slash": CAST, "pierce": CAST, "blunt": CAST}, [], ["Hun", "You"]),
+    "valencina": ((170, 30, 40), GOLD, "FLAME", {"slash": SLASH, "pierce": PIERCE, "blunt": BLUNT}, [("Blast a Hole", ["m_shoot"])], ["Disposal", "Blast a Hole", "Elefante"]),
+    "rien": ((236, 236, 240), GOLD, "ENCHANTED_HIT", {"slash": ["m_slash", "m_backslash", "m_sweep", "m_spin"], "pierce": ["m_punch_r", "m_thrust", "m_lowthrust", "m_punch_l"], "blunt": ["m_stomp", "m_punch_r", "m_kick", "m_smash"]}, [], ["Furioso", "Crush Flat", "Penetrate the Memory", "Cut the Form"]),
+    "matthias": ((170, 80, 230), GOLD, "FLAME", {"slash": SLASH, "pierce": PIERCE, "blunt": ["m_stomp", "m_kick", "m_punch_r", "m_stomp"]}, [("Punt", ["m_kick"]), ("Unbox", ["m_smash", "m_sweep", "m_slash", "m_spin"]), ("Heat", ["m_slash", "m_sweep", "m_smash"]),
+                                                                                                                                             ("Break Ya", ["m_smash", "m_backslash", "m_sweep"])], ["Unbox", "Heat", "Stamp of Vengeance"]),
+    "callisto": ((170, 30, 36), (246, 244, 238), "CRIMSON_SPORE", {"slash": SLASH, "pierce": PIERCE, "blunt": BLUNT}, [("Installation Art", CAST)], ["Closing Time", "Tibia"]),
+    "kira": ((150, 90, 220), (244, 244, 246), "SNOWFLAKE", {"slash": SLASH, "pierce": PIERCE, "blunt": ["m_punch_r", "m_kick", "m_punch_l", "m_stomp"]}, [], ["Violet", "Crossing Dervish"]),
+    "lucio": ((170, 30, 40), (196, 200, 210), "CRIT", {"slash": SLASH, "pierce": PIERCE, "blunt": BLUNT}, [], ["Cervo", "Cacciatore"]),
+    "albina": ((150, 26, 32), (244, 244, 246), "CRIMSON_SPORE", {"slash": ["m_smash", "m_sweep", "m_slash", "m_spin"], "pierce": PIERCE, "blunt": BLUNT}, [], ["Repressed Flesh", "Fascia"]),
+}
+
+
+def style(model, fn_name, data):
+    """Sets a boss model's effect colours and, for each of its skills, the clip of every coin."""
+    if fn_name not in STYLE or data is None:
+        return
+    col, col2, particle, kinds, named, greats = STYLE[fn_name]
+    model.fx = {"color": col[0] << 16 | col[1] << 8 | col[2], "color2": col2[0] << 16 | col2[1] << 8 | col2[2], "particle": particle}
+    model.skills = {}
+    for sk in data["skills"]:
+        if sk["type"] not in ("slash", "pierce", "blunt"):
+            continue
+        moves = kinds[sk["type"]]
+        for words, special in named:
+            if words.lower() in sk["name"].lower():
+                moves = special
+        coins = max(1, sk["coins"])
+        clips = [moves[i % len(moves)] for i in range(coins)]
+        great = any(w.lower() in sk["name"].lower() for w in greats)
+        if coins >= 3 or great:
+            clips[-1] = "m_flourish" if clips[-1] not in ("m_cast", "m_cast2", "m_shoot") else "m_cast2" if clips[-1] != "m_shoot" else "m_shoot"
+        model.skills[sk["name"]] = {"clips": clips, "great": great}

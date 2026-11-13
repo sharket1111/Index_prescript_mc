@@ -263,6 +263,9 @@ final class MdBattle {
 		FOES.put(mob.getUniqueId(), foe);
 		MdLooks.dress(mob, foe, kind);
 		MdFoes.setup(this, mob, foe, kind, null);
+		if (kind == Kind.BOSS || kind == Kind.FOCUSED) {
+			MdLooks.arrive(mob);
+		}
 		if (run.adv("shield") > 0) {
 			// Shield Generation: 3000 of the original's HP, no more than half its own.
 			double shield = Math.min(3000.0 / TotalDamage.SCALE, health * 0.5);

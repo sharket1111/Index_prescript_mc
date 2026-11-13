@@ -281,7 +281,9 @@ def cast(enemies, looks):
         sins = [s["sin"] for s in data["skills"] if s.get("sin") in SIN]
         col = SIN[max(set(sins), key=sins.count)] if sins else SIN["gloom"]
         if base in Bo.BOSSES:
-            put(name, "b_" + Bo.BOSSES[base].__name__, Bo.BOSSES[base])
+            fn = Bo.BOSSES[base]
+            put(name, "b_" + fn.__name__, fn)
+            Bo.style(models["b_" + fn.__name__], fn.__name__, data)
             continue
         if base in Rf.CREATURES:
             m = Rf.CREATURES[base]()

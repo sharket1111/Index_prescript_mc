@@ -42,7 +42,16 @@ final class MdModels {
 	record Clip(int length, boolean loop, Map<String, float[][]> tracks) {
 	}
 
-	record Def(String id, float scale, float height, List<Bone> bones, Map<String, Clip> clips, Map<String, List<String>> parts, boolean bright) {
+	/** A boss's effect colours and particle (MdFx). */
+	record Fx(int color, int color2, String particle) {
+	}
+
+	/** A boss's skill: the move (clip) of each coin, and whether its last coin is a great one. */
+	record Skill(List<String> clips, boolean great) {
+	}
+
+	record Def(String id, float scale, float height, List<Bone> bones, Map<String, Clip> clips, Map<String, List<String>> parts, boolean bright, Fx fx,
+			Map<String, Skill> skills) {
 		int index(String bone) {
 			for (int i = 0; i < bones.size(); i++) {
 				if (bones.get(i).name().equals(bone)) {
@@ -92,8 +101,20 @@ final class MdModels {
 					p.getValue().getAsJsonArray().forEach(x -> names.add(x.getAsString()));
 					parts.put(p.getKey(), names);
 				}
+				Fx fx = null;
+				Map<String, Skill> skills = new HashMap<>();
+				if (o.has("fx")) {
+					JsonObject f = o.getAsJsonObject("fx");
+					fx = new Fx(f.get("color").getAsInt(), f.get("color2").getAsInt(), f.get("particle").getAsString());
+					for (Map.Entry<String, JsonElement> sk : o.getAsJsonObject("skills").entrySet()) {
+						JsonObject k = sk.getValue().getAsJsonObject();
+						List<String> moves = new ArrayList<>();
+						k.getAsJsonArray("clips").forEach(x -> moves.add(x.getAsString()));
+						skills.put(sk.getKey(), new Skill(moves, k.get("great").getAsBoolean()));
+					}
+				}
 				MODELS.put(e.getKey(), new Def(e.getKey(), o.get("scale").getAsFloat(), o.get("height").getAsFloat(), bones, clips, parts,
-						o.has("bright") && o.get("bright").getAsBoolean()));
+						o.has("bright") && o.get("bright").getAsBoolean(), fx, skills));
 			}
 			root.getAsJsonObject("enemies").entrySet().forEach(e -> ENEMIES.put(e.getKey(), e.getValue().getAsString()));
 			plugin.getLogger().info("Mirror Dungeon: " + MODELS.size() + " enemy models");

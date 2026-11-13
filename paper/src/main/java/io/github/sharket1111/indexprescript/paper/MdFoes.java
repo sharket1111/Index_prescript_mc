@@ -380,9 +380,13 @@ final class MdFoes {
 					cancel();
 					return;
 				}
+				if (tick % 8 == 0 && skill != null && !Clash.destroyed(mob, coin)) {
+					// A boss winds up its move for this coin.
+					MdLooks.windup(ai.anchor(), skill.name(), coin, card.coins(), victim);
+				}
 				if (tick % 8 == 4) {
 					if (Clash.coin(mob, coin)) {
-						strike(battle, ai, victim, skill, coin, Clash.heads(mob, coin));
+						strike(battle, ai, victim, skill, coin, card.coins(), Clash.heads(mob, coin));
 					}
 					coin++;
 				}
@@ -391,12 +395,15 @@ final class MdFoes {
 		}.runTaskTimer(IndexPrescriptPlugin.instance(), 4L, 1L);
 	}
 
-	private static void strike(MdBattle battle, Ai ai, Player victim, MdData.EnemySkill skill, int coin, boolean heads) {
+	private static void strike(MdBattle battle, Ai ai, Player victim, MdData.EnemySkill skill, int coin, int coins, boolean heads) {
 		LivingEntity mob = ai.mob;
-		MdLooks.swing(ai.anchor(), skill == null ? "slash" : skill.type(), ai.foe.part == null ? null : ai.foe.part.icon());
 		Location at = victim.getLocation().add(0, 1, 0);
-		at.getWorld().spawnParticle(Particle.SWEEP_ATTACK, at, 1);
-		at.getWorld().spawnParticle(Particle.DUST, at, 14, 0.4, 0.5, 0.4, 0, new Particle.DustOptions(Color.fromRGB(battle.run.theme.color()), 1.4F));
+		if (skill == null || !MdLooks.hit(ai.anchor(), skill.name(), coin, coins, victim, heads)) {
+			// Not a boss with moves of its own: the plain swing and a puff of the theme's colour.
+			MdLooks.swing(ai.anchor(), skill == null ? "slash" : skill.type(), ai.foe.part == null ? null : ai.foe.part.icon());
+			at.getWorld().spawnParticle(Particle.SWEEP_ATTACK, at, 1);
+			at.getWorld().spawnParticle(Particle.DUST, at, 14, 0.4, 0.5, 0.4, 0, new Particle.DustOptions(Color.fromRGB(battle.run.theme.color()), 1.4F));
+		}
 		at.getWorld().playSound(at, heads ? Sound.ENTITY_PLAYER_ATTACK_CRIT : Sound.ENTITY_PLAYER_ATTACK_STRONG, SoundCategory.HOSTILE, 0.9F, 0.8F);
 		if (victim.getLocation().distanceSquared(ai.anchor().getLocation()) > 16 * ai.anchor().getAttribute(Attribute.SCALE).getValue()
 				|| battle.run.downed.contains(victim.getUniqueId())) {
