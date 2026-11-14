@@ -5,6 +5,9 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
@@ -361,19 +364,20 @@ final class Laevatein implements Listener {
 	 * releases it; otherwise, with enough hits, it uses the stage's skill and
 	 * spends every hit. Both need an enemy within reach.
 	 */
-	private static void act(Player player) {
+	/** The stage's skill ({@code release} false) or the next release (true). */
+	private static void act(Player player, boolean release) {
 		ItemStack held = player.getInventory().getItemInMainHand();
 		if (!Items.isLaevatein(held) || busy(player) || Clash.blocked(player)) {
 			return;
 		}
 		int stage = Items.laevateinStage(held);
-		boolean release = ready(held);
-		if (!release && hits(held) < SKILL_HITS[stage]) {
+		if (release ? !ready(held) : hits(held) < SKILL_HITS[stage]) {
 			return;
 		}
 		// Answering a skill aimed at us: the clash is with its user.
 		LivingEntity target = Clash.answering(player) != null ? Clash.answering(player) : findTarget(player);
 		if (target == null) {
+			Hud.message(player, Component.text(Messages.get(player, "renoir.no_target"), NamedTextColor.GRAY));
 			return;
 		}
 		if (release) {
@@ -384,7 +388,75 @@ final class Laevatein implements Listener {
 		}
 	}
 
-	/** Right-click releases or uses a skill; sneak + right-click enters the counter stance. */
+	private static SkillCard card(LaevateinSkill.Kind kind) {
+		return switch (kind) {
+			case STOMP -> SkillCard.STOMP;
+			case HEATED -> SkillCard.HEATED;
+			case MELT -> SkillCard.MELT;
+			default -> SkillCard.STAB;
+		};
+	}
+
+	private static java.util.List<net.kyori.adventure.text.Component> cardLore(SkillCard card) {
+		java.util.List<net.kyori.adventure.text.Component> lore = new java.util.ArrayList<>();
+		lore.add(SkillMenu.line("위력 " + card.base() + " · 코인 +" + card.coinPower() + " ×" + card.coins(), NamedTextColor.GOLD));
+		for (String l : MdGui.wrap(card.description(), 34)) {
+			lore.add(SkillMenu.line(l, NamedTextColor.GRAY));
+		}
+		return lore;
+	}
+
+	/** The skill menu: the stage's skill, the next release, the counter stance. */
+	private static java.util.List<SkillMenu.Entry> entries(Player player) {
+		java.util.List<SkillMenu.Entry> out = new java.util.ArrayList<>();
+		ItemStack held = player.getInventory().getItemInMainHand();
+		if (!Items.isLaevatein(held)) {
+			return out;
+		}
+		int stage = Items.laevateinStage(held);
+		int hits = hits(held);
+		SkillCard skill = card(SKILLS[stage]);
+		if (hits >= SKILL_HITS[stage]) {
+			out.add(new SkillMenu.Entry(SkillMenu.icon("minecraft:blaze_powder", 1, SkillMenu.line("1. " + skill.name(), skill.colour()),
+					cardLore(skill)), () -> act(player, false)));
+		} else {
+			out.add(new SkillMenu.Entry(SkillMenu.locked("1. " + skill.name(), "적중 " + hits + "/" + SKILL_HITS[stage] + " (적중이 더 필요해요)",
+					cardLore(skill)), null));
+		}
+		if (stage < MAX_STAGE) {
+			SkillCard release = stage == 0 ? SkillCard.RELEASE_1 : stage == 1 ? SkillCard.RELEASE_2 : SkillCard.RELEASE_3;
+			String name = "2. 해방: " + release.name();
+			out.add(ready(held)
+					? new SkillMenu.Entry(SkillMenu.icon("minecraft:fire_charge", 1, SkillMenu.line(name, release.colour()), cardLore(release)),
+							() -> act(player, true))
+					: new SkillMenu.Entry(SkillMenu.locked(name, "적중 " + hits + "/" + HITS_TO_RELEASE[stage], cardLore(release)), null));
+		} else {
+			out.add(new SkillMenu.Entry(SkillMenu.locked("2. 해방", "이미 완전히 해방됐어요", java.util.List.of()), null));
+		}
+		long now = CaduceusListener.now();
+		long ready = STANCE_READY_AT.getOrDefault(player.getUniqueId(), 0L);
+		java.util.List<net.kyori.adventure.text.Component> stance = cardLore(SkillCard.RULE_VIOLATION);
+		stance.add(0, SkillMenu.line("2초 동안 반격 태세: 그동안 맞으면 반격해요", NamedTextColor.YELLOW));
+		out.add(now >= ready
+				? new SkillMenu.Entry(SkillMenu.icon("minecraft:shield", 1, SkillMenu.line("3. 반격 태세", NamedTextColor.YELLOW), stance),
+						() -> enterStance(player))
+				: new SkillMenu.Entry(SkillMenu.icon("minecraft:gray_dye", (int) ((ready - now + 19) / 20), SkillMenu.line("3. 반격 태세 (대기)",
+						NamedTextColor.GRAY), stance), null));
+		return out;
+	}
+
+	static void openMenu(Player player) {
+		if (busy(player)) {
+			return;
+		}
+		if (Clash.blocked(player)) {
+			Hud.message(player, Component.text("합이 진행 중입니다.", NamedTextColor.GRAY));
+			return;
+		}
+		SkillMenu.open(player, "weapon", () -> entries(player), Component.text("레바테인: 1 스킬 · 2 해방 · 3 반격 태세 · 9 취소", NamedTextColor.GOLD));
+	}
+
+	/** Right-click opens the skill menu (the stage's skill, the release, the counter stance). */
 	@EventHandler
 	public void onUse(PlayerInteractEvent event) {
 		if (event.getHand() != EquipmentSlot.HAND
@@ -392,22 +464,25 @@ final class Laevatein implements Listener {
 				|| !Items.isLaevatein(event.getItem())) {
 			return;
 		}
-		if (event.getPlayer().isSneaking()) {
-			enterStance(event.getPlayer());
-		} else {
-			act(event.getPlayer());
+		event.setCancelled(true);
+		openMenu(event.getPlayer());
+	}
+
+	/** Right-clicking a creature with Laevatein opens the menu too. */
+	@EventHandler
+	public void onUseOn(org.bukkit.event.player.PlayerInteractEntityEvent event) {
+		if (event.getHand() == EquipmentSlot.HAND && Items.isLaevatein(event.getPlayer().getInventory().getItemInMainHand())) {
+			event.setCancelled(true);
+			openMenu(event.getPlayer());
 		}
 	}
 
-	/** Swap-hands (F) never moves Laevatein or the icon; it releases or uses a skill instead. */
+	/** Swap-hands (F) never moves the off-hand icon (F with a weapon is the E.G.O: EgoMenu). */
 	@EventHandler(ignoreCancelled = true)
 	public void onSwap(PlayerSwapHandItemsEvent event) {
-		PlayerInventory inventory = event.getPlayer().getInventory();
-		if (!Items.isLaevatein(inventory.getItemInMainHand()) && !Items.isLaevateinIcon(inventory.getItemInOffHand())) {
-			return;
+		if (Items.isLaevateinIcon(event.getPlayer().getInventory().getItemInOffHand())) {
+			event.setCancelled(true);
 		}
-		event.setCancelled(true);
-		act(event.getPlayer());
 	}
 
 	@EventHandler(ignoreCancelled = true)

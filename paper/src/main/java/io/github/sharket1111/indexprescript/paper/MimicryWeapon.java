@@ -157,16 +157,6 @@ final class MimicryWeapon implements Listener {
 
 	// --- manifesting -----------------------------------------------------------------
 
-	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-	public void onSwap(PlayerSwapHandItemsEvent event) {
-		Player player = event.getPlayer();
-		if (!holding(player) || BlackGod.active(player) || MimicrySkill.choosing(player)) {
-			return;
-		}
-		event.setCancelled(true);
-		manifest(player);
-	}
-
 	static void manifest(Player player) {
 		if (ego(player)) {
 			Hud.message(player, Component.text("이미 E.G.O가 발현되어 있습니다.", NamedTextColor.GRAY));

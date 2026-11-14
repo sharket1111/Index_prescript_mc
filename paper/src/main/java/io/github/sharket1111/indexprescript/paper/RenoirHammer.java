@@ -394,8 +394,30 @@ final class RenoirHammer implements Listener {
 		return best;
 	}
 
-	private static void act(Player player) {
+	private static int need(RenoirSkill.Kind kind) {
+		return switch (kind) {
+			case NAIL -> 0;
+			case BORN -> BORN_VOICE;
+			case SEVER -> SEVER_VOICE;
+			case AGAIN -> MAX_VOICE;
+		};
+	}
+
+	private static SkillCard card(RenoirSkill.Kind kind) {
+		return switch (kind) {
+			case NAIL -> SkillCard.NAIL;
+			case BORN -> SkillCard.BORN;
+			case SEVER -> SkillCard.SEVER;
+			case AGAIN -> SkillCard.AGAIN;
+		};
+	}
+
+	/** Uses {@code kind}: it needs that much Voice and spends all of it. */
+	private static void act(Player player, RenoirSkill.Kind kind) {
 		if (!holding(player) || RenoirSkill.active(player) || Clash.blocked(player)) {
+			return;
+		}
+		if (voice(player) < need(kind)) {
 			return;
 		}
 		LivingEntity target = Clash.answering(player) != null ? Clash.answering(player) : lookedAt(player);
@@ -403,9 +425,6 @@ final class RenoirHammer implements Listener {
 			Hud.message(player, Component.text(Messages.get(player, "renoir.no_target"), NamedTextColor.GRAY));
 			return;
 		}
-		int voice = voice(player);
-		RenoirSkill.Kind kind = voice >= MAX_VOICE ? RenoirSkill.Kind.AGAIN : voice >= SEVER_VOICE ? RenoirSkill.Kind.SEVER
-				: voice >= BORN_VOICE ? RenoirSkill.Kind.BORN : RenoirSkill.Kind.NAIL;
 		if (kind == RenoirSkill.Kind.NAIL || kind == RenoirSkill.Kind.BORN) {
 			long now = CaduceusListener.now();
 			long ready = LESSER_READY.getOrDefault(player.getUniqueId(), 0L);
@@ -420,6 +439,46 @@ final class RenoirHammer implements Listener {
 		RenoirSkill.start(player, target, kind);
 	}
 
+	private static java.util.List<SkillMenu.Entry> entries(Player player) {
+		java.util.List<SkillMenu.Entry> out = new java.util.ArrayList<>();
+		int voice = voice(player);
+		long now = CaduceusListener.now();
+		long lesser = LESSER_READY.getOrDefault(player.getUniqueId(), 0L);
+		int n = 1;
+		for (RenoirSkill.Kind kind : RenoirSkill.Kind.values()) {
+			SkillCard card = card(kind);
+			java.util.List<Component> lore = new java.util.ArrayList<>();
+			lore.add(SkillMenu.line("위력 " + card.base() + " · 코인 +" + card.coinPower() + " ×" + card.coins(), NamedTextColor.GOLD));
+			for (String l : MdGui.wrap(card.description(), 34)) {
+				lore.add(SkillMenu.line(l, NamedTextColor.GRAY));
+			}
+			lore.add(SkillMenu.line("필요한 목소리 " + need(kind) + " (지금 " + voice + ") · 쓰면 목소리를 모두 써요", NamedTextColor.DARK_GRAY));
+			String name = n++ + ". " + card.name();
+			boolean lesserKind = kind == RenoirSkill.Kind.NAIL || kind == RenoirSkill.Kind.BORN;
+			if (voice < need(kind)) {
+				out.add(new SkillMenu.Entry(SkillMenu.locked(name, "목소리가 모자라요", lore), null));
+			} else if (lesserKind && now < lesser) {
+				out.add(new SkillMenu.Entry(SkillMenu.icon("minecraft:gray_dye", (int) ((lesser - now + 19) / 20), SkillMenu.line(name, NamedTextColor.GRAY),
+						lore), null));
+			} else {
+				out.add(new SkillMenu.Entry(SkillMenu.icon("minecraft:iron_nugget", 1, SkillMenu.line(name, card.colour()), lore), () -> act(player, kind)));
+			}
+		}
+		return out;
+	}
+
+	static void openMenu(Player player) {
+		if (!holding(player) || RenoirSkill.active(player)) {
+			return;
+		}
+		if (Clash.blocked(player)) {
+			Hud.message(player, Component.text("합이 진행 중입니다.", NamedTextColor.GRAY));
+			return;
+		}
+		SkillMenu.open(player, "weapon", () -> entries(player), Component.text("르누아르: 1~4 스킬 · 9 취소 (목소리 " + voice(player) + ")",
+				NamedTextColor.GOLD));
+	}
+
 	@EventHandler
 	public void onUse(PlayerInteractEvent event) {
 		if (event.getHand() != EquipmentSlot.HAND
@@ -427,18 +486,25 @@ final class RenoirHammer implements Listener {
 				|| !Items.isRenoirHammer(event.getItem())) {
 			return;
 		}
-		act(event.getPlayer());
+		event.setCancelled(true);
+		openMenu(event.getPlayer());
 	}
 
-	/** Swap-hands (F) never moves the hammer or the icon; it uses a skill instead. */
+	/** Right-clicking a creature with the hammer opens the menu too. */
+	@EventHandler
+	public void onUseOn(org.bukkit.event.player.PlayerInteractEntityEvent event) {
+		if (event.getHand() == EquipmentSlot.HAND && holding(event.getPlayer())) {
+			event.setCancelled(true);
+			openMenu(event.getPlayer());
+		}
+	}
+
+	/** Swap-hands (F) never moves the off-hand icon (F with a weapon is the E.G.O: EgoMenu). */
 	@EventHandler(ignoreCancelled = true)
 	public void onSwap(PlayerSwapHandItemsEvent event) {
-		PlayerInventory inventory = event.getPlayer().getInventory();
-		if (!Items.isRenoirHammer(inventory.getItemInMainHand()) && !Items.isVoiceIcon(inventory.getItemInOffHand())) {
-			return;
+		if (Items.isVoiceIcon(event.getPlayer().getInventory().getItemInOffHand())) {
+			event.setCancelled(true);
 		}
-		event.setCancelled(true);
-		act(event.getPlayer());
 	}
 
 	// --- the icon stays put ----------------------------------------------------

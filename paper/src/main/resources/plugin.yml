@@ -14,6 +14,10 @@ commands:
     description: Mirror Dungeon (alone or as a party).
     usage: /md [초대|수락|시작|나가기|기프트]
     aliases: [거울던전, mirror]
+  menu:
+    description: The Index Prescript menu (E.G.O loadout, resources, controls).
+    usage: /menu
+    aliases: [메뉴, ipmenu, 인덱스]
 permissions:
   indexprescript.command:
     description: Use /indexprescript give.

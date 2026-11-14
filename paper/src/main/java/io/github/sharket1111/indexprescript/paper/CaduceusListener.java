@@ -80,11 +80,21 @@ final class CaduceusListener implements Listener {
 		}
 		long now = now();
 		Long last = RIGHT_CLICKED.put(player.getUniqueId(), now);
-		if (last != null && now - last < 10) {
+		if (last != null && now - last < 4) {
 			return;
 		}
 		event.setCancelled(true);
-		RienSkill.use(player);
+		RienSkill.openMenu(player);
+	}
+
+	/** Right-clicking a creature with Caduceus opens the menu too (not sneaking: that is the prescript's). */
+	@EventHandler
+	public void onRightClickOn(org.bukkit.event.player.PlayerInteractEntityEvent event) {
+		Player player = event.getPlayer();
+		if (event.getHand() == EquipmentSlot.HAND && !player.isSneaking() && Items.isCaduceus(player.getInventory().getItemInMainHand())) {
+			event.setCancelled(true);
+			RienSkill.openMenu(player);
+		}
 	}
 
 	@EventHandler(ignoreCancelled = true)

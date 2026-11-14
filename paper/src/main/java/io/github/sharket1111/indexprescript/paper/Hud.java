@@ -68,7 +68,7 @@ final class Hud {
 		long now = CaduceusListener.now();
 		for (Player player : Bukkit.getOnlinePlayers()) {
 			Shown shown = SHOWN.computeIfAbsent(player.getUniqueId(), id -> new Shown());
-			boolean sanity = readout(player);
+			boolean sanity = readout(player) || egoReadout(player);
 			boolean message = now < shown.messageUntil;
 			if (!sanity && !message) {
 				if (!shown.blank) {
@@ -88,6 +88,27 @@ final class Hud {
 		return showsSanity(player) && !SkillOverlay.showing(player);
 	}
 
+	/** The E.G.O resources on the right of the hotbar: hidden while the skill screen's edges are up. */
+	private static boolean egoReadout(Player player) {
+		return Ego.showsReadout(player) && !SkillOverlay.showing(player);
+	}
+
+	/** From the screen centre to the E.G.O readout's left edge, just right of the hotbar. */
+	private static final int RIGHT = 98;
+
+	private static Component withEgo(Player player, Component line, Component message) {
+		Component readout = Ego.readout(player);
+		if (player.getUniqueId().toString().startsWith(FLOODGATE_PREFIX)) {
+			return line.append(Component.text("  ")).append(readout);
+		}
+		int width = width(message);
+		int shift = RIGHT - width / 2;
+		int own = width(readout);
+		// Net width zero again: across to the right of the hotbar, the readout, back.
+		return line.append(Component.text(shift(shift, PLUS, MINUS)).font(FONT)).append(readout)
+				.append(Component.text(shift(-(shift + own), PLUS, MINUS)).font(FONT));
+	}
+
 	static boolean showsSanity(Player player) {
 		return Sanity.of(player) != 0 || Sanity.inCombat(player) || Items.isWeapon(player.getInventory().getItemInMainHand())
 				|| BlackGod.active(player);
@@ -97,6 +118,9 @@ final class Hud {
 		long now = CaduceusListener.now();
 		Component message = now < shown.messageUntil ? shown.message : Component.empty();
 		Component line = readout(player) ? withSanity(player, message) : message;
+		if (egoReadout(player)) {
+			line = withEgo(player, line, message);
+		}
 		player.sendActionBar(line);
 		shown.sentAt = now;
 		shown.blank = false;

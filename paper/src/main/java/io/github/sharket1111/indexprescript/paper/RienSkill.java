@@ -96,13 +96,18 @@ final class RienSkill {
 	}
 
 	/** Right-click with Caduceus: the skill [Hermes] picks, at the looked-at foe (or the one to answer). */
-	static void use(Player player) {
+	/** The tier of skills the [Hermes] stacks allow: 1-3 Gluttony, 4-6 Pride, 7+ Gloom (-1 if none). */
+	private static int family(int hermes) {
+		return hermes < 1 ? -1 : hermes <= 3 ? 0 : hermes <= 6 ? 1 : 2;
+	}
+
+	/** Uses {@code kind}, of the tier the [Hermes] stacks allow. */
+	static void use(Player player, Kind kind) {
 		if (active(player) || Furioso.active(player) || Clash.blocked(player)) {
 			return;
 		}
 		int hermes = PrescriptTracker.hermes(player);
-		if (hermes < 1) {
-			Hud.message(player, Component.text("대행 [헤르메스]가 없습니다.", NamedTextColor.GRAY));
+		if (family(hermes) != kind.family) {
 			return;
 		}
 		LivingEntity target = Clash.answering(player) != null ? Clash.answering(player) : lookedAt(player);
@@ -110,13 +115,52 @@ final class RienSkill {
 			Hud.message(player, Component.text(Messages.get(player, "renoir.no_target"), NamedTextColor.GRAY));
 			return;
 		}
-		int family = hermes <= 3 ? 0 : hermes <= 6 ? 1 : 2;
 		int cost = hermes <= 3 ? 1 : 2;
 		if (!PrescriptTracker.spendHermes(player, cost)) {
 			return;
 		}
-		Kind kind = Kind.values()[family * 3 + ThreadLocalRandom.current().nextInt(3)];
 		Clash.request(player, target, kind.card(), outcome -> launch(player, outcome.target(), kind));
+	}
+
+	/** The skill menu: the three skills of the tier the [Hermes] stacks allow. */
+	private static java.util.List<SkillMenu.Entry> entries(Player player) {
+		java.util.List<SkillMenu.Entry> out = new java.util.ArrayList<>();
+		int hermes = PrescriptTracker.hermes(player);
+		int family = family(hermes);
+		int n = 1;
+		for (Kind kind : Kind.values()) {
+			if (kind.family != Math.max(0, family)) {
+				continue;
+			}
+			SkillCard card = kind.card();
+			java.util.List<Component> lore = new java.util.ArrayList<>();
+			lore.add(SkillMenu.line("위력 " + card.base() + " · 코인 +" + card.coinPower() + " ×" + card.coins(), NamedTextColor.GOLD));
+			for (String l : MdGui.wrap(card.description(), 34)) {
+				lore.add(SkillMenu.line(l, NamedTextColor.GRAY));
+			}
+			lore.add(SkillMenu.line("대행 [헤르메스] " + hermes + " (쓰면 " + (hermes <= 3 ? 1 : 2) + " 소모)", NamedTextColor.DARK_GRAY));
+			String name = n++ + ". " + kind.name;
+			String model = switch (kind.type) {
+				case BLUNT -> "minecraft:mace";
+				case PIERCE -> "minecraft:trident";
+				default -> "minecraft:iron_sword";
+			};
+			out.add(family < 0 ? new SkillMenu.Entry(SkillMenu.locked(name, "대행 [헤르메스]가 없어요", lore), null)
+					: new SkillMenu.Entry(SkillMenu.icon(model, 1, SkillMenu.line(name, card.colour()), lore), () -> use(player, kind)));
+		}
+		return out;
+	}
+
+	static void openMenu(Player player) {
+		if (active(player) || Furioso.active(player)) {
+			return;
+		}
+		if (Clash.blocked(player)) {
+			Hud.message(player, Component.text("합이 진행 중입니다.", NamedTextColor.GRAY));
+			return;
+		}
+		SkillMenu.open(player, "weapon", () -> entries(player), Component.text("카두케우스: 1~3 스킬 · 9 취소 ([헤르메스] "
+				+ PrescriptTracker.hermes(player) + ")", NamedTextColor.GOLD));
 	}
 
 	private static void launch(Player player, LivingEntity target, Kind kind) {

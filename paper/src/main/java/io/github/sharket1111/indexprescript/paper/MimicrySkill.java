@@ -152,21 +152,9 @@ final class MimicrySkill {
 	private static final NamespacedKey ICON = new NamespacedKey(Items.NAMESPACE, "mimicry_icon");
 	private static final NamespacedKey BACKUP = new NamespacedKey(Items.NAMESPACE, "mimicry_hotbar_backup");
 
-	private static final Map<UUID, Menu> CHOOSING = new ConcurrentHashMap<>();
-	private static final Map<UUID, Long> OPENED = new ConcurrentHashMap<>();
 	private static final Map<UUID, long[]> READY = new ConcurrentHashMap<>();
 	private static final Map<UUID, Long> SEALED = new ConcurrentHashMap<>();
 	private static final Map<UUID, MimicrySkill> ACTIVE = new ConcurrentHashMap<>();
-
-	private static final class Menu {
-		final ItemStack[] saved;
-		final long until;
-
-		Menu(ItemStack[] saved, long until) {
-			this.saved = saved;
-			this.until = until;
-		}
-	}
 
 	// --- queries ---------------------------------------------------------------------
 
@@ -175,7 +163,7 @@ final class MimicrySkill {
 	}
 
 	static boolean choosing(Player player) {
-		return CHOOSING.containsKey(player.getUniqueId());
+		return SkillMenu.choosing(player, "weapon");
 	}
 
 	/** Whether 대절단-세로 destroyed this unit's combat page: no skills until the scene is over. */
@@ -211,7 +199,7 @@ final class MimicrySkill {
 			ready[kind.ordinal()] -= ticks;
 		}
 		if (choosing(player)) {
-			layIcons(player);
+			SkillMenu.refresh(player);
 		}
 	}
 
@@ -289,7 +277,7 @@ final class MimicrySkill {
 				case BLUNT -> "타격";
 			}) + " (그 외 견딤)", NamedTextColor.GRAY));
 		} else {
-			lore.add(line("F: E.G.O 발현 (정신력 " + MimicryWeapon.SANITY_NEEDED + " 이상, 체력 50% 이하, 정신력 -" + MimicryWeapon.SANITY_COST + ")",
+			lore.add(line("8번(클릭): E.G.O 발현 (정신력 " + MimicryWeapon.SANITY_NEEDED + " 이상, 체력 50% 이하, 정신력 -" + MimicryWeapon.SANITY_COST + ")",
 					NamedTextColor.GRAY));
 		}
 		lore.add(line("반격: 장면마다 한 번, 근접 공격을 받으면 반격(4~8).", NamedTextColor.DARK_GRAY));
@@ -303,110 +291,25 @@ final class MimicrySkill {
 				false), List.of());
 	}
 
-	/** Every hotbar slot gets an icon, so nothing picked up can land in the hotbar meanwhile. */
-	private static void layIcons(Player player) {
-		PlayerInventory inventory = player.getInventory();
-		Kind[] kinds = Kind.values();
-		for (int slot = 0; slot < 9; slot++) {
-			ItemStack icon = slot < kinds.length ? skillIcon(player, kinds[slot]) : slot == INFO_SLOT ? infoIcon(player) : cancelIcon();
-			inventory.setItem(slot, icon);
+	/** The combat pages, then (slot 8) the E.G.O state: manifesting it from here. */
+	private static List<SkillMenu.Entry> entries(Player player) {
+		List<SkillMenu.Entry> out = new ArrayList<>();
+		for (Kind kind : Kind.values()) {
+			out.add(new SkillMenu.Entry(skillIcon(player, kind), () -> use(player, kind)));
 		}
+		out.add(new SkillMenu.Entry(infoIcon(player), MimicryWeapon.ego(player) ? null : () -> MimicryWeapon.manifest(player)));
+		return out;
 	}
 
-	private static void open(Player player) {
-		long now = CaduceusListener.now();
-		if (choosing(player) || now - OPENED.getOrDefault(player.getUniqueId(), Long.MIN_VALUE / 2) < OPEN_DEBOUNCE) {
+	static void open(Player player) {
+		if (active(player)) {
 			return;
 		}
-		if (active(player) || Clash.blocked(player) || player.getGameMode() == GameMode.SPECTATOR) {
+		if (Clash.blocked(player)) {
+			Hud.message(player, Component.text("합이 진행 중입니다.", NamedTextColor.GRAY));
 			return;
 		}
-		OPENED.put(player.getUniqueId(), now);
-		PlayerInventory inventory = player.getInventory();
-		ItemStack[] saved = new ItemStack[9];
-		for (int slot = 0; slot < 9; slot++) {
-			ItemStack stack = inventory.getItem(slot);
-			saved[slot] = stack == null || stack.isEmpty() || isIcon(stack) ? null : stack.clone();
-		}
-		backup(player, saved);
-		CHOOSING.put(player.getUniqueId(), new Menu(saved, now + CHOOSE_TICKS));
-		layIcons(player);
-		player.playSound(player.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, SoundCategory.PLAYERS, 1.0F, 0.8F);
-		Hud.message(player, Component.text("전투 책장: 1~7 선택 · 9 취소", MimicryWeapon.RED_TEXT));
-	}
-
-	/** Puts the real hotbar back. */
-	private static void close(Player player) {
-		Menu menu = CHOOSING.remove(player.getUniqueId());
-		if (menu != null) {
-			restore(player, menu.saved);
-		}
-	}
-
-	private static void restore(Player player, ItemStack[] saved) {
-		PlayerInventory inventory = player.getInventory();
-		List<ItemStack> stray = new ArrayList<>();
-		for (int slot = 0; slot < 9; slot++) {
-			ItemStack current = inventory.getItem(slot);
-			if (current != null && !current.isEmpty() && !isIcon(current)) {
-				stray.add(current);
-			}
-			inventory.setItem(slot, saved[slot]);
-		}
-		purgeIcons(player);
-		for (ItemStack stack : stray) {
-			inventory.addItem(stack).values().forEach(rest -> player.getWorld().dropItem(player.getLocation(), rest));
-		}
-		player.getPersistentDataContainer().remove(BACKUP);
-	}
-
-	private static void purgeIcons(Player player) {
-		PlayerInventory inventory = player.getInventory();
-		for (int slot = 0; slot < inventory.getSize(); slot++) {
-			if (isIcon(inventory.getItem(slot))) {
-				inventory.setItem(slot, null);
-			}
-		}
-		if (isIcon(player.getItemOnCursor())) {
-			player.setItemOnCursor(null);
-		}
-	}
-
-	private static void backup(Player player, ItemStack[] saved) {
-		List<byte[]> bytes = new ArrayList<>();
-		for (ItemStack stack : saved) {
-			bytes.add(stack == null ? new byte[0] : stack.serializeAsBytes());
-		}
-		player.getPersistentDataContainer().set(BACKUP, PersistentDataType.LIST.byteArrays(), bytes);
-	}
-
-	/** After a crash mid-choice: the hotbar saved on the player comes back. */
-	private static void recover(Player player) {
-		List<byte[]> bytes = player.getPersistentDataContainer().get(BACKUP, PersistentDataType.LIST.byteArrays());
-		if (bytes == null) {
-			purgeIcons(player);
-			return;
-		}
-		ItemStack[] saved = new ItemStack[9];
-		for (int slot = 0; slot < Math.min(9, bytes.size()); slot++) {
-			byte[] data = bytes.get(slot);
-			try {
-				saved[slot] = data.length == 0 ? null : ItemStack.deserializeBytes(data);
-			} catch (RuntimeException e) {
-				IndexPrescriptPlugin.instance().getLogger().log(Level.WARNING, "Could not restore a Mimicry hotbar slot", e);
-			}
-		}
-		restore(player, saved);
-	}
-
-	private static void select(Player player, int index) {
-		if (index == INFO_SLOT) {
-			return;
-		}
-		close(player);
-		if (index >= 0 && index < Kind.values().length) {
-			use(player, Kind.values()[index]);
-		}
+		SkillMenu.open(player, "weapon", () -> entries(player), Component.text("전투 책장: 1~7 스킬 · 8 E.G.O 발현 · 9 취소", MimicryWeapon.RED_TEXT));
 	}
 
 	// --- using a skill ---------------------------------------------------------------
@@ -522,17 +425,6 @@ final class MimicrySkill {
 	}
 
 	static void tickAll() {
-		long now = CaduceusListener.now();
-		for (Map.Entry<UUID, Menu> entry : Map.copyOf(CHOOSING).entrySet()) {
-			Player player = Bukkit.getPlayer(entry.getKey());
-			if (player == null) {
-				CHOOSING.remove(entry.getKey());
-			} else if (now >= entry.getValue().until || player.isDead()) {
-				close(player);
-			} else if (now % 10 == 0) {
-				layIcons(player);
-			}
-		}
 		ACTIVE.values().removeIf(skill -> {
 			try {
 				return !skill.tick();
@@ -545,13 +437,6 @@ final class MimicrySkill {
 	}
 
 	static void endAll() {
-		for (UUID id : Map.copyOf(CHOOSING).keySet()) {
-			Player player = Bukkit.getPlayer(id);
-			if (player != null) {
-				close(player);
-			}
-		}
-		CHOOSING.clear();
 		List<MimicrySkill> running = List.copyOf(ACTIVE.values());
 		ACTIVE.clear();
 		for (MimicrySkill skill : running) {
@@ -1054,7 +939,7 @@ final class MimicrySkill {
 
 	// --- events ----------------------------------------------------------------------
 
-	/** The menu's and the icons' event handlers. */
+	/** Right-click with Mimicry opens the combat pages (the icons themselves are SkillMenu's). */
 	static final class Events implements Listener {
 		@EventHandler(priority = EventPriority.LOW)
 		public void onUse(PlayerInteractEvent event) {
@@ -1063,17 +948,7 @@ final class MimicrySkill {
 				return;
 			}
 			Player player = event.getPlayer();
-			ItemStack held = event.getItem();
-			if (isIcon(held)) {
-				event.setCancelled(true);
-				if (choosing(player)) {
-					select(player, iconIndex(held));
-				} else {
-					player.getInventory().setItemInMainHand(null);
-				}
-				return;
-			}
-			if (Items.isMimicry(held) && !BlackGod.active(player)) {
+			if (Items.isMimicry(event.getItem()) && !BlackGod.active(player)) {
 				event.setCancelled(true);
 				open(player);
 			}
@@ -1086,88 +961,10 @@ final class MimicrySkill {
 				return;
 			}
 			Player player = event.getPlayer();
-			ItemStack held = player.getInventory().getItemInMainHand();
-			if (isIcon(held)) {
-				event.setCancelled(true);
-				if (choosing(player)) {
-					select(player, iconIndex(held));
-				}
-			} else if (Items.isMimicry(held) && !BlackGod.active(player)) {
+			if (Items.isMimicry(player.getInventory().getItemInMainHand()) && !BlackGod.active(player)) {
 				event.setCancelled(true);
 				open(player);
 			}
-		}
-
-		/** While choosing, switching slots uses that slot's page instead of moving. */
-		@EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
-		public void onSwitch(PlayerItemHeldEvent event) {
-			Player player = event.getPlayer();
-			if (!choosing(player)) {
-				return;
-			}
-			event.setCancelled(true);
-			select(player, event.getNewSlot());
-		}
-
-		@EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
-		public void onClick(InventoryClickEvent event) {
-			if (event.getWhoClicked() instanceof Player player && (choosing(player) || isIcon(event.getCurrentItem()) || isIcon(event.getCursor()))) {
-				event.setCancelled(true);
-			}
-		}
-
-		@EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
-		public void onDrag(InventoryDragEvent event) {
-			if (event.getWhoClicked() instanceof Player player && (choosing(player) || isIcon(event.getOldCursor()))) {
-				event.setCancelled(true);
-			}
-		}
-
-		@EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
-		public void onDrop(PlayerDropItemEvent event) {
-			if (isIcon(event.getItemDrop().getItemStack())) {
-				event.setCancelled(true);
-			}
-		}
-
-		@EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
-		public void onSwapHands(PlayerSwapHandItemsEvent event) {
-			if (choosing(event.getPlayer()) || isIcon(event.getMainHandItem()) || isIcon(event.getOffHandItem())) {
-				event.setCancelled(true);
-			}
-		}
-
-		/** Dying mid-choice: the real hotbar drops (or is kept), never the icons. */
-		@EventHandler(priority = EventPriority.HIGHEST)
-		public void onDeath(PlayerDeathEvent event) {
-			Player player = event.getPlayer();
-			event.getDrops().removeIf(MimicrySkill::isIcon);
-			Menu menu = CHOOSING.remove(player.getUniqueId());
-			if (menu == null) {
-				return;
-			}
-			if (event.getKeepInventory()) {
-				restore(player, menu.saved);
-			} else {
-				for (ItemStack stack : menu.saved) {
-					if (stack != null) {
-						event.getDrops().add(stack);
-					}
-				}
-				purgeIcons(player);
-				player.getPersistentDataContainer().remove(BACKUP);
-			}
-		}
-
-		@EventHandler
-		public void onQuit(PlayerQuitEvent event) {
-			close(event.getPlayer());
-			OPENED.remove(event.getPlayer().getUniqueId());
-		}
-
-		@EventHandler
-		public void onJoin(PlayerJoinEvent event) {
-			recover(event.getPlayer());
 		}
 	}
 }

@@ -218,6 +218,15 @@ final class Clash {
 	 * coins), with its target. Returns false if the user is busy clashing.
 	 */
 	static boolean request(Player user, LivingEntity target, SkillCard card, Consumer<Outcome> start) {
+		boolean accepted = requestInner(user, target, card, start);
+		if (accepted) {
+			// E.G.O resources: one of the skill's sin.
+			Ego.used(user, card);
+		}
+		return accepted;
+	}
+
+	private static boolean requestInner(Player user, LivingEntity target, SkillCard card, Consumer<Outcome> start) {
 		if (MimicrySkill.sealed(user)) {
 			// 대절단-세로 destroyed a combat page: no skills this scene.
 			Hud.message(user, Component.text("전투 책장이 파괴되어 스킬을 쓸 수 없습니다.", NamedTextColor.RED));
@@ -666,6 +675,7 @@ final class Clash {
 
 	private static void win(Duel duel, Side winner, Side loser) {
 		MdFoes.clashResult(winner.player, loser.player);
+		Ego.clashWon(winner.player, winner.card);
 		int rounds = Math.max(1, duel.rounds);
 		// The original: a win gives 10, 20% more per round from the second; a loss takes 2, 5% more per round.
 		int gain = (int) Math.round(10 * (1 + 0.2 * (rounds - 1)));
@@ -780,6 +790,23 @@ final class Clash {
 	// --- the panel ---------------------------------------------------------------------------
 
 	private static TextDisplay panel(LivingEntity player) {
+		// A new skill's panel replaces the last one still fading beside the same unit: they never pile up.
+		synchronized (LINGERING) {
+			Iterator<Lingering> it = LINGERING.iterator();
+			while (it.hasNext()) {
+				Lingering l = it.next();
+				if (l.side() != null && l.side().player == player) {
+					l.display().remove();
+					it.remove();
+				}
+			}
+		}
+		for (Side run : RUNS.values()) {
+			if (run.player == player && run.panel != null) {
+				run.panel.remove();
+				run.panel = null;
+			}
+		}
 		return player.getWorld().spawn(sideOf(body(player)), TextDisplay.class, d -> {
 			d.setPersistent(false);
 			d.setBillboard(Display.Billboard.CENTER);

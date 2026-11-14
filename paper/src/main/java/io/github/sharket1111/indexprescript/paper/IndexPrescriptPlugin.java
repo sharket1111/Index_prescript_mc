@@ -72,6 +72,18 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			md.setTabCompleter(mirror);
 		}
 		getServer().getPluginManager().registerEvents(new MimicrySkill.Events(), this);
+		getServer().getPluginManager().registerEvents(new SkillMenu.Events(), this);
+		Ego.load(this);
+		getServer().getPluginManager().registerEvents(new Ego.Events(), this);
+		var menu = getCommand("menu");
+		if (menu != null) {
+			menu.setExecutor((sender, cmd, label, args) -> {
+				if (sender instanceof org.bukkit.entity.Player p) {
+					Ego.Menu.open(p);
+				}
+				return true;
+			});
+		}
 		// Made in the mod studio: keyframe animations, particle effects and skill numbers, reloadable in game.
 		getLogger().info(SkillTuning.load(this));
 		StudioEffects.load(this);
@@ -96,6 +108,8 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Bukkit.getScheduler().runTaskTimer(this, Clash::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, RienSkill::tickAll, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, MimicrySkill::tickAll, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, SkillMenu::tick, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, Ego.EgoSkill::tickAll, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, MimicryWeapon::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Sanity::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Hud::tick, 1L, 1L);
@@ -120,6 +134,8 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		BlackGodState.clearAll();
 		Clash.endAll();
 		RienSkill.endAll();
+		SkillMenu.closeAll();
+		Ego.EgoSkill.endAll();
 		MimicrySkill.endAll();
 		MimicryWeapon.endAll();
 		UnitHud.clearAll();

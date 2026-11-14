@@ -367,7 +367,7 @@ final class MdGifts implements Listener {
 
 	// --- buffs and numbers --------------------------------------------------------------------------
 
-	private static void buff(Player p, String kind, int amount) {
+	static void buff(Player p, String kind, int amount) {
 		long until = CaduceusListener.now() + CombatState.TURN_TICKS;
 		BUFFS.computeIfAbsent(p.getUniqueId(), k -> new HashMap<>()).merge(kind, new int[] {amount, (int) until}, (a, b) -> new int[] {
 			Math.min(10, (a[1] > CaduceusListener.now() ? a[0] : 0) + b[0]), b[1]});
