@@ -77,7 +77,7 @@ final class MdCommand implements TabExecutor, Listener {
 		}
 		if (args.length >= 1 && (args[0].equals("적스킨") || args[0].equalsIgnoreCase("enemyskins")) && sender.hasPermission("indexprescript.command")) {
 			int n = SkinPack.reloadEnemySkins();
-			sender.sendMessage(msg("적 스킨 " + n + "개를 다시 읽었어요 (plugins/IndexPrescript/enemy_skins/). 다시 접속하면 보여요.", NamedTextColor.GREEN));
+			sender.sendMessage(msg("적 스킨 " + n + "개와 기프트 그림을 다시 읽었어요 (enemy_skins/, gift_icons/). 다시 접속하면 보여요.", NamedTextColor.GREEN));
 			return true;
 		}
 		if (args.length >= 2 && args[0].equals("미리보기") && sender.hasPermission("indexprescript.command")) {

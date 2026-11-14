@@ -50,6 +50,11 @@ import net.kyori.adventure.resource.ResourcePackInfo;
  * custom model data [s_<skin hash>, bone]. A viewer whose copy of this pack
  * predates someone's skin sees the suit instead, until they next join.
  * Skins are kept in plugins/IndexPrescript/skins/.
+ *
+ * The pack also carries the Mirror Dungeon's E.G.O Gift pictures an admin put
+ * in plugins/IndexPrescript/gift_icons/ (named by gift id, e.g.
+ * "glimpse_of_flames.png"): each becomes item model index_prescript:gift/<id>.
+ * The game's art is not shipped with the plugin.
  */
 final class SkinPack {
 	static final String MODEL = "index_prescript:rig_skin";
@@ -74,6 +79,9 @@ final class SkinPack {
 	/** Enemy skins (enemy_skins/<name>.png): slug -> slim arms. */
 	private final Map<String, Boolean> enemies = new ConcurrentHashMap<>();
 	private final File enemyDir;
+	/** Gift pictures (gift_icons/<id>.png): id -> PNG. */
+	private final Map<String, byte[]> gifts = new ConcurrentHashMap<>();
+	private volatile java.util.Set<String> servedGifts = java.util.Set.of();
 
 	private SkinPack(IndexPrescriptPlugin plugin, byte[] packMeta, String base) {
 		this.plugin = plugin;
@@ -88,6 +96,7 @@ final class SkinPack {
 		SkinPack pack = new SkinPack(plugin, packMeta, base);
 		pack.load();
 		pack.loadEnemies();
+		pack.loadGifts();
 		pack.rebuild();
 		server.createContext(PATH, exchange -> {
 			byte[] body = pack.zip;
@@ -133,13 +142,38 @@ final class SkinPack {
 		return name.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]+", "_").replaceAll("^_|_$", "");
 	}
 
-	/** Reads enemy_skins/ again and rebuilds the pack. Returns how many skins are there. */
+	/** The item model of a gift's picture, if the pack being served has one. */
+	static org.bukkit.NamespacedKey giftModel(String id) {
+		SkinPack pack = instance;
+		return pack != null && pack.servedGifts.contains(id) ? new org.bukkit.NamespacedKey("index_prescript", "gift/" + id) : null;
+	}
+
+	private void loadGifts() {
+		gifts.clear();
+		File giftDir = new File(plugin.getDataFolder(), "gift_icons");
+		giftDir.mkdirs();
+		File[] files = giftDir.listFiles((d, n) -> n.toLowerCase(java.util.Locale.ROOT).endsWith(".png"));
+		if (files == null) {
+			return;
+		}
+		for (File f : files) {
+			String id = slug(f.getName().substring(0, f.getName().length() - 4));
+			try {
+				gifts.put(id, Files.readAllBytes(f.toPath()));
+			} catch (IOException e) {
+				plugin.getLogger().warning("gift_icons/" + f.getName() + ": " + e.getMessage());
+			}
+		}
+	}
+
+	/** Reads enemy_skins/ and gift_icons/ again and rebuilds the pack. Returns how many enemy skins are there. */
 	static int reloadEnemySkins() {
 		SkinPack pack = instance;
 		if (pack == null) {
 			return 0;
 		}
 		pack.loadEnemies();
+		pack.loadGifts();
 		pack.rebuild();
 		return pack.enemies.size();
 	}
@@ -320,6 +354,20 @@ final class SkinPack {
 			for (String bone : BONES) {
 				suit.add(when(bone, plain("index_prescript:item/rig/outfit/suit/" + bone)));
 			}
+			// The gifts' pictures.
+			for (Map.Entry<String, byte[]> gift : gifts.entrySet()) {
+				String id = gift.getKey();
+				put(out, "assets/index_prescript/textures/item/gift/" + id + ".png", gift.getValue());
+				JsonObject model = new JsonObject();
+				model.addProperty("parent", "minecraft:item/generated");
+				JsonObject textures = new JsonObject();
+				textures.addProperty("layer0", "index_prescript:item/gift/" + id);
+				model.add("textures", textures);
+				put(out, "assets/index_prescript/models/item/gift/" + id + ".json", GSON.toJson(model).getBytes(StandardCharsets.UTF_8));
+				JsonObject item = new JsonObject();
+				item.add("model", plain("index_prescript:item/gift/" + id));
+				put(out, "assets/index_prescript/items/gift/" + id + ".json", GSON.toJson(item).getBytes(StandardCharsets.UTF_8));
+			}
 			JsonObject definition = new JsonObject();
 			definition.add("model", select(0, cases, select(1, suit, plain("index_prescript:item/rig/outfit/suit/body"))));
 			put(out, "assets/index_prescript/items/rig_skin.json", GSON.toJson(definition).getBytes(StandardCharsets.UTF_8));
@@ -335,6 +383,7 @@ final class SkinPack {
 		}
 		zip = built;
 		served = java.util.Set.copyOf(now.keySet());
+		servedGifts = java.util.Set.copyOf(gifts.keySet());
 	}
 
 	private static void put(ZipOutputStream out, String name, byte[] data) throws IOException {

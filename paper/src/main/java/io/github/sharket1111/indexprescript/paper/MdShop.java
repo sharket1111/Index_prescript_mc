@@ -512,11 +512,9 @@ final class MdShop {
 		for (String line : lv.ko()) {
 			lore.add(Component.text("• " + line, NamedTextColor.AQUA).decoration(TextDecoration.ITALIC, false));
 		}
-		if (lv.generic()) {
-			lore.add(Component.text("  (원작 효과를 간단히 옮긴 효과예요)", NamedTextColor.DARK_AQUA).decoration(TextDecoration.ITALIC, false));
-		}
 		lore.add(Component.empty());
-		for (String line : MdGui.wrap(lv.text(), 46)) {
+		lore.add(Component.text("원작 효과 (참고)", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false));
+		for (String line : MdGui.wrap(lv.textKo() != null ? lv.textKo() : lv.text(), 36)) {
 			lore.add(Component.text(line, NamedTextColor.DARK_GRAY).decoration(TextDecoration.ITALIC, false));
 		}
 		if (run != null && run.fuseOnly.contains(g.id())) {
@@ -528,7 +526,13 @@ final class MdShop {
 				lore.add(Component.text(a, NamedTextColor.YELLOW).decoration(TextDecoration.ITALIC, false));
 			}
 		}
-		return MdGui.item(keywordIcon(g.keyword()), name(g), lore);
+		ItemStack item = MdGui.item(keywordIcon(g.keyword()), name(g), lore);
+		// The gift's own picture, when the server has it (plugins/IndexPrescript/gift_icons/).
+		org.bukkit.NamespacedKey model = SkinPack.giftModel(g.id());
+		if (model != null) {
+			item.editMeta(meta -> meta.setItemModel(model));
+		}
+		return item;
 	}
 
 	static void showGifts(MdRun run, Player p, Runnable back) {

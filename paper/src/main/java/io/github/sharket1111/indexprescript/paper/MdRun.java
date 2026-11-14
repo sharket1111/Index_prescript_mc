@@ -774,7 +774,10 @@ final class MdRun {
 		gui.fill().open(viewer);
 	}
 
-	/** After a floor boss: E.G.O Gifts (Normal 1 of 3, Hard 2 of 4) and Mounting Trials (1, Hard 2, of 3). */
+	/**
+	 * After a floor boss: reward cards, each an E.G.O Gift with the Mounting Trial that comes with it
+	 * (Normal: 1 of 3, Hard: 2 of 4). After the last floor the cards are gifts only.
+	 */
 	private void bossReward() {
 		int offerCount = floorHard ? 4 : 3;
 		int picks = floorHard ? 2 : 1;
@@ -794,12 +797,14 @@ final class MdRun {
 		}
 		// Mounting Trials: Hard's for floors 1-4, the INFINITY MIRROR's for 5-9, the EXTREME MIRROR's for 10-14.
 		List<MdData.Trial> pool = new ArrayList<>(MdData.trials(Math.min(MAX_FLOORS - 1, floor)));
+		pool.removeAll(trials);
 		java.util.Collections.shuffle(pool, random);
-		List<MdData.Trial> trialOffer = floor >= MAX_FLOORS || floor >= goal && !canExtend() ? List.of() : pool.subList(0, Math.min(3, pool.size()));
-		Set<String> chosenGifts = new HashSet<>();
-		Set<MdData.Trial> chosenTrials = new HashSet<>();
-		// From floor 5 on a trial is a whole tier of the enemy's strength: one a floor.
-		openBossReward(offer, picks, trialOffer, floorHard && floor < FLOORS ? 2 : 1, chosenGifts, chosenTrials);
+		boolean last = floor >= MAX_FLOORS || floor >= goal && !canExtend();
+		List<MdData.Trial> paired = new ArrayList<>();
+		for (int i = 0; i < offer.size(); i++) {
+			paired.add(last || i >= pool.size() ? null : pool.get(i));
+		}
+		openBossReward(offer, paired, picks, new HashSet<>());
 	}
 
 	/** On clearing floor 5 or 10 on Hard the party may go on: to floor 10 (INFINITY MIRROR), then 15 (EXTREME MIRROR). */
@@ -844,66 +849,80 @@ final class MdRun {
 		gui.fill().open(viewer);
 	}
 
-	private void openBossReward(List<MdData.Gift> offer, int picks, List<MdData.Trial> trialOffer, int trialPicks, Set<String> chosen,
-			Set<MdData.Trial> chosenTrials) {
+	/** The reward cards: a gift (top) and its trial (below); picking one takes both. */
+	private void openBossReward(List<MdData.Gift> offer, List<MdData.Trial> paired, int picks, Set<Integer> chosen) {
 		Player viewer = leaderPlayer();
-		MdGui gui = new MdGui(5, floor + "층 클리어 보상");
-		for (int i = 0; i < offer.size(); i++) {
-			MdData.Gift g = offer.get(i);
-			ItemStack icon = MdShop.icon(this, g, 0, chosen.contains(g.id()) ? "선택됨 (다시 누르면 취소)" : "클릭해서 선택 (" + picks + "개까지)");
-			if (chosen.contains(g.id())) {
-				MdGui.glow(icon);
-			}
-			gui.set(10 + i * 2, icon, () -> {
-				if (!chosen.remove(g.id()) && chosen.size() < picks) {
-					chosen.add(g.id());
-				}
-				openBossReward(offer, picks, trialOffer, trialPicks, chosen, chosenTrials);
-			});
+		if (viewer == null) {
+			return;
 		}
-		for (int i = 0; i < trialOffer.size(); i++) {
-			MdData.Trial t = trialOffer.get(i);
-			ItemStack icon = MdGui.item(Material.REDSTONE_TORCH, "등반 시련: " + t.name(), NamedTextColor.RED, t.text(), "다음 층부터 적이 강해져요",
-					chosenTrials.contains(t) ? "선택됨" : "클릭해서 선택 (" + trialPicks + "개)");
-			if (chosenTrials.contains(t)) {
+		MdGui gui = new MdGui(5, floor + "층 클리어 보상 (" + chosen.size() + "/" + picks + ")");
+		for (int i = 0; i < offer.size(); i++) {
+			int card = i;
+			MdData.Gift g = offer.get(i);
+			MdData.Trial t = paired.get(i);
+			boolean on = chosen.contains(i);
+			String action = (on ? "선택됨 (다시 누르면 취소)" : "클릭해서 선택 (" + picks + "장까지)") + (t != null ? "\n아래 등반 시련도 함께 받아요" : "");
+			ItemStack icon = MdShop.icon(this, g, 0, action);
+			if (on) {
 				MdGui.glow(icon);
 			}
-			gui.set(29 + i * 2, icon, () -> {
-				if (!chosenTrials.remove(t) && chosenTrials.size() < trialPicks) {
-					chosenTrials.add(t);
+			Runnable toggle = () -> {
+				if (!chosen.remove(card) && chosen.size() < picks) {
+					chosen.add(card);
 				}
-				openBossReward(offer, picks, trialOffer, trialPicks, chosen, chosenTrials);
-			});
+				openBossReward(offer, paired, picks, chosen);
+			};
+			int col = offer.size() == 4 ? 1 + i * 2 : 2 + i * 2;
+			gui.set(9 + col, icon, toggle);
+			if (t != null) {
+				ItemStack trial = MdGui.item(Material.REDSTONE_TORCH, "등반 시련: " + t.name(), NamedTextColor.RED, t.text(), "다음 층부터 적이 강해져요",
+						"위 기프트와 한 세트예요");
+				if (on) {
+					MdGui.glow(trial);
+				}
+				gui.set(18 + col, trial, toggle);
+			}
 		}
 		boolean extend = canExtend();
-		if (extend) {
-			gui.set(42, MdGui.item(Material.GOLD_BLOCK, "여기서 끝내기 (던전 클리어)", NamedTextColor.GOLD, floor + "층까지의 보상을 받고 나가요"), () -> {
-				for (String id : chosen) {
-					addGift(MdData.gift(id), false);
+		Runnable take = () -> {
+			// Cards not picked yet are picked at random, so every floor takes its trials.
+			List<Integer> rest = new ArrayList<>();
+			for (int i = 0; i < offer.size(); i++) {
+				if (!chosen.contains(i)) {
+					rest.add(i);
 				}
-				viewer.closeInventory();
-				finish(true);
-			});
+			}
+			java.util.Collections.shuffle(rest, random);
+			while (chosen.size() < Math.min(picks, offer.size()) && !rest.isEmpty()) {
+				chosen.add(rest.remove(0));
+			}
+			for (int i : chosen) {
+				addGift(offer.get(i), false);
+				if (paired.get(i) != null) {
+					trials.add(paired.get(i));
+					broadcast(Component.text("등반 시련: " + paired.get(i).name() + " - " + paired.get(i).text(), NamedTextColor.RED));
+				}
+			}
+		};
+		if (extend) {
+			gui.set(42, MdGui.item(Material.GOLD_BLOCK, "여기서 끝내기 (던전 클리어)", NamedTextColor.GOLD, floor + "층까지의 보상을 받고 나가요",
+					"고른 기프트만 받고 시련은 받지 않아요"), () -> {
+						for (int i : chosen) {
+							addGift(offer.get(i), false);
+						}
+						viewer.closeInventory();
+						finish(true);
+					});
 		}
 		String onward = extend ? (floor == FLOORS ? "무한 거울로 (6~10층)" : "익스트림 거울로 (11~15층)") : floor >= goal ? "던전 클리어!" : "다음 층으로";
 		gui.set(extend ? 38 : 40, MdGui.item(extend ? Material.CRYING_OBSIDIAN : Material.LIME_CONCRETE, onward, extend ? NamedTextColor.LIGHT_PURPLE : NamedTextColor.GREEN,
-				"기프트를 안 고르면 시련이 무작위로 정해져요", extend ? "적이 훨씬 강해져요. 6층부터는 언제나 HARD예요" : ""), () -> {
+				"카드를 다 고르지 않으면 남은 카드에서 무작위로 정해져요", extend ? "적이 훨씬 강해져요. 6층부터는 언제나 HARD예요" : ""), () -> {
 					if (canExtend()) {
 						goal += FLOORS;
 						broadcast(Component.text(goal == 10 ? "무한 거울: 10층까지 이어 가요." : "익스트림 거울: 15층까지 이어 가요. 층을 깰 때마다 역경(제약)을 고를 수 있어요.",
 								NamedTextColor.LIGHT_PURPLE));
 					}
-					for (String id : chosen) {
-						addGift(MdData.gift(id), false);
-					}
-					List<MdData.Trial> picked = new ArrayList<>(chosenTrials);
-					List<MdData.Trial> rest = new ArrayList<>(trialOffer);
-					rest.removeAll(picked);
-					java.util.Collections.shuffle(rest, random);
-					while (picked.size() < Math.min(trialPicks, trialOffer.size())) {
-						picked.add(rest.remove(0));
-					}
-					trials.addAll(picked);
+					take.run();
 					viewer.closeInventory();
 					if (floor >= 10 && floor < goal) {
 						openAdversities(new HashSet<>());

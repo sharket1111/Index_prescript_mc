@@ -29,7 +29,7 @@ final class MdData {
 	/** Gift tiers as numbers (V and EX count as 5). */
 	static final Map<String, Integer> TIER = Map.of("I", 1, "II", 2, "III", 3, "IV", 4, "V", 5, "EX", 5);
 
-	record Level(String text, JsonArray effects, List<String> ko, boolean generic) {
+	record Level(String text, String textKo, JsonArray effects, List<String> ko, boolean generic) {
 	}
 
 	record Gift(String id, String name, String tier, int tierNumber, String sin, String keyword, int cost, int enhance, boolean themeOnly,
@@ -129,10 +129,13 @@ final class MdData {
 					JsonObject lo = l.getAsJsonObject();
 					List<String> ko = new ArrayList<>();
 					lo.getAsJsonArray("ko").forEach(k -> ko.add(k.getAsString()));
-					levels.add(new Level(lo.get("text").getAsString(), lo.getAsJsonArray("effects"), ko, lo.has("generic")));
+					levels.add(new Level(lo.get("text").getAsString(), lo.has("text_ko") ? lo.get("text_ko").getAsString() : null, lo.getAsJsonArray("effects"), ko,
+							lo.has("generic")));
 				}
 				String tier = o.get("tier").getAsString();
-				Gift gift = new Gift(o.get("id").getAsString(), o.get("name").getAsString(), tier, TIER.getOrDefault(tier, 1), str(o, "sin", "wrath"),
+				// The Korean name where there is one (lookups by the original's name go by id).
+				String name = o.has("name_ko") && !o.get("name_ko").isJsonNull() ? o.get("name_ko").getAsString() : o.get("name").getAsString();
+				Gift gift = new Gift(o.get("id").getAsString(), name, tier, TIER.getOrDefault(tier, 1), str(o, "sin", "wrath"),
 						str(o, "keyword", "none"), o.get("cost").getAsInt(), o.get("enhance").getAsInt(), o.get("theme_only").getAsBoolean(),
 						o.has("fusion_only") && o.get("fusion_only").getAsBoolean(), levels);
 				GIFTS.put(gift.id(), gift);
