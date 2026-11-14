@@ -711,6 +711,7 @@ final class MdRun {
 		cost += gained;
 		broadcast(Component.text("승리! 코스트 +" + gained + " (보유 " + cost + ")", NamedTextColor.GOLD));
 		MdGifts.trigger(this, "reward", null, null);
+		extractionRewards(type);
 		if (type == NodeType.BOSS) {
 			MdGifts.trigger(this, "floor_clear", null, null);
 		}
@@ -1445,12 +1446,44 @@ final class MdRun {
 					Component.text(floorsCleared + "층까지 클리어", NamedTextColor.GRAY)));
 			sendHome(p);
 			settle(p, true);
+			if (cleared) {
+				// Clearing the dungeon: Lunacy by the floors climbed.
+				int lunacy = 100 + 40 * floorsCleared;
+				Gacha.addLunacy(p, lunacy);
+				Gacha.give(p, Gacha.Kind.TICKET, floorsCleared >= 10 ? 3 : 1);
+				p.sendMessage(Component.text("[클리어 보상] 광기 +" + lunacy + " · 추출권 +" + (floorsCleared >= 10 ? 3 : 1), NamedTextColor.LIGHT_PURPLE));
+			}
 		}
 		for (UUID id : members) {
 			BY_PLAYER.remove(id);
 		}
 		members.clear();
 		close();
+	}
+
+	/**
+	 * What a won battle gives each member for Extraction and upgrades: Lunacy, EXP tickets, and
+	 * on bosses Threads and an Extraction Ticket (more on Hard and on the INFINITY/EXTREME floors).
+	 */
+	private void extractionRewards(NodeType type) {
+		boolean boss = type == NodeType.BOSS || type == NodeType.HIDDEN;
+		double scale = (floorHard ? 1.5 : 1.0) * (floor > 10 ? 2.0 : floor > 5 ? 1.5 : 1.0);
+		int lunacy = (int) Math.round((boss ? 60 : type == NodeType.ABNO || type == NodeType.RISKY ? 20 : 12) * scale);
+		int exp = (int) Math.round((boss ? 4 : 1) * scale);
+		int threads = boss ? (int) Math.round(8 * scale) : 0;
+		int tickets = boss ? (type == NodeType.HIDDEN ? 3 : 1) : 0;
+		for (Player p : players()) {
+			Gacha.addLunacy(p, lunacy);
+			Gacha.give(p, Gacha.Kind.EXP, exp);
+			if (threads > 0) {
+				Gacha.give(p, Gacha.Kind.THREAD, threads);
+			}
+			if (tickets > 0) {
+				Gacha.give(p, Gacha.Kind.TICKET, tickets);
+			}
+			p.sendMessage(Component.text("[보상] 광기 +" + lunacy + " · 경험치 티켓 +" + exp + (threads > 0 ? " · 끈 +" + threads : "")
+					+ (tickets > 0 ? " · 추출권 +" + tickets : ""), NamedTextColor.LIGHT_PURPLE));
+		}
 	}
 
 	/** Starlight for the floors cleared (and the unspent bonus), the weekly claim, records. */

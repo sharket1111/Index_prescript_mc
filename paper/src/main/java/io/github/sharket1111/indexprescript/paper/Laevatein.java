@@ -51,8 +51,6 @@ import io.papermc.paper.entity.TeleportFlag;
  */
 final class Laevatein implements Listener {
 	private static final int[] HITS_TO_RELEASE = {5, 7, 9};
-	/** Burn on every hit once released: 1, 4, then 9 seconds by stage. */
-	private static final int[] BURN_TICKS = {0, 20, 80, 180};
 	/** At full release hits keep counting (for Stab and Summary Execution) up to this cap. */
 	private static final int MAX_HITS = 9;
 	/** Hits needed for each stage's skill, and the skill itself. */
@@ -67,6 +65,8 @@ final class Laevatein implements Listener {
 		PotionEffectType.BLINDNESS, PotionEffectType.DARKNESS, PotionEffectType.NAUSEA, PotionEffectType.HUNGER,
 		PotionEffectType.MINING_FATIGUE, PotionEffectType.LEVITATION};
 	private static final Map<UUID, Long> STANCE_UNTIL = new ConcurrentHashMap<>();
+	private static final Map<UUID, Long> SKILL_READY = new ConcurrentHashMap<>();
+	private static final int SKILL_WAIT = 6 * 20;
 	private static final Map<UUID, Long> STANCE_READY_AT = new ConcurrentHashMap<>();
 	private static final int MAX_STAGE = Items.LAEVATEIN_STAGES.size() - 1;
 	private static final int TARGET_RANGE = 6;
@@ -265,12 +265,7 @@ final class Laevatein implements Listener {
 				|| !(event.getDamager() instanceof Player player) || !(event.getEntity() instanceof LivingEntity)) {
 			return;
 		}
-		ItemStack held = player.getInventory().getItemInMainHand();
-		int stage = Items.isLaevatein(held) ? Items.laevateinStage(held) : 0;
-		if (stage > 0) {
-			LivingEntity target = (LivingEntity) event.getEntity();
-			target.setFireTicks(Math.max(target.getFireTicks(), BURN_TICKS[stage]));
-		}
+		// Plain swings no longer set anything alight: only the skills burn.
 		if (Boolean.TRUE.equals(CHARGED.remove(player.getUniqueId()))) {
 			addHit(player);
 		}
@@ -383,7 +378,12 @@ final class Laevatein implements Listener {
 		if (release) {
 			startRelease(player, target);
 		} else {
-			setHits(held, 0);
+			// The hits are kept; a short wait between skills instead.
+			long now = CaduceusListener.now();
+			if (now < SKILL_READY.getOrDefault(player.getUniqueId(), 0L)) {
+				return;
+			}
+			SKILL_READY.put(player.getUniqueId(), now + SKILL_WAIT);
 			LaevateinSkill.start(player, target, SKILLS[stage], stage);
 		}
 	}

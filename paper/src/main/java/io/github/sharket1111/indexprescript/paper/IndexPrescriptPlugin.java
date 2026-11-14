@@ -76,6 +76,10 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Ego.load(this);
 		getServer().getPluginManager().registerEvents(new Ego.Events(), this);
 		getServer().getPluginManager().registerEvents(new EgoPassive(), this);
+		getServer().getPluginManager().registerEvents(new NoBasicFire(), this);
+		Gacha.load(this);
+		getServer().getPluginManager().registerEvents(new GachaWeapon(), this);
+		getServer().getPluginManager().registerEvents(new Upgrade(), this);
 		var menu = getCommand("menu");
 		if (menu != null) {
 			menu.setExecutor((sender, cmd, label, args) -> {
@@ -113,6 +117,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Bukkit.getScheduler().runTaskTimer(this, Ego.EgoSkill::tickAll, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, EgoPassive::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, MdScenes::tick, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, Extraction::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, MimicryWeapon::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Sanity::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Hud::tick, 1L, 1L);
@@ -139,6 +144,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		RienSkill.endAll();
 		SkillMenu.closeAll();
 		Ego.EgoSkill.endAll();
+		Extraction.endAll();
 		MimicrySkill.endAll();
 		MimicryWeapon.endAll();
 		UnitHud.clearAll();
@@ -191,6 +197,21 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			sender.sendMessage(Component.text(Messages.get(sender, "command.pack_sent"), NamedTextColor.GREEN));
 			return true;
 		}
+		if (args.length >= 3 && args[0].equalsIgnoreCase("lunacy")) {
+			// /ip lunacy <player> <+/-amount>
+			Player who = Bukkit.getPlayerExact(args[1]);
+			if (who == null) {
+				sender.sendMessage(Messages.get(sender, "command.no_player", args[1]));
+				return true;
+			}
+			try {
+				Gacha.addLunacy(who, Integer.parseInt(args[2]));
+				sender.sendMessage(Component.text(who.getName() + " 광기 " + Gacha.lunacy(who), NamedTextColor.GREEN));
+			} catch (NumberFormatException e) {
+				sender.sendMessage(Component.text("/ip lunacy <플레이어> <양>", NamedTextColor.RED));
+			}
+			return true;
+		}
 		if (args.length < 2 || !args[0].equalsIgnoreCase("give")) {
 			sender.sendMessage(Messages.get(sender, "command.usage"));
 			return true;
@@ -207,7 +228,10 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			case "hammer", "renoir_hammer" -> Items.renoirHammer(target);
 			case "mimicry", "미미크리" -> Items.mimicry(target);
 			case "blackgod", "black_god" -> BlackGod.toggleItem(target);
-			default -> null;
+			case "ticket", "추출권" -> Gacha.item(Gacha.Kind.TICKET, 10);
+			case "exp", "경험치" -> Gacha.item(Gacha.Kind.EXP, 10);
+			case "thread", "끈" -> Gacha.item(Gacha.Kind.THREAD, 50);
+			default -> args[1].startsWith("weapon:") && Gacha.weapon(args[1].substring(7)) != null ? Gacha.weaponItem(Gacha.weapon(args[1].substring(7))) : null;
 		};
 		if (item == null) {
 			sender.sendMessage(Messages.get(sender, "command.usage"));
@@ -448,7 +472,8 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		return switch (args.length) {
 			case 1 -> List.of("give", "pack", "laevatein", "sanity", "mang", "renoir", "blackgod", "dummy", "anim", "fx", "skills");
 			case 2 -> switch (args[0].toLowerCase(Locale.ROOT)) {
-				case "give" -> List.of("caduceus", "terminal", "laevatein", "hammer", "mimicry", "blackgod");
+				case "give" -> join(List.of("caduceus", "terminal", "laevatein", "hammer", "mimicry", "blackgod", "ticket", "exp", "thread"),
+						Gacha.weapons().stream().map(w -> "weapon:" + w.id()).toList());
 				case "laevatein" -> List.of("0", "1", "2", "3");
 				case "mang" -> List.of("1", "2", "3", "4", "5", "6");
 				case "renoir" -> List.of("0", "50", "100");

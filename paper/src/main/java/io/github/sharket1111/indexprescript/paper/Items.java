@@ -240,6 +240,11 @@ final class Items {
 		return isCaduceus(stack) || isLaevatein(stack) || isRenoirHammer(stack) || isMimicry(stack);
 	}
 
+	/** Any weapon: the plugin's own or one from Extraction. */
+	static boolean isAnyWeapon(ItemStack stack) {
+		return isWeapon(stack) || Gacha.weaponOf(stack) != null;
+	}
+
 	/** The form or stage string first, then the Mang string; an empty first string stands for none. */
 	private static void setModelStrings(ItemStack stack, String model, String mang) {
 		stack.editMeta(meta -> {

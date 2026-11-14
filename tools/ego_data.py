@@ -175,6 +175,9 @@ def main(raw):
             "risk": field(text, "risk"), "sin": field(text, "affinity").lower(), "abnormality": n.get("abno") or field(text, "abnormality"),
             "quote": n.get("quote") or plain(field(text, "aquote")), "sanity": int(field(text, "asanity") or 0), "costs": costs,
             "skill": awakening, "text_ko": n.get("effects") or [],
+            # Threadspin (Uptie): the Awakening skill at Uptie 1-2 (askill2), 3 (askill3) and 4 (askill).
+            "upties": [skill(text, "askill2") or awakening, skill(text, "askill2") or awakening, skill(text, "askill3") or awakening, awakening],
+            "base": "base" in field(text, "obtained").lower() or field(text, "baseego") == "1",
             "passive_effects": passive_effects(slug(title))[0], "passive_ko": passive_effects(slug(title))[1],
             "passive": {"name": (n.get("passive") or {}).get("name") or (passive.group(1) if passive else ""),
                         "text": ptext or (plain(passive.group(2)) if passive else "")},

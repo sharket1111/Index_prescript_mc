@@ -55,6 +55,15 @@ final class EgoPassive implements Listener {
 
 	private static List<Owned> effects(Player p) {
 		List<Owned> out = new ArrayList<>();
+		// The two-star weapon in hand: its Identity's passive at the weapon's Uptie.
+		org.bukkit.inventory.ItemStack held = p.getInventory().getItemInMainHand();
+		Gacha.Weapon weapon = Gacha.weaponOf(held);
+		if (weapon != null) {
+			JsonArray list = weapon.passiveEffects().get(Math.max(0, Math.min(weapon.passiveEffects().size() - 1, Upgrade.uptie(held) - 1)));
+			for (int i = 0; i < list.size(); i++) {
+				out.add(new Owned("w_" + weapon.id(), list.get(i).getAsJsonObject(), i));
+			}
+		}
 		for (String grade : Ego.GRADES) {
 			Ego.Def def = Ego.equipped(p, grade);
 			if (def == null) {

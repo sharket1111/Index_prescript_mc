@@ -425,7 +425,7 @@ final class RenoirHammer implements Listener {
 			Hud.message(player, Component.text(Messages.get(player, "renoir.no_target"), NamedTextColor.GRAY));
 			return;
 		}
-		if (kind == RenoirSkill.Kind.NAIL || kind == RenoirSkill.Kind.BORN) {
+		if (kind != RenoirSkill.Kind.AGAIN) {
 			long now = CaduceusListener.now();
 			long ready = LESSER_READY.getOrDefault(player.getUniqueId(), 0L);
 			if (now < ready) {
@@ -434,8 +434,10 @@ final class RenoirHammer implements Listener {
 			}
 			LESSER_READY.put(player.getUniqueId(), now + LESSER_COOLDOWN);
 		}
-		// Every skill spends all of the Voice.
-		setVoice(player, 0);
+		// Only Strike Again, at the full 100, spends the Voice; the others keep it.
+		if (kind == RenoirSkill.Kind.AGAIN) {
+			setVoice(player, 0);
+		}
 		RenoirSkill.start(player, target, kind);
 	}
 
@@ -452,9 +454,10 @@ final class RenoirHammer implements Listener {
 			for (String l : MdGui.wrap(card.description(), 34)) {
 				lore.add(SkillMenu.line(l, NamedTextColor.GRAY));
 			}
-			lore.add(SkillMenu.line("필요한 목소리 " + need(kind) + " (지금 " + voice + ") · 쓰면 목소리를 모두 써요", NamedTextColor.DARK_GRAY));
+			lore.add(SkillMenu.line("필요한 목소리 " + need(kind) + " (지금 " + voice + ")" + (kind == RenoirSkill.Kind.AGAIN ? " · 쓰면 목소리를 모두 써요"
+					: " · 목소리 유지, 대기 5초"), NamedTextColor.DARK_GRAY));
 			String name = n++ + ". " + card.name();
-			boolean lesserKind = kind == RenoirSkill.Kind.NAIL || kind == RenoirSkill.Kind.BORN;
+			boolean lesserKind = kind != RenoirSkill.Kind.AGAIN;
 			if (voice < need(kind)) {
 				out.add(new SkillMenu.Entry(SkillMenu.locked(name, "목소리가 모자라요", lore), null));
 			} else if (lesserKind && now < lesser) {

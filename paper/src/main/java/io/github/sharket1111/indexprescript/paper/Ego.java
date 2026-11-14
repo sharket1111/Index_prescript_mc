@@ -70,12 +70,12 @@ final class Ego {
 	private static final int MAX_RESOURCE = 10;
 	private static final NamespacedKey RESOURCES = new NamespacedKey(Items.NAMESPACE, "ego_resources");
 
-	record Skill(String type, String sin, int power, int coinPower, int coins, int weight, List<String> text, JsonArray effects) {
+	record Skill(String type, String sin, int power, int coinPower, int coins, int weight, List<String> text, JsonArray effects, String name) {
 	}
 
 	record Def(String id, String name, String nameKo, String sinner, String sinnerKo, String risk, String sin, String abnormality, String quote,
 			int sanity, Map<String, Integer> costs, Skill skill, List<String> textKo, String passiveName, String passiveText, JsonArray passiveEffects,
-			List<String> passiveKo) {
+			List<String> passiveKo, List<Skill> upties, boolean base) {
 		int sinIndex() {
 			return index(sin);
 		}
@@ -84,10 +84,15 @@ final class Ego {
 			return TextColor.color(SIN_RGB[Math.max(0, sinIndex())]);
 		}
 
-		SkillCard card() {
-			String desc = String.join(" ", textKo.isEmpty() ? skill.text() : textKo);
-			return new SkillCard("E.G.O::" + nameKo, colour(), skill.power(), skill.coinPower(), Math.max(1, skill.coins()), desc,
-					EgoSkill.length(this) + 10, true, "N".repeat(Math.max(1, skill.coins())));
+		SkillCard card(Skill at) {
+			String desc = String.join(" ", textKo.isEmpty() ? at.text() : textKo);
+			return new SkillCard("E.G.O::" + nameKo, colour(), at.power(), at.coinPower(), Math.max(1, at.coins()), desc, EgoSkill.length(at) + 10, true,
+					"N".repeat(Math.max(1, at.coins())));
+		}
+
+		/** The Awakening skill at Threadspin (Uptie) {@code uptie} (1-4). */
+		Skill skill(int uptie) {
+			return upties.isEmpty() ? skill : upties.get(Math.max(0, Math.min(upties.size() - 1, uptie - 1)));
 		}
 	}
 
@@ -121,8 +126,11 @@ final class Ego {
 				JsonObject s = o.getAsJsonObject("skill");
 				List<String> text = new ArrayList<>();
 				s.getAsJsonArray("text").forEach(t -> text.add(t.getAsString()));
-				Skill skill = new Skill(s.get("type").getAsString(), s.get("sin").getAsString(), s.get("power").getAsInt(),
-						s.get("coin_power").getAsInt(), s.get("coins").getAsInt(), s.get("weight").getAsInt(), text, s.getAsJsonArray("effects"));
+				Skill skill = skillOf(s);
+				List<Skill> upties = new ArrayList<>();
+				if (o.has("upties")) {
+					o.getAsJsonArray("upties").forEach(u -> upties.add(skillOf(u.getAsJsonObject())));
+				}
 				Map<String, Integer> costs = new LinkedHashMap<>();
 				o.getAsJsonObject("costs").entrySet().forEach(c -> costs.put(c.getKey(), c.getValue().getAsInt()));
 				List<String> ko = new ArrayList<>();
@@ -135,13 +143,75 @@ final class Ego {
 				JsonArray passiveEffects = o.has("passive_effects") ? o.getAsJsonArray("passive_effects") : new JsonArray();
 				Def def = new Def(o.get("id").getAsString(), o.get("name").getAsString(), o.get("name_ko").getAsString(), o.get("sinner").getAsString(),
 						o.get("sinner_ko").getAsString(), o.get("risk").getAsString(), o.get("sin").getAsString(), str(o, "abnormality"), str(o, "quote"),
-						o.get("sanity").getAsInt(), costs, skill, ko, str(passive, "name"), str(passive, "text"), passiveEffects, passiveKo);
+						o.get("sanity").getAsInt(), costs, skill, ko, str(passive, "name"), str(passive, "text"), passiveEffects, passiveKo, upties,
+						o.has("base") && o.get("base").getAsBoolean());
 				DEFS.put(def.id(), def);
 			}
 			plugin.getLogger().info("E.G.O: " + DEFS.size());
 		} catch (java.io.IOException | RuntimeException e) {
 			plugin.getLogger().log(Level.WARNING, "Could not read ego/egos.json", e);
 		}
+	}
+
+	/** A skill in the data's shape (E.G.O and the gacha's weapons alike). */
+	static Skill skillOf(JsonObject s) {
+		List<String> text = new ArrayList<>();
+		s.getAsJsonArray("text").forEach(t -> text.add(t.getAsString()));
+		return new Skill(s.get("type").getAsString(), s.get("sin").getAsString(), s.get("power").getAsInt(), s.get("coin_power").getAsInt(),
+				s.get("coins").getAsInt(), s.get("weight").getAsInt(), text, s.getAsJsonArray("effects"), s.has("name") ? s.get("name").getAsString() : "");
+	}
+
+	static List<Def> all() {
+		return List.copyOf(DEFS.values());
+	}
+
+	// --- owning and threadspinning -----------------------------------------------------------
+
+	private static final NamespacedKey OWNED = new NamespacedKey(Items.NAMESPACE, "ego_owned");
+	private static final NamespacedKey UPTIES = new NamespacedKey(Items.NAMESPACE, "ego_upties");
+
+	/** Whether {@code player} has this E.G.O: the Sinners' base E.G.O from the start, the rest from Extraction. */
+	static boolean owns(Player player, Def def) {
+		if (def.base()) {
+			return true;
+		}
+		String owned = player.getPersistentDataContainer().getOrDefault(OWNED, PersistentDataType.STRING, "");
+		return ("," + owned + ",").contains("," + def.id() + ",");
+	}
+
+	static void give(Player player, Def def) {
+		if (owns(player, def)) {
+			return;
+		}
+		String owned = player.getPersistentDataContainer().getOrDefault(OWNED, PersistentDataType.STRING, "");
+		player.getPersistentDataContainer().set(OWNED, PersistentDataType.STRING, owned.isEmpty() ? def.id() : owned + "," + def.id());
+	}
+
+	/** The E.G.O's Threadspin (1-4). */
+	static int uptie(Player player, Def def) {
+		String all = player.getPersistentDataContainer().getOrDefault(UPTIES, PersistentDataType.STRING, "");
+		for (String part : all.split(",")) {
+			if (part.startsWith(def.id() + ":")) {
+				try {
+					return Math.max(1, Math.min(4, Integer.parseInt(part.substring(def.id().length() + 1))));
+				} catch (NumberFormatException e) {
+					return 1;
+				}
+			}
+		}
+		return 1;
+	}
+
+	static void setUptie(Player player, Def def, int uptie) {
+		String all = player.getPersistentDataContainer().getOrDefault(UPTIES, PersistentDataType.STRING, "");
+		StringBuilder out = new StringBuilder();
+		for (String part : all.split(",")) {
+			if (!part.isEmpty() && !part.startsWith(def.id() + ":")) {
+				out.append(out.isEmpty() ? "" : ",").append(part);
+			}
+		}
+		out.append(out.isEmpty() ? "" : ",").append(def.id()).append(':').append(uptie);
+		player.getPersistentDataContainer().set(UPTIES, PersistentDataType.STRING, out.toString());
 	}
 
 	private static String str(JsonObject o, String key) {
@@ -285,7 +355,7 @@ final class Ego {
 	/** Our weapons and the game's own: what F turns into the E.G.O key with. */
 	static boolean holdsWeapon(Player player) {
 		ItemStack held = player.getInventory().getItemInMainHand();
-		if (Items.isWeapon(held)) {
+		if (Items.isAnyWeapon(held)) {
 			return true;
 		}
 		String type = held.getType().name();
@@ -295,12 +365,14 @@ final class Ego {
 
 	// --- the hotbar of E.G.O ------------------------------------------------------------------
 
-	static List<Component> lore(Def def, Player viewer) {
+	static List<Component> lore(Def base, Player viewer) {
 		List<Component> lore = new ArrayList<>();
+		Def def = base;
+		Skill at = viewer == null ? base.skill() : base.skill(uptie(viewer, base));
 		lore.add(SkillMenu.line(def.risk() + " · " + def.sinnerKo() + " · " + SINS_KO[Math.max(0, def.sinIndex())] + " · "
 				+ typeKo(def.skill().type()), def.colour()));
-		lore.add(SkillMenu.line("위력 " + def.skill().power() + " · 코인 " + (def.skill().coinPower() >= 0 ? "+" : "") + def.skill().coinPower() + " ×"
-				+ def.skill().coins() + " · 공격 가중치 " + def.skill().weight(), NamedTextColor.GOLD));
+		lore.add(SkillMenu.line("위력 " + at.power() + " · 코인 " + (at.coinPower() >= 0 ? "+" : "") + at.coinPower() + " ×" + at.coins() + " · 공격 가중치 "
+				+ at.weight() + (viewer != null ? " · 동기화 " + uptie(viewer, base) : ""), NamedTextColor.GOLD));
 		lore.add(SkillMenu.line("요구 자원: " + costText(def) + " · 정신력 -" + def.sanity(), NamedTextColor.AQUA));
 		for (String line : def.textKo().isEmpty() ? def.skill().text() : def.textKo()) {
 			for (String l : MdGui.wrap(line, 36)) {
@@ -360,7 +432,9 @@ final class Ego {
 			}
 			String name = label + " " + def.nameKo();
 			List<Component> lore = lore(def, player);
-			if (!affordable(player, def)) {
+			if (!owns(player, def)) {
+				out.add(new SkillMenu.Entry(SkillMenu.locked(name, "보유하지 않은 E.G.O예요", lore), null));
+			} else if (!affordable(player, def)) {
 				out.add(new SkillMenu.Entry(SkillMenu.locked(name, "자원이 모자라요", lore), null));
 			} else if (Sanity.of(player) - def.sanity() < Sanity.MIN) {
 				out.add(new SkillMenu.Entry(SkillMenu.locked(name, "정신력이 모자라요", lore), null));
@@ -416,6 +490,7 @@ final class Ego {
 	static final class EgoSkill {
 		private static final Map<UUID, EgoSkill> ACTIVE = new ConcurrentHashMap<>();
 		private static final int WIND_UP = 26;
+		private static final int WEAPON_WIND_UP = 8;
 		private static final int COIN_GAP = 12;
 		private static final double RANGE = 10.0;
 		/** Health per point of power a coin strikes for (the original's power, a skill's damage here). */
@@ -423,7 +498,11 @@ final class Ego {
 
 		private final Player player;
 		private final LivingEntity target;
-		private final Def def;
+		private final Skill skill;
+		private final String name;
+		private final TextColor colour;
+		private final String quote;
+		private final boolean ego;
 		private final Particle.DustOptions main;
 		private final Particle.DustOptions pale;
 		private Cinematic camera;
@@ -431,11 +510,15 @@ final class Ego {
 		private int tick;
 		private int heads;
 
-		private EgoSkill(Player player, LivingEntity target, Def def) {
+		private EgoSkill(Player player, LivingEntity target, Skill skill, String name, TextColor colour, String quote, boolean ego) {
 			this.player = player;
 			this.target = target;
-			this.def = def;
-			int rgb = SIN_RGB[Math.max(0, def.sinIndex())];
+			this.skill = skill;
+			this.name = name;
+			this.colour = colour;
+			this.quote = quote;
+			this.ego = ego;
+			int rgb = SIN_RGB[Math.max(0, index(skill.sin()))];
 			this.main = new Particle.DustOptions(Color.fromRGB(rgb), 1.6F);
 			this.pale = new Particle.DustOptions(Color.fromRGB(lighten(rgb)), 1.1F);
 		}
@@ -447,9 +530,14 @@ final class Ego {
 			return r << 16 | g << 8 | b;
 		}
 
-		static int length(Def def) {
-			return WIND_UP + Math.max(1, def.skill().coins()) * COIN_GAP + 24;
+		static int length(Skill skill) {
+			return WIND_UP + Math.max(1, skill.coins()) * COIN_GAP + 24;
 		}
+
+		private int windUp() {
+			return ego ? WIND_UP : WEAPON_WIND_UP;
+		}
+
 
 		static boolean active(Player player) {
 			return ACTIVE.containsKey(player.getUniqueId());
@@ -468,19 +556,36 @@ final class Ego {
 				Hud.message(player, Component.text(Messages.get(player, "renoir.no_target"), NamedTextColor.GRAY));
 				return;
 			}
-			if (Clash.request(player, target, def.card(), outcome -> launch(player, outcome.target(), def))) {
+			Skill skill = def.skill(uptie(player, def));
+			if (Clash.request(player, target, def.card(skill), outcome -> launch(player, outcome.target(), skill, def.nameKo(), def.colour(),
+					def.quote().isBlank() ? def.sinnerKo() : "\"" + def.quote() + "\"", true))) {
 				pay(player, def);
 				Sanity.lose(player, def.sanity());
 			}
 		}
 
-		private static void launch(Player player, LivingEntity target, Def def) {
+		/** A weapon's skill (the gacha's weapons): the same strikes and coin effects, without the E.G.O's title. Returns false if it could not start. */
+		static boolean cast(Player player, Skill skill, String name, TextColor colour, int clashBonus) {
+			if (active(player) || Clash.blocked(player)) {
+				return false;
+			}
+			LivingEntity target = Clash.answering(player) != null ? Clash.answering(player) : lookedAt(player);
+			if (target == null) {
+				Hud.message(player, Component.text(Messages.get(player, "renoir.no_target"), NamedTextColor.GRAY));
+				return false;
+			}
+			SkillCard card = new SkillCard(name, colour, skill.power() + clashBonus, skill.coinPower(), Math.max(1, skill.coins()),
+					String.join(" ", skill.text()), length(skill) + 10, true, "N".repeat(Math.max(1, skill.coins())));
+			return Clash.request(player, target, card, outcome -> launch(player, outcome.target(), skill, name, colour, "", false));
+		}
+
+		private static void launch(Player player, LivingEntity target, Skill skill, String name, TextColor colour, String quote, boolean ego) {
 			if (active(player) || !player.isOnline() || player.isDead()) {
 				return;
 			}
-			EgoSkill skill = new EgoSkill(player, target, def);
-			ACTIVE.put(player.getUniqueId(), skill);
-			skill.open();
+			EgoSkill run = new EgoSkill(player, target, skill, name, colour, quote, ego);
+			ACTIVE.put(player.getUniqueId(), run);
+			run.open();
 		}
 
 		private static LivingEntity lookedAt(Player player) {
@@ -525,17 +630,20 @@ final class Ego {
 
 		private void open() {
 			camera = Cinematic.start(player, player.getLocation().add(0, 2, 0));
-			SkillOverlay.show(player, SkillOverlay.Size.BIG);
-			TotalDamage.start(player);
-			player.showTitle(Title.title(Component.text(def.nameKo(), def.colour()).decorate(TextDecoration.BOLD),
-					Component.text(def.quote().isBlank() ? def.sinnerKo() : "\"" + def.quote() + "\"", NamedTextColor.WHITE),
-					Title.Times.times(Duration.ofMillis(150), Duration.ofMillis(1500), Duration.ofMillis(400))));
+			SkillOverlay.show(player, ego ? SkillOverlay.Size.BIG : SkillOverlay.Size.SMALL);
+			if (ego) {
+				TotalDamage.start(player);
+				player.showTitle(Title.title(Component.text(name, colour).decorate(TextDecoration.BOLD), Component.text(quote, NamedTextColor.WHITE),
+						Title.Times.times(Duration.ofMillis(150), Duration.ofMillis(1500), Duration.ofMillis(400))));
+			}
 			World world = player.getWorld();
-			world.playSound(player.getLocation(), Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.0F, 0.7F);
-			world.playSound(player.getLocation(), Sound.ENTITY_WARDEN_SONIC_CHARGE, SoundCategory.PLAYERS, 0.6F, 1.4F);
-			for (Player near : world.getPlayers()) {
-				if (near != player && near.getLocation().distanceSquared(player.getLocation()) < 32 * 32) {
-					near.sendActionBar(Component.text(player.getName() + " — E.G.O::" + def.nameKo(), def.colour()));
+			if (ego) {
+				world.playSound(player.getLocation(), Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.0F, 0.7F);
+				world.playSound(player.getLocation(), Sound.ENTITY_WARDEN_SONIC_CHARGE, SoundCategory.PLAYERS, 0.6F, 1.4F);
+				for (Player near : world.getPlayers()) {
+					if (near != player && near.getLocation().distanceSquared(player.getLocation()) < 32 * 32) {
+						near.sendActionBar(Component.text(player.getName() + " — E.G.O::" + name, colour));
+					}
 				}
 			}
 			apply(-1, true);
@@ -550,9 +658,9 @@ final class Ego {
 			LivingEntity actor = actor();
 			World world = actor.getWorld();
 			Location at = actor.getLocation();
-			if (tick < WIND_UP) {
+			if (tick < windUp()) {
 				// The E.G.O wells up: a ring of the sin's colour closing in, a pillar rising.
-				double r = 2.6 * (1 - tick / (double) WIND_UP) + 0.4;
+				double r = 2.6 * (1 - tick / (double) windUp()) + 0.4;
 				for (int i = 0; i < 16; i++) {
 					double a = Math.PI * 2 * i / 16 + tick * 0.2;
 					world.spawnParticle(Particle.DUST, at.clone().add(Math.cos(a) * r, 0.1 + tick * 0.06, Math.sin(a) * r), 1, 0, 0, 0, 0, i % 3 == 0 ? pale : main);
@@ -561,16 +669,16 @@ final class Ego {
 					world.spawnParticle(Particle.END_ROD, at.clone().add(0, 1.2, 0), 4, 0.3, 0.6, 0.3, 0.02);
 				}
 			}
-			int coins = Math.max(1, def.skill().coins());
+			int coins = Math.max(1, skill.coins());
 			for (int c = 0; c < coins; c++) {
-				if (tick == WIND_UP + c * COIN_GAP - 3) {
+				if (tick == windUp() + c * COIN_GAP - 3) {
 					dashBeside(c);
 				}
-				if (tick == WIND_UP + c * COIN_GAP) {
+				if (tick == windUp() + c * COIN_GAP) {
 					strike(c, c == coins - 1);
 				}
 			}
-			if (tick >= length(def)) {
+			if (tick >= windUp() + Math.max(1, skill.coins()) * COIN_GAP + 24) {
 				finish();
 				return false;
 			}
@@ -607,13 +715,13 @@ final class Ego {
 			}
 			LivingEntity actor = actor();
 			actor.swingMainHand();
-			double power = Math.max(1, def.skill().power() + def.skill().coinPower() * heads);
+			double power = Math.max(1, skill.power() + skill.coinPower() * heads);
 			double bonus = apply(coin, isHeads);
 			double damage = power * DAMAGE_PER_POWER * (1 + bonus / 100.0) * IndexMark.multiplier(player, target);
 			List<LivingEntity> hit = new ArrayList<>(List.of(target));
 			// Attack weight: that many foes around the target take the coin too.
 			for (Entity e : target.getNearbyEntities(5, 3, 5)) {
-				if (hit.size() >= def.skill().weight()) {
+				if (hit.size() >= skill.weight()) {
 					break;
 				}
 				if (e instanceof LivingEntity other && other != player && !(other instanceof Player) && !other.isDead() && !Cinematic.isActor(other)
@@ -639,7 +747,7 @@ final class Ego {
 		private double apply(int coin, boolean isHeads, String moment) {
 			double bonus = 0;
 			long now = CaduceusListener.now();
-			for (JsonElement el : def.skill().effects()) {
+			for (JsonElement el : skill.effects()) {
 				JsonObject e = el.getAsJsonObject();
 				if (e.get("coin").getAsInt() != coin) {
 					continue;
@@ -720,7 +828,7 @@ final class Ego {
 			LivingEntity actor = actor();
 			World world = target.getWorld();
 			Location mid = target.getLocation().add(0, target.getHeight() * 0.6, 0);
-			switch (def.skill().type()) {
+			switch (skill.type()) {
 				case "blunt" -> Effects.arc(actor, target, -150, 200, 75);
 				case "pierce" -> Effects.slash(actor, target, 0, 3.2);
 				default -> Effects.arc(actor, target, coin % 2 == 0 ? -100 : 100, coin % 2 == 0 ? 200 : -200, -10);
@@ -760,11 +868,11 @@ final class Ego {
 			if (Double.isNaN(cameraSide)) {
 				cameraSide = Math.atan2(from.getZ() - to.getZ(), from.getX() - to.getX()) + Math.PI / 2;
 			}
-			int lastCoin = WIND_UP + (Math.max(1, def.skill().coins()) - 1) * COIN_GAP;
-			double distance = tick < WIND_UP ? 3.2 : tick >= lastCoin - 4 && tick < lastCoin + 10 ? 3.4 : 4.6;
-			Vector at = tick < WIND_UP ? Cinematic.orbit(from.clone().add(new Vector(0, 1.2, 0)), cameraSide + tick * 0.02, distance, 0.6)
+			int lastCoin = windUp() + (Math.max(1, skill.coins()) - 1) * COIN_GAP;
+			double distance = tick < windUp() ? 3.2 : tick >= lastCoin - 4 && tick < lastCoin + 10 ? 3.4 : 4.6;
+			Vector at = tick < windUp() ? Cinematic.orbit(from.clone().add(new Vector(0, 1.2, 0)), cameraSide + tick * 0.02, distance, 0.6)
 					: Cinematic.orbit(focus, cameraSide, distance, 1.4);
-			camera.frame(at, tick < WIND_UP ? from.clone().add(new Vector(0, 1.3, 0)) : focus, 0.0);
+			camera.frame(at, tick < windUp() ? from.clone().add(new Vector(0, 1.3, 0)) : focus, 0.0);
 		}
 
 		private LivingEntity actor() {
@@ -772,7 +880,9 @@ final class Ego {
 		}
 
 		private void finish() {
-			TotalDamage.finish(player);
+			if (ego) {
+				TotalDamage.finish(player);
+			}
 			SkillOverlay.hide(player);
 			if (camera != null) {
 				camera.end();
@@ -802,15 +912,21 @@ final class Ego {
 			}
 			res.add("스킬을 쓰면 그 스킬의 죄악 속성 자원 +1, 합에서 이기면 +1 더");
 			gui.set(12, MdGui.item(Material.AMETHYST_SHARD, "E.G.O 자원", NamedTextColor.AQUA, res.toArray(String[]::new)), (Runnable) null);
+			gui.set(11, MdGui.item(Material.GOLD_BLOCK, "추출", Gacha.THREE_COLOUR, "광기 " + Gacha.lunacy(player) + " · 추출권 "
+					+ Gacha.count(player, Gacha.Kind.TICKET) + "장", "무기와 E.G.O를 뽑아요"), () -> Extraction.open(player));
+			gui.set(15, MdGui.item(Material.ANVIL, "무기 강화", NamedTextColor.AQUA, "손에 든 무기의 레벨과 동기화", "경험치 티켓 "
+					+ Gacha.count(player, Gacha.Kind.EXP) + "장 · 끈 " + Gacha.count(player, Gacha.Kind.THREAD) + "개"), () -> Upgrade.open(player));
 			gui.set(14, MdGui.item(Material.ENDER_EYE, "거울 던전", NamedTextColor.GOLD, "거울 던전 메뉴를 열어요 (/md)"), () -> {
 				player.closeInventory();
 				player.performCommand("md");
 			});
 			gui.set(16, MdGui.item(Material.WRITABLE_BOOK, "조작법", NamedTextColor.WHITE,
 					"우클릭: 들고 있는 무기의 스킬 (핫바에서 숫자키로 선택)",
+					"추출: 광기 130 또는 추출권 1장 (10회는 1300 / 10장)",
+					"무기 강화: 경험치 티켓으로 레벨(공격·방어 레벨), 끈으로 동기화",
 					"F (왼손 들기): 무기를 든 채로 누르면 E.G.O (숫자키로 사용)",
 					"9번 또는 5초 기다리면 핫바가 돌아와요",
-					"E.G.O는 수감자와 상관없이 등급에 맞으면 낄 수 있어요",
+					"E.G.O는 수감자와 상관없이 등급에 맞으면 낄 수 있어요 (가진 것만)",
 					"자원과 정신력을 써서 E.G.O 각성 스킬을 써요"), (Runnable) null);
 			gui.fill().open(player);
 		}
@@ -833,22 +949,47 @@ final class Ego {
 		}
 
 		static void pick(Player player, String grade, int page) {
-			List<Def> list = ofGrade(grade);
+			// Owned E.G.O first (the Sinners' base E.G.O, and those from Extraction), the rest shown locked.
+			List<Def> list = new ArrayList<>(ofGrade(grade));
+			list.sort(Comparator.comparing((Def d) -> !owns(player, d)));
 			int per = 45;
 			int pages = Math.max(1, (list.size() + per - 1) / per);
 			MdGui gui = new MdGui(6, grade + " E.G.O (" + (page + 1) + "/" + pages + ")");
 			Def current = equipped(player, grade);
 			for (int i = page * per; i < Math.min(list.size(), (page + 1) * per); i++) {
 				Def def = list.get(i);
-				List<Component> lore = new ArrayList<>(lore(def, null));
-				lore.add(SkillMenu.line(def == current ? "장착 중 (클릭하면 해제)" : "클릭해서 장착", NamedTextColor.YELLOW));
-				ItemStack icon = MdGui.item(Material.PAPER, Component.text(def.nameKo() + " · " + def.sinnerKo(), def.colour())
-						.decoration(TextDecoration.ITALIC, false), lore);
-				icon.editMeta(meta -> meta.setItemModel(NamespacedKey.fromString(model(def))));
+				boolean owned = owns(player, def);
+				int spin = uptie(player, def);
+				List<Component> lore = new ArrayList<>(lore(def, player));
+				if (!owned) {
+					lore.add(SkillMenu.line("아직 없어요: 추출로 얻어요", NamedTextColor.RED));
+				} else {
+					lore.add(SkillMenu.line("동기화 " + spin + "/4" + (spin < 4 ? " · 우클릭: 동기화 " + (spin + 1) + " (끈 " + Upgrade.THREADS[spin + 1] * 2 + ")" : ""),
+							NamedTextColor.AQUA));
+					lore.add(SkillMenu.line(def == current ? "좌클릭: 장착 해제" : "좌클릭: 장착", NamedTextColor.YELLOW));
+				}
+				ItemStack icon = MdGui.item(Material.PAPER, Component.text(def.nameKo() + " · " + def.sinnerKo() + (owned ? "" : " (미보유)"),
+						owned ? def.colour() : NamedTextColor.DARK_GRAY).decoration(TextDecoration.ITALIC, false), lore);
+				icon.editMeta(meta -> meta.setItemModel(NamespacedKey.fromString(owned ? model(def) : "minecraft:gray_dye")));
 				if (def == current) {
 					MdGui.glow(icon);
 				}
-				gui.set(i - page * per, icon, () -> {
+				gui.set(i - page * per, icon, (org.bukkit.event.inventory.InventoryClickEvent click) -> {
+					if (!owned) {
+						return;
+					}
+					if (click.isRightClick()) {
+						// Threadspin: Threads for the next Uptie of its Awakening skill.
+						if (spin < 4 && Gacha.take(player, Gacha.Kind.THREAD, Upgrade.THREADS[spin + 1] * 2)) {
+							setUptie(player, def, spin + 1);
+							Hud.message(player, Component.text(def.nameKo() + " 동기화 " + (spin + 1) + "!", def.colour()));
+							player.playSound(player.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1.0F, 1.0F);
+						} else if (spin < 4) {
+							Hud.message(player, Component.text("끈이 모자라요", NamedTextColor.GRAY));
+						}
+						pick(player, grade, page);
+						return;
+					}
 					equip(player, grade, def == current ? null : def);
 					Hud.message(player, Component.text(def == current ? grade + " E.G.O를 뺐어요" : grade + " E.G.O: " + def.nameKo(), def.colour()));
 					loadout(player);

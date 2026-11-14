@@ -96,6 +96,9 @@ final class RienSkill {
 	}
 
 	/** Right-click with Caduceus: the skill [Hermes] picks, at the looked-at foe (or the one to answer). */
+	private static final java.util.Map<java.util.UUID, Long> READY = new java.util.concurrent.ConcurrentHashMap<>();
+	private static final int WAIT = 5 * 20;
+
 	/** The tier of skills the [Hermes] stacks allow: 1-3 Gluttony, 4-6 Pride, 7+ Gloom (-1 if none). */
 	private static int family(int hermes) {
 		return hermes < 1 ? -1 : hermes <= 3 ? 0 : hermes <= 6 ? 1 : 2;
@@ -115,10 +118,14 @@ final class RienSkill {
 			Hud.message(player, Component.text(Messages.get(player, "renoir.no_target"), NamedTextColor.GRAY));
 			return;
 		}
-		int cost = hermes <= 3 ? 1 : 2;
-		if (!PrescriptTracker.spendHermes(player, cost)) {
+		// [Hermes] is kept (only Furioso-Replica, at 9, spends it all); a short wait between skills instead.
+		long now = CaduceusListener.now();
+		long ready = READY.getOrDefault(player.getUniqueId(), 0L);
+		if (now < ready) {
+			Hud.message(player, Component.text("대기 중 (" + (ready - now + 19) / 20 + "초)", NamedTextColor.GRAY));
 			return;
 		}
+		READY.put(player.getUniqueId(), now + WAIT);
 		Clash.request(player, target, kind.card(), outcome -> launch(player, outcome.target(), kind));
 	}
 
@@ -138,7 +145,7 @@ final class RienSkill {
 			for (String l : MdGui.wrap(card.description(), 34)) {
 				lore.add(SkillMenu.line(l, NamedTextColor.GRAY));
 			}
-			lore.add(SkillMenu.line("대행 [헤르메스] " + hermes + " (쓰면 " + (hermes <= 3 ? 1 : 2) + " 소모)", NamedTextColor.DARK_GRAY));
+			lore.add(SkillMenu.line("대행 [헤르메스] " + hermes + " (쓰지 않고 유지 · 대기 5초)", NamedTextColor.DARK_GRAY));
 			String name = n++ + ". " + kind.name;
 			String model = switch (kind.type) {
 				case BLUNT -> "minecraft:mace";
