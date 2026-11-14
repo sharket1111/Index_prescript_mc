@@ -112,6 +112,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Bukkit.getScheduler().runTaskTimer(this, SkillMenu::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Ego.EgoSkill::tickAll, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, EgoPassive::tick, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, MdScenes::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, MimicryWeapon::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Sanity::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Hud::tick, 1L, 1L);

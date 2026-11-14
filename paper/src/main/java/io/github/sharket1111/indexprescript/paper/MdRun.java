@@ -636,7 +636,7 @@ final class MdRun {
 		at = n;
 		n.visited = true;
 		phase = Phase.BATTLE;
-		MdWorld.build(slot, MdWorld.Room.BOSS, 0x6A1FA8, boss[0]);
+		MdWorld.build(slot, MdWorld.Room.BOSS, 0x6A1FA8, boss[0], MdScenes.ofHidden(boss[0]));
 		gather(MdWorld.Room.BOSS);
 		broadcast(Component.text("숨은 보스: " + boss[0], NamedTextColor.LIGHT_PURPLE));
 		battle = new MdBattle(this, NodeType.HIDDEN, boss[0], List.of(boss[2]));
@@ -657,20 +657,21 @@ final class MdRun {
 		switch (n.type) {
 			case EVENT -> {
 				phase = Phase.EVENT;
-				MdWorld.build(slot, MdWorld.Room.EVENT, theme.color(), "이벤트");
+				MdWorld.build(slot, MdWorld.Room.EVENT, theme.color(), "이벤트", MdScenes.of(theme));
 				gather(MdWorld.Room.EVENT);
 				MdEvent.start(this);
 			}
 			case SHOP -> {
 				phase = Phase.SHOP;
-				MdWorld.build(slot, MdWorld.Room.SHOP, theme.color(), "상점");
+				MdWorld.build(slot, MdWorld.Room.SHOP, theme.color(), "상점", MdScenes.of(theme));
 				gather(MdWorld.Room.SHOP);
 				shop = MdShop.open(this);
 			}
 			default -> {
 				phase = Phase.BATTLE;
 				MdWorld.Room room = n.type == NodeType.BOSS ? MdWorld.Room.BOSS : MdWorld.Room.BATTLE;
-				MdWorld.build(slot, room, theme.color(), n.type == NodeType.BOSS ? (theme.boss().isBlank() ? "보스" : theme.boss()) : theme.name());
+				MdWorld.build(slot, room, theme.color(), n.type == NodeType.BOSS ? (theme.boss().isBlank() ? "보스" : theme.boss()) : theme.name(),
+						MdScenes.of(theme));
 				gather(room);
 				battle = new MdBattle(this, n.type, null, List.of());
 				battle.start();
@@ -1527,7 +1528,7 @@ final class MdRun {
 		run.theme = t;
 		run.floor = t.normal() != null ? t.normal()[0] : t.hard() != null ? t.hard()[0] : 1;
 		MdWorld.Room room = type == NodeType.BOSS ? MdWorld.Room.BOSS : MdWorld.Room.BATTLE;
-		MdWorld.build(0, room, t.color(), type == NodeType.BOSS ? t.boss() : t.name());
+		MdWorld.build(0, room, t.color(), type == NodeType.BOSS ? t.boss() : t.name(), MdScenes.of(t));
 		String[] hidden = type == NodeType.HIDDEN ? HIDDEN_BOSSES[run.random.nextInt(HIDDEN_BOSSES.length)] : null;
 		MdBattle battle = new MdBattle(run, type, hidden == null ? null : hidden[0], List.of());
 		if (hidden != null) {

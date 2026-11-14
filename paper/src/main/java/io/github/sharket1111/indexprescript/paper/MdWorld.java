@@ -31,8 +31,8 @@ final class MdWorld {
 	private static final int PLOT = 1024;
 	private static final int Y = 100;
 	/** The room's half width (blocks) and wall height; the cleared box is a bit larger. */
-	private static final int HALF = 16;
-	private static final int CLEAR_UP = 14;
+	private static final int HALF = 31;
+	private static final int CLEAR_UP = 20;
 	private static World world;
 
 	enum Room {
@@ -142,6 +142,85 @@ final class MdWorld {
 	 * pillars, and the room's name floating at the far end.
 	 */
 	static void build(int slot, Room room, int rgb, String title) {
+		build(slot, room, rgb, title, null);
+	}
+
+	/**
+	 * Clears the plot and builds {@code room} as the Theme Pack's stage
+	 * ({@code scene}, MdScenes): its floor, props and backdrop, an invisible
+	 * fence round the fighting ground, and the room's name at the far end.
+	 * Without a scene, the plain tiled room.
+	 */
+	static void build(int slot, Room room, int rgb, String title, MdScenes.Scene scene) {
+		if (scene != null) {
+			clear(slot);
+			int h = room.half;
+			MdScenes.build(slot, scene, h, rgb, (long) slot * 31 + title.hashCode() + room.ordinal());
+			World w = world();
+			Location c = centre(slot);
+			for (int x = -h - 1; x <= h + 1; x++) {
+				for (int z = -h - 1; z <= h + 1; z++) {
+					if (Math.max(Math.abs(x), Math.abs(z)) == h + 1) {
+						for (int dy = 0; dy <= 5; dy++) {
+							Block b = w.getBlockAt(c.getBlockX() + x, Y + 1 + dy, c.getBlockZ() + z);
+							if (b.getType().isAir() || !b.getType().isSolid()) {
+								b.setType(Material.BARRIER, false);
+							}
+						}
+					}
+				}
+			}
+			if (room == Room.SHOP) {
+				w.getBlockAt(c.getBlockX(), Y + 1, c.getBlockZ() + 3).setType(Material.LECTERN, false);
+				w.getBlockAt(c.getBlockX() - 2, Y + 1, c.getBlockZ() + 3).setType(Material.CHEST, false);
+				w.getBlockAt(c.getBlockX() + 2, Y + 1, c.getBlockZ() + 3).setType(Material.SMITHING_TABLE, false);
+			} else if (room == Room.EVENT) {
+				w.getBlockAt(c.getBlockX(), Y + 1, c.getBlockZ() + 3).setType(Material.LECTERN, false);
+			}
+			label(c, h, rgb, title);
+			return;
+		}
+		MdScenes.forget(slot);
+		buildPlain(slot, room, rgb, title);
+	}
+
+	/** Empties run {@code slot}'s plot: blocks and everything but players. */
+	private static void clear(int slot) {
+		World w = world();
+		Location c = centre(slot);
+		int cx = c.getBlockX();
+		int cz = c.getBlockZ();
+		for (Entity e : w.getNearbyEntities(c, HALF + 4, CLEAR_UP + 4, HALF + 4)) {
+			if (!(e instanceof Player)) {
+				e.remove();
+			}
+		}
+		for (int x = -HALF - 2; x <= HALF + 2; x++) {
+			for (int z = -HALF - 2; z <= HALF + 2; z++) {
+				for (int dy = -2; dy <= CLEAR_UP; dy++) {
+					Block b = w.getBlockAt(cx + x, Y + dy, cz + z);
+					if (!b.getType().isAir()) {
+						b.setType(Material.AIR, false);
+					}
+				}
+			}
+		}
+	}
+
+	private static void label(Location c, int h, int rgb, String title) {
+		Location at = c.clone().add(0, 5.5, h - 1.5);
+		world().spawn(at, TextDisplay.class, t -> {
+			t.text(Component.text(title, TextColor.color(rgb)).decorate(TextDecoration.BOLD));
+			t.setBillboard(Display.Billboard.CENTER);
+			t.setPersistent(false);
+			t.setShadowed(true);
+			t.setBackgroundColor(Color.fromARGB(160, 10, 8, 12));
+			t.setTransformation(new org.bukkit.util.Transformation(new org.joml.Vector3f(), new org.joml.Quaternionf(),
+					new org.joml.Vector3f(2.2F, 2.2F, 2.2F), new org.joml.Quaternionf()));
+		});
+	}
+
+	private static void buildPlain(int slot, Room room, int rgb, String title) {
 		World w = world();
 		Location c = centre(slot);
 		int cx = c.getBlockX();
