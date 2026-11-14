@@ -152,10 +152,14 @@ final class MdWorld {
 	 * Without a scene, the plain tiled room.
 	 */
 	static void build(int slot, Room room, int rgb, String title, MdScenes.Scene scene) {
+		build(slot, room, rgb, title, scene, new int[] {rgb, rgb});
+	}
+
+	static void build(int slot, Room room, int rgb, String title, MdScenes.Scene scene, int[] palette) {
 		if (scene != null) {
 			clear(slot);
 			int h = room.half;
-			MdScenes.build(slot, scene, h, rgb, (long) slot * 31 + title.hashCode() + room.ordinal());
+			MdScenes.build(slot, scene, h, palette, (long) slot * 31 + title.hashCode() + room.ordinal());
 			World w = world();
 			Location c = centre(slot);
 			for (int x = -h - 1; x <= h + 1; x++) {

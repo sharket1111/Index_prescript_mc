@@ -244,7 +244,7 @@ final class MdEvent {
 						}
 						if (fight) {
 							run.phase = MdRun.Phase.BATTLE;
-							MdWorld.build(run.slot, MdWorld.Room.BATTLE, run.theme.color(), foe, MdScenes.of(run.theme));
+							MdWorld.build(run.slot, MdWorld.Room.BATTLE, run.theme.color(), foe, MdScenes.of(run.theme), MdScenes.palette(run.theme, run.theme.color()));
 							run.gather(MdWorld.Room.BATTLE);
 							run.battle = new MdBattle(run, MdRun.NodeType.ABNO, foe, battleGifts);
 							run.battle.start();

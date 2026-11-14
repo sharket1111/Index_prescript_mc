@@ -657,13 +657,13 @@ final class MdRun {
 		switch (n.type) {
 			case EVENT -> {
 				phase = Phase.EVENT;
-				MdWorld.build(slot, MdWorld.Room.EVENT, theme.color(), "이벤트", MdScenes.of(theme));
+				MdWorld.build(slot, MdWorld.Room.EVENT, theme.color(), "이벤트", MdScenes.of(theme), MdScenes.palette(theme, theme.color()));
 				gather(MdWorld.Room.EVENT);
 				MdEvent.start(this);
 			}
 			case SHOP -> {
 				phase = Phase.SHOP;
-				MdWorld.build(slot, MdWorld.Room.SHOP, theme.color(), "상점", MdScenes.of(theme));
+				MdWorld.build(slot, MdWorld.Room.SHOP, theme.color(), "상점", MdScenes.of(theme), MdScenes.palette(theme, theme.color()));
 				gather(MdWorld.Room.SHOP);
 				shop = MdShop.open(this);
 			}
@@ -671,7 +671,7 @@ final class MdRun {
 				phase = Phase.BATTLE;
 				MdWorld.Room room = n.type == NodeType.BOSS ? MdWorld.Room.BOSS : MdWorld.Room.BATTLE;
 				MdWorld.build(slot, room, theme.color(), n.type == NodeType.BOSS ? (theme.boss().isBlank() ? "보스" : theme.boss()) : theme.name(),
-						MdScenes.of(theme));
+						MdScenes.of(theme), MdScenes.palette(theme, theme.color()));
 				gather(room);
 				battle = new MdBattle(this, n.type, null, List.of());
 				battle.start();
@@ -1528,7 +1528,7 @@ final class MdRun {
 		run.theme = t;
 		run.floor = t.normal() != null ? t.normal()[0] : t.hard() != null ? t.hard()[0] : 1;
 		MdWorld.Room room = type == NodeType.BOSS ? MdWorld.Room.BOSS : MdWorld.Room.BATTLE;
-		MdWorld.build(0, room, t.color(), type == NodeType.BOSS ? t.boss() : t.name(), MdScenes.of(t));
+		MdWorld.build(0, room, t.color(), type == NodeType.BOSS ? t.boss() : t.name(), MdScenes.of(t), MdScenes.palette(t, t.color()));
 		String[] hidden = type == NodeType.HIDDEN ? HIDDEN_BOSSES[run.random.nextInt(HIDDEN_BOSSES.length)] : null;
 		MdBattle battle = new MdBattle(run, type, hidden == null ? null : hidden[0], List.of());
 		if (hidden != null) {
