@@ -381,7 +381,7 @@ final class MdGifts implements Listener {
 		buff(p, kind, amount);
 	}
 
-	private static int buffOf(Player p, String kind) {
+	static int buffOf(Player p, String kind) {
 		Map<String, int[]> map = BUFFS.get(p.getUniqueId());
 		int[] b = map == null ? null : map.get(kind);
 		return b == null || b[1] < CaduceusListener.now() ? 0 : b[0];

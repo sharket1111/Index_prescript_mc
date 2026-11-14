@@ -27,6 +27,7 @@ Acts:
   fixed PCT [to]             fixed damage, PCT% of the target's max HP
   lifesteal PCT              heal PCT% of the damage dealt
   shopdiscount PCT           shop prices -PCT%
+  resource SIN N             E.G.O resources (SIN: a sin, lowest or random)
 Conditions: has:KW notstaggered staggered kind:K sin:S hp<N hp>N thp<N thp>N kw>=KW:N chance:N
 Limits: !turn N  !combat N
 """
@@ -242,6 +243,11 @@ def effect(trig, act, args, conds, limit, lv, levels):
     elif act == "lifesteal":
         e.update({"act": "lifesteal", "pct": v(0)})
         ko = "%s %s준 피해의 %s%%만큼 체력 회복" % (head, obj, fmt(v(0)))
+    elif act == "resource":
+        sin = args[0]
+        e.update({"act": "ego_resource", "sin": sin, "amount": int(v(1))})
+        what = {"lowest": "가장 적은", "random": "무작위"}.get(sin, SIN_KO.get(sin, sin))
+        ko = "%s E.G.O 자원(%s) +%d" % (head, what, int(v(1)))
     elif act == "shopdiscount":
         e.update({"act": "shop_discount", "pct": v(0)})
         ko = "상점 가격 -%s%% (최대 60%%)" % fmt(v(0))

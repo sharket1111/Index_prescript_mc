@@ -166,7 +166,7 @@ final class MdBattle {
 			p.playSound(p.getLocation(), Sound.EVENT_RAID_HORN, SoundCategory.HOSTILE, 0.6F, 1.4F);
 		}
 		announce();
-		MdGifts.trigger(run, "combat_start", null, null);
+		MdGifts.trigger(run, "combat_start", null, null); EgoPassive.dungeon(run, "combat_start");
 	}
 
 	private void spawnMany(String pool, int count, boolean ignored) {
@@ -372,14 +372,14 @@ final class MdBattle {
 		if (now >= nextTurn) {
 			nextTurn = now + CombatState.TURN_TICKS;
 			if (turn > 0) {
-				MdGifts.trigger(run, "turn_end", null, null);
+				MdGifts.trigger(run, "turn_end", null, null); EgoPassive.dungeon(run, "turn_end");
 			}
 			if (turn > 0) {
 				adversities(fighters);
 			}
 			turn++;
 			turnStart = true;
-			MdGifts.trigger(run, "turn_start", null, null);
+			MdGifts.trigger(run, "turn_start", null, null); EgoPassive.dungeon(run, "turn_start");
 		}
 		MdFoes.tick(this, fighters, now, turn, turnStart);
 		updateBar();

@@ -75,6 +75,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		getServer().getPluginManager().registerEvents(new SkillMenu.Events(), this);
 		Ego.load(this);
 		getServer().getPluginManager().registerEvents(new Ego.Events(), this);
+		getServer().getPluginManager().registerEvents(new EgoPassive(), this);
 		var menu = getCommand("menu");
 		if (menu != null) {
 			menu.setExecutor((sender, cmd, label, args) -> {
@@ -110,6 +111,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Bukkit.getScheduler().runTaskTimer(this, MimicrySkill::tickAll, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, SkillMenu::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Ego.EgoSkill::tickAll, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, EgoPassive::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, MimicryWeapon::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Sanity::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Hud::tick, 1L, 1L);

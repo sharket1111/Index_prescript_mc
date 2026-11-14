@@ -80,6 +80,7 @@ final class Stagger implements Listener {
 
 	/** The foe was staggered: raises its stage if it still was, binds it, and shows the stage. */
 	static void apply(LivingEntity target, long now) {
+		EgoPassive.staggered(target);
 		State state = STATES.computeIfAbsent(target.getUniqueId(), id -> new State(target));
 		state.stage = now < state.until ? Math.min(MAX_STAGE, state.stage + 1) : 1;
 		state.until = now + CombatState.TURN_TICKS;

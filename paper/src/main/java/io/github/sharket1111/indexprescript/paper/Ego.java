@@ -58,7 +58,8 @@ import net.kyori.adventure.title.Title;
  * Awakening skill then goes through a clash like every skill: its power, coin
  * power and coins are the original's; each coin strikes for its power so far,
  * plays the coin effects the plugin knows (keywords, Tremor Burst, healing,
- * more damage) and the rest is in its text. Using an E.G.O shows its name and
+ * more damage) and the rest is in its text; its passive works while equipped
+ * (EgoPassive). Using an E.G.O shows its name and
  * quote, the screen's skill edges, the sin's colours and a close camera.
  */
 final class Ego {
@@ -73,7 +74,8 @@ final class Ego {
 	}
 
 	record Def(String id, String name, String nameKo, String sinner, String sinnerKo, String risk, String sin, String abnormality, String quote,
-			int sanity, Map<String, Integer> costs, Skill skill, List<String> textKo, String passiveName, String passiveText) {
+			int sanity, Map<String, Integer> costs, Skill skill, List<String> textKo, String passiveName, String passiveText, JsonArray passiveEffects,
+			List<String> passiveKo) {
 		int sinIndex() {
 			return index(sin);
 		}
@@ -126,9 +128,14 @@ final class Ego {
 				List<String> ko = new ArrayList<>();
 				o.getAsJsonArray("text_ko").forEach(t -> ko.add(t.getAsString()));
 				JsonObject passive = o.getAsJsonObject("passive");
+				List<String> passiveKo = new ArrayList<>();
+				if (o.has("passive_ko")) {
+					o.getAsJsonArray("passive_ko").forEach(t -> passiveKo.add(t.getAsString()));
+				}
+				JsonArray passiveEffects = o.has("passive_effects") ? o.getAsJsonArray("passive_effects") : new JsonArray();
 				Def def = new Def(o.get("id").getAsString(), o.get("name").getAsString(), o.get("name_ko").getAsString(), o.get("sinner").getAsString(),
 						o.get("sinner_ko").getAsString(), o.get("risk").getAsString(), o.get("sin").getAsString(), str(o, "abnormality"), str(o, "quote"),
-						o.get("sanity").getAsInt(), costs, skill, ko, str(passive, "name"), str(passive, "text"));
+						o.get("sanity").getAsInt(), costs, skill, ko, str(passive, "name"), str(passive, "text"), passiveEffects, passiveKo);
 				DEFS.put(def.id(), def);
 			}
 			plugin.getLogger().info("E.G.O: " + DEFS.size());
@@ -301,8 +308,13 @@ final class Ego {
 			}
 		}
 		if (!def.passiveName().isBlank()) {
-			lore.add(SkillMenu.line("패시브 [" + def.passiveName() + "] (설명만)", NamedTextColor.DARK_AQUA));
-			for (String l : MdGui.wrap(def.passiveText(), 36)) {
+			lore.add(SkillMenu.line("패시브 [" + def.passiveName() + "] (장착하면 항상)", NamedTextColor.DARK_AQUA));
+			for (String l : def.passiveKo()) {
+				for (String w : MdGui.wrap("• " + l, 36)) {
+					lore.add(SkillMenu.line(w, NamedTextColor.AQUA));
+				}
+			}
+			for (String l : MdGui.wrap("원작: " + def.passiveText(), 36)) {
 				lore.add(SkillMenu.line(l, NamedTextColor.DARK_GRAY));
 			}
 		}

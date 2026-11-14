@@ -1011,6 +1011,7 @@ final class MdRun {
 	void down(Player p) {
 		downed.add(p.getUniqueId());
 		MdGifts.trigger(this, "ally_down", null, null);
+		EgoPassive.dungeon(this, "ally_down");
 		broadcast(Component.text(p.getName() + "님이 쓰러졌어요. 층을 옮기거나 상점에서 부활할 수 있어요.", NamedTextColor.RED));
 		if (fighters().isEmpty()) {
 			Bukkit.getScheduler().runTask(IndexPrescriptPlugin.instance(), () -> finish(false));
