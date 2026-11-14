@@ -281,6 +281,9 @@ def build_gifts(lua, themes_unique, general, namu=None):
     out, missing = [], []
     for key, g in gifts.items():
         gid = gift_id(key)
+        if namu is not None and gid not in namu:
+            # Not in NamuWiki's Mirror Dungeon lists: collaborations and the like, not in the Mirror Dungeon.
+            continue
         texts = [g["levels"][lv] for lv in sorted(g["levels"])] or [""]
         spec = SPECS.get(gid)
         if spec is None:

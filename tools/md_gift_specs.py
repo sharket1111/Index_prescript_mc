@@ -456,13 +456,4 @@ SPECS = {
     "crushed_wooden_manacle": "hit: debuff defense_down 1 @kind:slash !turn 2; always: dmg 12",
     "unadorned_sword_guard": "always: dmg 15 @kind:slash @kw>=poise:1",
     "the_book_of_the_homeland_swordplay": "turn_start: buff offense 2; always: dmg 25 @kind:slash",
-    "sea_terror_notes": "always: dmg 10; kill: buff dmgup 1",
-    "goldforged_compass": "turn_start: sp 5; turn_start: buff power 1 @hp>90; turn_start: buff protect 2 @hp>90",
-    "silver_key_bundle": "turn_start: sp 3",
-    "sea_terror_jerky": "turn_start: debuff defense_down 3 all",
-    "brilliant_lamplight": "always: clash 1; always: dmg 25",
-    "aged_sheet_music": "always: dmg 10; always: dmg 15 @has:sinking",
-    "metal_construct": "turn_start: heal 2 all; turn_start: heal 2 @has:rupture",
-    "moonmirror_wine_cup": "turn_start: sp 5 all; hit: gain poise 0 2 !turn 1",
-    "classical_design_letter_opener": "always: dmg 15; always: dmg 15 @has:tremor",
 }
