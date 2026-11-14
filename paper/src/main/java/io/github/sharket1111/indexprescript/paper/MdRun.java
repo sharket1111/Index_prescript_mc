@@ -120,6 +120,8 @@ final class MdRun {
 	/** Adversities taken (from floor 10 on). */
 	final List<MdAdversity> adversities = new ArrayList<>();
 	final Set<String> hiddenBeaten = new HashSet<>();
+	/** How often each gift's limited effect was used this turn or encounter ("turn|gift|i|member"). */
+	final Map<String, Integer> giftUses = new HashMap<>();
 	MdData.Theme theme;
 	final Set<String> visitedThemes = new HashSet<>();
 	List<List<Node>> map = new ArrayList<>();
@@ -310,6 +312,7 @@ final class MdRun {
 			heal(p, 1.0);
 		}
 		MdGrace.floorEnter(this);
+		MdGifts.trigger(this, "floor", null, null);
 		phase = Phase.THEME;
 		MdWorld.build(slot, MdWorld.Room.START, 0x8E2121, floor + "층");
 		for (Player p : players()) {
@@ -706,6 +709,10 @@ final class MdRun {
 				* (1 + MdGrace.rewardBonus(this) + MdGifts.rewardPct(this) / 100.0));
 		cost += gained;
 		broadcast(Component.text("승리! 코스트 +" + gained + " (보유 " + cost + ")", NamedTextColor.GOLD));
+		MdGifts.trigger(this, "reward", null, null);
+		if (type == NodeType.BOSS) {
+			MdGifts.trigger(this, "floor_clear", null, null);
+		}
 		for (String name : eventGifts) {
 			MdData.Gift g = MdData.giftByName(name);
 			if (g != null) {
@@ -984,6 +991,7 @@ final class MdRun {
 
 	void down(Player p) {
 		downed.add(p.getUniqueId());
+		MdGifts.trigger(this, "ally_down", null, null);
 		broadcast(Component.text(p.getName() + "님이 쓰러졌어요. 층을 옮기거나 상점에서 부활할 수 있어요.", NamedTextColor.RED));
 		if (fighters().isEmpty()) {
 			Bukkit.getScheduler().runTask(IndexPrescriptPlugin.instance(), () -> finish(false));

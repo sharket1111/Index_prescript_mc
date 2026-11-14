@@ -27,6 +27,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
@@ -50,6 +51,12 @@ final class MdGifts implements Listener {
 
 	/** Fires every owned gift's effects with trigger {@code on}; {@code actor} is the player concerned (null: everyone), {@code target} the other unit. */
 	static void trigger(MdRun run, String on, Player actor, LivingEntity target) {
+		if (on.equals("combat_start")) {
+			run.giftUses.clear();
+		}
+		if (on.equals("turn_start")) {
+			run.giftUses.keySet().removeIf(k -> k.startsWith("turn|"));
+		}
 		for (Map.Entry<String, Integer> owned : run.gifts.entrySet()) {
 			if (run.fuseOnly.contains(owned.getKey())) {
 				continue;
@@ -58,11 +65,38 @@ final class MdGifts implements Listener {
 			if (gift == null) {
 				continue;
 			}
-			for (JsonElement e : gift.level(owned.getValue()).effects()) {
-				JsonObject effect = e.getAsJsonObject();
-				String when = effect.get("on").getAsString();
-				if (when.equals(on) || on.equals("hit") && when.equals("clash_win") && MdRun.rng().nextInt(4) == 0) {
-					run(run, effect, actor, target);
+			JsonArray effects = gift.level(owned.getValue()).effects();
+			for (int i = 0; i < effects.size(); i++) {
+				JsonObject effect = effects.get(i).getAsJsonObject();
+				if (!effect.get("on").getAsString().equals(on)) {
+					continue;
+				}
+				// A moment of the whole team (turn start...) with conditions on the member: each member that meets them.
+				List<Player> actors = new ArrayList<>();
+				if (actor == null && selfConditions(effect)) {
+					actors.addAll(run.fighters());
+				} else {
+					actors.add(actor);
+				}
+				for (Player a : actors) {
+					// Conditions on the unit concerned (a hit's target, the member hit...).
+					if (!passes(effect, target, a)) {
+						continue;
+					}
+					// No enemy concerned yet: effects on the team need one enemy that meets them.
+					if (target == null && enemyConditions(effect) && !ENEMY_ACTS.contains(effect.get("act").getAsString())
+							&& (run.battle == null || run.battle.mobs.stream().noneMatch(m -> passes(effect, m, a)))) {
+						continue;
+					}
+					if (effect.has("limit")) {
+						String key = effect.get("limit").getAsString() + "|" + gift.id() + "|" + i + "|" + (a == null ? "" : a.getUniqueId());
+						int used = run.giftUses.getOrDefault(key, 0);
+						if (used >= effect.get("times").getAsInt()) {
+							continue;
+						}
+						run.giftUses.put(key, used + 1);
+					}
+					run(run, effect, actors.size() > 1 ? a : actor, target);
 				}
 			}
 		}
@@ -75,6 +109,10 @@ final class MdGifts implements Listener {
 		String act = e.get("act").getAsString();
 		String to = e.has("to") ? e.get("to").getAsString() : "target";
 		List<LivingEntity> enemies = run.battle == null ? List.of() : List.copyOf(run.battle.mobs);
+		if (target == null && ENEMY_ACTS.contains(act)) {
+			// A random enemy is picked among those that meet the conditions.
+			enemies = enemies.stream().filter(m -> passes(e, m, actor)).toList();
+		}
 		List<Player> allies = run.fighters();
 		switch (act) {
 			case "inflict" -> {
@@ -83,7 +121,7 @@ final class MdGifts implements Listener {
 				int count = e.get("count").getAsInt();
 				if (to.equals("random_enemies")) {
 					// "Randomly inflict a total of N between all enemies": one at a time.
-					List<LivingEntity> pool = enemies.stream().filter(m -> passes(e, m)).toList();
+					List<LivingEntity> pool = enemies.stream().filter(m -> passes(e, m, actor)).toList();
 					for (int i = 0; i < potency && !pool.isEmpty(); i++) {
 						inflictKeyword(pool.get(MdRun.rng().nextInt(pool.size())), kw, 1, i == 0 ? count : 0);
 					}
@@ -93,7 +131,7 @@ final class MdGifts implements Listener {
 					if (t instanceof Player) {
 						continue;
 					}
-					if (passes(e, t)) {
+					if (passes(e, t, actor)) {
 						inflictKeyword(t, kw, potency, count);
 					}
 				}
@@ -121,7 +159,7 @@ final class MdGifts implements Listener {
 			}
 			case "debuff" -> {
 				for (LivingEntity t : targets(to, target, enemies, allies, actor)) {
-					if (!(t instanceof Player)) {
+					if (!(t instanceof Player) && passes(e, t, actor)) {
 						MdBattle.debuff(t, e.get("debuff").getAsString(), e.get("amount").getAsInt());
 					}
 				}
@@ -129,25 +167,39 @@ final class MdGifts implements Listener {
 			case "heal_hp" -> {
 				for (Player p : players(to, actor, allies)) {
 					double max = p.getAttribute(Attribute.MAX_HEALTH) == null ? 20 : p.getAttribute(Attribute.MAX_HEALTH).getValue();
-					double amount = e.get("pct").getAsBoolean() ? max * e.get("amount").getAsDouble() / 100 : e.get("amount").getAsDouble() / 5.0;
+					// A flat amount is the original's HP: a tenth of it here.
+					double amount = e.get("pct").getAsBoolean() ? max * e.get("amount").getAsDouble() / 100 : e.get("amount").getAsDouble() / TotalDamage.SCALE;
 					p.setHealth(Math.min(max, p.getHealth() + amount));
 				}
 			}
 			case "heal_sp" -> {
 				for (Player p : players(to, actor, allies)) {
-					Sanity.add(p, (int) Math.round(e.get("amount").getAsDouble()));
+					int amount = (int) Math.round(e.get("amount").getAsDouble());
+					if (amount >= 0) {
+						Sanity.add(p, amount);
+					} else {
+						Sanity.lose(p, -amount);
+					}
 				}
 			}
 			case "cost" -> {
-				if (!e.get("pct").getAsBoolean() && !e.get("on").getAsString().equals("reward")) {
+				if (!e.get("pct").getAsBoolean()) {
 					run.cost += (int) e.get("amount").getAsDouble();
 					run.updateBar();
 				}
 			}
 			case "tremor_burst" -> {
 				for (LivingEntity t : targets(to, target, enemies, allies, actor)) {
-					if (!(t instanceof Player)) {
+					if (!(t instanceof Player) && passes(e, t, actor)) {
 						Tremor.burst(t);
+					}
+				}
+			}
+			case "fixed_damage" -> {
+				for (LivingEntity t : targets(to, target, enemies, allies, actor)) {
+					if (!(t instanceof Player) && t.isValid() && !t.isDead() && passes(e, t, actor)) {
+						var max = t.getAttribute(Attribute.MAX_HEALTH);
+						Damage.dealFixed(t, (max == null ? t.getHealth() : max.getValue()) * e.get("pct").getAsDouble() / 100.0, actor);
 					}
 				}
 			}
@@ -156,19 +208,98 @@ final class MdGifts implements Listener {
 		}
 	}
 
-	private static boolean passes(JsonObject e, LivingEntity t) {
+	/** Acts that pick their enemies themselves, each checked against the conditions. */
+	private static final java.util.Set<String> ENEMY_ACTS = java.util.Set.of("inflict", "debuff", "fixed_damage", "tremor_burst");
+
+	private static List<String> conditions(JsonObject e) {
+		List<String> conds = new ArrayList<>();
+		if (e.has("if")) {
+			if (e.get("if").isJsonArray()) {
+				e.getAsJsonArray("if").forEach(c -> conds.add(c.getAsString()));
+			} else {
+				conds.add(e.get("if").getAsString());
+			}
+		}
+		return conds;
+	}
+
+	private static boolean selfCondition(String c) {
+		return c.startsWith("kind:") || c.startsWith("sin:") || c.startsWith("hp<") || c.startsWith("hp>")
+				|| c.startsWith("kw>=poise") || c.startsWith("kw>=charge");
+	}
+
+	private static boolean selfConditions(JsonObject e) {
+		return conditions(e).stream().anyMatch(MdGifts::selfCondition);
+	}
+
+	private static boolean enemyConditions(JsonObject e) {
+		return conditions(e).stream().anyMatch(c -> !selfCondition(c));
+	}
+
+	/** Whether an effect's conditions hold: on the enemy concerned ({@code t}) and the member ({@code p}). */
+	static boolean passes(JsonObject e, LivingEntity t, Player p) {
 		if (!e.has("if")) {
 			return true;
 		}
-		String cond = e.get("if").getAsString();
 		long now = CaduceusListener.now();
-		if (cond.startsWith("target_has:")) {
-			return has(t, cond.substring(11), now);
-		}
-		if (cond.equals("target_staggered")) {
-			return CombatState.of(t).staggered(now);
+		LivingEntity enemy = t instanceof Player ? null : t;
+		for (String c : conditions(e)) {
+			boolean ok;
+			if (t == null && !selfCondition(c)) {
+				// No enemy concerned here: checked on each enemy the effect reaches.
+				ok = true;
+			} else if (c.startsWith("kw>=poise") || c.startsWith("kw>=charge")) {
+				// Poise and Charge are the member's own.
+				String[] kv = c.substring(4).split(":");
+				ok = p != null && potency(p, kv[0], now) >= Integer.parseInt(kv[1]);
+			} else if (c.startsWith("has:") || c.startsWith("target_has:")) {
+				ok = enemy != null && has(enemy, c.substring(c.indexOf(':') + 1), now);
+			} else if (c.equals("staggered") || c.equals("target_staggered")) {
+				ok = enemy != null && CombatState.of(enemy).staggered(now);
+			} else if (c.equals("notstaggered")) {
+				ok = enemy == null || !CombatState.of(enemy).staggered(now);
+			} else if (c.startsWith("kind:")) {
+				ok = p != null && kindOf(p.getInventory().getItemInMainHand()).name().equalsIgnoreCase(c.substring(5));
+			} else if (c.startsWith("sin:")) {
+				ok = p != null && MdEvent.sinOf(p).equals(c.substring(4));
+			} else if (c.startsWith("hp<") || c.startsWith("hp>")) {
+				ok = p != null && compare(fraction(p), c.charAt(2), Double.parseDouble(c.substring(3)));
+			} else if (c.startsWith("thp<") || c.startsWith("thp>")) {
+				ok = enemy != null && compare(fraction(enemy), c.charAt(3), Double.parseDouble(c.substring(4)));
+			} else if (c.startsWith("kw>=")) {
+				String[] kv = c.substring(4).split(":");
+				ok = enemy != null && potency(enemy, kv[0], now) >= Integer.parseInt(kv[1]);
+			} else {
+				ok = true;
+			}
+			if (!ok) {
+				return false;
+			}
 		}
 		return true;
+	}
+
+	private static double fraction(LivingEntity u) {
+		var max = u.getAttribute(Attribute.MAX_HEALTH);
+		return 100.0 * u.getHealth() / (max == null ? Math.max(1, u.getHealth()) : max.getValue());
+	}
+
+	private static boolean compare(double value, char op, double bound) {
+		return op == '<' ? value <= bound : value >= bound;
+	}
+
+	private static int potency(LivingEntity t, String kw, long now) {
+		CombatState s = CombatState.of(t);
+		return switch (kw) {
+			case "burn" -> s.burnPotency(now);
+			case "bleed" -> s.bleedPotency(now);
+			case "tremor" -> s.tremorPotency(now);
+			case "rupture" -> s.rupturePotency(now);
+			case "sinking" -> s.sinkingPotency(now);
+			case "poise" -> s.poisePotency(now);
+			case "charge" -> s.chargeCount(now);
+			default -> 0;
+		};
 	}
 
 	private static boolean has(LivingEntity t, String kw, long now) {
@@ -326,16 +457,8 @@ final class MdGifts implements Listener {
 		for (JsonObject e : passives(run)) {
 			String act = e.get("act").getAsString();
 			String on = e.get("on").getAsString();
-			if (act.equals("damage_pct") && (on.equals("damage") || on.equals("passive"))) {
-				if (e.has("if")) {
-					String cond = e.get("if").getAsString();
-					if (cond.startsWith("kind:") && !cond.substring(5).equalsIgnoreCase(kind.name())) {
-						continue;
-					}
-					if (!cond.startsWith("kind:") && !passes(e, target)) {
-						continue;
-					}
-				}
+			if (act.equals("damage_pct") && (on.equals("damage") || on.equals("passive")) && passes(e, target, p)
+					&& (!e.has("chance") || MdRun.rng().nextInt(100) < e.get("chance").getAsInt())) {
 				pct += e.get("pct").getAsDouble();
 			}
 		}
@@ -371,7 +494,7 @@ final class MdGifts implements Listener {
 		long now = CaduceusListener.now();
 		double pct = 0;
 		for (JsonObject e : passives(run)) {
-			if (e.get("act").getAsString().equals("taken_pct")) {
+			if (e.get("act").getAsString().equals("taken_pct") && passes(e, attacker, p)) {
 				pct += e.get("pct").getAsDouble();
 			}
 		}
@@ -383,6 +506,43 @@ final class MdGifts implements Listener {
 			mult *= foe.damage * (foe.debuffUntil > now ? Math.max(0.3, 1 - 0.1 * foe.offenseDown) : 1);
 		}
 		return mult;
+	}
+
+	/** Clash power from gifts for {@code p}'s skill against {@code target} (Clash Power, Coin Power, Final Power...). */
+	static int clashPower(Player p, LivingEntity target) {
+		MdRun run = MdRun.of(p);
+		if (run == null) {
+			return 0;
+		}
+		int sum = 0;
+		for (JsonObject e : passives(run)) {
+			if (e.get("act").getAsString().equals("clash_power") && passes(e, target, p)) {
+				sum += e.get("amount").getAsInt();
+			}
+		}
+		return sum;
+	}
+
+	/** Percent of the damage dealt healed back (Lifesteal-like gifts). */
+	static double lifesteal(MdRun run, Player p, LivingEntity target) {
+		double sum = 0;
+		for (JsonObject e : passives(run)) {
+			if (e.get("act").getAsString().equals("lifesteal") && passes(e, target, p)) {
+				sum += e.get("pct").getAsDouble();
+			}
+		}
+		return sum;
+	}
+
+	/** Percent off the shop's prices. */
+	static double shopDiscount(MdRun run) {
+		double sum = 0;
+		for (JsonObject e : passives(run)) {
+			if (e.get("act").getAsString().equals("shop_discount")) {
+				sum += e.get("pct").getAsDouble();
+			}
+		}
+		return Math.min(60, sum);
 	}
 
 	static double critMultiplier(MdRun run) {
@@ -488,6 +648,11 @@ final class MdGifts implements Listener {
 			victim.getWorld().playSound(victim.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 0.8F, 1.2F);
 		}
 		event.setDamage(damage);
+		double steal = lifesteal(run, attacker, victim);
+		if (steal > 0) {
+			var maxHp = attacker.getAttribute(Attribute.MAX_HEALTH);
+			attacker.setHealth(Math.min(maxHp == null ? 20 : maxHp.getValue(), attacker.getHealth() + damage * steal / 100.0));
+		}
 		Bukkit.getScheduler().runTask(IndexPrescriptPlugin.instance(), () -> MdFoes.checkStagger(victim, attacker));
 		boolean fresh = !Damage.dealing() || Damage.countsAsHit();
 		Long last = LAST_HIT.get(attacker.getUniqueId());

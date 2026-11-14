@@ -260,30 +260,43 @@ def summary_ko(e):
     return a
 
 
-def build_gifts(lua, themes_unique):
+def main_gifts(path):
+    """Ids of the gifts in the general pool (the wiki's MainGifts): the rest come only from a theme pack,
+    an event, a hidden boss or fusion."""
+    src = open(path, encoding="utf-8").read()
+    block = src[src.index("p.MainGifts"):src.index("p.ThemedGifts")]
+    return {gift_id(m.group(1)) for m in re.finditer(r'gift\s*=\s*"([^"]+)"', block)}
+
+
+def gift_id(name):
+    return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+
+
+def build_gifts(lua, themes_unique, general):
+    """Each gift's effects come from its spec (md_gift_specs.py), close to the original's text without the
+    conditions on the team's make-up; the Korean lines are made from the same spec."""
+    from md_gift_specs import SPECS
+    from md_gift_dsl import parse
     gifts = read_gifts(lua)
-    out, parsed = [], 0
+    out, missing = [], []
     for key, g in gifts.items():
-        levels = []
-        for level in sorted(g["levels"]):
-            text = g["levels"][level]
-            effects = []
-            for line in text.split("\n"):
-                # "... instead" lines are stronger variants for conditions this server does not have (an Affinity, a faction).
-                if line.strip() and not re.search(r"\binstead\b", line, re.I):
-                    effects += parse_line(line)
-            levels.append({"text": text, "effects": effects})
-        exact = bool(levels and levels[0]["effects"])
-        parsed += exact
-        for lv in levels:
-            if not lv["effects"]:
-                lv["effects"] = generic(g)
-                lv["generic"] = True
-            lv["ko"] = [summary_ko(e) for e in lv["effects"]]
-        out.append({"id": re.sub(r"[^a-z0-9]+", "_", key.lower()).strip("_"), "name": g["name"], "tier": g["tier"], "sin": g["sin"],
+        gid = gift_id(key)
+        texts = [g["levels"][lv] for lv in sorted(g["levels"])] or [""]
+        spec = SPECS.get(gid)
+        if spec is None:
+            missing.append(gid)
+            spec = "-"
+        if spec == "-":
+            parsed = [([], ["효과 없음 (상점에 팔거나 융합 재료로 쓸 수 있다)"])] * len(texts)
+        else:
+            parsed = parse(spec, len(texts))
+        levels = [{"text": t, "effects": e, "ko": ko} for t, (e, ko) in zip(texts, parsed)]
+        out.append({"id": gid, "name": g["name"], "tier": g["tier"], "sin": g["sin"],
                     "keyword": g["keyword"], "cost": g["cost"], "enhance": g["enhance"], "source": g["source"],
-                    "theme_only": key in themes_unique, "levels": levels})
-    print("gifts", len(out), "played as written", parsed)
+                    # Only in the general pool (shop, rewards, searches): the rest only from their theme pack, event or boss.
+                    "theme_only": key in themes_unique or gid not in general, "levels": levels})
+    assert not missing, ("gifts without a spec", missing)
+    print("gifts", len(out), "general pool", sum(not g["theme_only"] for g in out))
     return out
 
 
@@ -740,7 +753,7 @@ def main(raw):
     enemies = read_enemies(os.path.join(raw, "enbox.lua"))
     themes = build_themes(open(os.path.join(raw, "List_of_Floor_Themes.txt"), encoding="utf-8").read(), os.path.join(raw, "themes"), events, enemies)
     unique = {u for t in themes for u in t["unique"]}
-    gifts = build_gifts(os.path.join(raw, "gift_data.lua"), unique)
+    gifts = build_gifts(os.path.join(raw, "gift_data.lua"), unique, main_gifts(os.path.join(raw, "giftlist.lua")))
     trials = build_trials(open(os.path.join(raw, "Mirror_of_Sisyphe.txt"), encoding="utf-8").read())
     recipes = build_recipes(open(os.path.join(raw, "fusion.txt"), encoding="utf-8").read(), gifts)
     results = {r["result"] for r in recipes}

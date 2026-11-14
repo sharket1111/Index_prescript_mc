@@ -166,6 +166,7 @@ final class MdShop {
 		// Inflation: twice the cost, or three times.
 		int inflation = run.adv("inflation");
 		amount *= inflation >= 2 ? 3 : inflation == 1 ? 2 : 1;
+		amount = (int) Math.round(amount * (1 - MdGifts.shopDiscount(run) / 100.0));
 		if (run.cost < amount) {
 			p.sendMessage(Component.text("코스트가 모자라요 (" + run.cost + "/" + amount + ").", NamedTextColor.RED));
 			p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.6F, 1F);

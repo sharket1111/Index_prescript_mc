@@ -734,6 +734,13 @@ final class MdFoes {
 
 	/** After a clash: the original's "Clash Win" / "Clash Lose" effects of the enemy's skill and passives. */
 	static void clashResult(LivingEntity winner, LivingEntity loser) {
+		// A member's gifts: "on clash win" / "on clash lose".
+		for (LivingEntity unit : new LivingEntity[] {winner, loser}) {
+			if (unit instanceof Player p && MdRun.of(p) != null) {
+				LivingEntity other = unit == winner ? loser : winner;
+				MdGifts.trigger(MdRun.of(p), unit == winner ? "clash_win" : "clash_lose", p, other);
+			}
+		}
 		for (LivingEntity unit : new LivingEntity[] {winner, loser}) {
 			Ai ai = of(unit);
 			if (ai == null) {

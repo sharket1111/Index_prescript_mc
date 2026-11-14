@@ -161,7 +161,7 @@ final class Clash {
 					heads += faces[i] == 1 ? 1 : 0;
 				}
 			}
-			power = card.base() + heads * card.coinPower();
+			power = card.base() + heads * card.coinPower() + (player instanceof Player p ? MdGifts.clashPower(p, target) : 0);
 			spinning = false;
 		}
 
