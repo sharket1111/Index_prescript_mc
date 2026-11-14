@@ -39,7 +39,9 @@ final class MdScenes {
 				Particle.FALLING_DUST), BLOOD(13000, false, Particle.DRIPPING_LAVA), FACTORY(14000, false, Particle.LARGE_SMOKE), MIRROR(18000, false,
 						Particle.REVERSE_PORTAL), NEON(18000, false, Particle.END_ROD), WHALE(18000, false, Particle.FALLING_WATER),
 		THEATER(18000, false, Particle.WHITE_ASH), CLOCK(12000, false, Particle.WHITE_ASH), ARENA(18000, false, Particle.SMOKE),
-		TILES(13000, false, Particle.FALLING_SPORE_BLOSSOM);
+		TILES(13000, false, Particle.FALLING_SPORE_BLOSSOM), ICE(18000, false, Particle.SNOWFLAKE), CANDLES(18000, false, Particle.SMALL_FLAME),
+		CAVE(18000, false, Particle.GLOW), ROOFTOP(17000, true, null), SCRAPYARD(13000, false, Particle.SPORE_BLOSSOM_AIR), INK(6000, false,
+				Particle.WHITE_ASH);
 
 		final long time;
 		final boolean rain;
@@ -54,165 +56,160 @@ final class MdScenes {
 
 	/** Theme Pack id -> scene, after where the original fights each one. */
 	private static final Map<String, Scene> THEMES = new HashMap<>();
-	/** Theme Pack id -> its picture's two main colours (the scene's accents). */
+	/** Theme Pack id -> its battle background's colours: floor, floor 2, wall, wall 2, light, accent. */
 	private static final Map<String, int[]> PALETTE = new HashMap<>();
 
 	static {
-		// After each Theme Pack's picture in the original.
-		put(Scene.ALLEY, "the_dawn_of_green", "complete_total_extermination", "yield_my_flesh_to_claim_their_bones");
-		put(Scene.FACTORY, "the_forgotten", "automated_factory", "blade_and_artwork", "the_unsevering", "s_e_a", "full_stopped_by_a_bullet",
-				"bridle_of_infinity", "bearers_of_weight");
-		put(Scene.LAB, "nest_workshop_and_technology", "textbook", "code_purple");
-		put(Scene.CHAPEL, "the_unloving", "falling_flowers", "the_noon_of_violet", "n_corp_new_league_of_nine_litt_rateurs");
-		put(Scene.QUAKE, "faith_erosion");
-		put(Scene.FIRE, "the_outcast", "nagel_und_hammer");
-		put(Scene.BLOOD, "the_unconfronting", "readvent_of_gluttony", "a_beautiful_voice");
-		put(Scene.TILES, "tearful_things");
-		put(Scene.FOREST, "efflorescing_greenery", "fairy_tale", "a_midspring_night_s_dream_2");
-		put(Scene.MOOR, "the_unchanging", "impenetrable_path");
-		put(Scene.NEON, "lake_world", "an_anarchy_of_colors", "who_couldn_t_be_bloodfiends");
+		// After each Theme Pack's battle backgrounds in the original.
+		put(Scene.QUAKE, "the_forgotten", "the_outcast", "line_2");
+		put(Scene.CASINO, "flat_broke_gamblers", "the_b_e");
+		put(Scene.FACTORY, "automated_factory", "miracle_in_district_20", "miracle_in_district_20_bokgak", "line_3", "deep_sigh", "bearers_of_weight", "vain_pride", "bridle_of_infinity");
+		put(Scene.ICE, "the_unloving");
+		put(Scene.LAB, "nagel_und_hammer", "nest_workshop_and_technology", "falling_flowers", "textbook", "yield_my_flesh_to_claim_their_bones", "yield_my_flesh_to_claim_their_bones_bokgak", "lcb_regular_check_up", "lcb_regular_check_up_bokgak", "the_noon_of_violet", "thunder_and_lightning", "code_purple", "slicers_dicers", "insignificant_envy", "pitiful_envy");
+		put(Scene.ALLEY, "faith_erosion", "tearful_things", "mnestic_experience", "nocturnal_sweeping_bokgak", "the_dawn_of_green", "complete_total_extermination", "sinking_pang");
+		put(Scene.MOOR, "the_unconfronting", "the_unchanging", "the_heartbreaking", "a_beautiful_voice", "the_dusk_of_amber", "excessive_gluttony");
+		put(Scene.CAVE, "abnormal_seismic_zone", "emotional_subservience", "line_1", "to_be_pierced", "degraded_gloom", "sunk_gloom", "emotional_judgment");
+		put(Scene.NEON, "lake_world", "an_anarchy_of_colors", "emotional_flood", "rising_power_supply");
 		put(Scene.WHALE, "crawling_abyss", "the_evil_defining");
-		put(Scene.MANOR, "dregs_of_the_manor", "a_certain_world", "the_heartbreaking", "hatred_and_despair");
+		put(Scene.MANOR, "dregs_of_the_manor", "nocturnal_sweeping", "a_midspring_night_s_dream_2");
+		put(Scene.STORM, "a_certain_world", "hatred_and_despair", "line_4_section_3");
 		put(Scene.CARNIVAL, "la_manchaland_re_opening", "the_infinite_procession", "the_dream_ending", "blessed_carnival", "the_master_of_la_manchaland");
-		put(Scene.EAST, "flat_broke_gamblers", "four_houses_and_greed", "the_surrendered_witnessing", "mnestic_experience",
-				"yield_my_flesh_to_claim_their_bones_bokgak", "chachihu");
-		put(Scene.STUDIO, "charm_wander_doubt", "twining_threads");
-		put(Scene.BOUTIQUE, "storefront_campout");
-		put(Scene.KITCHEN, "hell_s_chicken", "the_dusk_of_amber");
-		put(Scene.TRAIN, "murder_on_the_warp_express", "murder_on_the_warp_express_bokgak", "lcb_regular_check_up", "lcb_regular_check_up_bokgak",
-				"line_1", "line_2", "line_3", "line_4_section_3", "line_4_section_4", "line_5", "line_3_terminus", "line_1_madness");
-		put(Scene.THEATER, "nocturnal_sweeping", "nocturnal_sweeping_bokgak");
+		put(Scene.EAST, "four_houses_and_greed", "the_surrendered_witnessing", "blade_and_artwork", "spring_cultivation", "chachihu");
+		put(Scene.STUDIO, "charm_wander_doubt", "twining_threads", "line_5");
+		put(Scene.CHAPEL, "the_unsevering", "full_stopped_by_a_bullet", "line_4_section_4");
+		put(Scene.KITCHEN, "storefront_campout", "hell_s_chicken", "emotional_seduction", "dizzying_waves");
+		put(Scene.BOUTIQUE, "creed_of_preservation", "readvent_of_gluttony");
+		put(Scene.SCRAPYARD, "s_e_a", "s_e_a_c_r");
 		put(Scene.CLOCK, "timekilling_time", "timekilling_time_bokgak");
-		put(Scene.SNOW, "miracle_in_district_20", "miracle_in_district_20_bokgak");
-		put(Scene.LIBRARY, "into_a_certain_library_s_book", "spring_cultivation");
-		put(Scene.DEEP, "creed_of_preservation", "s_e_a_c_r", "bloodtinged_ichthyic_odor");
-		put(Scene.CASINO, "the_b_e");
-		// The Attack Type, Sin and Status themes: the pictures' warning-taped containment panels.
-		put(Scene.ARENA, "slicers_dicers", "to_be_cleaved", "piercers_penetrators", "to_be_pierced", "crushers_breakers", "to_be_crushed",
-				"repressed_wrath", "unbound_wrath", "emotional_repression", "addicting_lust", "tangling_lust", "emotional_seduction", "treadwheel_sloth",
-				"inert_sloth", "emotional_indolence", "devoured_gluttony", "excessive_gluttony", "emotional_craving", "degraded_gloom", "sunk_gloom",
-				"emotional_flood", "vain_pride", "tyrannical_pride", "emotional_subservience", "insignificant_envy", "pitiful_envy", "emotional_judgment",
-				"burning_haze", "season_of_the_flame", "trickled_sanguine_blood", "mountain_of_corpses_sea_of_blood", "dizzying_waves",
-				"abnormal_seismic_zone", "crushing_external_force", "unrelenting_might", "sinking_pang", "sinking_deluge", "deep_sigh", "poised_breathing",
-				"rising_power_supply", "thunder_and_lightning");
-		PALETTE.put("the_forgotten", new int[] {0x572e26, 0x74372e});
-		PALETTE.put("the_outcast", new int[] {0x602e23, 0x8a4435});
-		PALETTE.put("flat_broke_gamblers", new int[] {0xa8563e, 0xcc8561});
-		PALETTE.put("automated_factory", new int[] {0x1a554a, 0x925842});
-		PALETTE.put("the_unloving", new int[] {0x4291a5, 0x5ac0cb});
-		PALETTE.put("nagel_und_hammer", new int[] {0x75291f, 0xaa5146});
-		PALETTE.put("faith_erosion", new int[] {0xa77151, 0x5a2e1f});
-		PALETTE.put("the_unconfronting", new int[] {0xc07272, 0x602420});
-		PALETTE.put("falling_flowers", new int[] {0x5e4535, 0x523a2b});
-		PALETTE.put("tearful_things", new int[] {0x74573c, 0x5a432b});
-		PALETTE.put("lake_world", new int[] {0x2f3472, 0x665893});
-		PALETTE.put("crawling_abyss", new int[] {0xd5817a, 0x7c5249});
-		PALETTE.put("the_evil_defining", new int[] {0xb07a5e, 0xdda27c});
-		PALETTE.put("dregs_of_the_manor", new int[] {0x613c34, 0x502b25});
-		PALETTE.put("a_certain_world", new int[] {0x7a5e4a, 0x614b3b});
-		PALETTE.put("the_heartbreaking", new int[] {0x6e4452, 0x8b536e});
-		PALETTE.put("la_manchaland_re_opening", new int[] {0xab75c6, 0x655078});
-		PALETTE.put("the_infinite_procession", new int[] {0x7b3b41, 0xa34f52});
-		PALETTE.put("the_dream_ending", new int[] {0x89503e, 0x643225});
-		PALETTE.put("four_houses_and_greed", new int[] {0x7d4938, 0x5f3424});
-		PALETTE.put("the_surrendered_witnessing", new int[] {0xae6667, 0x61383a});
-		PALETTE.put("charm_wander_doubt", new int[] {0x63282d, 0x83494a});
-		PALETTE.put("textbook", new int[] {0x3c5561, 0xb4a05e});
-		PALETTE.put("blade_and_artwork", new int[] {0x6678ad, 0x53638e});
-		PALETTE.put("the_unsevering", new int[] {0x464167, 0x512f36});
-		PALETTE.put("storefront_campout", new int[] {0x972832, 0x643435});
-		PALETTE.put("an_anarchy_of_colors", new int[] {0x2a2c5d, 0xb876b5});
-		PALETTE.put("creed_of_preservation", new int[] {0x463e62, 0x353355});
-		PALETTE.put("readvent_of_gluttony", new int[] {0x7c4145, 0x681b21});
-		PALETTE.put("hell_s_chicken", new int[] {0x9c7d26, 0x6c5b1a});
-		PALETTE.put("s_e_a", new int[] {0x5c4624, 0x7f642b});
-		PALETTE.put("miracle_in_district_20", new int[] {0x704a22, 0xc58c2b});
-		PALETTE.put("miracle_in_district_20_bokgak", new int[] {0x634721, 0x937616});
-		PALETTE.put("yield_my_flesh_to_claim_their_bones", new int[] {0x313965, 0x8d7317});
-		PALETTE.put("yield_my_flesh_to_claim_their_bones_bokgak", new int[] {0x2b416b, 0x3f6cb4});
-		PALETTE.put("timekilling_time", new int[] {0x644b10, 0x92730a});
-		PALETTE.put("timekilling_time_bokgak", new int[] {0xa78f63, 0x655129});
-		PALETTE.put("murder_on_the_warp_express", new int[] {0x5ccde4, 0x17c5f4});
-		PALETTE.put("murder_on_the_warp_express_bokgak", new int[] {0x73324e, 0x9f3f67});
-		PALETTE.put("lcb_regular_check_up", new int[] {0x5d3c21, 0x735741});
-		PALETTE.put("lcb_regular_check_up_bokgak", new int[] {0x375071, 0x624a0d});
-		PALETTE.put("nocturnal_sweeping", new int[] {0x755d0d, 0xa17f0b});
-		PALETTE.put("nocturnal_sweeping_bokgak", new int[] {0x4c4a8c, 0x2f2c63});
-		PALETTE.put("spring_cultivation", new int[] {0x5c3d2e, 0x8b6d07});
-		PALETTE.put("twining_threads", new int[] {0x705813, 0x6273a0});
-		PALETTE.put("mnestic_experience", new int[] {0x62490b, 0x907208});
-		PALETTE.put("the_noon_of_violet", new int[] {0x895e49, 0x674c19});
-		PALETTE.put("full_stopped_by_a_bullet", new int[] {0x7e691f, 0x58451a});
-		PALETTE.put("hatred_and_despair", new int[] {0xcf9156, 0xa6704b});
-		PALETTE.put("the_dusk_of_amber", new int[] {0x425d99, 0x886d23});
-		PALETTE.put("line_1", new int[] {0x2850d8, 0x1a2a9a});
-		PALETTE.put("line_2", new int[] {0x30c040, 0x0f6a20});
-		PALETTE.put("line_3", new int[] {0xe86a10, 0x7a3008});
-		PALETTE.put("line_4_section_3", new int[] {0x20a8e0, 0x0a5080});
-		PALETTE.put("line_4_section_4", new int[] {0x20a8e0, 0x0a5080});
-		PALETTE.put("line_5", new int[] {0x8030c0, 0x40106a});
-		PALETTE.put("slicers_dicers", new int[] {0x621010, 0x975f61});
-		PALETTE.put("to_be_cleaved", new int[] {0x399e73, 0x58dec6});
-		PALETTE.put("piercers_penetrators", new int[] {0x5b3a20, 0x535d28});
-		PALETTE.put("to_be_pierced", new int[] {0x2c9d6f, 0x237652});
-		PALETTE.put("crushers_breakers", new int[] {0x5e403b, 0x326da9});
-		PALETTE.put("to_be_crushed", new int[] {0xae6e39, 0x774b23});
-		PALETTE.put("repressed_wrath", new int[] {0xfb9708, 0x962809});
-		PALETTE.put("unbound_wrath", new int[] {0xe04612, 0xfab00d});
-		PALETTE.put("emotional_repression", new int[] {0x68261b, 0xa9825c});
-		PALETTE.put("addicting_lust", new int[] {0x47b28e, 0x5f1e07});
-		PALETTE.put("tangling_lust", new int[] {0x711b0e, 0x965a4f});
-		PALETTE.put("emotional_seduction", new int[] {0x853905, 0x996653});
-		PALETTE.put("treadwheel_sloth", new int[] {0x614725, 0x16e0d4});
-		PALETTE.put("inert_sloth", new int[] {0x968040, 0x07c6bc});
-		PALETTE.put("emotional_indolence", new int[] {0xf8c51b, 0x65461f});
-		PALETTE.put("devoured_gluttony", new int[] {0x5eb088, 0x3e956e});
-		PALETTE.put("excessive_gluttony", new int[] {0x8d8158, 0x5b6115});
-		PALETTE.put("emotional_craving", new int[] {0x768728, 0xace333});
-		PALETTE.put("degraded_gloom", new int[] {0x194855, 0x5a64a7});
-		PALETTE.put("sunk_gloom", new int[] {0x576ba8, 0x611a17});
-		PALETTE.put("emotional_flood", new int[] {0x1f767e, 0x17cee9});
-		PALETTE.put("vain_pride", new int[] {0xe3b562, 0x4f262a});
-		PALETTE.put("tyrannical_pride", new int[] {0x0e336d, 0x136aef});
-		PALETTE.put("emotional_subservience", new int[] {0x59a78c, 0x2976ed});
-		PALETTE.put("insignificant_envy", new int[] {0x6c1213, 0x401553});
-		PALETTE.put("pitiful_envy", new int[] {0x602955, 0x6d3890});
-		PALETTE.put("emotional_judgment", new int[] {0xa34be1, 0x7458a1});
-		PALETTE.put("burning_haze", new int[] {0x681e0a, 0xba3d19});
-		PALETTE.put("season_of_the_flame", new int[] {0xd54515, 0x782e16});
-		PALETTE.put("trickled_sanguine_blood", new int[] {0x590b0e, 0x710d12});
-		PALETTE.put("mountain_of_corpses_sea_of_blood", new int[] {0x6f0a09, 0x6d3e38});
-		PALETTE.put("dizzying_waves", new int[] {0x8a4a00, 0x622b03});
-		PALETTE.put("abnormal_seismic_zone", new int[] {0x2c976b, 0x41b17d});
-		PALETTE.put("crushing_external_force", new int[] {0xb0672d, 0x605e39});
-		PALETTE.put("unrelenting_might", new int[] {0x7e5828, 0x96783a});
-		PALETTE.put("sinking_pang", new int[] {0x70513a, 0x83654a});
-		PALETTE.put("sinking_deluge", new int[] {0x807038, 0xd5b839});
-		PALETTE.put("deep_sigh", new int[] {0x7a5e45, 0x612e1d});
-		PALETTE.put("poised_breathing", new int[] {0x119d9c, 0x02efe1});
-		PALETTE.put("rising_power_supply", new int[] {0x274261, 0x651b1c});
-		PALETTE.put("thunder_and_lightning", new int[] {0x1b3c5e, 0x6b3a3c});
-		PALETTE.put("n_corp_new_league_of_nine_litt_rateurs", new int[] {0x590200, 0x760100});
-		PALETTE.put("efflorescing_greenery", new int[] {0x0f6f13, 0x62af7c});
-		PALETTE.put("line_3_terminus", new int[] {0xe86a10, 0x7a3008});
-		PALETTE.put("bridle_of_infinity", new int[] {0x61130a, 0x900f09});
-		PALETTE.put("s_e_a_c_r", new int[] {0x3e9048, 0x68b05e});
-		PALETTE.put("impenetrable_path", new int[] {0x6b0074, 0x52005b});
-		PALETTE.put("who_couldn_t_be_bloodfiends", new int[] {0x7d010b, 0xcb030d});
-		PALETTE.put("a_beautiful_voice", new int[] {0x750c02, 0x600f06});
-		PALETTE.put("the_dawn_of_green", new int[] {0x580b00, 0xa71000});
-		PALETTE.put("into_a_certain_library_s_book", new int[] {0x096314, 0x17912b});
-		PALETTE.put("code_purple", new int[] {0x690360, 0x97b40e});
-		PALETTE.put("bearers_of_weight", new int[] {0x830a01, 0x690e05});
-		PALETTE.put("line_1_madness", new int[] {0x2850d8, 0x1a2a9a});
-		PALETTE.put("blessed_carnival", new int[] {0xc5579d, 0xb41cc4});
-		PALETTE.put("fairy_tale", new int[] {0x006900, 0x005600});
-		PALETTE.put("bloodtinged_ichthyic_odor", new int[] {0x082972, 0x0860a3});
-		PALETTE.put("complete_total_extermination", new int[] {0x470254, 0x025e4e});
-		PALETTE.put("the_master_of_la_manchaland", new int[] {0x670242, 0x690210});
-		PALETTE.put("chachihu", new int[] {0x5b0000, 0x510000});
-		PALETTE.put("a_midspring_night_s_dream_2", new int[] {0x914374, 0x722b59});
-		PALETTE.put("the_b_e", new int[] {0xd3a645, 0xbe8c76});
+		put(Scene.TRAIN, "murder_on_the_warp_express", "murder_on_the_warp_express_bokgak");
+		put(Scene.FOREST, "to_be_cleaved", "tangling_lust", "emotional_craving", "fairy_tale", "piercers_penetrators", "devoured_gluttony", "line_3_terminus", "emotional_repression", "tyrannical_pride", "efflorescing_greenery", "into_a_certain_library_s_book");
+		put(Scene.CANDLES, "to_be_crushed", "addicting_lust", "crushing_external_force");
+		put(Scene.FIRE, "crushers_breakers", "burning_haze", "season_of_the_flame", "repressed_wrath", "unbound_wrath");
+		put(Scene.DEEP, "treadwheel_sloth", "sinking_deluge", "poised_breathing", "emotional_indolence", "trickled_sanguine_blood", "line_1_madness", "bloodtinged_ichthyic_odor");
+		put(Scene.INK, "inert_sloth", "unrelenting_might");
+		put(Scene.THEATER, "mountain_of_corpses_sea_of_blood", "who_couldn_t_be_bloodfiends");
+		put(Scene.LIBRARY, "n_corp_new_league_of_nine_litt_rateurs");
+		put(Scene.ROOFTOP, "impenetrable_path");
+		PALETTE.put("the_forgotten", new int[] {0x49291b, 0x854d3f, 0x472210, 0xbb5242, 0xffedd6, 0x73382a});
+		PALETTE.put("the_outcast", new int[] {0x462113, 0x472713, 0x502914, 0xc15946, 0xffedd6, 0x783424});
+		PALETTE.put("flat_broke_gamblers", new int[] {0x381c1c, 0x470e1a, 0x431019, 0xaa3f64, 0xfffdf6, 0x6d1921});
+		PALETTE.put("automated_factory", new int[] {0x383838, 0x474747, 0x3d3d1c, 0x554e30, 0xa1804a, 0x6d5e37});
+		PALETTE.put("the_unloving", new int[] {0x478ca2, 0x1a3e47, 0x8cedff, 0x519bac, 0xceffff, 0x367888});
+		PALETTE.put("nagel_und_hammer", new int[] {0x000038, 0xb7c4f6, 0x384453, 0xdee6ff, 0xf2feff, 0x434f63});
+		PALETTE.put("faith_erosion", new int[] {0x2d2d38, 0x625274, 0x562928, 0xda5b44, 0xffd95f, 0x7b2515});
+		PALETTE.put("the_unconfronting", new int[] {0x381025, 0x67192e, 0x491326, 0xa73762, 0xe966e4, 0x732241});
+		PALETTE.put("nest_workshop_and_technology", new int[] {0x263826, 0x3a4741, 0x363d3b, 0x657674, 0xe6ebed, 0x2e7c6e});
+		PALETTE.put("falling_flowers", new int[] {0x2a3238, 0x506165, 0xa8cac8, 0x40514d, 0xe4fafc, 0x95b3b1});
+		PALETTE.put("tearful_things", new int[] {0x1c3838, 0x3f4047, 0x3d2a29, 0xd57444, 0xf8ffff, 0x7c402e});
+		PALETTE.put("the_unchanging", new int[] {0x38281f, 0x47362a, 0x44392f, 0xa69589, 0xd0c1b7, 0x3d332b});
+		PALETTE.put("lake_world", new int[] {0x291a38, 0x3b2a47, 0x321f3d, 0x85669e, 0xfdf0ff, 0x46296d});
+		PALETTE.put("crawling_abyss", new int[] {0x381b22, 0xaf7487, 0xe79ead, 0x673c42, 0xfdd6ef, 0x6f363d});
+		PALETTE.put("the_evil_defining", new int[] {0x381b14, 0x703c30, 0x5a322a, 0xf2ad8e, 0xffffff, 0x6f3c30});
+		PALETTE.put("dregs_of_the_manor", new int[] {0x381c00, 0x472313, 0x3d2b24, 0x7d756b, 0xb8aa92, 0x5c2c28});
+		PALETTE.put("a_certain_world", new int[] {0x382818, 0x47392a, 0x3d2c1f, 0x6c5d4e, 0xd5dfcb, 0x663e2e});
+		PALETTE.put("the_heartbreaking", new int[] {0x222f38, 0x5f6d8c, 0x201f3d, 0x6858c6, 0xffffff, 0x3a327f});
+		PALETTE.put("la_manchaland_re_opening", new int[] {0x383838, 0x47052d, 0x3f0a24, 0xbc2376, 0xffb2fb, 0x771545});
+		PALETTE.put("the_infinite_procession", new int[] {0x0a0038, 0x3a0147, 0x4a0c4d, 0xb74bae, 0xfef5fd, 0x781974});
+		PALETTE.put("the_dream_ending", new int[] {0x80332a, 0xff8166, 0x6c302d, 0xffc48d, 0xffffe8, 0x742725});
+		PALETTE.put("four_houses_and_greed", new int[] {0x293836, 0xa1bbaa, 0x343d38, 0x89a098, 0xe5e8e5, 0x734935});
+		PALETTE.put("the_surrendered_witnessing", new int[] {0x380f05, 0x47190b, 0x6a2913, 0xe96f39, 0xfdb261, 0x782d16});
+		PALETTE.put("charm_wander_doubt", new int[] {0x383838, 0x606060, 0x888481, 0xfffcf8, 0xffffff, 0x797573});
+		PALETTE.put("textbook", new int[] {0x131f38, 0x283448, 0x3f4b66, 0x97accd, 0xf4fde1, 0x354768});
+		PALETTE.put("blade_and_artwork", new int[] {0x382b21, 0x473a30, 0x524740, 0xb0a5a0, 0xc9bfb8, 0x4a3f39});
+		PALETTE.put("the_unsevering", new int[] {0x38160a, 0x471614, 0x3d160c, 0x9c4d35, 0xc09177, 0x73301c});
+		PALETTE.put("storefront_campout", new int[] {0x382d2d, 0x5b5855, 0x3d3931, 0xe4e4d7, 0xf2f2e7, 0x2c2923});
+		PALETTE.put("an_anarchy_of_colors", new int[] {0x000038, 0x0d0647, 0x26133d, 0x724382, 0xb3b6c0, 0x3c2669});
+		PALETTE.put("creed_of_preservation", new int[] {0x383826, 0x47392a, 0x3d3d2a, 0x513e2c, 0x5c4f45, 0x0d0d09});
+		PALETTE.put("readvent_of_gluttony", new int[] {0x38170b, 0xa77654, 0x3d2013, 0xffd8ad, 0xfdf0c9, 0x6d452f});
+		PALETTE.put("hell_s_chicken", new int[] {0x381c05, 0x47260c, 0x3d2617, 0x896a4f, 0xc6b883, 0x6b472c});
+		PALETTE.put("s_e_a", new int[] {0x2e381d, 0x405129, 0x2f3d1d, 0x6c8f53, 0xcdd6a5, 0x49622f});
+		PALETTE.put("miracle_in_district_20", new int[] {0x381202, 0x472516, 0x3d1f12, 0x824a2b, 0xc8a852, 0x6b3e24});
+		PALETTE.put("miracle_in_district_20_bokgak", new int[] {0x380901, 0x471700, 0x481c0c, 0xb7582a, 0xffff8f, 0x793116});
+		PALETTE.put("yield_my_flesh_to_claim_their_bones", new int[] {0x383838, 0x474747, 0x3d3a3d, 0x5d6062, 0xd1d2d2, 0x242324});
+		PALETTE.put("yield_my_flesh_to_claim_their_bones_bokgak", new int[] {0x383838, 0x474747, 0x3b393d, 0x585a60, 0xc1c0c0, 0x29282b});
+		PALETTE.put("timekilling_time", new int[] {0x381100, 0x47301e, 0x3d2912, 0x584024, 0xfefaf0, 0x684c2a});
+		PALETTE.put("timekilling_time_bokgak", new int[] {0x382518, 0x47372b, 0x5f4b32, 0xecc685, 0xffffdc, 0x775c3a});
+		PALETTE.put("murder_on_the_warp_express", new int[] {0x182338, 0x5c8ec1, 0x1f2e4b, 0x5989cb, 0xc0edfa, 0x304a79});
+		PALETTE.put("murder_on_the_warp_express_bokgak", new int[] {0x380e09, 0x7f414a, 0x3f0c17, 0x932c57, 0xda98b6, 0x6c1b34});
+		PALETTE.put("lcb_regular_check_up", new int[] {0x38290b, 0x473020, 0x3d2e20, 0x9c8566, 0xfdfdc8, 0x6b482b});
+		PALETTE.put("lcb_regular_check_up_bokgak", new int[] {0x38211c, 0x5d3f2b, 0x3d291a, 0x9e7658, 0xf1dfd1, 0x6b4229});
+		PALETTE.put("nocturnal_sweeping", new int[] {0x38322e, 0x473c38, 0x3d332f, 0x766553, 0xfffffd, 0x71533b});
+		PALETTE.put("nocturnal_sweeping_bokgak", new int[] {0x38230e, 0x472a18, 0x3d1d08, 0x693e17, 0xfce286, 0x6d411a});
+		PALETTE.put("spring_cultivation", new int[] {0x353830, 0xc1bda6, 0x3f423c, 0xcbd3bb, 0xd2d0c2, 0x3b6c61});
+		PALETTE.put("twining_threads", new int[] {0x383838, 0x474747, 0x716f6c, 0xf1eae3, 0xfdfcfb, 0x656360});
+		PALETTE.put("mnestic_experience", new int[] {0x1c2f38, 0x344147, 0x2f373d, 0x7f8e94, 0xffffff, 0x23292d});
+		PALETTE.put("the_noon_of_violet", new int[] {0x381c00, 0x472e16, 0x412210, 0xc16538, 0xffffdf, 0x7b3d23});
+		PALETTE.put("full_stopped_by_a_bullet", new int[] {0x383128, 0x473d2f, 0x433a2c, 0xbfac8a, 0xffffff, 0x3c3428});
+		PALETTE.put("hatred_and_despair", new int[] {0x212638, 0x24305a, 0x0a1d4c, 0x164ab6, 0x58ffff, 0x13337b});
+		PALETTE.put("the_dusk_of_amber", new int[] {0x3c1b0f, 0x782a2d, 0x26173d, 0x4a2951, 0xfffff0, 0x632732});
+		PALETTE.put("line_1", new int[] {0x383838, 0x002884, 0x18293d, 0x16428a, 0x5373d5, 0x082a6d});
+		PALETTE.put("line_2", new int[] {0x383800, 0x47472c, 0x554b33, 0xe7d9ad, 0xffffed, 0x6b442c});
+		PALETTE.put("line_3", new int[] {0x383838, 0x47473a, 0x3e3b28, 0xb7a583, 0xe7e3d9, 0x6b5030});
+		PALETTE.put("line_4_section_3", new int[] {0x150038, 0x280847, 0x22083d, 0x9546ab, 0xf8dbff, 0x5d2576});
+		PALETTE.put("line_4_section_4", new int[] {0x380000, 0x471707, 0x3d1c0f, 0x512e20, 0x84715b, 0x662e20});
+		PALETTE.put("line_5", new int[] {0x381e18, 0x473d35, 0x3d3d38, 0x485151, 0x5f615d, 0x181816});
+		PALETTE.put("slicers_dicers", new int[] {0x1f1f38, 0x37677f, 0x332c3d, 0x9bc9fb, 0xf6fafd, 0x365c77});
+		PALETTE.put("to_be_cleaved", new int[] {0x003826, 0x0f473e, 0x124b42, 0x3ab6a5, 0x85fff2, 0x1b7666});
+		PALETTE.put("piercers_penetrators", new int[] {0x779420, 0x344d0a, 0x43560f, 0x7d9e1e, 0xd3e138, 0x587015});
+		PALETTE.put("to_be_pierced", new int[] {0x383838, 0x002884, 0x18293d, 0x16428a, 0x5373d5, 0x082a6d});
+		PALETTE.put("crushers_breakers", new int[] {0x380801, 0xe75506, 0x441007, 0xf64212, 0xffff3a, 0x931405});
+		PALETTE.put("to_be_crushed", new int[] {0x380a00, 0x742904, 0x5b2308, 0xd36423, 0xf3c47a, 0x78300d});
+		PALETTE.put("repressed_wrath", new int[] {0x490d00, 0x470b00, 0x761c06, 0xff7b30, 0xffb23d, 0x7e230d});
+		PALETTE.put("unbound_wrath", new int[] {0x490d00, 0x470b00, 0x761c06, 0xff7b30, 0xffb23d, 0x7e230d});
+		PALETTE.put("emotional_repression", new int[] {0x383838, 0x474747, 0x393d1b, 0x61712d, 0xe3ff48, 0x576f23});
+		PALETTE.put("addicting_lust", new int[] {0x380a00, 0x742904, 0x5b2308, 0xd36423, 0xf3c47a, 0x78300d});
+		PALETTE.put("tangling_lust", new int[] {0x003826, 0x0f473e, 0x124b42, 0x3ab6a5, 0x85fff2, 0x1b7666});
+		PALETTE.put("emotional_seduction", new int[] {0x381202, 0x471c0f, 0x3d2614, 0xad8e6e, 0xffffe0, 0x704a27});
+		PALETTE.put("treadwheel_sloth", new int[] {0x0f3833, 0x267e77, 0x004b43, 0x06dcc9, 0x58fbf3, 0x0d8278});
+		PALETTE.put("inert_sloth", new int[] {0x2a2a38, 0x61616f, 0x989898, 0x4b4b51, 0xa8a7a8, 0x878787});
+		PALETTE.put("emotional_indolence", new int[] {0x383838, 0x172f47, 0x16293d, 0x569fd3, 0xabefff, 0x2b6a9a});
+		PALETTE.put("devoured_gluttony", new int[] {0x779420, 0x344d0a, 0x43560f, 0x7d9e1e, 0xd3e138, 0x587015});
+		PALETTE.put("excessive_gluttony", new int[] {0x381c00, 0x472226, 0x3d1a1a, 0x894c4c, 0xa99a9c, 0x681317});
+		PALETTE.put("emotional_craving", new int[] {0x003826, 0x0f473e, 0x124b42, 0x3ab6a5, 0x85fff2, 0x1b7666});
+		PALETTE.put("degraded_gloom", new int[] {0x383838, 0x002884, 0x18293d, 0x16428a, 0x5373d5, 0x082a6d});
+		PALETTE.put("sunk_gloom", new int[] {0x383838, 0x002884, 0x18293d, 0x16428a, 0x5373d5, 0x082a6d});
+		PALETTE.put("emotional_flood", new int[] {0x38002e, 0x300e47, 0x3d1c55, 0xc581ed, 0xfdc2f8, 0x432579});
+		PALETTE.put("vain_pride", new int[] {0x383838, 0x1f3447, 0x53454f, 0x405ee6, 0xe9d469, 0x524058});
+		PALETTE.put("tyrannical_pride", new int[] {0x383838, 0x473d2b, 0x4e5047, 0xb7d5c4, 0xe7fcf0, 0x613332});
+		PALETTE.put("emotional_subservience", new int[] {0x003834, 0x05473c, 0x147b65, 0x42fcdf, 0xd3fffe, 0x1a856e});
+		PALETTE.put("insignificant_envy", new int[] {0x1f1f38, 0x37677f, 0x332c3d, 0x9bc9fb, 0xf6fafd, 0x365c77});
+		PALETTE.put("pitiful_envy", new int[] {0x1f1f38, 0x37677f, 0x332c3d, 0x9bc9fb, 0xf6fafd, 0x365c77});
+		PALETTE.put("emotional_judgment", new int[] {0x383838, 0x002884, 0x18293d, 0x16428a, 0x5373d5, 0x082a6d});
+		PALETTE.put("burning_haze", new int[] {0x380801, 0xe75506, 0x441007, 0xf64212, 0xffff3a, 0x931405});
+		PALETTE.put("season_of_the_flame", new int[] {0x380801, 0xe75506, 0x441007, 0xf64212, 0xffff3a, 0x931405});
+		PALETTE.put("trickled_sanguine_blood", new int[] {0x383838, 0x172f47, 0x16293d, 0x569fd3, 0xabefff, 0x2b6a9a});
+		PALETTE.put("mountain_of_corpses_sea_of_blood", new int[] {0x380800, 0x873300, 0x4c1708, 0xfa9f49, 0xfff5b1, 0x783413});
+		PALETTE.put("dizzying_waves", new int[] {0x381202, 0x471c0f, 0x3d2614, 0xad8e6e, 0xffffe0, 0x704a27});
+		PALETTE.put("abnormal_seismic_zone", new int[] {0x003834, 0x05473c, 0x147b65, 0x42fcdf, 0xd3fffe, 0x1a856e});
+		PALETTE.put("crushing_external_force", new int[] {0x380a00, 0x742904, 0x5b2308, 0xd36423, 0xf3c47a, 0x78300d});
+		PALETTE.put("unrelenting_might", new int[] {0x2a2a38, 0x61616f, 0x989898, 0x4b4b51, 0xa8a7a8, 0x878787});
+		PALETTE.put("sinking_pang", new int[] {0x434b43, 0x39473d, 0x363d34, 0x6b7964, 0xf8f9ed, 0x2d322c});
+		PALETTE.put("sinking_deluge", new int[] {0x0f3833, 0x267e77, 0x004b43, 0x06dcc9, 0x58fbf3, 0x0d8278});
+		PALETTE.put("deep_sigh", new int[] {0x383838, 0x47473a, 0x3e3b28, 0xb7a583, 0xe7e3d9, 0x6b5030});
+		PALETTE.put("poised_breathing", new int[] {0x0f3833, 0x267e77, 0x004b43, 0x06dcc9, 0x58fbf3, 0x0d8278});
+		PALETTE.put("rising_power_supply", new int[] {0x38002e, 0x300e47, 0x3d1c55, 0xc581ed, 0xfdc2f8, 0x432579});
+		PALETTE.put("thunder_and_lightning", new int[] {0x1f2938, 0x333d47, 0x0b295f, 0x2b8aff, 0xc6ffff, 0x3398f4});
+		PALETTE.put("n_corp_new_league_of_nine_litt_rateurs", new int[] {0x381e04, 0x47290f, 0x412c16, 0x795c3c, 0xe8ceaf, 0x5d4227});
+		PALETTE.put("efflorescing_greenery", new int[] {0x383838, 0x473d2b, 0x4e5047, 0xb7d5c4, 0xe7fcf0, 0x613332});
+		PALETTE.put("line_3_terminus", new int[] {0x779420, 0x344d0a, 0x43560f, 0x7d9e1e, 0xd3e138, 0x587015});
+		PALETTE.put("bridle_of_infinity", new int[] {0x383838, 0x1f3447, 0x53454f, 0x405ee6, 0xe9d469, 0x524058});
+		PALETTE.put("s_e_a_c_r", new int[] {0x2b381b, 0x3e4e28, 0x43582d, 0x9bc481, 0xc8c889, 0x4c6633});
+		PALETTE.put("impenetrable_path", new int[] {0x2e1d38, 0x4a3157, 0x43285a, 0x8f5acf, 0xf0d1ff, 0x4f3072});
+		PALETTE.put("who_couldn_t_be_bloodfiends", new int[] {0x383838, 0x472a1a, 0x392f3d, 0xd38d9d, 0xfbeeff, 0x5d3b48});
+		PALETTE.put("a_beautiful_voice", new int[] {0x38162a, 0x612b4e, 0xe95e6b, 0x671e23, 0xffe2ef, 0x7c293a});
+		PALETTE.put("the_dawn_of_green", new int[] {0x382f29, 0x534c45, 0x3d352e, 0x998c7f, 0xfffdf7, 0x302924});
+		PALETTE.put("into_a_certain_library_s_book", new int[] {0x383838, 0x003c47, 0x0b3d2c, 0x5bc389, 0xc3fac8, 0x296e4f});
+		PALETTE.put("code_purple", new int[] {0x2f3838, 0x484b4b, 0x3c494e, 0x8eb7c0, 0xffffff, 0x355a63});
+		PALETTE.put("bearers_of_weight", new int[] {0x380e09, 0x471c16, 0x3d1710, 0x76211b, 0xb85e4e, 0x6b1712});
+		PALETTE.put("line_1_madness", new int[] {0x383838, 0x172f47, 0x16293d, 0x569fd3, 0xabefff, 0x2b6a9a});
+		PALETTE.put("blessed_carnival", new int[] {0x0a0038, 0x3a0147, 0x570e52, 0xd340b6, 0xffc9fe, 0x831b73});
+		PALETTE.put("fairy_tale", new int[] {0x383838, 0x003c47, 0x0b3d2c, 0x5bc389, 0xc3fac8, 0x296e4f});
+		PALETTE.put("bloodtinged_ichthyic_odor", new int[] {0x383838, 0x172f47, 0x16293d, 0x569fd3, 0xabefff, 0x2b6a9a});
+		PALETTE.put("complete_total_extermination", new int[] {0x38382e, 0x234723, 0x3d332b, 0xaf7354, 0xe4fffa, 0xda8857});
+		PALETTE.put("the_master_of_la_manchaland", new int[] {0x5b143a, 0xf55f8a, 0x471197, 0xc63fd4, 0xe7f4ff, 0x50148a});
+		PALETTE.put("chachihu", new int[] {0x381b20, 0x743741, 0x3d2936, 0x958399, 0xe1e3e9, 0x65323b});
+		PALETTE.put("a_midspring_night_s_dream_2", new int[] {0x381a16, 0x47261d, 0x3d261c, 0xb66842, 0xffffbd, 0x793d25});
+		PALETTE.put("the_b_e", new int[] {0x382626, 0x47121c, 0x4e1824, 0xb65f88, 0xfffaf5, 0x6e1d26});
 	}
 
 	private static void put(Scene scene, String... ids) {
@@ -228,7 +225,7 @@ final class MdScenes {
 	/** The colours a theme's scene is built in: its picture's, else the theme's own. */
 	static int[] palette(MdData.Theme theme, int fallback) {
 		int[] p = theme == null ? null : PALETTE.get(theme.id());
-		return p != null ? p : new int[] {fallback, fallback};
+		return p != null ? p : new int[] {0x303034, 0x46464c, 0x2a2a30, 0x505058, 0xFFF2D0, fallback};
 	}
 
 	/** A hidden boss's place: the Thumb and the Middle in the Backstreets, the Index in a chapel, the Ring in its studio. */
@@ -259,18 +256,34 @@ final class MdScenes {
 		final Material glass;
 		final Material accent2;
 		final Material wool;
+		final Material floorA;
+		final Material floorB;
+		final Material wallA;
+		final Material wallB;
+		final Material light;
+		final boolean painted;
+		final Material leaves;
 
-		Ctx(World w, int cx, int y, int cz, int h, Random r, int rgb, int rgb2) {
+		Ctx(World w, int cx, int y, int cz, int h, Random r, int[] p) {
 			this.w = w;
 			this.cx = cx;
 			this.y = y;
 			this.cz = cz;
 			this.h = h;
 			this.r = r;
-			this.accent = MdWorld.concrete(rgb);
-			this.glass = MdWorld.glass(rgb);
-			this.accent2 = MdWorld.concrete(rgb2);
-			this.wool = Material.valueOf(MdWorld.concrete(rgb2).name().replace("_CONCRETE", "_WOOL"));
+			this.painted = p.length >= 6;
+			int accentRgb = painted ? p[5] : p[0];
+			int accent2Rgb = painted ? p[3] : p[1];
+			this.accent = MdWorld.concrete(accentRgb);
+			this.glass = BlockColours.glass(accentRgb);
+			this.accent2 = MdWorld.concrete(accent2Rgb);
+			this.wool = Material.valueOf(MdWorld.concrete(accentRgb).name().replace("_CONCRETE", "_WOOL"));
+			this.floorA = painted ? BlockColours.solid(p[0]) : Material.POLISHED_DEEPSLATE;
+			this.floorB = painted ? BlockColours.solid(p[1]) : Material.DEEPSLATE_TILES;
+			this.wallA = painted ? BlockColours.solid(p[2]) : Material.STONE_BRICKS;
+			this.wallB = painted ? BlockColours.solid(p[3]) : Material.POLISHED_ANDESITE;
+			this.light = painted ? BlockColours.light(p[4]) : Material.SEA_LANTERN;
+			this.leaves = painted ? BlockColours.leaves(p[5]) : Material.AZALEA_LEAVES;
 		}
 
 		void set(int x, int dy, int z, Material m) {
@@ -326,7 +339,7 @@ final class MdScenes {
 	/** Builds {@code scene} on run {@code slot}'s cleared plot: the floor (half width {@code h}), props and backdrop. */
 	static void build(int slot, Scene scene, int h, int[] palette, long seed) {
 		Location c = MdWorld.centre(slot);
-		Ctx k = new Ctx(c.getWorld(), c.getBlockX(), c.getBlockY() - 1, c.getBlockZ(), h, new Random(seed), palette[0], palette[1]);
+		Ctx k = new Ctx(c.getWorld(), c.getBlockX(), c.getBlockY() - 1, c.getBlockZ(), h, new Random(seed), palette);
 		AT.put(slot, scene);
 		floor(k, scene);
 		switch (scene) {
@@ -358,6 +371,12 @@ final class MdScenes {
 			case CLOCK -> clock(k);
 			case ARENA -> arena(k);
 			case TILES -> tiles(k);
+			case ICE -> ice(k);
+			case CANDLES -> candles(k);
+			case CAVE -> cave(k);
+			case ROOFTOP -> rooftop(k);
+			case SCRAPYARD -> scrapyard(k);
+			case INK -> ink(k);
 			default -> mirror(k);
 		}
 	}
@@ -378,6 +397,12 @@ final class MdScenes {
 	}
 
 	private static Material ground(Ctx k, Scene s, int x, int z, boolean inside) {
+		if (k.painted) {
+			Material painted = painted(k, s, x, z, inside);
+			if (painted != null) {
+				return painted;
+			}
+		}
 		Random r = k.r;
 		return switch (s) {
 			case ALLEY -> Math.abs(x) <= 3 && inside ? (z % 6 == 0 && x == 0 ? Material.WHITE_CONCRETE : Material.BLACK_CONCRETE_POWDER)
@@ -468,15 +493,58 @@ final class MdScenes {
 		}
 	}
 
+	/** The floor in the battle background's colours (null: the scene's own, e.g. a ship's deck). */
+	private static Material painted(Ctx k, Scene s, int x, int z, boolean inside) {
+		Random r = k.r;
+		boolean outdoor = switch (s) {
+			case MOOR, FOREST, QUAKE, STORM, BLOOD, FIRE, ICE, CAVE, INK, SCRAPYARD, DEEP, TILES, ROOFTOP, WHALE, SNOW, ALLEY -> true;
+			default -> false;
+		};
+		switch (s) {
+			case SHIP, TRAIN, CARNIVAL, ARENA, MIRROR -> {
+				return null;
+			}
+			case FIRE -> {
+				if (!inside && r.nextInt(3) > 0) {
+					return Material.LAVA;
+				}
+			}
+			case SCRAPYARD, DEEP -> {
+				if (!inside && r.nextInt(3) > 0) {
+					// Murky water: the background's tint over it.
+					k.w.getBlockAt(k.cx + x, k.y - 1, k.cz + z).setType(Material.WATER, false);
+					return k.glass;
+				}
+			}
+			case CHAPEL, MANOR, BOUTIQUE, CASINO, LIBRARY, THEATER -> {
+				if (Math.abs(x) <= 2 && inside) {
+					return k.wool;
+				}
+			}
+			case EAST, ALLEY -> {
+				if (Math.abs(x) <= 2 && inside) {
+					return k.floorB;
+				}
+			}
+			default -> {
+			}
+		}
+		if (outdoor) {
+			return r.nextInt(10) < 8 ? k.floorA : k.floorB;
+		}
+		// Indoors: one tone with tile lines in the second, as the originals' floors.
+		return Math.floorMod(x, 4) == 0 || Math.floorMod(z, 4) == 0 ? k.floorB : k.floorA;
+	}
+
 	// --- the scenes -----------------------------------------------------------------------------------
 
 	/** Buildings on three sides with lit windows (the Backstreets at night), lamps, bins and crates. */
 	private static void alley(Ctx k) {
 		int d = k.h + 3;
 		for (int x = -d; x <= d; x += 5) {
-			building(k, x, d + 1, 6 + k.r.nextInt(12), k.pick(Material.BRICKS, Material.STONE_BRICKS, Material.DEEPSLATE_BRICKS, Material.MUD_BRICKS));
-			building(k, -d - 1, x, 5 + k.r.nextInt(10), k.pick(Material.BRICKS, Material.POLISHED_ANDESITE, Material.DEEPSLATE_TILES));
-			building(k, d + 1, x, 5 + k.r.nextInt(10), k.pick(Material.BRICKS, Material.POLISHED_ANDESITE, Material.DEEPSLATE_TILES));
+			building(k, x, d + 1, 6 + k.r.nextInt(12), k.pick(k.wallA, k.wallB, k.wallA, Material.DEEPSLATE_BRICKS));
+			building(k, -d - 1, x, 5 + k.r.nextInt(10), k.pick(k.wallA, k.wallB, Material.DEEPSLATE_TILES));
+			building(k, d + 1, x, 5 + k.r.nextInt(10), k.pick(k.wallA, k.wallB, Material.DEEPSLATE_TILES));
 		}
 		k.around(k.h, 6, (x, z) -> lamp(k, x, z, Material.LANTERN));
 		for (int i = 0; i < 10; i++) {
@@ -487,7 +555,7 @@ final class MdScenes {
 		// Neon signs in the theme's colour.
 		for (int x = -d; x <= d; x += 9) {
 			k.box(x, d, x + 2, d, 5, 5, k.accent);
-			k.set(x + 1, 4, d, Material.SEA_LANTERN);
+			k.set(x + 1, 4, d, k.light);
 		}
 	}
 
@@ -517,7 +585,7 @@ final class MdScenes {
 	private static void lab(Ctx k) {
 		int d = k.h + 1;
 		k.around(d, 1, (x, z) -> {
-			k.column(x, z, 1, 6, (x + z) % 4 == 0 ? Material.SEA_LANTERN : Math.abs(x + z) % 2 == 0 ? Material.WHITE_CONCRETE : Material.GLASS);
+			k.column(x, z, 1, 6, (x + z) % 4 == 0 ? k.light : Math.abs(x + z) % 2 == 0 ? k.wallA : k.glass);
 			k.set(x, 7, z, Material.QUARTZ_SLAB);
 		});
 		k.around(k.h - 1, 6, (x, z) -> {
@@ -531,8 +599,8 @@ final class MdScenes {
 		}
 		// Containment cells behind the glass on the far side.
 		for (int x = -k.h; x <= k.h; x += 7) {
-			k.box(x - 2, d + 1, x + 2, d + 5, 0, 0, Material.SMOOTH_QUARTZ);
-			k.box(x - 2, d + 5, x + 2, d + 5, 1, 5, Material.WHITE_CONCRETE);
+			k.box(x - 2, d + 1, x + 2, d + 5, 0, 0, k.wallB);
+			k.box(x - 2, d + 5, x + 2, d + 5, 1, 5, k.wallA);
 			k.set(x, 1, d + 3, k.accent);
 		}
 	}
@@ -541,11 +609,11 @@ final class MdScenes {
 	private static void chapel(Ctx k) {
 		int d = k.h + 1;
 		k.around(d, 1, (x, z) -> {
-			k.column(x, z, 1, 9, (Math.abs(x) + Math.abs(z)) % 4 == 0 ? Material.CHISELED_STONE_BRICKS : Math.abs(x + z) % 3 == 1 ? k.glass
-					: Material.STONE_BRICKS);
+			k.column(x, z, 1, 9, (Math.abs(x) + Math.abs(z)) % 4 == 0 ? k.wallB : Math.abs(x + z) % 3 == 1 ? k.glass
+					: k.wallA);
 		});
 		k.around(k.h - 1, 4, (x, z) -> {
-			k.column(x, z, 1, 6, Material.POLISHED_DIORITE);
+			k.column(x, z, 1, 6, k.wallB);
 			k.set(x, 7, z, Material.SOUL_LANTERN);
 		});
 		for (int x = -k.h + 2; x <= k.h - 2; x += 2) {
@@ -554,7 +622,7 @@ final class MdScenes {
 			}
 		}
 		// The altar: a great nail on the far wall.
-		k.box(-2, k.h - 1, 2, k.h - 1, 1, 1, Material.POLISHED_DIORITE);
+		k.box(-2, k.h - 1, 2, k.h - 1, 1, 1, k.wallB);
 		k.column(0, k.h, 1, 8, Material.IRON_BLOCK);
 		k.box(-2, k.h, 2, k.h, 7, 7, Material.IRON_BLOCK);
 		for (int x = -2; x <= 2; x += 2) {
@@ -608,8 +676,8 @@ final class MdScenes {
 	private static void manor(Ctx k) {
 		int d = k.h + 1;
 		k.around(d, 1, (x, z) -> {
-			k.column(x, z, 1, 8, (Math.abs(x) + Math.abs(z)) % 5 == 0 ? Material.DARK_OAK_LOG : (Math.abs(x + z) % 5 == 2 ? Material.GRAY_STAINED_GLASS
-					: Material.DARK_OAK_PLANKS));
+			k.column(x, z, 1, 8, (Math.abs(x) + Math.abs(z)) % 5 == 0 ? k.wallB : (Math.abs(x + z) % 5 == 2 ? Material.GRAY_STAINED_GLASS
+					: k.wallA));
 			k.set(x, 9, z, Material.DARK_OAK_SLAB);
 		});
 		k.around(k.h - 1, 1, (x, z) -> {
@@ -623,7 +691,7 @@ final class MdScenes {
 			k.column(p[0], p[1], 7, 8, Material.IRON_CHAIN);
 			k.set(p[0], 6, p[1], Material.LANTERN);
 		}
-		k.box(-3, k.h - 1, 3, k.h - 1, 1, 3, Material.POLISHED_BLACKSTONE_BRICKS);
+		k.box(-3, k.h - 1, 3, k.h - 1, 1, 3, k.wallB);
 		k.set(0, 4, k.h - 1, k.accent);
 	}
 
@@ -634,7 +702,7 @@ final class MdScenes {
 			double rad = k.h + 7 + k.r.nextInt(5);
 			int x = (int) Math.round(Math.cos(Math.toRadians(a)) * rad);
 			int z = (int) Math.round(Math.sin(Math.toRadians(a)) * rad);
-			k.column(x, z, 1, 1 + k.r.nextInt(5), k.pick(Material.GRASS_BLOCK, Material.MOSS_BLOCK, Material.DIRT));
+			k.column(x, z, 1, 1 + k.r.nextInt(5), k.pick(k.floorA, k.floorB, k.wallA));
 		}
 		for (int i = 0; i < 8; i++) {
 			int a = k.r.nextInt(360);
@@ -720,7 +788,7 @@ final class MdScenes {
 	/** A kitchen and diner: counters, stoves and smokers, tables and hanging lights. */
 	private static void kitchen(Ctx k) {
 		int d = k.h + 1;
-		k.around(d, 1, (x, z) -> k.column(x, z, 1, 6, Math.abs(x + z) % 6 == 0 ? Material.WHITE_STAINED_GLASS : Material.WHITE_TERRACOTTA));
+		k.around(d, 1, (x, z) -> k.column(x, z, 1, 6, Math.abs(x + z) % 6 == 0 ? Material.WHITE_STAINED_GLASS : k.wallA));
 		k.around(k.h - 1, 1, (x, z) -> {
 			if (z > 0 || Math.abs(x) == k.h - 1) {
 				k.set(x, 1, z, (Math.abs(x) + Math.abs(z)) % 4 == 0 ? Material.SMOKER : (Math.abs(x) + Math.abs(z)) % 4 == 2 ? Material.FURNACE
@@ -736,7 +804,7 @@ final class MdScenes {
 		k.set(0, 4, k.h + 1, k.accent);
 		for (int x = -k.h; x <= k.h; x++) {
 			for (int z = -k.h; z <= k.h; z++) {
-				k.set(x, 7, z, (x % 5 == 0 && z % 5 == 0) ? Material.SEA_LANTERN : Material.WHITE_TERRACOTTA);
+				k.set(x, 7, z, (x % 5 == 0 && z % 5 == 0) ? k.light : k.wallA);
 			}
 		}
 		for (int z = -k.h + 3; z <= k.h - 3; z += 5) {
@@ -751,7 +819,7 @@ final class MdScenes {
 	/** A boutique: mirrors, mannequins (armour stands are not used: dark posts with a head), racks and a runway. */
 	private static void boutique(Ctx k) {
 		int d = k.h + 1;
-		k.around(d, 1, (x, z) -> k.column(x, z, 1, 7, (Math.abs(x) + Math.abs(z)) % 4 == 0 ? Material.GOLD_BLOCK : Material.BLACK_CONCRETE));
+		k.around(d, 1, (x, z) -> k.column(x, z, 1, 7, (Math.abs(x) + Math.abs(z)) % 4 == 0 ? k.wallB : k.wallA));
 		k.around(k.h - 1, 3, (x, z) -> {
 			k.column(x, z, 1, 1, Material.POLISHED_BLACKSTONE_WALL);
 			k.set(x, 2, z, k.pick(Material.RED_WOOL, Material.BLACK_WOOL, Material.WHITE_WOOL, k.accent));
@@ -759,14 +827,14 @@ final class MdScenes {
 		});
 		for (int x = -k.h; x <= k.h; x += 4) {
 			k.column(x, d, 2, 5, Material.TINTED_GLASS);
-			k.set(x, 6, d, Material.GLOWSTONE);
+			k.set(x, 6, d, k.light);
 		}
 	}
 
 	/** The Ring's studio: canvases on easels, paint spilt, frames on the walls. */
 	private static void studio(Ctx k) {
 		int d = k.h + 1;
-		k.around(d, 1, (x, z) -> k.column(x, z, 1, 7, Material.WHITE_CONCRETE));
+		k.around(d, 1, (x, z) -> k.column(x, z, 1, 7, k.wallA));
 		k.around(d, 4, (x, z) -> {
 			k.box(x - 1, z, x + 1, z, 3, 5, k.pick(Material.RED_CONCRETE, Material.YELLOW_CONCRETE, Material.BLUE_CONCRETE, Material.PURPLE_CONCRETE,
 					Material.ORANGE_CONCRETE, k.accent));
@@ -783,7 +851,7 @@ final class MdScenes {
 	private static void east(Ctx k) {
 		int d = k.h + 2;
 		k.around(d, 4, (x, z) -> {
-			k.column(x, z, 1, 6, Material.RED_TERRACOTTA);
+			k.column(x, z, 1, 6, k.wallB);
 			k.set(x, 7, z, Material.DARK_OAK_SLAB);
 		});
 		k.around(d, 1, (x, z) -> k.set(x, 7, z, Material.DEEPSLATE_TILE_SLAB));
@@ -807,7 +875,7 @@ final class MdScenes {
 		for (int storey = 0; storey < 3; storey++) {
 			int half = 5 - storey;
 			int base = 1 + storey * 5;
-			k.box(-half + 1, pz - half + 1, half - 1, pz + half - 1, base, base + 3, Material.RED_TERRACOTTA);
+			k.box(-half + 1, pz - half + 1, half - 1, pz + half - 1, base, base + 3, k.wallB);
 			for (int x = -half + 1; x <= half - 1; x += 2) {
 				k.set(x, base + 2, pz - half + 1, Material.GLOWSTONE);
 			}
@@ -824,7 +892,7 @@ final class MdScenes {
 			int a = k.r.nextInt(360);
 			double rad = k.h + 2 + k.r.nextInt(9);
 			tree(k, (int) (Math.cos(Math.toRadians(a)) * rad), (int) (Math.sin(Math.toRadians(a)) * rad), k.pick(Material.OAK_LOG, Material.BIRCH_LOG),
-					k.pick(Material.AZALEA_LEAVES, Material.FLOWERING_AZALEA_LEAVES, Material.OAK_LEAVES),
+					k.painted ? k.leaves : k.pick(Material.AZALEA_LEAVES, Material.FLOWERING_AZALEA_LEAVES, Material.OAK_LEAVES),
 					5 + k.r.nextInt(4));
 		}
 		for (int i = 0; i < 70; i++) {
@@ -861,7 +929,7 @@ final class MdScenes {
 		int d = k.h + 1;
 		k.around(d, 1, (x, z) -> {
 			k.column(x, z, 1, 9, Material.BOOKSHELF);
-			k.set(x, 10, z, Material.DARK_OAK_PLANKS);
+			k.set(x, 10, z, k.wallA);
 		});
 		k.around(k.h - 1, 4, (x, z) -> {
 			k.column(x, z, 1, 3, Material.BOOKSHELF);
@@ -903,7 +971,7 @@ final class MdScenes {
 	/** A casino floor: tables, chandeliers, gold and slot machines along the walls. */
 	private static void casino(Ctx k) {
 		int d = k.h + 1;
-		k.around(d, 1, (x, z) -> k.column(x, z, 1, 7, (Math.abs(x) + Math.abs(z)) % 3 == 0 ? Material.GOLD_BLOCK : Material.RED_TERRACOTTA));
+		k.around(d, 1, (x, z) -> k.column(x, z, 1, 7, (Math.abs(x) + Math.abs(z)) % 3 == 0 ? k.wallB : k.wallA));
 		k.around(k.h - 1, 2, (x, z) -> {
 			k.set(x, 1, z, Material.DISPENSER);
 			k.set(x, 2, z, k.pick(Material.REDSTONE_LAMP, Material.GLOWSTONE, Material.SHROOMLIGHT));
@@ -930,7 +998,7 @@ final class MdScenes {
 
 	/** A storm: lightning rods on stone towers, copper and the rain. */
 	private static void storm(Ctx k) {
-		skyline(k, 8, 20, true, false, Material.DEEPSLATE_TILES, Material.POLISHED_DEEPSLATE, Material.TUFF_BRICKS);
+		skyline(k, 8, 20, true, false, k.wallA, k.wallB, Material.POLISHED_DEEPSLATE);
 		k.around(k.h + 2, 6, (x, z) -> {
 			int height = 4 + k.r.nextInt(6);
 			k.column(x, z, 1, height, k.pick(Material.TUFF_BRICKS, Material.COPPER_BLOCK, Material.OXIDIZED_COPPER));
@@ -941,7 +1009,7 @@ final class MdScenes {
 
 	/** Shaking ground: cracked rock, fallen pillars, rubble. */
 	private static void quake(Ctx k) {
-		skyline(k, 6, 16, false, true, Material.CRACKED_STONE_BRICKS, Material.COBBLED_DEEPSLATE, Material.CRACKED_DEEPSLATE_BRICKS);
+		skyline(k, 6, 16, false, true, k.wallA, k.wallB, Material.CRACKED_STONE_BRICKS);
 		cracks(k, Material.MAGMA_BLOCK, 18);
 		for (int i = 0; i < 12; i++) {
 			int a = k.r.nextInt(360);
@@ -976,7 +1044,7 @@ final class MdScenes {
 	/** A factory: machines, chains from the ceiling beams, pipes, hazard stripes. */
 	private static void factory(Ctx k) {
 		int d = k.h + 1;
-		k.around(d, 1, (x, z) -> k.column(x, z, 1, 9, (Math.abs(x) + Math.abs(z)) % 6 == 0 ? Material.IRON_BLOCK : Material.WAXED_COPPER_BLOCK));
+		k.around(d, 1, (x, z) -> k.column(x, z, 1, 9, (Math.abs(x) + Math.abs(z)) % 6 == 0 ? k.wallB : k.wallA));
 		for (int x = -d; x <= d; x += 4) {
 			for (int z = -d; z <= d; z++) {
 				k.set(x, 10, z, Material.IRON_BLOCK);
@@ -986,7 +1054,7 @@ final class MdScenes {
 			k.set(x, 1, z, k.pick(Material.BLAST_FURNACE, Material.PISTON, Material.OBSERVER, Material.DISPENSER));
 			k.column(x, z, 2, 9, Material.IRON_CHAIN);
 		});
-		k.around(k.h - 2, 8, (x, z) -> k.set(x, 9, z, Material.SEA_LANTERN));
+		k.around(k.h - 2, 8, (x, z) -> k.set(x, 9, z, k.light));
 	}
 
 	/** The Mirror: black glass, crying obsidian and the theme's colour (the Sins' and Emotions' themes). */
@@ -1003,7 +1071,7 @@ final class MdScenes {
 	/** A night club (Lake World): neon tubes, lasers, a stage of lights, the dance floor. */
 	private static void neon(Ctx k) {
 		int d = k.h + 1;
-		k.around(d, 1, (x, z) -> k.column(x, z, 1, 8, Material.BLACK_CONCRETE));
+		k.around(d, 1, (x, z) -> k.column(x, z, 1, 8, k.wallA));
 		k.around(d, 3, (x, z) -> k.column(x, z, 1, 7, (Math.abs(x) + Math.abs(z)) % 2 == 0 ? k.glass : MdWorld.glass(0xD040E0)));
 		k.around(k.h - 1, 4, (x, z) -> {
 			k.column(x, z, 1, 3, Material.END_ROD);
@@ -1011,7 +1079,7 @@ final class MdScenes {
 		});
 		for (int x = -d; x <= d; x++) {
 			for (int z = -d; z <= d; z++) {
-				k.set(x, 9, z, (x + z) % 7 == 0 ? Material.SEA_LANTERN : Material.BLACK_CONCRETE);
+				k.set(x, 9, z, (x + z) % 7 == 0 ? k.light : k.wallA);
 			}
 		}
 		k.box(-5, k.h - 2, 5, k.h - 1, 1, 1, Material.POLISHED_BLACKSTONE);
@@ -1029,12 +1097,12 @@ final class MdScenes {
 				k.set(x, y, z, Material.BONE_BLOCK);
 			}
 		}
-		k.around(d + 1, 1, (x, z) -> k.column(x, z, 1, 4 + k.r.nextInt(3), k.r.nextInt(5) == 0 ? Material.RED_TERRACOTTA : Material.CALCITE));
+		k.around(d + 1, 1, (x, z) -> k.column(x, z, 1, 4 + k.r.nextInt(3), k.r.nextInt(5) == 0 ? k.wallB : k.wallA));
 		for (int i = 0; i < 30; i++) {
 			int x = k.r.nextInt(2 * k.h + 1) - k.h;
 			int z = k.r.nextInt(2 * k.h + 1) - k.h;
 			if (Math.max(Math.abs(x), Math.abs(z)) >= k.h - 2) {
-				k.set(x, 0, z, k.r.nextBoolean() ? Material.RED_TERRACOTTA : Material.NETHER_WART_BLOCK);
+				k.set(x, 0, z, k.r.nextBoolean() ? k.wallB : Material.NETHER_WART_BLOCK);
 			}
 		}
 		// The heart on the far side.
@@ -1045,15 +1113,15 @@ final class MdScenes {
 	/** A theatre (Nocturnal Sweeping): rows of red seats facing a stage with curtains and footlights. */
 	private static void theater(Ctx k) {
 		int d = k.h + 1;
-		k.around(d, 1, (x, z) -> k.column(x, z, 1, 10, Material.DARK_OAK_PLANKS));
-		k.box(-k.h, d - 1, k.h, d - 1, 1, 9, Material.RED_WOOL);
+		k.around(d, 1, (x, z) -> k.column(x, z, 1, 10, k.wallA));
+		k.box(-k.h, d - 1, k.h, d - 1, 1, 9, k.wool);
 		for (int x = -k.h + 1; x <= k.h - 1; x += 2) {
 			k.set(x, 1, k.h / 2 + 1, Material.GLOWSTONE);
 		}
 		for (int z = -d - 6; z <= -k.h + 1; z += 2) {
 			for (int x = -k.h; x <= k.h; x++) {
 				if (Math.abs(x) > 2) {
-					k.set(x, 1 + Math.max(0, (-k.h + 1 - z) / 2), z, Material.RED_WOOL);
+					k.set(x, 1 + Math.max(0, (-k.h + 1 - z) / 2), z, k.wool);
 				}
 			}
 		}
@@ -1063,7 +1131,7 @@ final class MdScenes {
 	/** Inside a clock tower: great gears on the walls, a clock face and brass. */
 	private static void clock(Ctx k) {
 		int d = k.h + 1;
-		k.around(d, 1, (x, z) -> k.column(x, z, 1, 12, (Math.abs(x) + Math.abs(z)) % 4 == 0 ? Material.CUT_SANDSTONE : Material.SMOOTH_SANDSTONE));
+		k.around(d, 1, (x, z) -> k.column(x, z, 1, 12, (Math.abs(x) + Math.abs(z)) % 4 == 0 ? k.wallB : k.wallA));
 		for (int[] g : new int[][] {{-8, d, 7, 4}, {8, d, 5, 3}, {-d, -4, 6, 3}, {d, 3, 6, 4}}) {
 			for (int a = 0; a < 40; a++) {
 				double t = Math.PI * 2 * a / 40;
@@ -1131,6 +1199,134 @@ final class MdScenes {
 			k.set(x, tall + 1, z, k.pick(Material.SUNFLOWER, Material.DANDELION, Material.TORCHFLOWER));
 		}
 		skyline(k, 4, 12, false, true, Material.QUARTZ_BRICKS, Material.WHITE_CONCRETE, Material.CALCITE);
+	}
+
+	/** An ice castle: ice floor, pillars of packed ice, icicles, cold light. */
+	private static void ice(Ctx k) {
+		int d = k.h + 1;
+		k.around(d, 1, (x, z) -> k.column(x, z, 1, 3 + k.r.nextInt(6), k.pick(Material.PACKED_ICE, Material.BLUE_ICE, Material.ICE, k.wallA)));
+		k.around(k.h - 1, 5, (x, z) -> {
+			k.column(x, z, 1, 6, Material.PACKED_ICE);
+			k.set(x, 7, z, k.light);
+		});
+		for (int i = 0; i < 40; i++) {
+			int x = k.r.nextInt(2 * d + 1) - d;
+			int z = d + 1 + k.r.nextInt(5);
+			int top = 6 + k.r.nextInt(10);
+			k.column(x, z, 1, top, Material.BLUE_ICE);
+			k.column(x, -z, 1, top - 3, Material.PACKED_ICE);
+		}
+		skyline(k, 8, 20, false, false, Material.PACKED_ICE, Material.BLUE_ICE, k.wallB);
+	}
+
+	/** A hall of candles and strings of paper lanterns (So That No One Will Cry). */
+	private static void candles(Ctx k) {
+		int d = k.h + 1;
+		k.around(d, 1, (x, z) -> k.column(x, z, 1, 9, (Math.abs(x) + Math.abs(z)) % 5 == 0 ? k.wallB : k.wallA));
+		for (int z = -k.h; z <= k.h; z += 4) {
+			for (int x = -k.h; x <= k.h; x++) {
+				int sag = (int) Math.round(2 * Math.sin(Math.PI * (x + k.h) / (2.0 * k.h)));
+				k.set(x, 9 - sag, z, x % 3 == 0 ? Material.LANTERN : Material.IRON_CHAIN);
+			}
+		}
+		for (int i = 0; i < 50; i++) {
+			int x = (k.r.nextBoolean() ? 1 : -1) * (k.h - k.r.nextInt(3));
+			int z = k.r.nextInt(2 * k.h + 1) - k.h;
+						k.lit(x, 1, z, Material.WHITE_CANDLE);
+		}
+		for (int i = 0; i < 30; i++) {
+			int x = k.r.nextInt(2 * k.h + 1) - k.h;
+			int z = k.r.nextInt(2 * k.h + 1) - k.h;
+			if (Math.max(Math.abs(x), Math.abs(z)) >= k.h - 2) {
+				k.set(x, 1, z, k.pick(Material.COBBLESTONE_SLAB, Material.MUD_BRICK_SLAB, k.wallB));
+			}
+		}
+	}
+
+	/** A cave of glowing crystals over still water (Fairy Gentleman, the Blubbering Toad). */
+	private static void cave(Ctx k) {
+		for (int a = 0; a < 360; a += 3) {
+			double rad = k.h + 3 + k.r.nextInt(4);
+			int x = (int) Math.round(Math.cos(Math.toRadians(a)) * rad);
+			int z = (int) Math.round(Math.sin(Math.toRadians(a)) * rad);
+			int top = 6 + k.r.nextInt(12);
+			k.column(x, z, 1, top, k.pick(k.wallA, k.wallB, Material.DEEPSLATE));
+		}
+		// Stalactites over the ground and crystals round it.
+		for (int i = 0; i < 30; i++) {
+			int x = k.r.nextInt(2 * k.h + 9) - k.h - 4;
+			int z = k.r.nextInt(2 * k.h + 9) - k.h - 4;
+			if (Math.max(Math.abs(x), Math.abs(z)) < k.h - 3) {
+				continue;
+			}
+			int tall = 2 + k.r.nextInt(5);
+			k.column(x, z, 1, tall, k.glass);
+			k.set(x, tall + 1, z, k.light);
+		}
+		k.around(k.h + 1, 2, (x, z) -> k.set(x, 0, z, Material.WATER));
+	}
+
+	/** Rooftops in a storm: a balustrade round the roof, chimneys, the City beyond. */
+	private static void rooftop(Ctx k) {
+		k.around(k.h, 1, (x, z) -> {
+			k.set(x, 1, z, Material.STONE_BRICK_WALL);
+			k.set(x, 2, z, (x + z) % 3 == 0 ? Material.STONE_BRICK_WALL : Material.AIR);
+		});
+		k.around(k.h, 2, (x, z) -> k.set(x, 2, z, Material.STONE_BRICK_SLAB));
+		for (int i = 0; i < 8; i++) {
+			int x = k.r.nextInt(2 * k.h + 9) - k.h - 4;
+			int z = k.h + 2 + k.r.nextInt(6);
+			k.column(x, z, 1, 3 + k.r.nextInt(4), k.wallA);
+		}
+		skyline(k, 4, 18, true, false, k.wallA, k.wallB, Material.DEEPSLATE_BRICKS);
+	}
+
+	/** A scrapyard on a murky green sea: heaps of junk, wrecks and rusted metal. */
+	private static void scrapyard(Ctx k) {
+		for (int i = 0; i < 26; i++) {
+			int a = k.r.nextInt(360);
+			double rad = k.h + 2 + k.r.nextInt(8);
+			int x = (int) (Math.cos(Math.toRadians(a)) * rad);
+			int z = (int) (Math.sin(Math.toRadians(a)) * rad);
+			int r = 1 + k.r.nextInt(3);
+			for (int dx = -r; dx <= r; dx++) {
+				for (int dz = -r; dz <= r; dz++) {
+					int top = r - Math.max(Math.abs(dx), Math.abs(dz)) + 1;
+					k.column(x + dx, z + dz, 1, top, k.pick(Material.EXPOSED_COPPER, Material.IRON_BLOCK, Material.RAW_IRON_BLOCK, k.wallA,
+							Material.WEATHERED_CUT_COPPER));
+				}
+			}
+		}
+		k.around(k.h, 7, (x, z) -> k.set(x, 1, z, Material.LANTERN));
+	}
+
+	/** An ink-wash mountain scene (Pagoda Veneration): grey peaks and stacked stone cairns. */
+	private static void ink(Ctx k) {
+		for (int a = 0; a < 360; a += 6) {
+			double rad = k.h + 8 + k.r.nextInt(5);
+			int x = (int) Math.round(Math.cos(Math.toRadians(a)) * rad);
+			int z = (int) Math.round(Math.sin(Math.toRadians(a)) * rad);
+			int peak = 8 + k.r.nextInt(14);
+			for (int dx = -3; dx <= 3; dx++) {
+				for (int dz = -3; dz <= 3; dz++) {
+					int top = peak - 3 * Math.max(Math.abs(dx), Math.abs(dz));
+					if (top > 0) {
+						k.column(x + dx, z + dz, 1, top, top > peak - 4 ? Material.LIGHT_GRAY_CONCRETE : k.pick(Material.GRAY_CONCRETE,
+								Material.ANDESITE, Material.STONE));
+					}
+				}
+			}
+		}
+		for (int i = 0; i < 12; i++) {
+			int a = k.r.nextInt(360);
+			double rad = k.h - 1 + k.r.nextInt(5);
+			int x = (int) (Math.cos(Math.toRadians(a)) * rad);
+			int z = (int) (Math.sin(Math.toRadians(a)) * rad);
+			int tall = 2 + k.r.nextInt(4);
+			for (int dy = 1; dy <= tall; dy++) {
+				k.set(x, dy, z, dy % 2 == 0 ? Material.POLISHED_BLACKSTONE : Material.COBBLED_DEEPSLATE);
+			}
+		}
 	}
 
 	// --- the players' sky and air --------------------------------------------------------------
