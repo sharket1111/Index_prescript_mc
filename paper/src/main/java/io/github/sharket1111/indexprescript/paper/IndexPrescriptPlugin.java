@@ -80,6 +80,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Gacha.load(this);
 		getServer().getPluginManager().registerEvents(new GachaWeapon(), this);
 		getServer().getPluginManager().registerEvents(new Upgrade(), this);
+		getServer().getPluginManager().registerEvents(new Armory(), this);
 		var menu = getCommand("menu");
 		if (menu != null) {
 			menu.setExecutor((sender, cmd, label, args) -> {
@@ -94,6 +95,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		StudioEffects.load(this);
 		Animations.load(this);
 		Bukkit.getScheduler().runTaskTimer(this, Animations::tick, 1L, 1L);
+		Bukkit.getScheduler().runTaskTimer(this, Armory::tick, 20L, 20L);
 		Bukkit.getScheduler().runTaskTimer(this, MdRun::tickAll, 1L, 1L);
 		Bukkit.getScheduler().runTask(this, ClashDummy::scan);
 		Bukkit.getScheduler().runTaskTimer(this, PrescriptTracker::tick, 1L, 1L);
@@ -221,17 +223,26 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			sender.sendMessage(Messages.get(sender, "command.no_player", args.length >= 3 ? args[2] : "-"));
 			return true;
 		}
+		String weaponId = switch (args[1].toLowerCase(Locale.ROOT)) {
+			case "caduceus", "terminal", "rien_terminal" -> Gacha.Three.CADUCEUS.id();
+			case "laevatein" -> Gacha.Three.LAEVATEIN.id();
+			case "hammer", "renoir_hammer" -> Gacha.Three.RENOIR.id();
+			case "mimicry", "미미크리" -> Gacha.Three.MIMICRY.id();
+			case "blackgod", "black_god" -> Gacha.Three.BLACK_GOD.id();
+			default -> args[1].startsWith("weapon:") && Gacha.weapon(args[1].substring(7)) != null ? args[1].substring(7) : null;
+		};
+		if (weaponId != null) {
+			// Skill weapons are owned, then carried one at a time.
+			Gacha.own(target, weaponId);
+			Armory.equip(target, weaponId);
+			sender.sendMessage(Component.text(Messages.get(sender, "command.given", target.getName(), args[1]), NamedTextColor.GREEN));
+			return true;
+		}
 		ItemStack item = switch (args[1].toLowerCase(Locale.ROOT)) {
-			case "caduceus" -> Items.caduceus(target);
-			case "terminal", "rien_terminal" -> Items.terminal(target);
-			case "laevatein" -> Items.laevatein(target);
-			case "hammer", "renoir_hammer" -> Items.renoirHammer(target);
-			case "mimicry", "미미크리" -> Items.mimicry(target);
-			case "blackgod", "black_god" -> BlackGod.toggleItem(target);
 			case "ticket", "추출권" -> Gacha.item(Gacha.Kind.TICKET, 10);
 			case "exp", "경험치" -> Gacha.item(Gacha.Kind.EXP, 10);
 			case "thread", "끈" -> Gacha.item(Gacha.Kind.THREAD, 50);
-			default -> args[1].startsWith("weapon:") && Gacha.weapon(args[1].substring(7)) != null ? Gacha.weaponItem(Gacha.weapon(args[1].substring(7))) : null;
+			default -> null;
 		};
 		if (item == null) {
 			sender.sendMessage(Messages.get(sender, "command.usage"));

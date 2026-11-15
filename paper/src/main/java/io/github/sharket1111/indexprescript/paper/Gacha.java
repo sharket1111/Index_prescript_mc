@@ -170,7 +170,7 @@ final class Gacha {
 		return ("," + owned + ",").contains("," + id + ",");
 	}
 
-	private static void own(Player p, String id) {
+	static void own(Player p, String id) {
 		if (!owns(p, id)) {
 			String owned = p.getPersistentDataContainer().getOrDefault(OWNED, PersistentDataType.STRING, "");
 			p.getPersistentDataContainer().set(OWNED, PersistentDataType.STRING, owned.isEmpty() ? id : owned + "," + id);
@@ -331,20 +331,9 @@ final class Gacha {
 			return;
 		}
 		own(p, pull.id());
-		if (pull.rarity() == 3) {
-			for (Three t : Three.values()) {
-				if (t.id().equals(pull.id())) {
-					t.items(p).forEach(stack -> {
-						Upgrade.refreshLore(stack);
-						give(p, stack);
-					});
-				}
-			}
-		} else {
-			Weapon w = weapon(pull.id());
-			if (w != null) {
-				give(p, weaponItem(w));
-			}
+		// Weapons are carried from the menu (one at a time); the first one is carried at once.
+		if (Armory.equipped(p) == null) {
+			Armory.equip(p, pull.id());
 		}
 	}
 

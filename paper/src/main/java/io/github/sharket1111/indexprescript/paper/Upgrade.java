@@ -199,10 +199,11 @@ final class Upgrade implements Listener {
 
 	/** The upgrade menu for the weapon in hand: levels with EXP tickets, Uptie with Threads. */
 	static void open(Player p) {
-		ItemStack held = p.getInventory().getItemInMainHand();
+		int slot = Armory.mainSlot(p);
+		ItemStack held = slot < 0 ? null : p.getInventory().getItem(slot);
 		MdGui gui = new MdGui(3, "무기 강화");
 		if (!levels(held)) {
-			gui.set(13, MdGui.item(Material.BARRIER, "강화할 무기를 손에 들고 여세요", NamedTextColor.RED, "이 플러그인의 무기나 추출로 얻은 무기"),
+			gui.set(13, MdGui.item(Material.BARRIER, "장착한 스킬 무기가 없어요", NamedTextColor.RED, "/메뉴 → 무기 선택에서 고르세요"),
 					(Runnable) null);
 			gui.fill().open(p);
 			return;
@@ -231,12 +232,17 @@ final class Upgrade implements Listener {
 		} else {
 			gui.set(15, MdGui.item(Material.NETHER_STAR, "동기화 4 (최대)", NamedTextColor.GOLD), (Runnable) null);
 		}
-		gui.set(22, MdGui.item(Material.ARROW, "뒤로", NamedTextColor.WHITE), () -> Ego.Menu.open(p));
+		gui.set(22, MdGui.item(Material.ARROW, "뒤로", NamedTextColor.WHITE), () -> Armory.open(p));
 		gui.fill().open(p);
 	}
 
 	private static void level(Player p, int tickets) {
-		ItemStack held = p.getInventory().getItemInMainHand();
+		int slot = Armory.mainSlot(p);
+		if (slot < 0) {
+			open(p);
+			return;
+		}
+		ItemStack held = p.getInventory().getItem(slot);
 		if (!levels(held) || level(held) >= MAX_LEVEL) {
 			open(p);
 			return;
@@ -247,7 +253,7 @@ final class Upgrade implements Listener {
 			gained += addExp(held, EXP_PER_TICKET);
 			used++;
 		}
-		p.getInventory().setItemInMainHand(held);
+		p.getInventory().setItem(slot, held);
 		if (used == 0) {
 			Hud.message(p, Component.text("경험치 티켓이 없어요", NamedTextColor.GRAY));
 		} else {
@@ -258,7 +264,12 @@ final class Upgrade implements Listener {
 	}
 
 	private static void spin(Player p) {
-		ItemStack held = p.getInventory().getItemInMainHand();
+		int slot = Armory.mainSlot(p);
+		if (slot < 0) {
+			open(p);
+			return;
+		}
+		ItemStack held = p.getInventory().getItem(slot);
 		int uptie = uptie(held);
 		if (!levels(held) || uptie >= 4) {
 			open(p);
@@ -270,7 +281,7 @@ final class Upgrade implements Listener {
 			return;
 		}
 		setUptie(held, uptie + 1);
-		p.getInventory().setItemInMainHand(held);
+		p.getInventory().setItem(slot, held);
 		Hud.message(p, Component.text("동기화 " + (uptie + 1) + "!", NamedTextColor.GOLD));
 		p.playSound(p.getLocation(), org.bukkit.Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1.0F, 1.0F);
 		open(p);

@@ -914,13 +914,17 @@ final class Ego {
 			gui.set(12, MdGui.item(Material.AMETHYST_SHARD, "E.G.O 자원", NamedTextColor.AQUA, res.toArray(String[]::new)), (Runnable) null);
 			gui.set(11, MdGui.item(Material.GOLD_BLOCK, "추출", Gacha.THREE_COLOUR, "광기 " + Gacha.lunacy(player) + " · 추출권 "
 					+ Gacha.count(player, Gacha.Kind.TICKET) + "장", "무기와 E.G.O를 뽑아요"), () -> Extraction.open(player));
-			gui.set(15, MdGui.item(Material.ANVIL, "무기 강화", NamedTextColor.AQUA, "손에 든 무기의 레벨과 동기화", "경험치 티켓 "
+			String carried = Armory.equipped(player);
+			gui.set(13, MdGui.item(Material.NETHERITE_SWORD, "무기 선택", Gacha.THREE_COLOUR, "장착: " + (carried == null ? "없음" : Armory.name(carried)),
+					"가진 스킬 무기 중 하나만 들 수 있어요"), () -> Armory.open(player));
+			gui.set(15, MdGui.item(Material.ANVIL, "무기 강화", NamedTextColor.AQUA, "장착한 스킬 무기의 레벨과 동기화", "경험치 티켓 "
 					+ Gacha.count(player, Gacha.Kind.EXP) + "장 · 끈 " + Gacha.count(player, Gacha.Kind.THREAD) + "개"), () -> Upgrade.open(player));
 			gui.set(14, MdGui.item(Material.ENDER_EYE, "거울 던전", NamedTextColor.GOLD, "거울 던전 메뉴를 열어요 (/md)"), () -> {
 				player.closeInventory();
 				player.performCommand("md");
 			});
 			gui.set(16, MdGui.item(Material.WRITABLE_BOOK, "조작법", NamedTextColor.WHITE,
+					"무기 선택: 가진 스킬 무기 중 하나를 장착 (하나만)",
 					"우클릭: 들고 있는 무기의 스킬 (핫바에서 숫자키로 선택)",
 					"추출: 광기 130 또는 추출권 1장 (10회는 1300 / 10장)",
 					"무기 강화: 경험치 티켓으로 레벨(공격·방어 레벨), 끈으로 동기화",
