@@ -82,6 +82,9 @@ final class SkinPack {
 	/** Gift pictures (gift_icons/<id>.png): id -> PNG. */
 	private final Map<String, byte[]> gifts = new ConcurrentHashMap<>();
 	private volatile java.util.Set<String> servedGifts = java.util.Set.of();
+	/** Item pictures (item_icons/<id>.png: lunacy, thread, train1-4, keyword_burn...): id -> PNG. */
+	private final Map<String, byte[]> icons = new ConcurrentHashMap<>();
+	private volatile java.util.Set<String> servedIcons = java.util.Set.of();
 
 	private SkinPack(IndexPrescriptPlugin plugin, byte[] packMeta, String base) {
 		this.plugin = plugin;
@@ -97,6 +100,7 @@ final class SkinPack {
 		pack.load();
 		pack.loadEnemies();
 		pack.loadGifts();
+		pack.loadIcons();
 		pack.rebuild();
 		server.createContext(PATH, exchange -> {
 			byte[] body = pack.zip;
@@ -142,6 +146,35 @@ final class SkinPack {
 		return name.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]+", "_").replaceAll("^_|_$", "");
 	}
 
+	/** The item model of an item picture (item_icons/<id>.png), if the pack being served has one. */
+	static org.bukkit.NamespacedKey iconModel(String id) {
+		SkinPack pack = instance;
+		return pack != null && pack.servedIcons.contains(id) ? new org.bukkit.NamespacedKey("index_prescript", "icon/" + id) : null;
+	}
+
+	/** An item picture's PNG (for drawing on others, e.g. a keyword on a gift), or null. */
+	static byte[] icon(String id) {
+		SkinPack pack = instance;
+		return pack == null ? null : pack.icons.get(id);
+	}
+
+	void loadIcons() {
+		icons.clear();
+		File dir = new File(plugin.getDataFolder(), "item_icons");
+		dir.mkdirs();
+		File[] files = dir.listFiles((d, n) -> n.toLowerCase(java.util.Locale.ROOT).endsWith(".png"));
+		if (files == null) {
+			return;
+		}
+		for (File f : files) {
+			try {
+				icons.put(slug(f.getName().substring(0, f.getName().length() - 4)), Files.readAllBytes(f.toPath()));
+			} catch (IOException e) {
+				plugin.getLogger().warning("item_icons/" + f.getName() + ": " + e.getMessage());
+			}
+		}
+	}
+
 	/** The item model of a gift's picture, if the pack being served has one. */
 	static org.bukkit.NamespacedKey giftModel(String id) {
 		SkinPack pack = instance;
@@ -174,6 +207,7 @@ final class SkinPack {
 		}
 		pack.loadEnemies();
 		pack.loadGifts();
+		pack.loadIcons();
 		pack.rebuild();
 		return pack.enemies.size();
 	}
@@ -354,10 +388,24 @@ final class SkinPack {
 			for (String bone : BONES) {
 				suit.add(when(bone, plain("index_prescript:item/rig/outfit/suit/" + bone)));
 			}
+			// The item pictures.
+			for (Map.Entry<String, byte[]> icon : icons.entrySet()) {
+				String id = icon.getKey();
+				put(out, "assets/index_prescript/textures/item/icon/" + id + ".png", GiftBadge.square(icon.getValue()));
+				JsonObject model = new JsonObject();
+				model.addProperty("parent", "minecraft:item/generated");
+				JsonObject textures = new JsonObject();
+				textures.addProperty("layer0", "index_prescript:item/icon/" + id);
+				model.add("textures", textures);
+				put(out, "assets/index_prescript/models/item/icon/" + id + ".json", GSON.toJson(model).getBytes(StandardCharsets.UTF_8));
+				JsonObject item = new JsonObject();
+				item.add("model", plain("index_prescript:item/icon/" + id));
+				put(out, "assets/index_prescript/items/icon/" + id + ".json", GSON.toJson(item).getBytes(StandardCharsets.UTF_8));
+			}
 			// The gifts' pictures.
 			for (Map.Entry<String, byte[]> gift : gifts.entrySet()) {
 				String id = gift.getKey();
-				put(out, "assets/index_prescript/textures/item/gift/" + id + ".png", GiftBadge.decorate(id, gift.getValue()));
+				put(out, "assets/index_prescript/textures/item/gift/" + id + ".png", GiftBadge.decorate(id, gift.getValue(), icons::get));
 				JsonObject model = new JsonObject();
 				model.addProperty("parent", "minecraft:item/generated");
 				JsonObject textures = new JsonObject();
@@ -384,6 +432,7 @@ final class SkinPack {
 		zip = built;
 		served = java.util.Set.copyOf(now.keySet());
 		servedGifts = java.util.Set.copyOf(gifts.keySet());
+		servedIcons = java.util.Set.copyOf(icons.keySet());
 	}
 
 	private static void put(ZipOutputStream out, String name, byte[] data) throws IOException {

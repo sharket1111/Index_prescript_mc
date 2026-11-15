@@ -64,7 +64,32 @@ final class GiftBadge {
 		return info.get(id);
 	}
 
-	static byte[] decorate(String id, byte[] png) {
+	/** A picture padded to a square (item textures must be square), or as it was. */
+	static byte[] square(byte[] png) {
+		try {
+			BufferedImage src = ImageIO.read(new ByteArrayInputStream(png));
+			if (src == null || src.getWidth() == src.getHeight()) {
+				return png;
+			}
+			int n = Math.max(src.getWidth(), src.getHeight());
+			BufferedImage out = new BufferedImage(n, n, BufferedImage.TYPE_INT_ARGB);
+			Graphics2D g = out.createGraphics();
+			g.drawImage(src, (n - src.getWidth()) / 2, (n - src.getHeight()) / 2, null);
+			g.dispose();
+			ByteArrayOutputStream buf = new ByteArrayOutputStream();
+			ImageIO.write(out, "png", buf);
+			return buf.toByteArray();
+		} catch (IOException | RuntimeException e) {
+			return png;
+		}
+	}
+
+	/**
+	 * The picture with the badges, or as it was if the gift is unknown or the picture cannot be read. The
+	 * keyword's picture is the server's item_icons/keyword_<keyword>.png when there is one ({@code icons}),
+	 * else the plugin's own.
+	 */
+	static byte[] decorate(String id, byte[] png, java.util.function.Function<String, byte[]> icons) {
 		String[] gift = info(id);
 		if (gift == null) {
 			return png;
@@ -83,12 +108,18 @@ final class GiftBadge {
 			int unit = Math.max(1, w / 32);
 			// The keyword, top right.
 			int k = KEYWORDS.indexOf(gift[1]);
-			BufferedImage icons = strip();
-			if (k >= 0 && icons != null) {
+			byte[] own = k >= 0 && icons != null ? icons.apply("keyword_" + gift[1]) : null;
+			BufferedImage picture = own == null ? null : ImageIO.read(new ByteArrayInputStream(own));
+			BufferedImage strip = strip();
+			if (picture != null) {
+				// The original's icon: smooth scaling, a little larger.
+				int size = 11 * unit;
+				g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+				g.drawImage(picture, w - size, 0, size, size, null);
+				g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+			} else if (k >= 0 && strip != null) {
 				int size = 9 * unit;
-				int x = w - size - unit;
-				int y = unit;
-				g.drawImage(icons.getSubimage(k * 12, 0, 12, 12), x, y, size, size, null);
+				g.drawImage(strip.getSubimage(k * 12, 0, 12, 12), w - size - unit, unit, size, size, null);
 			}
 			// The tier, bottom right.
 			String tier = gift[0].toUpperCase(java.util.Locale.ROOT);

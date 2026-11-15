@@ -169,6 +169,13 @@ final class Missions implements Listener {
 			progress(p, "login", 1);
 		}
 		PaidShop.dailySupply(p);
+		// Items made before the server had their pictures get them.
+		for (org.bukkit.inventory.ItemStack stack : p.getInventory().getContents()) {
+			Gacha.Kind k = Gacha.kindOf(stack);
+			if (k != null && stack.getItemMeta().getItemModel() != null && !k.modelKey().equals(stack.getItemMeta().getItemModel())) {
+				stack.editMeta(meta -> meta.setItemModel(k.modelKey()));
+			}
+		}
 		// E.G.O kept in the collection while the plugin had no data for them become owned E.G.O once it does.
 		for (String c : Season.getList(id, "cosmetics")) {
 			if (c.startsWith("ego:") && Ego.get(c.substring(4)) != null) {

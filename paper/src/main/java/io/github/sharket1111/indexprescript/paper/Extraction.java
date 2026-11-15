@@ -77,7 +77,7 @@ final class Extraction {
 		int ideality = Gacha.ideality(p);
 		ItemStack moon = MdGui.item(Material.POPPY, "광기 " + lunacy + " · 유료 광기 " + Gacha.paidLunacy(p), TextColor.color(0xE03C3C),
 				"광기: 거울 던전 주간 보너스·패스·투영", "유료 광기: 상점", "추출은 광기를 먼저, 그다음 유료 광기를 써요");
-		gui.set(19, moon, (Runnable) null);
+		gui.set(19, Rewards.dress(moon, "lunacy"), (Runnable) null);
 		gui.set(20, MdGui.item(Material.PAPER, "추출권 " + tickets + "장 · 10회 추출권 " + Gacha.count(p, Gacha.Kind.DECA) + "장", Gacha.ONE_COLOUR,
 				"패스·투영·상점에서 얻어요"), (Runnable) null);
 		int deca3 = Gacha.count(p, Gacha.Kind.DECA3);

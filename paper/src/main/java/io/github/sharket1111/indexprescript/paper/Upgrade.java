@@ -353,6 +353,7 @@ final class Upgrade implements Listener {
 			var icon = MdGui.item(Material.EXPERIENCE_BOTTLE, "인격 경험치 티켓 " + ROMAN[i] + "  " + picked[i] + "/" + have, k.colour, "EXP +" + k.exp() + " (1장)",
 					"좌클릭 +1 · 우클릭 -1 · 쉬프트 좌클릭 +10 · 쉬프트 우클릭 0");
 			icon.setAmount(Math.max(1, Math.min(99, picked[i])));
+			Rewards.dress(icon, k.iconId().equals("train3") ? "train3" : "train" + (i + 1));
 			gui.set(29 + i * 2 - (i > 1 ? 0 : 0), picked[i] > 0 ? MdGui.glow(icon) : icon, click -> {
 				int[] pk = PICKED.computeIfAbsent(p.getUniqueId(), x -> new int[4]);
 				if (click.isShiftClick() && click.isRightClick()) {
@@ -461,11 +462,11 @@ final class Upgrade implements Listener {
 			int threads = Gacha.count(p, Gacha.Kind.THREAD);
 			int shards = Shards.count(p, sinner);
 			boolean enough = threads >= cost[0] && shards >= cost[1];
-			gui.set(38, MdGui.item(Material.STRING, "끈 " + threads + " / " + cost[0], threads >= cost[0] ? NamedTextColor.GREEN : NamedTextColor.RED,
-					"끈 루사이크·패스·상점에서 얻어요"), (Runnable) null);
+			gui.set(38, Rewards.dress(MdGui.item(Material.STRING, "끈 " + threads + " / " + cost[0], threads >= cost[0] ? NamedTextColor.GREEN : NamedTextColor.RED,
+					"끈 루사이크·패스·상점에서 얻어요"), "thread"), (Runnable) null);
 			if (cost[1] > 0) {
-				gui.set(40, MdGui.item(Material.AMETHYST_SHARD, "에고 조각 " + shards + " / " + cost[1], shards >= cost[1] ? NamedTextColor.GREEN : NamedTextColor.RED,
-						sinner >= 0 ? Gacha.SINNERS_KO[sinner] + "의 에고 조각 또는 범용 동기화 조각" : "범용 동기화 조각 (또는 아무 수감자의 조각 없음)"), (Runnable) null);
+				gui.set(40, Rewards.dress(MdGui.item(Material.AMETHYST_SHARD, "에고 조각 " + shards + " / " + cost[1], shards >= cost[1] ? NamedTextColor.GREEN : NamedTextColor.RED,
+						sinner >= 0 ? Gacha.SINNERS_KO[sinner] + "의 에고 조각 또는 범용 동기화 조각" : "범용 동기화 조각 (또는 아무 수감자의 조각 없음)"), "shard_universal"), (Runnable) null);
 			}
 			int takeoff = Gacha.count(p, Gacha.Kind.TAKEOFF_UPTIE);
 			if (takeoff > 0) {

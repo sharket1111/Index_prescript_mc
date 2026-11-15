@@ -147,20 +147,34 @@ final class Rewards {
 		}
 	}
 
+	/** Puts the reward's picture (item_icons) on an icon, if the server has it. */
+	static ItemStack dress(ItemStack stack, String id) {
+		Gacha.Kind k = kind(id);
+		String icon = k != null ? k.iconId() : id.startsWith("lunacy") ? "lunacy" : null;
+		org.bukkit.NamespacedKey model = icon == null ? null : SkinPack.iconModel(icon);
+		if (model != null) {
+			stack.editMeta(meta -> meta.setItemModel(model));
+		}
+		return stack;
+	}
+
 	/** An icon showing a list of rewards. */
 	static ItemStack icon(JsonArray items, String title, NamedTextColor colour, String... extra) {
 		List<String> lines = new ArrayList<>();
 		Material m = Material.PAPER;
+		String first = null;
 		for (JsonElement e : items) {
 			JsonArray pair = e.getAsJsonArray();
 			if (lines.isEmpty()) {
 				m = icon(pair.get(0).getAsString());
+				first = pair.get(0).getAsString();
 			}
 			lines.add(text(pair.get(0).getAsString(), pair.get(1).getAsInt()));
 		}
 		for (String x : extra) {
 			lines.add(x);
 		}
-		return MdGui.item(m, title, colour, lines.toArray(String[]::new));
+		ItemStack out = MdGui.item(m, title, colour, lines.toArray(String[]::new));
+		return first == null ? out : dress(out, first);
 	}
 }

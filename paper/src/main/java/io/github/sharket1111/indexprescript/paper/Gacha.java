@@ -292,6 +292,33 @@ final class Gacha {
 			return valueOf("SHARD_" + i);
 		}
 
+		/** Its picture in the server's item_icons folder (the original's, put there by the admin). */
+		String iconId() {
+			return switch (this) {
+				case TICKET -> "ticket";
+				case DECA -> "deca";
+				case DECA3 -> "deca3";
+				case TRAIN1 -> "train1";
+				case TRAIN2 -> "train2";
+				case EXP -> "train3";
+				case TRAIN4 -> "train4";
+				case THREAD -> "thread";
+				case SHARD -> "shard_universal";
+				case CRATE_RANDOM -> "crate_random";
+				case CRATE_NOMINABLE -> "crate_nominable";
+				case ENK_MODULE -> "enk_module";
+				case ENK_BOX -> "enk_box";
+				case TAKEOFF_UPTIE -> "takeoff_uptie";
+				default -> name().startsWith("BOOST") ? "boost" + name().substring(5) : "egoshard";
+			};
+		}
+
+		/** The item model: the picture from item_icons if the pack has it, else the plain one. */
+		NamespacedKey modelKey() {
+			NamespacedKey own = SkinPack.iconModel(iconId());
+			return own != null ? own : NamespacedKey.fromString(model);
+		}
+
 		/** Weapon EXP a training ticket gives (0 for anything else). */
 		int exp() {
 			return switch (this) {
@@ -310,7 +337,7 @@ final class Gacha {
 			meta.setMaxStackSize(99);
 			meta.itemName(Component.text(kind.name, kind.colour).decoration(TextDecoration.ITALIC, false));
 			meta.lore(List.of(Component.text(kind.lore, NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)));
-			meta.setItemModel(NamespacedKey.fromString(kind.model));
+			meta.setItemModel(kind.modelKey());
 			meta.setRarity(ItemRarity.UNCOMMON);
 			meta.getPersistentDataContainer().set(KIND, PersistentDataType.STRING, kind.name());
 		});
