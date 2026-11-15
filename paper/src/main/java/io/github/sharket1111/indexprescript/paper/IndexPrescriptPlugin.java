@@ -91,6 +91,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Bukkit.getScheduler().runTaskTimer(this, Projection::tick, 40L, 20L);
 		Bukkit.getScheduler().runTaskTimer(this, Season::save, 100L, 100L);
 		getServer().getPluginManager().registerEvents(new GachaWeapon(), this);
+		getServer().getPluginManager().registerEvents(new BedrockCommands(), this);
 		getServer().getPluginManager().registerEvents(new Upgrade(), this);
 		getServer().getPluginManager().registerEvents(new Armory(), this);
 		getServer().getPluginManager().registerEvents(new VanillaWeapon(), this);

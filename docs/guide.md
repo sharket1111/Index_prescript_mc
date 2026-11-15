@@ -37,6 +37,7 @@
 - **서버:** Paper 26.3, Java 25
 - **설치:** 두 jar 파일을 서버의 `plugins` 폴더에 넣고 서버를 다시 켜요.
 - **베드락 (Geyser/Floodgate):** 그대로 접속할 수 있어요. IndexPrescript가 베드락용 팩(3D 아이템, 아이콘, 음성)을 Geyser 폴더에 자동으로 넣어 줘요.
+  - 베드락 클라이언트는 명령어 목록에 없는 명령을 스스로 막아요. 한글 명령어 이름이 그 목록을 망가뜨릴 수 있어서, 베드락 플레이어에게는 한글 이름(/메뉴, /거울던전 등)을 목록에서 빼요. 영어 이름(/menu, /md, /trade)은 그대로 써요. 그래도 /tp 같은 명령이 안 되면 `plugins/Geyser-Spigot/config.yml`의 `command-suggestions`를 `false`로 바꾸고 재시작하세요(명령을 확인 없이 서버로 보내요).
 
 ### 자바 리소스팩
 
