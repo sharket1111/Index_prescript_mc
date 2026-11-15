@@ -376,7 +376,7 @@ final class MdGifts implements Listener {
 		}
 	}
 
-	/** A debuff from an enemy's skill on a member until the next turn: "fragile" (+10% damage taken each), "offense_down" (-10% dealt each). */
+	/** A debuff from an enemy's skill on a member until the next turn: "fragile" (+10% damage taken each), "offense_down" / "defense_down" (a level each). */
 	static void debuff(Player p, String kind, int amount) {
 		buff(p, kind, amount);
 	}
@@ -462,13 +462,14 @@ final class MdGifts implements Listener {
 				pct += e.get("pct").getAsDouble();
 			}
 		}
-		pct += 5 * (buffOf(p, "power") + buffOf(p, "damage")) + 2 * buffOf(p, "offense_level") + run.levels - 10 * buffOf(p, "offense_down");
+		// Offense Level Up/Down change the Offense Level itself (Upgrade.offenseLevel), not a damage percent.
+		pct += 5 * (buffOf(p, "power") + buffOf(p, "damage")) + run.levels;
 		pct += Math.min(20, CombatState.of(p).chargeCount(now));
 		pct += MdGrace.damageBonus(run);
 		MdBattle.Foe foe = MdBattle.foe(target);
 		double mult = 1 + pct / 100.0;
 		if (foe != null) {
-			mult *= foe.taken * (foe.debuffUntil > now ? 1 + 0.1 * foe.defenseDown : 1);
+			mult *= foe.taken * (foe.debuffUntil > now ? 1 + 0.1 * foe.fragile : 1);
 			// The original's resistances: by the attack's kind (Slash/Pierce/Blunt) and by its sin.
 			if (foe.data != null) {
 				mult *= Math.max(0, foe.resist(kind.name().toLowerCase(java.util.Locale.ROOT)));
@@ -479,7 +480,7 @@ final class MdGifts implements Listener {
 			}
 			// A Guard skill halves what it takes.
 			if (foe.guardUntil > now && !foe.evading) {
-				mult *= 0.5;
+				mult *= Upgrade.guardShare(target, p);
 			}
 			// A staggered enemy takes double damage.
 			if (CombatState.of(target).staggered(now)) {
@@ -499,11 +500,11 @@ final class MdGifts implements Listener {
 			}
 		}
 		pct += 10 * buffOf(p, "fragile");
-		double mult = (1 + pct / 100.0) * Math.max(0.3, 1 - 0.1 * buffOf(p, "protection") - 0.02 * buffOf(p, "defense_level") - 0.01 * run.levels)
+		double mult = (1 + pct / 100.0) * Math.max(0.3, 1 - 0.1 * buffOf(p, "protection") - 0.01 * run.levels)
 				* (1 - MdGrace.protection(run));
 		MdBattle.Foe foe = MdBattle.foe(attacker);
 		if (foe != null) {
-			mult *= foe.damage * (foe.debuffUntil > now ? Math.max(0.3, 1 - 0.1 * foe.offenseDown) : 1);
+			mult *= foe.damage;
 		}
 		return mult;
 	}

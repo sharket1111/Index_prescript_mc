@@ -122,12 +122,58 @@ final class Upgrade implements Listener {
 		return Math.max(0.1, 1 + d / (double) (Math.abs(d) + 25));
 	}
 
-	private static int levelOf(LivingEntity unit) {
+	private static int baseLevel(LivingEntity unit) {
 		if (unit instanceof Player p) {
 			return level(p.getInventory().getItemInMainHand());
 		}
 		MdBattle.Foe foe = MdBattle.foe(unit);
 		return foe != null && foe.level > 0 ? foe.level : NEUTRAL_LEVEL;
+	}
+
+	/**
+	 * The unit's Offense Level now: its level, raised by Offense Level Up and lowered by Offense Level Down
+	 * (each a level a stack, for the turn), and for a dungeon enemy its Mounting Trials.
+	 */
+	static int offenseLevel(LivingEntity unit) {
+		int level = baseLevel(unit);
+		if (unit instanceof Player p) {
+			return level + MdGifts.buffOf(p, "offense_level") - MdGifts.buffOf(p, "offense_down");
+		}
+		MdBattle.Foe foe = MdBattle.foe(unit);
+		if (foe != null) {
+			level += foe.offenseBonus - (foe.debuffUntil > CaduceusListener.now() ? foe.offenseDown : 0);
+		}
+		return level;
+	}
+
+	/** The unit's Defense Level now, as {@link #offenseLevel} with Defense Level Up and Down. */
+	static int defenseLevel(LivingEntity unit) {
+		int level = baseLevel(unit);
+		if (unit instanceof Player p) {
+			return level + MdGifts.buffOf(p, "defense_level") - MdGifts.buffOf(p, "defense_down");
+		}
+		MdBattle.Foe foe = MdBattle.foe(unit);
+		if (foe != null) {
+			level += foe.defenseBonus - (foe.debuffUntil > CaduceusListener.now() ? foe.defenseDown : 0);
+		}
+		return level;
+	}
+
+	/** The original's clash rule: +1 Clash Power for every 3 Offense Levels above the opponent's. */
+	static int clashLevelBonus(LivingEntity unit, LivingEntity opponent) {
+		if (opponent == null) {
+			return 0;
+		}
+		return Math.max(0, (offenseLevel(unit) - offenseLevel(opponent)) / 3);
+	}
+
+	/**
+	 * A Guard's share of the damage it lets through: half, 5% less for every 3 Defense Levels the guard has
+	 * above the attacker's Offense Level (5% more for every 3 below), between a quarter and three quarters.
+	 */
+	static double guardShare(LivingEntity guard, LivingEntity attacker) {
+		int d = (defenseLevel(guard) - offenseLevel(attacker)) / 3;
+		return Math.max(0.25, Math.min(0.75, 0.5 - 0.05 * d));
 	}
 
 	/** The info lines of a gacha weapon's item (the plugin's own keep their own lore; the menu shows theirs). */
@@ -193,7 +239,7 @@ final class Upgrade implements Listener {
 		if (!armed && !defended && !dungeon) {
 			return;
 		}
-		double scale = levelScale(levelOf(attacker), levelOf(victim));
+		double scale = levelScale(offenseLevel(attacker), defenseLevel(victim));
 		if (attacker instanceof Player p) {
 			scale *= uptieDamage(p);
 		}

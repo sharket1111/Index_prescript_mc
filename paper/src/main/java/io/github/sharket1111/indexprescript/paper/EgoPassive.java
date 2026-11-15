@@ -271,7 +271,7 @@ final class EgoPassive implements Listener {
 	static double dealt(Player p, LivingEntity target) {
 		double pct = sum(p, "damage_pct", "pct", target);
 		if (MdRun.of(p) == null) {
-			pct += 5 * (MdGifts.buffOf(p, "power") + MdGifts.buffOf(p, "damage")) + 2 * MdGifts.buffOf(p, "offense_level");
+			pct += 5 * (MdGifts.buffOf(p, "power") + MdGifts.buffOf(p, "damage"));
 		}
 		return Math.max(0, 1 + pct / 100.0);
 	}
@@ -280,7 +280,7 @@ final class EgoPassive implements Listener {
 		double pct = sum(p, "taken_pct", "pct", attacker);
 		double mult = Math.max(0, 1 + pct / 100.0);
 		if (MdRun.of(p) == null) {
-			mult *= Math.max(0.3, 1 - 0.1 * MdGifts.buffOf(p, "protection") - 0.02 * MdGifts.buffOf(p, "defense_level"));
+			mult *= Math.max(0.3, 1 - 0.1 * MdGifts.buffOf(p, "protection"));
 		}
 		return mult;
 	}

@@ -527,7 +527,8 @@ final class MdFoes {
 			case "burn", "bleed", "tremor", "rupture", "sinking" -> MdGifts.inflictKeyword(victim, status, potency * twice, count * twice);
 			case "bind" -> victim.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, CombatState.TURN_TICKS, Math.min(3, n - 1)));
 			case "paralyze" -> victim.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, CombatState.TURN_TICKS, Math.min(3, n - 1)));
-			case "fragile", "defense_level_down" -> MdGifts.debuff(victim, "fragile", status.equals("fragile") ? n : (n + 1) / 2);
+			case "fragile" -> MdGifts.debuff(victim, "fragile", n);
+			case "defense_level_down" -> MdGifts.debuff(victim, "defense_down", n);
 			case "offense_level_down" -> MdGifts.debuff(victim, "offense_down", n);
 			default -> {
 			}

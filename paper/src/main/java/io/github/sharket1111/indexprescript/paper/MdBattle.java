@@ -60,9 +60,14 @@ final class MdBattle {
 		/** Guarding or evading (a Guard/Evade skill) until this tick. */
 		long guardUntil;
 		boolean evading;
+		/** Offense / Defense Level Down (levels) and Fragile (+10% taken each) until debuffUntil. */
 		int offenseDown;
 		int defenseDown;
+		int fragile;
 		long debuffUntil;
+		/** Offense / Defense Level from Mounting Trials. */
+		int offenseBonus;
+		int defenseBonus;
 		/** For a part of an Abnormality: which part (its own HP, stagger and resistances). */
 		MdData.Part part;
 		/** The original's own statuses on it (Ember, Bloodfeast...), by name. */
@@ -248,10 +253,10 @@ final class MdBattle {
 		if (mob instanceof PiglinAbstract piglin) {
 			piglin.setImmuneToZombification(true);
 		}
-		double trialDamage = MdGifts.trialStat(run, "damage_dealt") + 2 * MdGifts.trialStat(run, "offense_level") + 5 * (MdGifts.trialStat(run, "clash_power")
+		double trialDamage = MdGifts.trialStat(run, "damage_dealt") + 5 * (MdGifts.trialStat(run, "clash_power")
 				+ MdGifts.trialStat(run, "final_power") + MdGifts.trialStat(run, "base_power") + MdGifts.trialStat(run, "plus_coin_power"));
 		double damage = kind.damage * (1 + 0.2 * (run.floor - 1)) * (run.floorHard ? 1.2 : 1.0) * (1 + trialDamage / 100.0) * (1 + 0.02 * run.trials.size());
-		double taken = (1 + MdGifts.trialStat(run, "damage_taken") / 100.0) / (1 + 0.03 * MdGifts.trialStat(run, "defense_level"));
+		double taken = 1 + MdGifts.trialStat(run, "damage_taken") / 100.0;
 		String keyword = run.theme.keyword();
 		if (keyword == null || keyword.equals("poise") || keyword.equals("charge")) {
 			keyword = List.of("burn", "bleed", "tremor", "rupture", "sinking").get(Math.floorMod(run.theme.id().hashCode() + mobs.size(), 5));
@@ -260,6 +265,8 @@ final class MdBattle {
 				kind == Kind.BOSS);
 		foe.data = data;
 		foe.level = level;
+		foe.offenseBonus = (int) Math.round(MdGifts.trialStat(run, "offense_level"));
+		foe.defenseBonus = (int) Math.round(MdGifts.trialStat(run, "defense_level"));
 		FOES.put(mob.getUniqueId(), foe);
 		MdLooks.dress(mob, foe, kind);
 		MdFoes.setup(this, mob, foe, kind, null);
@@ -295,6 +302,8 @@ final class MdBattle {
 				Foe pf = new Foe(this, enemy.name() + " · " + partData.name(), foe.damage, taken, keyword, foe.potency, foe.boss);
 				pf.data = data;
 				pf.level = level;
+				pf.offenseBonus = foe.offenseBonus;
+				pf.defenseBonus = foe.defenseBonus;
 				pf.part = partData;
 				FOES.put(part.getUniqueId(), pf);
 				MdLooks.dressPart(part, mob, partData.name(), partData.icon(), run.theme.color());
@@ -493,6 +502,12 @@ final class MdBattle {
 	static void debuff(LivingEntity target, String what, int amount) {
 		Foe foe = foe(target);
 		long now = CaduceusListener.now();
+		if (foe != null && foe.debuffUntil <= now) {
+			// The last turn's debuffs are over.
+			foe.offenseDown = 0;
+			foe.defenseDown = 0;
+			foe.fragile = 0;
+		}
 		switch (what) {
 			case "offense_level_down" -> {
 				if (foe != null) {
@@ -500,9 +515,15 @@ final class MdBattle {
 					foe.debuffUntil = now + CombatState.TURN_TICKS;
 				}
 			}
-			case "defense_level_down", "fragile" -> {
+			case "defense_level_down" -> {
 				if (foe != null) {
 					foe.defenseDown += amount;
+					foe.debuffUntil = now + CombatState.TURN_TICKS;
+				}
+			}
+			case "fragile" -> {
+				if (foe != null) {
+					foe.fragile += amount;
 					foe.debuffUntil = now + CombatState.TURN_TICKS;
 				}
 			}
