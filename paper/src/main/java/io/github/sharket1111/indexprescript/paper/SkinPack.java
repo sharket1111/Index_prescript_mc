@@ -172,7 +172,7 @@ final class SkinPack {
 	/** How many gift and item pictures the pack serves (for admins). */
 	static String counts() {
 		SkinPack pack = instance;
-		return pack == null ? "스킨 팩 없음" : "기프트 그림 " + pack.servedGifts.size() + "개 · 아이템 그림 " + pack.servedIcons.size() + "개";
+		return pack == null ? "그림 팩이 꺼져 있어요: config.yml의 resource-pack.host-address를 넣고 host-port를 열어야 기프트·아이템 그림이 보여요" : "기프트 그림 " + pack.servedGifts.size() + "개 · 아이템 그림 " + pack.servedIcons.size() + "개";
 	}
 
 	void loadIcons() {

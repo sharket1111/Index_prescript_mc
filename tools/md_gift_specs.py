@@ -1,7 +1,8 @@
 """What each E.G.O Gift does here, written after the original's text (see
-md_gift_dsl.py for the language). Conditions on the team's make-up (Resonance,
-"5 or more Identities with...", deployment slots, factions) are dropped and the
-effect is kept. The original's E.G.O resources become Sanity, Speed becomes
+md_gift_dsl.py for the language). Only conditions on the team's make-up (deployment
+slots "#1, #2 Deployed", "5 or more Identities with...", Resonance, factions) are
+dropped; conditions on the unit or the enemy (Potency/Count thresholds, HP,
+chances) are kept. The original's E.G.O resources become Sanity, Speed becomes
 Haste, Skill/Coin/Final Power become clash power, a Sin Affinity is the weapon's
 sin. Gifts not listed keep the parser's reading of their text."""
 
@@ -52,7 +53,7 @@ SPECS = {
     "employee_card": "turn_start: gain charge 0 3/3/4 all",
     "oscillating_bracelet": "hit: inflict tremor 1/2/2 0; hit: inflict tremor 1/1/2 0 @sin:wrath",
     "glimpse_of_flames": "turn_end: fixed 3/4/5 all @has:burn; turn_end: debuff defense_down 3/5/8 all @has:burn",
-    "cigarette_holder": "turn_start: buff power 1; turn_start: buff power 1 @hp>50",
+    "cigarette_holder": "turn_start: buff power 1 @kw>=poise:1; turn_start: buff power 1 @cnt>=poise:5",
     "barbed_lasso": "turn_end: inflict rupture 3/4/5 0 all; combat_start: inflict rupture 3/4/5 3/3/4 random",
     "rusted_cutting_knife": "hit: inflict bleed 1/2/3 1 @has:bleed @notstaggered; hit: inflict bleed 2/1/0 0/0/1 @has:bleed @sin:lust",
     "thorny_path": "hit: inflict sinking 3 2 @has:sinking !turn 1; combat_start: inflict sinking 2 3 all",
@@ -63,7 +64,7 @@ SPECS = {
     "melted_spring": "turn_start: debuff offense_down 3 all @has:sinking; turn_start: debuff defense_down 3 all @has:sinking",
     "downpour": "turn_start: inflict tremor 4/7/9 2/3/3 all; turn_end: burst all",
     "four_leaf_clover": "crit: gain poise 5 2 !turn 1; crit: gain poise 2 1 @sin:gluttony !turn 1",
-    "nightvision_goggles": "combat_start: buff offense 5",
+    "nightvision_goggles": "combat_start: buff offense 5 @kw>=charge:15",
     "disk_fragment": "turn_start: sp 3",
     "midwinter_nightmare": "hit: inflict sinking 3 0; hit: inflict sinking 2 0 @sin:gluttony",
     "thrill": "turn_start: inflict rupture 3/4/6 3 all; turn_end: fixed 2/3/4 all @has:rupture",
@@ -200,7 +201,7 @@ SPECS = {
     "ragged_bamboo_hat_md": "always: dmg 50 @kind:slash; always: crit 1.5",
     "old_dopo_robe_md": "always: dmg 50 @kind:slash; always: clash 1",
     "decamillennial_stewpot": "always: clash 1 @has:burn",
-    "decamillennial_hearthflame": "turn_end: inflict burn 3 0 all @has:burn",
+    "decamillennial_hearthflame": "turn_end: inflict burn 3 0 all @cnt>=burn:3",
     "secret_cookbook": "always: clash 1 @has:burn; clash_win: inflict burn 2 1 @has:burn",
     "purloined_flame": "hit: inflict burn 3 0 @kw>=burn:3 !turn 2; always: dmg 15 @has:burn",
     "millarca": "always: clash 1 @has:bleed",
@@ -228,7 +229,7 @@ SPECS = {
     "miniature_telepole": "kill: gain charge 0 2",
     "t_1b_octagonal_bolt": "turn_start: buff dmgup 1 all; turn_end: buff protect 1 all",
     "insulator": "kill: gain charge 0 3; turn_start: buff protect 2",
-    "t_5_perpetual_motion_machine": "turn_start: gain charge 0 5; turn_start: buff haste 2; turn_start: buff power 1; turn_start: buff dmgup 2",
+    "t_5_perpetual_motion_machine": "turn_start: gain charge 0 5; turn_start: buff haste 2 @kw>=charge:5; turn_start: buff power 1 @kw>=charge:5; turn_start: buff dmgup 2 @kw>=charge:5",
     "rebate_token": "always: shopdiscount 10",
     "new_release_pamphlet": "always: shopdiscount 10",
     "special_catalogue": "reward: cost 15",

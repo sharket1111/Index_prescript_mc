@@ -6,6 +6,8 @@ resource-pack:
   enabled: true
   # External download URL of index_prescript_pack.zip. Leave empty to host the
   # bundled pack from this server with the built-in web server below.
+  # Even with a url, set host-address and open host-port: the built-in server sends a second
+  # pack with the E.G.O gift / item pictures (gift_icons, item_icons) and enemy skins.
   url: ""
   # SHA-1 of the pack at "url" (optional, lets clients cache it).
   sha1: ""
@@ -14,7 +16,7 @@ resource-pack:
   host-port: 8164
   # Put each player's own skin on the body, arms and legs of the studio rig (skill motions):
   # their skin is fetched from Mojang's texture server when they join and sent in a small
-  # second pack from the built-in web server. Needs the built-in server (url empty).
+  # second pack from the built-in web server (the same pack as the gift and item pictures).
   player-skins: true
   # Address players use to reach this server, e.g. "play.example.com" or an IP.
   # Required for the built-in web server.

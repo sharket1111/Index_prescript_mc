@@ -225,7 +225,7 @@ final class MdGifts implements Listener {
 
 	private static boolean selfCondition(String c) {
 		return c.startsWith("kind:") || c.startsWith("sin:") || c.startsWith("hp<") || c.startsWith("hp>")
-				|| c.startsWith("kw>=poise") || c.startsWith("kw>=charge");
+				|| c.startsWith("kw>=poise") || c.startsWith("kw>=charge") || c.startsWith("cnt>=poise") || c.startsWith("cnt>=charge");
 	}
 
 	private static boolean selfConditions(JsonObject e) {
@@ -252,6 +252,12 @@ final class MdGifts implements Listener {
 				// Poise and Charge are the member's own.
 				String[] kv = c.substring(4).split(":");
 				ok = p != null && potency(p, kv[0], now) >= Integer.parseInt(kv[1]);
+			} else if (c.startsWith("cnt>=poise") || c.startsWith("cnt>=charge")) {
+				String[] kv = c.substring(5).split(":");
+				ok = p != null && count(p, kv[0], now) >= Integer.parseInt(kv[1]);
+			} else if (c.startsWith("cnt>=")) {
+				String[] kv = c.substring(5).split(":");
+				ok = enemy != null && count(enemy, kv[0], now) >= Integer.parseInt(kv[1]);
 			} else if (c.startsWith("has:") || c.startsWith("target_has:")) {
 				ok = enemy != null && has(enemy, c.substring(c.indexOf(':') + 1), now);
 			} else if (c.equals("staggered") || c.equals("target_staggered")) {
@@ -297,6 +303,21 @@ final class MdGifts implements Listener {
 			case "rupture" -> s.rupturePotency(now);
 			case "sinking" -> s.sinkingPotency(now);
 			case "poise" -> s.poisePotency(now);
+			case "charge" -> s.chargeCount(now);
+			default -> 0;
+		};
+	}
+
+	/** A keyword's Count (Sinking has none here: its Potency stands in). */
+	private static int count(LivingEntity t, String kw, long now) {
+		CombatState s = CombatState.of(t);
+		return switch (kw) {
+			case "burn" -> s.burnCount(now);
+			case "bleed" -> s.bleedCount(now);
+			case "tremor" -> s.tremorCount(now);
+			case "rupture" -> s.ruptureCount(now);
+			case "sinking" -> s.sinkingPotency(now);
+			case "poise" -> s.poiseCount(now);
 			case "charge" -> s.chargeCount(now);
 			default -> 0;
 		};

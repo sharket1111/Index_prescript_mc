@@ -28,7 +28,8 @@ Acts:
   lifesteal PCT              heal PCT% of the damage dealt
   shopdiscount PCT           shop prices -PCT%
   resource SIN N             E.G.O resources (SIN: a sin, lowest or random)
-Conditions: has:KW notstaggered staggered kind:K sin:S hp<N hp>N thp<N thp>N kw>=KW:N chance:N
+Conditions: has:KW notstaggered staggered kind:K sin:S hp<N hp>N thp<N thp>N kw>=KW:N cnt>=KW:N chance:N
+  (kw>= is Potency, cnt>= is Count; Poise and Charge are the member's own, the rest the enemy's)
 Limits: !turn N  !combat N
 """
 import re
@@ -103,10 +104,16 @@ def cond_ko(conds, enemy_to=None):
             enemy.append(("체력 %s%% 이하인" % c[4:], "대상의 체력이 %s%% 이하면" % c[4:]))
         elif c.startswith("thp>"):
             enemy.append(("체력 %s%% 이상인" % c[4:], "대상의 체력이 %s%% 이상이면" % c[4:]))
+        elif c.startswith("cnt>="):
+            kw, n = c[5:].split(":")
+            if kw in ("poise", "charge"):
+                parts.append("자신의 %s 횟수가 %s 이상이면" % (KW_KO[kw], n))
+            else:
+                enemy.append(("%s 횟수 %s 이상인" % (KW_KO[kw], n), "대상의 %s 횟수가 %s 이상이면" % (KW_KO[kw], n)))
         elif c.startswith("kw>="):
             kw, n = c[4:].split(":")
             if kw in ("poise", "charge"):
-                parts.append("자신의 %s이 %s 이상이면" % (KW_KO[kw] if kw == "poise" else "충전 횟수", n) if n != "1" else "자신에게 %s이 있으면" % KW_KO[kw])
+                parts.append(("자신의 호흡 위력이 %s 이상이면" if kw == "poise" else "자신의 충전 횟수가 %s 이상이면") % n if n != "1" else "자신에게 %s이 있으면" % KW_KO[kw])
             else:
                 enemy.append(("%s 위력 %s 이상인" % (KW_KO[kw], n), "대상의 %s 위력이 %s 이상이면" % (KW_KO[kw], n)) if n != "1"
                              else ("%s이 있는" % KW_KO[kw], "대상에게 %s이 있으면" % KW_KO[kw]))

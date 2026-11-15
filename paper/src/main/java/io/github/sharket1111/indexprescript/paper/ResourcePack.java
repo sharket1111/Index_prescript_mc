@@ -44,8 +44,10 @@ final class ResourcePack implements Listener {
 	private String sha1 = "";
 	private boolean required;
 	private HttpServer server;
-	/** Players' own skins for the rig (only with the built-in web server). */
+	/** The second pack: gift and item pictures, enemy skins, players' own skins (built-in web server only). */
 	private SkinPack skins;
+	/** Whether players' own skins go on the rig (the second pack is sent either way, for the pictures). */
+	private boolean playerSkins = true;
 
 	ResourcePack(IndexPrescriptPlugin plugin) {
 		this.plugin = plugin;
@@ -58,16 +60,21 @@ final class ResourcePack implements Listener {
 		}
 		required = config.getBoolean("required", false);
 		String url = config.getString("url", "").trim();
-		if (!url.isEmpty()) {
+		boolean external = !url.isEmpty();
+		if (external) {
 			uri = URI.create(url);
 			sha1 = config.getString("sha1", "").trim();
-			return;
 		}
+		playerSkins = config.getBoolean("player-skins", true);
 
+		// The built-in web server serves the second pack (gift and item pictures, enemy and player skins) and,
+		// without "url", the main pack too.
 		String address = config.getString("host-address", "").trim();
 		int port = config.getInt("host-port", 8164);
 		if (address.isEmpty()) {
-			plugin.getLogger().warning("resource-pack.host-address is empty; set it (or resource-pack.url) so Java players get the pack.");
+			plugin.getLogger().warning(external
+					? "resource-pack.host-address is empty: E.G.O gift, item and enemy pictures (the second pack) are not sent. Set it and open host-port."
+					: "resource-pack.host-address is empty; set it (or resource-pack.url) so Java players get the pack.");
 			return;
 		}
 		try (InputStream in = getClass().getResourceAsStream(BUNDLED)) {
@@ -76,24 +83,27 @@ final class ResourcePack implements Listener {
 				return;
 			}
 			byte[] pack = in.readAllBytes();
-			sha1 = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-1").digest(pack));
 			server = HttpServer.create(new InetSocketAddress(port), 0);
-			server.createContext(BUNDLED, exchange -> {
-				exchange.getResponseHeaders().add("Content-Type", "application/zip");
-				exchange.sendResponseHeaders(200, pack.length);
-				try (OutputStream out = exchange.getResponseBody()) {
-					out.write(pack);
-				}
-			});
+			if (!external) {
+				sha1 = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-1").digest(pack));
+				server.createContext(BUNDLED, exchange -> {
+					exchange.getResponseHeaders().add("Content-Type", "application/zip");
+					exchange.sendResponseHeaders(200, pack.length);
+					try (OutputStream out = exchange.getResponseBody()) {
+						out.write(pack);
+					}
+				});
+			}
 			server.setExecutor(Executors.newFixedThreadPool(2));
 			server.start();
-			uri = URI.create("http://" + address + ":" + port + BUNDLED);
-			plugin.getLogger().info("Serving the resource pack at " + uri);
-			if (config.getBoolean("player-skins", true)) {
-				byte[] meta = packMeta(pack);
-				if (meta != null) {
-					skins = SkinPack.start(plugin, server, "http://" + address + ":" + port, meta);
-				}
+			if (!external) {
+				uri = URI.create("http://" + address + ":" + port + BUNDLED);
+				plugin.getLogger().info("Serving the resource pack at " + uri);
+			}
+			byte[] meta = packMeta(pack);
+			if (meta != null) {
+				skins = SkinPack.start(plugin, server, "http://" + address + ":" + port, meta);
+				plugin.getLogger().info("Serving the picture pack (gifts, items, skins) at http://" + address + ":" + port);
 			}
 		} catch (IOException | NoSuchAlgorithmException e) {
 			plugin.getLogger().warning("Could not host the resource pack: " + e.getMessage());
@@ -133,7 +143,7 @@ final class ResourcePack implements Listener {
 	@EventHandler
 	public void onJoin(PlayerJoinEvent event) {
 		Player player = event.getPlayer();
-		if (skins == null || uri == null || player.getUniqueId().toString().startsWith(FLOODGATE_PREFIX)) {
+		if (skins == null || uri == null || !playerSkins || player.getUniqueId().toString().startsWith(FLOODGATE_PREFIX)) {
 			send(player);
 			return;
 		}
