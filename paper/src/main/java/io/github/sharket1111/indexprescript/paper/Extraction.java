@@ -67,7 +67,7 @@ final class Extraction {
 				"E.G.O " + Gacha.EGO_RATE + "% (가지지 않은 E.G.O만)",
 				Gacha.stars(3) + " " + Gacha.THREE_RATE + "% · 이 서버의 무기: 카두케우스, 레바테인, 르누아르의 망치, 미미크리, 검은 신",
 				Gacha.stars(2) + " " + Gacha.TWO_RATE + "% · 원작 2성 인격의 무기 " + Gacha.weapons().size() + "종",
-				Gacha.stars(1) + " 83% · 경험치 티켓",
+				Gacha.stars(1) + " 80.8% · 경험치 티켓",
 				"10회 추출의 10번째는 " + Gacha.stars(2) + " 이상 확정",
 				"이미 가진 무기가 나오면 끈 (" + Gacha.stars(2) + " " + Gacha.DUP_TWO_THREADS + "개, " + Gacha.stars(3) + " " + Gacha.DUP_THREE_THREADS + "개)"),
 				(Runnable) null);
@@ -83,9 +83,9 @@ final class Extraction {
 				"추출권 1장 또는 광기 " + Gacha.SINGLE_LUNACY, "(추출권을 먼저 써요)"), () -> start(p, 1));
 		gui.set(25, MdGui.item(Material.GOLD_BLOCK, "추출 10회", Gacha.THREE_COLOUR, "추출권 10장 또는 광기 " + Gacha.TEN_LUNACY,
 				"10번째는 " + Gacha.stars(2) + " 이상 확정"), () -> start(p, 10));
-		gui.set(40, MdGui.item(Material.WRITABLE_BOOK, "확률 정보", NamedTextColor.WHITE, "E.G.O 1.3% · " + Gacha.stars(3) + " 2.9% · "
-				+ Gacha.stars(2) + " 12.8% · " + Gacha.stars(1) + " 83%", "10번째: E.G.O 1.3% · " + Gacha.stars(3) + " 2.9% · " + Gacha.stars(2)
-				+ " 95.8%", "E.G.O를 모두 가지면: " + Gacha.stars(3) + " 3% · " + Gacha.stars(2) + " 13% · " + Gacha.stars(1) + " 84%"), (Runnable) null);
+		gui.set(40, MdGui.item(Material.WRITABLE_BOOK, "확률 정보", NamedTextColor.WHITE, "E.G.O 3.5% · " + Gacha.stars(3) + " 2.9% · "
+				+ Gacha.stars(2) + " 12.8% · " + Gacha.stars(1) + " 80.8%", "10번째: E.G.O 3.5% · " + Gacha.stars(3) + " 2.9% · " + Gacha.stars(2)
+				+ " 93.6%", "E.G.O를 모두 가지면: " + Gacha.stars(3) + " 3% · " + Gacha.stars(2) + " 13% · " + Gacha.stars(1) + " 84%"), (Runnable) null);
 		gui.set(49, MdGui.item(Material.ARROW, "뒤로", NamedTextColor.WHITE), () -> Ego.Menu.open(p));
 		gui.fill().open(p);
 	}

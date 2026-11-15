@@ -30,11 +30,11 @@ import net.kyori.adventure.text.format.TextDecoration;
 
 /**
  * Extraction, after the original: 130 Lunacy or an Extraction Ticket a pull,
- * 1300 or 10 tickets for ten (the tenth at least two-star). Rates: E.G.O 1.3%
+ * 1300 or 10 tickets for ten (the tenth at least two-star). Rates: E.G.O 3.5% (above the original's 1.3%)
  * (only ones not owned yet; when none are left the rest share it), three-star
  * 2.9% (the plugin's own weapons: Caduceus, Laevatein, Renoir's hammer,
- * Mimicry, the Black God), two-star 12.8% (the original two-star Identities'
- * weapons, gacha/weapons.json), one-star 83% (EXP tickets, as the original's
+ * Mimicry), two-star 12.8% (the original two-star Identities'
+ * weapons, gacha/weapons.json), one-star 80.8% (EXP tickets, as the original's
  * base Identities are owned already). Every pull adds a point of Ideality; 200
  * buy any three-star. A duplicate weapon becomes Threads.
  *
@@ -45,7 +45,7 @@ final class Gacha {
 	static final int SINGLE_LUNACY = 130;
 	static final int TEN_LUNACY = 1300;
 	static final int IDEALITY_EXCHANGE = 200;
-	static final double EGO_RATE = 1.3;
+	static final double EGO_RATE = 3.5;
 	static final double THREE_RATE = 2.9;
 	static final double TWO_RATE = 12.8;
 	static final int DUP_TWO_THREADS = 20;
