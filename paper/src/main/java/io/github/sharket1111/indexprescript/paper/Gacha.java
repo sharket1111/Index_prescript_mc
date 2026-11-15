@@ -399,12 +399,17 @@ final class Gacha {
 
 	// --- the two-star weapon item ------------------------------------------------------------------
 
+	/** The weapon's own 3D model in the main resource pack (tools/weapon2_models.py). */
+	static NamespacedKey weaponModel(String id) {
+		return new NamespacedKey("index_prescript", "weapon2/" + id);
+	}
+
 	static ItemStack weaponItem(Weapon w) {
 		ItemStack stack = ItemStack.of(Material.PAPER);
 		stack.editMeta(meta -> {
 			meta.setMaxStackSize(1);
 			meta.itemName(Component.text(w.name(), TWO_COLOUR).decoration(TextDecoration.ITALIC, false));
-			meta.setItemModel(NamespacedKey.fromString(w.model()));
+			meta.setItemModel(weaponModel(w.id()));
 			meta.setRarity(ItemRarity.RARE);
 			meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
 			meta.getPersistentDataContainer().set(WEAPON, PersistentDataType.STRING, w.id());

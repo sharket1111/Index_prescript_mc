@@ -59,7 +59,7 @@ final class GachaWeapon implements Listener {
 						lore), null));
 				continue;
 			}
-			out.add(new SkillMenu.Entry(SkillMenu.icon(w.model(), 1, SkillMenu.line(name, colour), lore), () -> {
+			out.add(new SkillMenu.Entry(SkillMenu.icon(Gacha.weaponModel(w.id()).asString(), 1, SkillMenu.line(name, colour), lore), () -> {
 				if (Ego.EgoSkill.cast(p, s, s.name(), colour, 0)) {
 					READY.computeIfAbsent(p.getUniqueId(), k -> new long[3])[slot] = CaduceusListener.now() + WAIT[slot];
 				}

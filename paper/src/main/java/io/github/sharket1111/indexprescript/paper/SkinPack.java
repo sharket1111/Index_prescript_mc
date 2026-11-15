@@ -158,15 +158,28 @@ final class SkinPack {
 		return pack == null ? null : pack.icons.get(id);
 	}
 
+	/** Every PNG in {@code dir} and its subfolders (a zip unpacked into the folder often leaves one more folder level). */
+	private static java.util.List<File> pngs(File dir) {
+		java.util.List<File> out = new java.util.ArrayList<>();
+		try (java.util.stream.Stream<java.nio.file.Path> walk = Files.walk(dir.toPath(), 3)) {
+			walk.filter(x -> x.getFileName().toString().toLowerCase(java.util.Locale.ROOT).endsWith(".png")).forEach(x -> out.add(x.toFile()));
+		} catch (IOException e) {
+			return out;
+		}
+		return out;
+	}
+
+	/** How many gift and item pictures the pack serves (for admins). */
+	static String counts() {
+		SkinPack pack = instance;
+		return pack == null ? "스킨 팩 없음" : "기프트 그림 " + pack.servedGifts.size() + "개 · 아이템 그림 " + pack.servedIcons.size() + "개";
+	}
+
 	void loadIcons() {
 		icons.clear();
 		File dir = new File(plugin.getDataFolder(), "item_icons");
 		dir.mkdirs();
-		File[] files = dir.listFiles((d, n) -> n.toLowerCase(java.util.Locale.ROOT).endsWith(".png"));
-		if (files == null) {
-			return;
-		}
-		for (File f : files) {
+		for (File f : pngs(dir)) {
 			try {
 				icons.put(slug(f.getName().substring(0, f.getName().length() - 4)), Files.readAllBytes(f.toPath()));
 			} catch (IOException e) {
@@ -185,11 +198,7 @@ final class SkinPack {
 		gifts.clear();
 		File giftDir = new File(plugin.getDataFolder(), "gift_icons");
 		giftDir.mkdirs();
-		File[] files = giftDir.listFiles((d, n) -> n.toLowerCase(java.util.Locale.ROOT).endsWith(".png"));
-		if (files == null) {
-			return;
-		}
-		for (File f : files) {
+		for (File f : pngs(giftDir)) {
 			String id = slug(f.getName().substring(0, f.getName().length() - 4));
 			try {
 				gifts.put(id, Files.readAllBytes(f.toPath()));
@@ -433,6 +442,7 @@ final class SkinPack {
 		served = java.util.Set.copyOf(now.keySet());
 		servedGifts = java.util.Set.copyOf(gifts.keySet());
 		servedIcons = java.util.Set.copyOf(icons.keySet());
+		plugin.getLogger().info("Skin pack: " + gifts.size() + " gift pictures, " + icons.size() + " item pictures");
 	}
 
 	private static void put(ZipOutputStream out, String name, byte[] data) throws IOException {

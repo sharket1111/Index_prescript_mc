@@ -221,6 +221,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		}
 		if (args.length >= 1 && args[0].equalsIgnoreCase("season")) {
 			// /ip season: what the Season data loaded and whether the Shop can take G.
+			sender.sendMessage(Component.text(SkinPack.counts(), NamedTextColor.GOLD));
 			sender.sendMessage(Component.text("림버스 패스 " + Pass.maxLevel() + "레벨 · 관리자 레벨 " + Manager.maxLevel() + "단계 · 상점 결제 "
 					+ (Gold.available() ? "가능 (PlayerTrade)" : "불가 (PlayerTrade 없음)"), NamedTextColor.GOLD));
 			return true;
