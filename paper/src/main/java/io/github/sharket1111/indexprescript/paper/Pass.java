@@ -117,13 +117,15 @@ final class Pass {
 			return;
 		}
 		if (pack && Season.getBool(id, key("package"))) {
-			Hud.message(p, Component.text("이번 시즌 패키지는 이미 샀어요", NamedTextColor.GRAY));
+			p.sendMessage(Component.text("[상점] 이번 시즌 패키지는 이미 샀어요", NamedTextColor.GRAY));
 			return;
 		}
 		int price = pack ? (premium(id) ? data.get("package_price_owned").getAsInt() : data.get("package_price").getAsInt())
 				: data.get("pass_price").getAsInt();
 		if (!Gacha.spendPaidLunacy(p, price)) {
-			Hud.message(p, Component.text("유료 광기가 모자라요 (" + price + ", /메뉴 → 상점)", NamedTextColor.RED));
+			p.sendMessage(Component.text("[상점] 유료 광기가 모자라요: 가격 " + price + " · 가진 유료 광기 " + Gacha.paidLunacy(p)
+					+ " (상점 → 광기 탭에서 사요)", NamedTextColor.RED));
+			p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.8F, 1.0F);
 			return;
 		}
 		unlock(p);

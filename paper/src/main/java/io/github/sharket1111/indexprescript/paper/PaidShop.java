@@ -142,7 +142,7 @@ final class PaidShop {
 		UUID id = p.getUniqueId();
 		String pid = pr.get("id").getAsString();
 		if (soldOut(id, pr)) {
-			Hud.message(p, Component.text("이미 샀어요", NamedTextColor.GRAY));
+			fail(p, "이미 산 상품이에요 (초기화 뒤에 다시 살 수 있어요)");
 			return;
 		}
 		if (pid.equals("pass")) {
@@ -155,16 +155,16 @@ final class PaidShop {
 		}
 		if (pr.get("won").isJsonNull()) {
 			if (!Gacha.spendPaidLunacy(p, pr.get("paid_lunacy").getAsInt())) {
-				Hud.message(p, Component.text("유료 광기가 모자라요", NamedTextColor.RED));
+				fail(p, "유료 광기가 모자라요: 가격 " + pr.get("paid_lunacy").getAsInt() + " · 가진 유료 광기 " + Gacha.paidLunacy(p));
 				return;
 			}
 		} else {
 			if (!Gold.available()) {
-				Hud.message(p, Component.text("거래 플러그인이 없어서 살 수 없어요", NamedTextColor.RED));
+				fail(p, "결제할 수 없어요: 거래 플러그인(PlayerTrade)을 찾지 못했어요. 관리자에게 PlayerTrade.jar 업데이트를 부탁하세요.");
 				return;
 			}
 			if (!Gold.take(id, priceG(pr))) {
-				Hud.message(p, Component.text("돈이 모자라요 (" + Gold.format(priceG(pr)) + ")", NamedTextColor.RED));
+				fail(p, "돈이 모자라요: 가격 " + Gold.format(priceG(pr)) + " · 가진 돈 " + Gold.format(Gold.balance(id)));
 				return;
 			}
 		}
@@ -173,6 +173,7 @@ final class PaidShop {
 			Season.addPeriodic(id, "shop_" + pid, period, 1);
 		}
 		Rewards.grant(p, pr.getAsJsonArray("items"), pr.get("name").getAsString());
+		p.sendMessage(Component.text("[상점] " + pr.get("name").getAsString() + "을(를) 샀어요", NamedTextColor.GOLD));
 		String note = note(pr);
 		if (note.startsWith("first:")) {
 			int bonus = Integer.parseInt(note.substring(6));
@@ -195,6 +196,12 @@ final class PaidShop {
 			dailySupply(p);
 		}
 		p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.7F, 1.5F);
+	}
+
+	/** Why a purchase failed, in chat (the action bar is hidden behind the open menu). */
+	private static void fail(Player p, String why) {
+		p.sendMessage(Component.text("[상점] " + why, NamedTextColor.RED));
+		p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.8F, 1.0F);
 	}
 
 	private static LocalDate supplyUntil(UUID id, String pid) {

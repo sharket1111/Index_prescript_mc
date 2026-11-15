@@ -19,22 +19,46 @@ final class Gold {
 	private Gold() {
 	}
 
+	/**
+	 * Finds the trade plugin's money: its public TradeEconomy, or, on a PlayerTrade built before that existed,
+	 * its Money class directly. A failed lookup is tried again on the next purchase.
+	 */
 	private static boolean ready() {
-		if (!tried) {
-			tried = true;
-			Plugin trade = Bukkit.getPluginManager().getPlugin("PlayerTrade");
-			if (trade != null) {
-				try {
-					Class<?> c = Class.forName("io.github.sharket1111.trade.TradeEconomy", true, trade.getClass().getClassLoader());
-					balance = c.getMethod("balance", UUID.class);
-					take = c.getMethod("take", UUID.class, long.class);
-					format = c.getMethod("format", long.class);
-				} catch (ReflectiveOperationException e) {
-					IndexPrescriptPlugin.instance().getLogger().warning("PlayerTrade has no TradeEconomy; the Shop cannot take payment");
-				}
+		if (balance != null) {
+			return true;
+		}
+		Plugin trade = Bukkit.getPluginManager().getPlugin("PlayerTrade");
+		if (trade == null || !trade.isEnabled()) {
+			if (!tried) {
+				tried = true;
+				IndexPrescriptPlugin.instance().getLogger().warning("PlayerTrade is not running; the Shop cannot take payment");
+			}
+			return false;
+		}
+		ClassLoader loader = trade.getClass().getClassLoader();
+		for (String name : new String[] {"io.github.sharket1111.trade.TradeEconomy", "io.github.sharket1111.trade.Money"}) {
+			try {
+				Class<?> c = Class.forName(name, true, loader);
+				Method b = c.getDeclaredMethod("balance", UUID.class);
+				Method t = c.getDeclaredMethod("take", UUID.class, long.class);
+				Method f = c.getDeclaredMethod("format", long.class);
+				b.setAccessible(true);
+				t.setAccessible(true);
+				f.setAccessible(true);
+				take = t;
+				format = f;
+				balance = b;
+				IndexPrescriptPlugin.instance().getLogger().info("Shop payment through PlayerTrade (" + c.getSimpleName() + ")");
+				return true;
+			} catch (ReflectiveOperationException | RuntimeException e) {
+				// try the next
 			}
 		}
-		return balance != null;
+		if (!tried) {
+			tried = true;
+			IndexPrescriptPlugin.instance().getLogger().warning("PlayerTrade has no money the Shop can use; update PlayerTrade.jar");
+		}
+		return false;
 	}
 
 	static boolean available() {
