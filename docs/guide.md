@@ -1105,7 +1105,7 @@
   - 원작에만 있는 것은 가까운 것으로 바꿨어요: 속도 → 신속, 코인·최종 위력 → 합 위력, E.G.O 자원 → 정신력, 속성 스킬 → 손에 든 무기의 죄종.
   - 한 기프트의 "턴마다 N회", "전투마다 N회" 제한도 그대로예요.
 - **얻는 곳:** 원작의 일반 풀에 있는 215개만 상점·보상·기프트 탐색에 나와요. 나머지는 그 테마팩, 이벤트, 숨은 보스, 합성으로만 얻어요.
-- **기프트 그림:** (config.yml의 `resource-pack.host-address`를 넣고 `host-port`를 열어야 보여요. `resource-pack.url`로 외부 팩을 쓸 때도 마찬가지예요.) 관리자가 `plugins/IndexPrescript/gift_icons/` 폴더에 `<기프트 id>.png`(예: `glimpse_of_flames.png`)를 넣으면 아이템이 그 그림으로 보여요. 넣은 뒤 `/md 적스킨`을 쓰고 다시 접속하면 돼요. 원작 그림은 플러그인에 들어 있지 않아요. 서버가 리소스팩을 만들 때 그림의 **오른쪽 아래에 등급(I~IV, EX)**, **오른쪽 위에 키워드 아이콘**(화상·출혈·진동·파열·침잠·호흡·충전·참격·관통·타격)을 원작 아이콘처럼 덧그려요. 폴더의 원본 그림은 바뀌지 않아요.
+- **기프트 그림:** (압축을 풀지 않은 zip을 폴더에 그대로 넣어도 읽어요. `plugins/IndexPrescript/gift_icons.zip`처럼 폴더 옆에 둬도 돼요.) (config.yml의 `resource-pack.host-address`를 넣고 `host-port`를 열어야 보여요. `resource-pack.url`로 외부 팩을 쓸 때도 마찬가지예요.) 관리자가 `plugins/IndexPrescript/gift_icons/` 폴더에 `<기프트 id>.png`(예: `glimpse_of_flames.png`)를 넣으면 아이템이 그 그림으로 보여요. 넣은 뒤 `/md 적스킨`을 쓰고 다시 접속하면 돼요. 원작 그림은 플러그인에 들어 있지 않아요. 서버가 리소스팩을 만들 때 그림의 **오른쪽 아래에 등급(I~IV, EX)**, **오른쪽 위에 키워드 아이콘**(화상·출혈·진동·파열·침잠·호흡·충전·참격·관통·타격)을 원작 아이콘처럼 덧그려요. 폴더의 원본 그림은 바뀌지 않아요.
 - **아이템 그림:** `plugins/IndexPrescript/item_icons/` 폴더에 그림을 넣으면 아이템과 메뉴 아이콘이 그 그림으로 보여요. 파일 이름(확장자 .png):
   - `lunacy`(광기), `thread`(끈), `ticket`(추출권), `deca`(10회 추출권), `deca3`(3성 확정 10회 추출권)
   - `train1`~`train4`(인격 경험치 티켓 I~IV), `boost1`~`boost6`(레벨 부스트 티켓 I~VI), `takeoff_uptie`(테이크오프 모듈)

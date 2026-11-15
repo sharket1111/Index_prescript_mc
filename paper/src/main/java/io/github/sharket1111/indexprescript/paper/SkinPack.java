@@ -158,34 +158,66 @@ final class SkinPack {
 		return pack == null ? null : pack.icons.get(id);
 	}
 
-	/** Every PNG in {@code dir} and its subfolders (a zip unpacked into the folder often leaves one more folder level). */
-	private static java.util.List<File> pngs(File dir) {
-		java.util.List<File> out = new java.util.ArrayList<>();
-		try (java.util.stream.Stream<java.nio.file.Path> walk = Files.walk(dir.toPath(), 3)) {
-			walk.filter(x -> x.getFileName().toString().toLowerCase(java.util.Locale.ROOT).endsWith(".png")).forEach(x -> out.add(x.toFile()));
-		} catch (IOException e) {
-			return out;
-		}
-		return out;
-	}
-
 	/** How many gift and item pictures the pack serves (for admins). */
 	static String counts() {
 		SkinPack pack = instance;
-		return pack == null ? "그림 팩이 꺼져 있어요: config.yml의 resource-pack.host-address를 넣고 host-port를 열어야 기프트·아이템 그림이 보여요" : "기프트 그림 " + pack.servedGifts.size() + "개 · 아이템 그림 " + pack.servedIcons.size() + "개";
+		return pack == null ? "그림 팩이 꺼져 있어요: config.yml의 resource-pack.host-address를 넣고 host-port를 열어야 기프트·아이템 그림이 보여요" : "기프트 그림 " + pack.servedGifts.size() + "개 · 아이템 그림 " + pack.servedIcons.size() + "개"
+				+ (pack.servedGifts.isEmpty() ? " (plugins/IndexPrescript/gift_icons/ 폴더에 PNG나 zip을 넣고 /md 적스킨)" : "");
 	}
 
 	void loadIcons() {
 		icons.clear();
-		File dir = new File(plugin.getDataFolder(), "item_icons");
+		icons.putAll(pictures("item_icons"));
+	}
+
+	/**
+	 * The PNGs of a picture folder by id: files in plugins/IndexPrescript/<folder>/ and its subfolders, and the
+	 * PNGs inside any zip there or a <folder>.zip next to it (uploaded and not unpacked).
+	 */
+	private Map<String, byte[]> pictures(String folder) {
+		Map<String, byte[]> out = new LinkedHashMap<>();
+		File dir = new File(plugin.getDataFolder(), folder);
 		dir.mkdirs();
-		for (File f : pngs(dir)) {
-			try {
-				icons.put(slug(f.getName().substring(0, f.getName().length() - 4)), Files.readAllBytes(f.toPath()));
+		java.util.List<File> zips = new java.util.ArrayList<>();
+		File beside = new File(plugin.getDataFolder(), folder + ".zip");
+		if (beside.isFile()) {
+			zips.add(beside);
+		}
+		try (java.util.stream.Stream<java.nio.file.Path> walk = Files.walk(dir.toPath(), 3)) {
+			walk.filter(Files::isRegularFile).forEach(x -> {
+				String n = x.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
+				if (n.endsWith(".zip")) {
+					zips.add(x.toFile());
+				} else if (n.endsWith(".png")) {
+					try {
+						out.put(slug(x.getFileName().toString().substring(0, n.length() - 4)), Files.readAllBytes(x));
+					} catch (IOException e) {
+						plugin.getLogger().warning(folder + "/" + x.getFileName() + ": " + e.getMessage());
+					}
+				}
+			});
+		} catch (IOException e) {
+			plugin.getLogger().warning(folder + ": " + e.getMessage());
+		}
+		for (File zip : zips) {
+			try (java.util.zip.ZipFile z = new java.util.zip.ZipFile(zip)) {
+				for (var en = z.entries(); en.hasMoreElements();) {
+					ZipEntry entry = en.nextElement();
+					String name = entry.getName().substring(entry.getName().lastIndexOf('/') + 1);
+					if (!entry.isDirectory() && name.toLowerCase(java.util.Locale.ROOT).endsWith(".png")) {
+						try (var in = z.getInputStream(entry)) {
+							out.putIfAbsent(slug(name.substring(0, name.length() - 4)), in.readAllBytes());
+						}
+					}
+				}
 			} catch (IOException e) {
-				plugin.getLogger().warning("item_icons/" + f.getName() + ": " + e.getMessage());
+				plugin.getLogger().warning(zip.getName() + ": " + e.getMessage());
 			}
 		}
+		if (out.isEmpty()) {
+			plugin.getLogger().info("No pictures in " + dir.getAbsolutePath() + " (put the PNGs or the zip there)");
+		}
+		return out;
 	}
 
 	/** The item model of a gift's picture, if the pack being served has one. */
@@ -196,16 +228,7 @@ final class SkinPack {
 
 	private void loadGifts() {
 		gifts.clear();
-		File giftDir = new File(plugin.getDataFolder(), "gift_icons");
-		giftDir.mkdirs();
-		for (File f : pngs(giftDir)) {
-			String id = slug(f.getName().substring(0, f.getName().length() - 4));
-			try {
-				gifts.put(id, Files.readAllBytes(f.toPath()));
-			} catch (IOException e) {
-				plugin.getLogger().warning("gift_icons/" + f.getName() + ": " + e.getMessage());
-			}
-		}
+		gifts.putAll(pictures("gift_icons"));
 	}
 
 	/** Reads enemy_skins/ and gift_icons/ again and rebuilds the pack. Returns how many enemy skins are there. */
