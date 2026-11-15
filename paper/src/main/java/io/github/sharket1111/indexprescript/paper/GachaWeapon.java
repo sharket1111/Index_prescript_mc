@@ -32,7 +32,7 @@ final class GachaWeapon implements Listener {
 
 	private static List<SkillMenu.Entry> entries(Player p) {
 		List<SkillMenu.Entry> out = new ArrayList<>();
-		ItemStack held = p.getInventory().getItemInMainHand();
+		ItemStack held = SkillMenu.held(p);
 		Gacha.Weapon w = Gacha.weaponOf(held);
 		if (w == null) {
 			return out;

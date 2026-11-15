@@ -266,7 +266,7 @@ final class VanillaWeapon implements Listener {
 
 	private static List<SkillMenu.Entry> entries(Player p) {
 		List<SkillMenu.Entry> out = new ArrayList<>();
-		ItemStack held = p.getInventory().getItemInMainHand();
+		ItemStack held = SkillMenu.held(p);
 		Kind kind = kindOf(held);
 		if (kind == null) {
 			return out;

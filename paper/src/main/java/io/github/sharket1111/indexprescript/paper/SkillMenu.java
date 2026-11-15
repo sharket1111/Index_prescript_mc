@@ -97,6 +97,19 @@ final class SkillMenu {
 		return menu != null && menu.key.equals(key);
 	}
 
+	/**
+	 * The item the player is holding: while the menu is open the cursor sits on 9 (cancel) and the hotbar
+	 * shows icons, so it is the item put aside from the slot that was held when the menu opened.
+	 */
+	static ItemStack held(Player player) {
+		Menu menu = OPEN.get(player.getUniqueId());
+		if (menu != null) {
+			ItemStack stack = menu.saved[menu.heldSlot];
+			return stack == null ? ItemStack.empty() : stack;
+		}
+		return player.getInventory().getItemInMainHand();
+	}
+
 	static boolean isIcon(ItemStack stack) {
 		if (stack == null || stack.isEmpty() || !stack.hasItemMeta()) {
 			return false;

@@ -133,7 +133,7 @@ final class MimicrySkill {
 		 * the other three-star weapons' best skills); lower Upties take some off, the big skills more.
 		 */
 		int[] power(Player player) {
-			int u = Upgrade.uptie(player.getInventory().getItemInMainHand());
+			int u = Upgrade.uptie(SkillMenu.held(player));
 			boolean heavy = big() || this == CHARGE;
 			int[] baseLoss = heavy ? new int[] {4, 3, 1, 0} : new int[] {2, 1, 0, 0};
 			int[] coinLoss = heavy ? new int[] {2, 1, 1, 0} : new int[] {0, 0, 0, 0};

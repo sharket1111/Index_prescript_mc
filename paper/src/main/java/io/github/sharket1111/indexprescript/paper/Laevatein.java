@@ -409,7 +409,7 @@ final class Laevatein implements Listener {
 	/** The skill menu: the stage's skill, the next release, the counter stance. */
 	private static java.util.List<SkillMenu.Entry> entries(Player player) {
 		java.util.List<SkillMenu.Entry> out = new java.util.ArrayList<>();
-		ItemStack held = player.getInventory().getItemInMainHand();
+		ItemStack held = SkillMenu.held(player);
 		if (!Items.isLaevatein(held)) {
 			return out;
 		}
