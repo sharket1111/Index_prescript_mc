@@ -48,8 +48,9 @@ final class Gacha {
 	static final double EGO_RATE = 3.5;
 	static final double THREE_RATE = 2.9;
 	static final double TWO_RATE = 12.8;
-	static final int DUP_TWO_THREADS = 20;
-	static final int DUP_THREE_THREADS = 50;
+	/** A duplicate weapon becomes Egoshards, as a duplicate Identity in the original: 15 for two-star (that Sinner's), 50 for three-star (universal; the plugin's own weapons have no Sinner). */
+	static final int DUP_TWO_SHARDS = 15;
+	static final int DUP_THREE_SHARDS = 50;
 
 	static final TextColor ONE_COLOUR = TextColor.color(0xB98A5A);
 	static final TextColor TWO_COLOUR = TextColor.color(0xF2B33D);
@@ -168,6 +169,41 @@ final class Gacha {
 		p.getPersistentDataContainer().set(LUNACY, PersistentDataType.INTEGER, Math.max(0, lunacy(p) + amount));
 	}
 
+	private static final NamespacedKey PAID = new NamespacedKey(Items.NAMESPACE, "lunacy_paid");
+
+	/** Paid Lunacy (bought in the Shop): the Limbus Pass and the packs priced in Lunacy take only this. */
+	static int paidLunacy(Player p) {
+		return p.getPersistentDataContainer().getOrDefault(PAID, PersistentDataType.INTEGER, 0);
+	}
+
+	static void addPaidLunacy(Player p, int amount) {
+		p.getPersistentDataContainer().set(PAID, PersistentDataType.INTEGER, Math.max(0, paidLunacy(p) + amount));
+	}
+
+	/** All Lunacy, free and paid. */
+	static int allLunacy(Player p) {
+		return lunacy(p) + paidLunacy(p);
+	}
+
+	/** Spends Lunacy for Extraction: free first, then paid; false (nothing spent) if there is not enough. */
+	static boolean spendLunacy(Player p, int amount) {
+		if (allLunacy(p) < amount) {
+			return false;
+		}
+		int free = Math.min(lunacy(p), amount);
+		addLunacy(p, -free);
+		addPaidLunacy(p, -(amount - free));
+		return true;
+	}
+
+	static boolean spendPaidLunacy(Player p, int amount) {
+		if (paidLunacy(p) < amount) {
+			return false;
+		}
+		addPaidLunacy(p, -amount);
+		return true;
+	}
+
 	static int ideality(Player p) {
 		return p.getPersistentDataContainer().getOrDefault(IDEALITY, PersistentDataType.INTEGER, 0);
 	}
@@ -190,10 +226,54 @@ final class Gacha {
 
 	// --- items: tickets, EXP tickets, Threads -------------------------------------------------------
 
+	/** The twelve Sinners (whose Egoshards are kept apart), in the original's order, and their Korean names. */
+	static final String[] SINNERS = {"Yi Sang", "Faust", "Don Quixote", "Ryōshū", "Meursault", "Hong Lu", "Heathcliff", "Ishmael", "Rodion",
+		"Sinclair", "Outis", "Gregor"};
+	static final String[] SINNERS_KO = {"이상", "파우스트", "돈키호테", "료슈", "뫼르소", "홍루", "히스클리프", "이스마엘", "로쟈", "싱클레어", "오티스", "그레고르"};
+
+	/** The index of a Sinner by English or Korean name (-1: none). */
+	static int sinner(String name) {
+		for (int i = 0; i < SINNERS.length; i++) {
+			if (SINNERS[i].equalsIgnoreCase(name) || SINNERS_KO[i].equals(name)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
 	enum Kind {
 		TICKET("추출권", "minecraft:paper", ONE_COLOUR, "추출 1회 (10장이면 10회 추출)"),
-		EXP("경험치 티켓", "minecraft:experience_bottle", TextColor.color(0x7FD8FF), "무기 경험치 +" + Upgrade.EXP_PER_TICKET + " (/메뉴 → 무기 강화)"),
-		THREAD("끈", "minecraft:string", TextColor.color(0xE8D7A8), "무기 동기화·E.G.O 동기화 재료 (/메뉴)");
+		DECA("10회 추출권", "minecraft:map", TWO_COLOUR, "10회 추출 1번 (추출권 10장과 같아요)"),
+		DECA3("3성 확정 10회 추출권", "minecraft:filled_map", THREE_COLOUR, "ØØØ 무기가 반드시 1개 이상 나오는 10회 추출 (E.G.O 제외)"),
+		TRAIN1("인격 경험치 티켓 I", "minecraft:experience_bottle", TextColor.color(0xA9D8E8), "무기 경험치 +50 (/메뉴 → 무기 강화)"),
+		TRAIN2("인격 경험치 티켓 II", "minecraft:experience_bottle", TextColor.color(0x8CCBE6), "무기 경험치 +200 (/메뉴 → 무기 강화)"),
+		EXP("인격 경험치 티켓 III", "minecraft:experience_bottle", TextColor.color(0x7FD8FF), "무기 경험치 +1000 (/메뉴 → 무기 강화)"),
+		TRAIN4("인격 경험치 티켓 IV", "minecraft:experience_bottle", TextColor.color(0x4FB8FF), "무기 경험치 +3000 (/메뉴 → 무기 강화)"),
+		THREAD("끈", "minecraft:string", TextColor.color(0xE8D7A8), "무기 동기화·E.G.O 동기화 재료 (/메뉴)"),
+		SHARD("동기화 전용 조각 (범용)", "minecraft:prismarine_shard", TextColor.color(0xD9F2FF), "모든 무기·E.G.O의 동기화에 에고 조각 대신 쓸 수 있어요"),
+		SHARD_0("이상의 에고 조각", "minecraft:amethyst_shard", TextColor.color(0x9DC9E8), "이상의 무기·E.G.O 동기화 재료"),
+		SHARD_1("파우스트의 에고 조각", "minecraft:amethyst_shard", TextColor.color(0xF2B5C8), "파우스트의 무기·E.G.O 동기화 재료"),
+		SHARD_2("돈키호테의 에고 조각", "minecraft:amethyst_shard", TextColor.color(0xF5E07A), "돈키호테의 무기·E.G.O 동기화 재료"),
+		SHARD_3("료슈의 에고 조각", "minecraft:amethyst_shard", TextColor.color(0xE05050), "료슈의 무기·E.G.O 동기화 재료"),
+		SHARD_4("뫼르소의 에고 조각", "minecraft:amethyst_shard", TextColor.color(0x5A6FB0), "뫼르소의 무기·E.G.O 동기화 재료"),
+		SHARD_5("홍루의 에고 조각", "minecraft:amethyst_shard", TextColor.color(0x6FC2A8), "홍루의 무기·E.G.O 동기화 재료"),
+		SHARD_6("히스클리프의 에고 조각", "minecraft:amethyst_shard", TextColor.color(0x7A5A9A), "히스클리프의 무기·E.G.O 동기화 재료"),
+		SHARD_7("이스마엘의 에고 조각", "minecraft:amethyst_shard", TextColor.color(0xF09A40), "이스마엘의 무기·E.G.O 동기화 재료"),
+		SHARD_8("로쟈의 에고 조각", "minecraft:amethyst_shard", TextColor.color(0xD06070), "로쟈의 무기·E.G.O 동기화 재료"),
+		SHARD_9("싱클레어의 에고 조각", "minecraft:amethyst_shard", TextColor.color(0xE8C860), "싱클레어의 무기·E.G.O 동기화 재료"),
+		SHARD_10("오티스의 에고 조각", "minecraft:amethyst_shard", TextColor.color(0x8A9A6A), "오티스의 무기·E.G.O 동기화 재료"),
+		SHARD_11("그레고르의 에고 조각", "minecraft:amethyst_shard", TextColor.color(0x9A7A50), "그레고르의 무기·E.G.O 동기화 재료"),
+		CRATE_RANDOM("무작위 에고 조각 상자", "minecraft:chest", TextColor.color(0xC9A8E8), "우클릭: 무작위 수감자의 에고 조각 1~3개"),
+		CRATE_NOMINABLE("지정 에고 조각 상자", "minecraft:ender_chest", TextColor.color(0xB98AF0), "우클릭: 고른 수감자의 에고 조각 1~3개"),
+		ENK_MODULE("엔케팔린 모듈", "minecraft:heart_of_the_sea", TextColor.color(0x5AE0C8), "루사이크 입장·거울 던전 보상 수령에 써요"),
+		ENK_BOX("엔케팔린 상자", "minecraft:shulker_shell", TextColor.color(0x4AC0A8), "우클릭: 엔케팔린 +60"),
+		BOOST1("레벨 부스트 티켓 I", "minecraft:name_tag", TextColor.color(0xE0E0E0), "무기 레벨을 10까지 올려요 (/메뉴 → 무기 강화)"),
+		BOOST2("레벨 부스트 티켓 II", "minecraft:name_tag", TextColor.color(0xE0E0E0), "무기 레벨을 20까지 올려요 (/메뉴 → 무기 강화)"),
+		BOOST3("레벨 부스트 티켓 III", "minecraft:name_tag", TextColor.color(0xE0E0E0), "무기 레벨을 30까지 올려요 (/메뉴 → 무기 강화)"),
+		BOOST4("레벨 부스트 티켓 IV", "minecraft:name_tag", TextColor.color(0xF0E8A0), "무기 레벨을 40까지 올려요 (/메뉴 → 무기 강화)"),
+		BOOST5("레벨 부스트 티켓 V", "minecraft:name_tag", TextColor.color(0xF0D870), "무기 레벨을 50까지 올려요 (/메뉴 → 무기 강화)"),
+		BOOST6("레벨 부스트 티켓 VI", "minecraft:name_tag", TextColor.color(0xF0C040), "무기 레벨을 60까지 올려요 (/메뉴 → 무기 강화)"),
+		TAKEOFF_UPTIE("테이크오프 모듈 - 인격 동기화", "minecraft:nether_star", TextColor.color(0xFF9A40), "무기 하나를 바로 동기화 4로 올려요 (/메뉴 → 무기 강화)");
 
 		final String name;
 		final String model;
@@ -205,6 +285,22 @@ final class Gacha {
 			this.model = model;
 			this.colour = colour;
 			this.lore = lore;
+		}
+
+		/** The Egoshard of Sinner {@code i}. */
+		static Kind shard(int i) {
+			return valueOf("SHARD_" + i);
+		}
+
+		/** Weapon EXP a training ticket gives (0 for anything else). */
+		int exp() {
+			return switch (this) {
+				case TRAIN1 -> 50;
+				case TRAIN2 -> 200;
+				case EXP -> 1000;
+				case TRAIN4 -> 3000;
+				default -> 0;
+			};
 		}
 	}
 
@@ -321,7 +417,27 @@ final class Gacha {
 			Weapon w = weapons().get(r.nextInt(WEAPONS.size()));
 			return new Pull(2, w.id(), w.name(), false, owns(p, w.id()));
 		}
-		return new Pull(1, "exp", "경험치 티켓", false, false);
+		return new Pull(1, "exp", "인격 경험치 티켓 III", false, false);
+	}
+
+	/** One pull without E.G.O (a 3★ Guarantee Decaextraction Ticket's pool). */
+	static Pull rollNoEgo(Player p, boolean tenth) {
+		ThreadLocalRandom r = ThreadLocalRandom.current();
+		double roll = r.nextDouble(100);
+		if (roll < 3.0) {
+			return rollThree(p);
+		}
+		roll -= 3.0;
+		if ((tenth || roll < 13.0) && !WEAPONS.isEmpty()) {
+			Weapon w = weapons().get(r.nextInt(WEAPONS.size()));
+			return new Pull(2, w.id(), w.name(), false, owns(p, w.id()));
+		}
+		return new Pull(1, "exp", "인격 경험치 티켓 III", false, false);
+	}
+
+	static Pull rollThree(Player p) {
+		Three t = Three.values()[ThreadLocalRandom.current().nextInt(Three.values().length)];
+		return new Pull(3, t.id(), t.name, false, owns(p, t.id()));
 	}
 
 	/** Gives what a pull brought: the weapon (or Threads for a duplicate), the E.G.O, or an EXP ticket. */
@@ -338,7 +454,13 @@ final class Gacha {
 			return;
 		}
 		if (pull.duplicate()) {
-			give(p, Kind.THREAD, pull.rarity() == 3 ? DUP_THREE_THREADS : DUP_TWO_THREADS);
+			Weapon w = weapon(pull.id());
+			int s = w == null ? -1 : sinner(w.sinner());
+			if (pull.rarity() == 2 && s >= 0) {
+				give(p, Kind.shard(s), DUP_TWO_SHARDS);
+			} else {
+				give(p, Kind.SHARD, pull.rarity() == 3 ? DUP_THREE_SHARDS : DUP_TWO_SHARDS);
+			}
 			return;
 		}
 		own(p, pull.id());

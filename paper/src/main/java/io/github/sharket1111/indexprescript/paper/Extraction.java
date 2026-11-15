@@ -65,23 +65,31 @@ final class Extraction {
 		MdGui gui = new MdGui(6, "추출");
 		gui.set(4, MdGui.item(Material.NETHER_STAR, "상시 추출", Gacha.THREE_COLOUR,
 				"E.G.O " + Gacha.EGO_RATE + "% (가지지 않은 E.G.O만)",
-				Gacha.stars(3) + " " + Gacha.THREE_RATE + "% · 이 서버의 무기: 카두케우스, 레바테인, 르누아르의 망치, 미미크리, 검은 신",
+				Gacha.stars(3) + " " + Gacha.THREE_RATE + "% · 이 서버의 무기: 카두케우스, 레바테인, 르누아르의 망치, 미미크리",
 				Gacha.stars(2) + " " + Gacha.TWO_RATE + "% · 원작 2성 인격의 무기 " + Gacha.weapons().size() + "종",
-				Gacha.stars(1) + " 80.8% · 경험치 티켓",
+				Gacha.stars(1) + " 80.8% · 인격 경험치 티켓 III",
 				"10회 추출의 10번째는 " + Gacha.stars(2) + " 이상 확정",
-				"이미 가진 무기가 나오면 끈 (" + Gacha.stars(2) + " " + Gacha.DUP_TWO_THREADS + "개, " + Gacha.stars(3) + " " + Gacha.DUP_THREE_THREADS + "개)"),
+				"이미 가진 무기가 나오면 에고 조각 (" + Gacha.stars(2) + " 그 수감자의 조각 " + Gacha.DUP_TWO_SHARDS + "개, " + Gacha.stars(3) + " 범용 조각 "
+						+ Gacha.DUP_THREE_SHARDS + "개)"),
 				(Runnable) null);
 		int lunacy = Gacha.lunacy(p);
 		int tickets = Gacha.count(p, Gacha.Kind.TICKET);
 		int ideality = Gacha.ideality(p);
-		ItemStack moon = MdGui.item(Material.POPPY, "광기 " + lunacy, TextColor.color(0xE03C3C), "거울 던전에서 얻어요");
+		ItemStack moon = MdGui.item(Material.POPPY, "광기 " + lunacy + " · 유료 광기 " + Gacha.paidLunacy(p), TextColor.color(0xE03C3C),
+				"광기: 거울 던전 주간 보너스·패스·투영", "유료 광기: 상점", "추출은 광기를 먼저, 그다음 유료 광기를 써요");
 		gui.set(19, moon, (Runnable) null);
-		gui.set(20, MdGui.item(Material.PAPER, "추출권 " + tickets + "장", Gacha.ONE_COLOUR, "거울 던전에서 얻어요"), (Runnable) null);
+		gui.set(20, MdGui.item(Material.PAPER, "추출권 " + tickets + "장 · 10회 추출권 " + Gacha.count(p, Gacha.Kind.DECA) + "장", Gacha.ONE_COLOUR,
+				"패스·투영·상점에서 얻어요"), (Runnable) null);
+		int deca3 = Gacha.count(p, Gacha.Kind.DECA3);
+		if (deca3 > 0) {
+			gui.set(31, MdGui.item(Material.FILLED_MAP, "3성 확정 10회 추출 (" + deca3 + "장)", Gacha.THREE_COLOUR,
+					Gacha.stars(3) + " 무기가 반드시 1개 이상 · E.G.O는 나오지 않아요", "클릭해서 추출"), () -> startGuarantee(p));
+		}
 		gui.set(21, MdGui.item(Material.AMETHYST_SHARD, "이상성 " + ideality + "/" + Gacha.IDEALITY_EXCHANGE, TextColor.color(0xC9A0FF),
 				"추출 1회마다 1", Gacha.IDEALITY_EXCHANGE + "이면 " + Gacha.stars(3) + " 무기 하나와 교환", "클릭해서 교환"), () -> exchange(p));
 		gui.set(23, MdGui.item(Material.IRON_BARS, "추출 1회", Gacha.TWO_COLOUR,
 				"추출권 1장 또는 광기 " + Gacha.SINGLE_LUNACY, "(추출권을 먼저 써요)"), () -> start(p, 1));
-		gui.set(25, MdGui.item(Material.GOLD_BLOCK, "추출 10회", Gacha.THREE_COLOUR, "추출권 10장 또는 광기 " + Gacha.TEN_LUNACY,
+		gui.set(25, MdGui.item(Material.GOLD_BLOCK, "추출 10회", Gacha.THREE_COLOUR, "10회 추출권 1장, 추출권 10장 또는 광기 " + Gacha.TEN_LUNACY,
 				"10번째는 " + Gacha.stars(2) + " 이상 확정"), () -> start(p, 10));
 		gui.set(40, MdGui.item(Material.WRITABLE_BOOK, "확률 정보", NamedTextColor.WHITE, "E.G.O 3.5% · " + Gacha.stars(3) + " 2.9% · "
 				+ Gacha.stars(2) + " 12.8% · " + Gacha.stars(1) + " 80.8%", "10번째: E.G.O 3.5% · " + Gacha.stars(3) + " 2.9% · " + Gacha.stars(2)
@@ -99,7 +107,7 @@ final class Extraction {
 		int slot = 11;
 		for (Gacha.Three t : Gacha.Three.values()) {
 			gui.set(slot++, MdGui.item(Material.NETHER_STAR, Gacha.stars(3) + " " + t.name, Gacha.THREE_COLOUR,
-					Gacha.owns(p, t.id()) ? "이미 가졌어요 (끈 " + Gacha.DUP_THREE_THREADS + "개로 바뀌어요)" : "클릭해서 교환"), () -> {
+					Gacha.owns(p, t.id()) ? "이미 가졌어요 (범용 조각 " + Gacha.DUP_THREE_SHARDS + "개로 바뀌어요)" : "클릭해서 교환"), () -> {
 						if (Gacha.exchange(p, t)) {
 							Hud.message(p, Component.text("이상성 교환: " + t.name, Gacha.THREE_COLOUR));
 						}
@@ -115,20 +123,39 @@ final class Extraction {
 		if (RUNNING.containsKey(p.getUniqueId())) {
 			return;
 		}
-		boolean paid = Gacha.take(p, Gacha.Kind.TICKET, count);
+		// The original's order: tickets (a Decaextraction Ticket for ten) before Lunacy, free Lunacy before paid.
+		boolean paid = count == 10 && Gacha.take(p, Gacha.Kind.DECA, 1) || Gacha.take(p, Gacha.Kind.TICKET, count);
 		if (!paid) {
 			int cost = count == 10 ? Gacha.TEN_LUNACY : Gacha.SINGLE_LUNACY;
-			if (Gacha.lunacy(p) < cost) {
+			if (!Gacha.spendLunacy(p, cost)) {
 				Hud.message(p, Component.text("추출권이나 광기가 모자라요", NamedTextColor.RED));
 				p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.8F, 0.6F);
 				return;
 			}
-			Gacha.addLunacy(p, -cost);
 		}
 		List<Gacha.Pull> pulls = new ArrayList<>();
 		for (int i = 0; i < count; i++) {
 			pulls.add(Gacha.roll(p, count == 10 && i == 9));
 		}
+		play(p, pulls, count);
+	}
+
+	/** A 3★ Guarantee Decaextraction Ticket: ten pulls without E.G.O, at least one three-star. */
+	private static void startGuarantee(Player p) {
+		if (RUNNING.containsKey(p.getUniqueId()) || !Gacha.take(p, Gacha.Kind.DECA3, 1)) {
+			return;
+		}
+		List<Gacha.Pull> pulls = new ArrayList<>();
+		for (int i = 0; i < 10; i++) {
+			pulls.add(Gacha.rollNoEgo(p, i == 9));
+		}
+		if (pulls.stream().noneMatch(x -> x.rarity() == 3)) {
+			pulls.set(ThreadLocalRandom.current().nextInt(10), Gacha.rollThree(p));
+		}
+		play(p, pulls, 10);
+	}
+
+	private static void play(Player p, List<Gacha.Pull> pulls, int count) {
 		// Results are given at once (a crash mid-scene loses nothing); the scene only shows them.
 		for (Gacha.Pull pull : pulls) {
 			Gacha.grant(p, pull);

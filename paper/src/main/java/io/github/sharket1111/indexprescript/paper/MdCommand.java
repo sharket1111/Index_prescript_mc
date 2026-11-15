@@ -208,8 +208,9 @@ final class MdCommand implements TabExecutor, Listener {
 		}
 		gui.set(15, MdGui.item(Material.NETHER_STAR, "별빛 " + MdMeta.starlight(id), NamedTextColor.AQUA, "별의 가호(시작 버프)와 기프트 탐색에 써요",
 				"층을 깰 때마다 쌓여요"), (Runnable) null);
-		gui.set(16, MdGui.item(Material.CLOCK, "주간 보상 " + MdMeta.claims(id) + "/" + MdMeta.WEEKLY_CLAIMS, NamedTextColor.GOLD, "매주 월요일에 초기화돼요",
-				"기록: " + MdMeta.runs(id) + "번 · 최고 " + MdMeta.best(id) + "층"), (Runnable) null);
+		gui.set(16, MdGui.item(Material.CLOCK, "보상 받기 · 주간 보너스 " + MdClaim.left(id) + "/" + MdClaim.charges(), NamedTextColor.GOLD,
+				MdClaim.has(id) ? "받을 보상이 있어요 (클릭)" : "받을 보상이 없어요", "수요일 06:00에 다시 채워져요",
+				"기록: " + MdMeta.runs(id) + "번 · 최고 " + MdMeta.best(id) + "층"), () -> MdClaim.open(p));
 		gui.fill().open(p);
 	}
 

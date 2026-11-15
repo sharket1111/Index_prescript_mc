@@ -42,6 +42,7 @@ final class MdShop {
 	private boolean sold;
 	private boolean fusedBonus;
 	private int spent;
+	private int giftSpent;
 
 	private MdShop(MdRun run, boolean superShop) {
 		this.run = run;
@@ -183,6 +184,9 @@ final class MdShop {
 			return;
 		}
 		offers.remove(g);
+		run.giftsBought++;
+		giftSpent += g.cost();
+		run.maxShopSpend = Math.max(run.maxShopSpend, giftSpent);
 		run.addGift(g, false);
 		refreshAll();
 	}
@@ -200,6 +204,7 @@ final class MdShop {
 		} else {
 			refreshes++;
 		}
+		run.shopRefreshes++;
 		stock(keyword);
 		refreshAll();
 	}
@@ -228,6 +233,7 @@ final class MdShop {
 					return;
 				}
 				run.cost += sellPrice(g);
+				run.costSold += sellPrice(g);
 				sold = true;
 				run.removeGift(id);
 				sellMenu(p);
@@ -448,6 +454,7 @@ final class MdShop {
 			for (String id : chosen) {
 				run.removeGift(id);
 			}
+			run.fused.add(result.id());
 			run.addGift(result, false);
 			p.playSound(p.getLocation(), Sound.BLOCK_BREWING_STAND_BREW, 1F, 1.2F);
 			if (!fusedBonus) {

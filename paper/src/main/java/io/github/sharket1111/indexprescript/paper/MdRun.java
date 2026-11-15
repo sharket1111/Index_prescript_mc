@@ -122,6 +122,13 @@ final class MdRun {
 	final Set<String> hiddenBeaten = new HashSet<>();
 	/** How often each gift's limited effect was used this turn or encounter ("turn|gift|i|member"). */
 	final Map<String, Integer> giftUses = new HashMap<>();
+	/** For Mirror Projection: gifts ever held, fusion results, shop refreshes, gifts bought, Cost from sales, the most Cost spent on gifts in one shop. */
+	final Set<String> everGifts = new HashSet<>();
+	final Set<String> fused = new HashSet<>();
+	int shopRefreshes;
+	int giftsBought;
+	int costSold;
+	int maxShopSpend;
 	MdData.Theme theme;
 	final Set<String> visitedThemes = new HashSet<>();
 	List<List<Node>> map = new ArrayList<>();
@@ -298,6 +305,11 @@ final class MdRun {
 			MdGrace.floorClear(this);
 		}
 		floor++;
+		if (floor == 1) {
+			for (Player p : players()) {
+				Missions.progress(p, "md_enter", 1);
+			}
+		}
 		// Past floor 5 the dungeon is always Hard.
 		floorHard = hard || floor > FLOORS;
 		applyFrail();
@@ -442,6 +454,9 @@ final class MdRun {
 		}
 		theme = t;
 		boolean first = visitedThemes.add(t.id());
+		for (Player p : players()) {
+			Projection.themeSeen(p, t, floorHard, floor > 10);
+		}
 		if (first) {
 			MdGrace.newTheme(this);
 		}
@@ -711,7 +726,12 @@ final class MdRun {
 		cost += gained;
 		broadcast(Component.text("승리! 코스트 +" + gained + " (보유 " + cost + ")", NamedTextColor.GOLD));
 		MdGifts.trigger(this, "reward", null, null);
-		extractionRewards(type);
+		for (Player p : players()) {
+			Missions.progress(p, "stage", 1);
+			if (type == NodeType.ABNO) {
+				Missions.progress(p, "abno", 1);
+			}
+		}
 		if (type == NodeType.BOSS) {
 			MdGifts.trigger(this, "floor_clear", null, null);
 		}
@@ -948,6 +968,10 @@ final class MdRun {
 			return;
 		}
 		gifts.put(gift.id(), 0);
+		everGifts.add(gift.id());
+		for (Player p : players()) {
+			Projection.compendium(p, gift);
+		}
 		if (fuseOnlyGift) {
 			fuseOnly.add(gift.id());
 		}
@@ -1417,7 +1441,7 @@ final class MdRun {
 		BY_PLAYER.remove(id);
 		downed.remove(id);
 		sendHome(p);
-		settle(p, false);
+		settle(p, false, false);
 		if (bar != null) {
 			bar.removePlayer(p);
 		}
@@ -1445,14 +1469,7 @@ final class MdRun {
 			p.showTitle(Title.title(Component.text(cleared ? "거울 던전 클리어" : "거울 던전 실패", cleared ? NamedTextColor.GOLD : NamedTextColor.RED),
 					Component.text(floorsCleared + "층까지 클리어", NamedTextColor.GRAY)));
 			sendHome(p);
-			settle(p, true);
-			if (cleared) {
-				// Clearing the dungeon: Lunacy by the floors climbed.
-				int lunacy = 100 + 40 * floorsCleared;
-				Gacha.addLunacy(p, lunacy);
-				Gacha.give(p, Gacha.Kind.TICKET, floorsCleared >= 10 ? 3 : 1);
-				p.sendMessage(Component.text("[클리어 보상] 광기 +" + lunacy + " · 추출권 +" + (floorsCleared >= 10 ? 3 : 1), NamedTextColor.LIGHT_PURPLE));
-			}
+			settle(p, true, cleared);
 		}
 		for (UUID id : members) {
 			BY_PLAYER.remove(id);
@@ -1461,33 +1478,8 @@ final class MdRun {
 		close();
 	}
 
-	/**
-	 * What a won battle gives each member for Extraction and upgrades: Lunacy, EXP tickets, and
-	 * on bosses Threads and an Extraction Ticket (more on Hard and on the INFINITY/EXTREME floors).
-	 */
-	private void extractionRewards(NodeType type) {
-		boolean boss = type == NodeType.BOSS || type == NodeType.HIDDEN;
-		double scale = (floorHard ? 1.5 : 1.0) * (floor > 10 ? 2.0 : floor > 5 ? 1.5 : 1.0);
-		int lunacy = (int) Math.round((boss ? 60 : type == NodeType.ABNO || type == NodeType.RISKY ? 20 : 12) * scale);
-		int exp = (int) Math.round((boss ? 4 : 1) * scale);
-		int threads = boss ? (int) Math.round(8 * scale) : 0;
-		int tickets = boss ? (type == NodeType.HIDDEN ? 3 : 1) : 0;
-		for (Player p : players()) {
-			Gacha.addLunacy(p, lunacy);
-			Gacha.give(p, Gacha.Kind.EXP, exp);
-			if (threads > 0) {
-				Gacha.give(p, Gacha.Kind.THREAD, threads);
-			}
-			if (tickets > 0) {
-				Gacha.give(p, Gacha.Kind.TICKET, tickets);
-			}
-			p.sendMessage(Component.text("[보상] 광기 +" + lunacy + " · 경험치 티켓 +" + exp + (threads > 0 ? " · 끈 +" + threads : "")
-					+ (tickets > 0 ? " · 추출권 +" + tickets : ""), NamedTextColor.LIGHT_PURPLE));
-		}
-	}
-
 	/** Starlight for the floors cleared (and the unspent bonus), the weekly claim, records. */
-	private void settle(Player p, boolean finished) {
+	private void settle(Player p, boolean finished, boolean cleared) {
 		UUID id = p.getUniqueId();
 		int starlight = bonus.getOrDefault(id, 0);
 		for (int f = 1; f <= floorsCleared; f++) {
@@ -1508,8 +1500,11 @@ final class MdRun {
 			MdMeta.addStarlight(id, starlight);
 			p.sendMessage(Component.text("별빛 +" + starlight + " (보유 " + MdMeta.starlight(id) + ")", NamedTextColor.AQUA));
 		}
-		if (floorsCleared > 0) {
-			MdMeta.claim(p, floorsCleared, hardFloorsCleared > 0);
+		// The original's rewards: a claim with the Weekly Bonus (MdClaim), Mirror Projection, the Pass missions.
+		MdClaim.pending(p, floorsCleared, hardFloorsCleared >= Math.min(floorsCleared, FLOORS));
+		Projection.runEnded(p, this, cleared);
+		if (cleared) {
+			Missions.progress(p, "md_clear", 1);
 		}
 		MdMeta.record(id, floorsCleared);
 	}

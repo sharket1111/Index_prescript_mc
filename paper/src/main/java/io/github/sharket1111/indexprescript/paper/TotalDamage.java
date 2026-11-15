@@ -107,6 +107,7 @@ final class TotalDamage {
 		Tally tally = TALLIES.get(player.getUniqueId());
 		if (tally != null && tally.running) {
 			tally.running = false;
+			Projection.skillDamage(player, Math.round(tally.total * SCALE));
 			tally.hideAt = CaduceusListener.now() + LINGER_TICKS;
 		}
 	}

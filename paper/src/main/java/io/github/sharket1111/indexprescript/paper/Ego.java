@@ -187,6 +187,26 @@ final class Ego {
 		player.getPersistentDataContainer().set(OWNED, PersistentDataType.STRING, owned.isEmpty() ? def.id() : owned + "," + def.id());
 	}
 
+	/**
+	 * The original's Threadspin cost to reach {@code to}: {Thread, Sinner Egoshards} by risk level. A Sinner's
+	 * base ZAYIN E.G.O reaches Tier 2 and 3 with the story in the original, so those are free here.
+	 */
+	static int[] spinCost(Def def, int to) {
+		int t = Math.max(2, Math.min(4, to));
+		int r = switch (def.risk()) {
+			case "TETH" -> 1;
+			case "HE" -> 2;
+			case "WAW" -> 3;
+			default -> 0;
+		};
+		if (def.base() && t < 4) {
+			return new int[] {0, 0};
+		}
+		int[][] thread = {{20, 25, 30, 35}, {60, 70, 80, 90}, {110, 130, 150, 170}};
+		int[] shards = {80, 90, 100, 150};
+		return new int[] {thread[t - 2][r], t == 4 ? shards[r] : 0};
+	}
+
 	/** The E.G.O's Threadspin (1-4). */
 	static int uptie(Player player, Def def) {
 		String all = player.getPersistentDataContainer().getOrDefault(UPTIES, PersistentDataType.STRING, "");
@@ -898,7 +918,7 @@ final class Ego {
 		}
 
 		static void open(Player player) {
-			MdGui gui = new MdGui(3, "INDEX PRESCRIPT");
+			MdGui gui = new MdGui(5, "INDEX PRESCRIPT");
 			List<String> loadout = new ArrayList<>();
 			for (String grade : GRADES) {
 				Def def = equipped(player, grade);
@@ -912,13 +932,26 @@ final class Ego {
 			}
 			res.add("스킬을 쓰면 그 스킬의 죄악 속성 자원 +1, 합에서 이기면 +1 더");
 			gui.set(12, MdGui.item(Material.AMETHYST_SHARD, "E.G.O 자원", NamedTextColor.AQUA, res.toArray(String[]::new)), (Runnable) null);
-			gui.set(11, MdGui.item(Material.GOLD_BLOCK, "추출", Gacha.THREE_COLOUR, "광기 " + Gacha.lunacy(player) + " · 추출권 "
-					+ Gacha.count(player, Gacha.Kind.TICKET) + "장", "무기와 E.G.O를 뽑아요"), () -> Extraction.open(player));
+			gui.set(11, MdGui.item(Material.GOLD_BLOCK, "추출", Gacha.THREE_COLOUR, "광기 " + Gacha.lunacy(player) + " · 유료 광기 " + Gacha.paidLunacy(player)
+					+ " · 추출권 " + Gacha.count(player, Gacha.Kind.TICKET) + "장", "무기와 E.G.O를 뽑아요"), () -> Extraction.open(player));
 			String carried = Armory.equipped(player);
 			gui.set(13, MdGui.item(Material.NETHERITE_SWORD, "무기 선택", Gacha.THREE_COLOUR, "장착: " + (carried == null ? "없음" : Armory.name(carried)),
 					"가진 스킬 무기 중 하나만 들 수 있어요"), () -> Armory.open(player));
-			gui.set(15, MdGui.item(Material.ANVIL, "무기 강화", NamedTextColor.AQUA, "장착한 스킬 무기의 레벨과 동기화", "경험치 티켓 "
-					+ Gacha.count(player, Gacha.Kind.EXP) + "장 · 끈 " + Gacha.count(player, Gacha.Kind.THREAD) + "개"), () -> Upgrade.open(player));
+			gui.set(15, MdGui.item(Material.ANVIL, "무기 강화", NamedTextColor.AQUA, "장착한 스킬 무기(또는 손에 든 검·창·도끼)의 레벨과 동기화",
+					"끈 " + Gacha.count(player, Gacha.Kind.THREAD) + "개"), () -> Upgrade.open(player));
+			UUID uid = player.getUniqueId();
+			gui.set(28, MdGui.item(Material.GOLDEN_HELMET, "림버스 패스", NamedTextColor.GOLD, "레벨 " + Pass.level(uid) + (Pass.premium(uid) ? " · 림버스 패스" : " · 무료"),
+					"미션과 거울 던전으로 패스 XP"), () -> Pass.open(player));
+			gui.set(29, MdGui.item(Material.WRITABLE_BOOK, "미션", NamedTextColor.AQUA, "일일·주간·시즌 미션"), () -> Missions.open(player));
+			gui.set(30, MdGui.item(Material.ENDER_EYE, "거울 투영", NamedTextColor.AQUA, "투영률 " + Projection.rate(uid) + " · 보상 레벨 " + Projection.level(uid),
+					"거울 던전 업적과 투영 보상"), () -> Projection.open(player));
+			gui.set(31, MdGui.item(Material.CLOCK, "거울 던전 보상", NamedTextColor.GOLD, "주간 보너스 " + MdClaim.left(uid) + "/" + MdClaim.charges(),
+					MdClaim.has(uid) ? "받을 보상이 있어요" : "받을 보상이 없어요"), () -> MdClaim.open(player));
+			gui.set(32, MdGui.item(Material.GLOW_INK_SAC, "관리자 · 엔케팔린", NamedTextColor.AQUA, "관리자 레벨 " + Manager.level(uid) + " · 엔케팔린 "
+					+ Manager.enkephalin(uid) + "/" + Manager.cap(uid), "모듈 조립, 루사이크"), () -> Manager.open(player));
+			gui.set(33, MdGui.item(Material.EMERALD, "상점", NamedTextColor.GREEN, "원작의 유료 상품 (원화 1원 = 2G)"), () -> PaidShop.open(player));
+			gui.set(34, MdGui.item(Material.ITEM_FRAME, "보관함", NamedTextColor.WHITE, "배너·아나운서·명함 장식 " + Season.getList(uid, "cosmetics").size() + "개"),
+					() -> Cosmetics.open(player));
 			gui.set(14, MdGui.item(Material.ENDER_EYE, "거울 던전", NamedTextColor.GOLD, "거울 던전 메뉴를 열어요 (/md)"), () -> {
 				player.closeInventory();
 				player.performCommand("md");
@@ -968,8 +1001,9 @@ final class Ego {
 				if (!owned) {
 					lore.add(SkillMenu.line("아직 없어요: 추출로 얻어요", NamedTextColor.RED));
 				} else {
-					lore.add(SkillMenu.line("동기화 " + spin + "/4" + (spin < 4 ? " · 우클릭: 동기화 " + (spin + 1) + " (끈 " + Upgrade.THREADS[spin + 1] * 2 + ")" : ""),
-							NamedTextColor.AQUA));
+					int[] cost = spinCost(def, spin + 1);
+					lore.add(SkillMenu.line("동기화 " + spin + "/4" + (spin < 4 ? " · 우클릭: 동기화 " + (spin + 1) + " (끈 " + cost[0]
+							+ (cost[1] > 0 ? " + " + def.sinnerKo() + "/범용 에고 조각 " + cost[1] : "") + ")" : ""), NamedTextColor.AQUA));
 					lore.add(SkillMenu.line(def == current ? "좌클릭: 장착 해제" : "좌클릭: 장착", NamedTextColor.YELLOW));
 				}
 				ItemStack icon = MdGui.item(Material.PAPER, Component.text(def.nameKo() + " · " + def.sinnerKo() + (owned ? "" : " (미보유)"),
@@ -984,12 +1018,16 @@ final class Ego {
 					}
 					if (click.isRightClick()) {
 						// Threadspin: Threads for the next Uptie of its Awakening skill.
-						if (spin < 4 && Gacha.take(player, Gacha.Kind.THREAD, Upgrade.THREADS[spin + 1] * 2)) {
+						int[] cost = spinCost(def, spin + 1);
+						int sinner = Gacha.sinner(def.sinner());
+						if (spin < 4 && Gacha.count(player, Gacha.Kind.THREAD) >= cost[0] && Shards.count(player, sinner) >= cost[1]) {
+							Gacha.take(player, Gacha.Kind.THREAD, cost[0]);
+							Shards.take(player, sinner, cost[1]);
 							setUptie(player, def, spin + 1);
 							Hud.message(player, Component.text(def.nameKo() + " 동기화 " + (spin + 1) + "!", def.colour()));
 							player.playSound(player.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1.0F, 1.0F);
 						} else if (spin < 4) {
-							Hud.message(player, Component.text("끈이 모자라요", NamedTextColor.GRAY));
+							Hud.message(player, Component.text("끈이나 에고 조각이 모자라요", NamedTextColor.GRAY));
 						}
 						pick(player, grade, page);
 						return;

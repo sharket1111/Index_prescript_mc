@@ -22,13 +22,16 @@ import net.kyori.adventure.text.format.TextDecoration;
 /**
  * Weapon levels and Uptie, after the original's Identities.
  *
- * A weapon's level (kept on the item; 40 when new, up to 60) rises with EXP
- * tickets, and is its Offense and Defense Level: damage is scaled as in the
+ * A weapon's level (kept on the item; 40 when new, up to 65 as the current
+ * Season's Identity cap) rises with the original's Identity Training Tickets
+ * (I-IV: 50/200/1000/3000 EXP) or jumps with a Level Boost Ticket, and is its Offense and Defense Level: damage is scaled as in the
  * original, by 1 + (offense - defense) / (|offense - defense| + 25), with the
  * attacker's weapon level (a Mirror Dungeon enemy's level) against the
  * target's (the player holding no weapon, or anything else, counts 40).
  *
- * Uptie (1-4, Threads) makes a weapon stronger: the two-star weapons play
+ * Uptie (1-4) costs what the original's does (Thread, and Egoshards for Tier 4: the two-star weapons as a 2★
+ * Identity with their Sinner's shards, the plugin's own as a 3★ with universal shards, swords/spears/axes as a
+ * 1★); a Takeoff Module raises one straight to 4. Uptie makes a weapon stronger: the two-star weapons play
  * their Identity's own skills and passive at that Uptie; the plugin's own
  * weapons gain clash power (+1 at Uptie 3, +2 at 4) and damage (+5% an Uptie
  * past 1), which carries their passives and effects too. The E.G.O's
@@ -36,11 +39,11 @@ import net.kyori.adventure.text.format.TextDecoration;
  */
 final class Upgrade implements Listener {
 	static final int START_LEVEL = 40;
-	static final int MAX_LEVEL = 60;
+	static final int MAX_LEVEL = 65;
 	static final int NEUTRAL_LEVEL = 40;
-	static final int EXP_PER_TICKET = 100;
-	/** Threads to reach Uptie 2, 3, 4 (two-star; three-star and E.G.O cost double). */
-	static final int[] THREADS = {0, 0, 20, 50, 100};
+	/** The training tickets, best first. */
+	static final Gacha.Kind[] TICKETS = {Gacha.Kind.TRAIN4, Gacha.Kind.EXP, Gacha.Kind.TRAIN2, Gacha.Kind.TRAIN1};
+	static final Gacha.Kind[] BOOSTS = {Gacha.Kind.BOOST1, Gacha.Kind.BOOST2, Gacha.Kind.BOOST3, Gacha.Kind.BOOST4, Gacha.Kind.BOOST5, Gacha.Kind.BOOST6};
 
 	private static final NamespacedKey LEVEL = new NamespacedKey(Items.NAMESPACE, "weapon_level");
 	private static final NamespacedKey EXP = new NamespacedKey(Items.NAMESPACE, "weapon_exp");
@@ -63,14 +66,30 @@ final class Upgrade implements Listener {
 		return levels(stack) ? stack.getItemMeta().getPersistentDataContainer().getOrDefault(UPTIE, PersistentDataType.INTEGER, 1) : 1;
 	}
 
-	/** EXP from one level to the next. */
+	/**
+	 * EXP from one level to the next: past 45 the original's curve rises gently, and from 60 to 65 it takes
+	 * 48,960 EXP in all; this line follows it (49,800 from 60 to 65).
+	 */
 	static int need(int level) {
-		return 50 + level * 5;
+		return 6000 + 180 * Math.max(0, level - 40);
 	}
 
-	static int threadsFor(ItemStack stack, int toUptie) {
-		int base = THREADS[Math.max(0, Math.min(4, toUptie))];
-		return Gacha.weaponOf(stack) != null || VanillaWeapon.is(stack) ? base : base * 2;
+	/** The original's Uptie cost to reach {@code toUptie}: {Thread, Egoshards}. */
+	static int[] costFor(ItemStack stack, int toUptie) {
+		int t = Math.max(2, Math.min(4, toUptie));
+		if (Gacha.weaponOf(stack) != null) {
+			return new int[] {new int[] {10, 40, 100}[t - 2], t == 4 ? 30 : 0};
+		}
+		if (VanillaWeapon.is(stack)) {
+			return new int[] {t == 4 ? 50 : 0, t == 4 ? 20 : 0};
+		}
+		return new int[] {new int[] {20, 80, 150}[t - 2], t == 4 ? 50 : 0};
+	}
+
+	/** Whose Egoshards a weapon takes (-1: universal only). */
+	static int sinnerOf(ItemStack stack) {
+		Gacha.Weapon w = Gacha.weaponOf(stack);
+		return w == null ? -1 : Gacha.sinner(w.sinner());
 	}
 
 	/** Adds EXP; returns how many levels it gained. */
@@ -266,7 +285,6 @@ final class Upgrade implements Listener {
 		}
 		int level = level(held);
 		int uptie = uptie(held);
-		int tickets = Gacha.count(p, Gacha.Kind.EXP);
 		int threads = Gacha.count(p, Gacha.Kind.THREAD);
 		ItemStack info = held.clone();
 		List<Component> lore = new ArrayList<>();
@@ -276,15 +294,34 @@ final class Upgrade implements Listener {
 				+ ", 피해 +" + 5 * (uptie - 1) + "%)" : ""), NamedTextColor.AQUA));
 		info.editMeta(meta -> meta.lore(lore));
 		gui.set(4, info, (Runnable) null);
-		gui.set(11, MdGui.item(Material.EXPERIENCE_BOTTLE, "경험치 티켓 1장", NamedTextColor.AQUA, "EXP +" + EXP_PER_TICKET, "가진 티켓 " + tickets + "장"),
-				() -> level(p, 1));
-		gui.set(12, MdGui.item(Material.EXPERIENCE_BOTTLE, "경험치 티켓 10장", NamedTextColor.AQUA, "EXP +" + EXP_PER_TICKET * 10, "가진 티켓 " + tickets + "장"),
-				() -> level(p, 10));
-		gui.set(13, MdGui.item(Material.EXPERIENCE_BOTTLE, "최대 레벨까지", NamedTextColor.AQUA, "가진 티켓으로 올릴 수 있는 만큼"), () -> level(p, 999));
+		// Training tickets I-IV: left-click one, right-click ten.
+		for (int i = 0; i < TICKETS.length; i++) {
+			Gacha.Kind k = TICKETS[TICKETS.length - 1 - i];
+			gui.set(9 + i, MdGui.item(Material.EXPERIENCE_BOTTLE, k.name, k.colour, "EXP +" + k.exp() + " · 가진 티켓 " + Gacha.count(p, k) + "장",
+					"좌클릭 1장 · 우클릭 10장"), click -> level(p, k, click.isRightClick() ? 10 : 1));
+		}
+		gui.set(13, MdGui.item(Material.EXPERIENCE_BOTTLE, "최대 레벨까지", NamedTextColor.AQUA, "좋은 티켓부터 올릴 수 있는 만큼"), () -> levelMax(p));
+		// Level Boost Tickets that would raise it.
+		int b = 18;
+		for (int i = 0; i < BOOSTS.length; i++) {
+			int target = (i + 1) * 10;
+			int have = Gacha.count(p, BOOSTS[i]);
+			if (have > 0 && target > level) {
+				Gacha.Kind k = BOOSTS[i];
+				gui.set(b++, MdGui.item(Material.NAME_TAG, k.name + " (" + have + "장)", k.colour, "레벨을 " + target + "로 올려요"), () -> boost(p, k, target));
+			}
+		}
 		if (uptie < 4) {
-			int cost = threadsFor(held, uptie + 1);
-			gui.set(15, MdGui.item(Material.STRING, "동기화 " + (uptie + 1) + " (끈 " + cost + ")", NamedTextColor.GOLD, "가진 끈 " + threads + "개",
+			int[] cost = costFor(held, uptie + 1);
+			int sinner = sinnerOf(held);
+			gui.set(15, MdGui.item(Material.STRING, "동기화 " + (uptie + 1), NamedTextColor.GOLD, "끈 " + cost[0] + (cost[1] > 0 ? " + 에고 조각 " + cost[1]
+					+ (sinner >= 0 ? " (" + Gacha.SINNERS_KO[sinner] + " 또는 범용)" : " (범용)") : ""), "가진 끈 " + threads + "개 · 쓸 수 있는 조각 " + Shards.count(p, sinner) + "개",
 					Gacha.weaponOf(held) != null ? "원작 인격의 동기화 " + (uptie + 1) + " 스킬·패시브가 돼요" : VanillaWeapon.is(held) ? "스킬셋이 강해져요 (위력·코인·효과)" : "합 위력과 피해가 올라요"), () -> spin(p));
+			int takeoff = Gacha.count(p, Gacha.Kind.TAKEOFF_UPTIE);
+			if (takeoff > 0) {
+				gui.set(16, MdGui.item(Material.NETHER_STAR, Gacha.Kind.TAKEOFF_UPTIE.name + " (" + takeoff + "개)", Gacha.Kind.TAKEOFF_UPTIE.colour,
+						"바로 동기화 4로 올려요"), () -> takeoff(p));
+			}
 		} else {
 			gui.set(15, MdGui.item(Material.NETHER_STAR, "동기화 4 (최대)", NamedTextColor.GOLD), (Runnable) null);
 		}
@@ -292,30 +329,86 @@ final class Upgrade implements Listener {
 		gui.fill().open(p);
 	}
 
-	private static void level(Player p, int tickets) {
+	private static ItemStack target(Player p, int[] slotOut) {
 		int slot = targetSlot(p);
-		if (slot < 0) {
-			open(p);
-			return;
-		}
-		ItemStack held = p.getInventory().getItem(slot);
+		slotOut[0] = slot;
+		return slot < 0 ? null : p.getInventory().getItem(slot);
+	}
+
+	private static void level(Player p, Gacha.Kind kind, int tickets) {
+		int[] slot = new int[1];
+		ItemStack held = target(p, slot);
 		if (!levels(held) || level(held) >= MAX_LEVEL) {
 			open(p);
 			return;
 		}
 		int used = 0;
 		int gained = 0;
-		while (used < tickets && level(held) < MAX_LEVEL && Gacha.take(p, Gacha.Kind.EXP, 1)) {
-			gained += addExp(held, EXP_PER_TICKET);
+		while (used < tickets && level(held) < MAX_LEVEL && Gacha.take(p, kind, 1)) {
+			gained += addExp(held, kind.exp());
 			used++;
 		}
-		p.getInventory().setItem(slot, held);
-		if (used == 0) {
-			Hud.message(p, Component.text("경험치 티켓이 없어요", NamedTextColor.GRAY));
-		} else {
-			Hud.message(p, Component.text("경험치 티켓 " + used + "장 사용" + (gained > 0 ? " · 레벨 +" + gained + " (Lv." + level(held) + ")" : ""), NamedTextColor.AQUA));
+		p.getInventory().setItem(slot[0], held);
+		Missions.progress(p, "train", used);
+		report(p, held, used == 0 ? kind.name + "이 없어요" : kind.name + " " + used + "장", gained);
+		open(p);
+	}
+
+	private static void levelMax(Player p) {
+		int[] slot = new int[1];
+		ItemStack held = target(p, slot);
+		if (!levels(held)) {
+			open(p);
+			return;
+		}
+		int used = 0;
+		int gained = 0;
+		for (Gacha.Kind k : TICKETS) {
+			while (level(held) < MAX_LEVEL && Gacha.take(p, k, 1)) {
+				gained += addExp(held, k.exp());
+				used++;
+			}
+		}
+		p.getInventory().setItem(slot[0], held);
+		report(p, held, used == 0 ? "경험치 티켓이 없어요" : "경험치 티켓 " + used + "장", gained);
+		open(p);
+	}
+
+	private static void report(Player p, ItemStack held, String what, int gained) {
+		Hud.message(p, Component.text(what + (gained > 0 ? " · 레벨 +" + gained + " (Lv." + level(held) + ")" : ""), NamedTextColor.AQUA));
+		if (gained > 0) {
 			p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 0.7F, 1.4F);
 		}
+	}
+
+	private static void boost(Player p, Gacha.Kind kind, int to) {
+		int[] slot = new int[1];
+		ItemStack held = target(p, slot);
+		if (!levels(held) || level(held) >= to || !Gacha.take(p, kind, 1)) {
+			open(p);
+			return;
+		}
+		held.editMeta(meta -> {
+			meta.getPersistentDataContainer().set(LEVEL, PersistentDataType.INTEGER, to);
+			meta.getPersistentDataContainer().set(EXP, PersistentDataType.INTEGER, 0);
+		});
+		refreshLore(held);
+		p.getInventory().setItem(slot[0], held);
+		report(p, held, kind.name, 1);
+		open(p);
+	}
+
+	private static void takeoff(Player p) {
+		int[] slot = new int[1];
+		ItemStack held = target(p, slot);
+		if (!levels(held) || uptie(held) >= 4 || !Gacha.take(p, Gacha.Kind.TAKEOFF_UPTIE, 1)) {
+			open(p);
+			return;
+		}
+		setUptie(held, 4);
+		p.getInventory().setItem(slot[0], held);
+		Hud.message(p, Component.text("동기화 4!", NamedTextColor.GOLD));
+		p.playSound(p.getLocation(), org.bukkit.Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1.0F, 1.0F);
 		open(p);
 	}
 
@@ -331,11 +424,15 @@ final class Upgrade implements Listener {
 			open(p);
 			return;
 		}
-		if (!Gacha.take(p, Gacha.Kind.THREAD, threadsFor(held, uptie + 1))) {
-			Hud.message(p, Component.text("끈이 모자라요", NamedTextColor.GRAY));
+		int[] cost = costFor(held, uptie + 1);
+		int sinner = sinnerOf(held);
+		if (Gacha.count(p, Gacha.Kind.THREAD) < cost[0] || Shards.count(p, sinner) < cost[1]) {
+			Hud.message(p, Component.text(Gacha.count(p, Gacha.Kind.THREAD) < cost[0] ? "끈이 모자라요" : "에고 조각이 모자라요", NamedTextColor.GRAY));
 			open(p);
 			return;
 		}
+		Gacha.take(p, Gacha.Kind.THREAD, cost[0]);
+		Shards.take(p, sinner, cost[1]);
 		setUptie(held, uptie + 1);
 		p.getInventory().setItem(slot, held);
 		Hud.message(p, Component.text("동기화 " + (uptie + 1) + "!", NamedTextColor.GOLD));

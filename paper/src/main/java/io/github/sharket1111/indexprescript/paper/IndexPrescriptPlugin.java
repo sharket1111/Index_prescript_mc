@@ -78,6 +78,18 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		getServer().getPluginManager().registerEvents(new EgoPassive(), this);
 		getServer().getPluginManager().registerEvents(new NoBasicFire(), this);
 		Gacha.load(this);
+		Season.load(this);
+		Manager.load();
+		Luxcavation.load();
+		Pass.load();
+		Missions.load();
+		Projection.load();
+		PaidShop.load();
+		MdClaim.load();
+		getServer().getPluginManager().registerEvents(new Missions(), this);
+		getServer().getPluginManager().registerEvents(new Manager(), this);
+		Bukkit.getScheduler().runTaskTimer(this, Projection::tick, 40L, 20L);
+		Bukkit.getScheduler().runTaskTimer(this, Season::save, 100L, 100L);
 		getServer().getPluginManager().registerEvents(new GachaWeapon(), this);
 		getServer().getPluginManager().registerEvents(new Upgrade(), this);
 		getServer().getPluginManager().registerEvents(new Armory(), this);
@@ -138,6 +150,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 
 	@Override
 	public void onDisable() {
+		Season.save();
 		Animations.stop(null);
 		MdRun.stopAll();
 		MdLooks.removeAll();
@@ -202,6 +215,12 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			sender.sendMessage(Component.text(Messages.get(sender, "command.pack_sent"), NamedTextColor.GREEN));
 			return true;
 		}
+		if (args.length >= 1 && args[0].equalsIgnoreCase("season")) {
+			// /ip season: what the Season data loaded and whether the Shop can take G.
+			sender.sendMessage(Component.text("림버스 패스 " + Pass.maxLevel() + "레벨 · 관리자 레벨 " + Manager.maxLevel() + "단계 · 상점 결제 "
+					+ (Gold.available() ? "가능 (PlayerTrade)" : "불가 (PlayerTrade 없음)"), NamedTextColor.GOLD));
+			return true;
+		}
 		if (args.length >= 3 && args[0].equalsIgnoreCase("lunacy")) {
 			// /ip lunacy <player> <+/-amount>
 			Player who = Bukkit.getPlayerExact(args[1]);
@@ -210,10 +229,15 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 				return true;
 			}
 			try {
-				Gacha.addLunacy(who, Integer.parseInt(args[2]));
-				sender.sendMessage(Component.text(who.getName() + " 광기 " + Gacha.lunacy(who), NamedTextColor.GREEN));
+				boolean paid = args.length >= 4 && args[3].equalsIgnoreCase("paid");
+				if (paid) {
+					Gacha.addPaidLunacy(who, Integer.parseInt(args[2]));
+				} else {
+					Gacha.addLunacy(who, Integer.parseInt(args[2]));
+				}
+				sender.sendMessage(Component.text(who.getName() + " 광기 " + Gacha.lunacy(who) + " · 유료 광기 " + Gacha.paidLunacy(who), NamedTextColor.GREEN));
 			} catch (NumberFormatException e) {
-				sender.sendMessage(Component.text("/ip lunacy <플레이어> <양>", NamedTextColor.RED));
+				sender.sendMessage(Component.text("/ip lunacy <플레이어> <양> [paid]", NamedTextColor.RED));
 			}
 			return true;
 		}
@@ -245,7 +269,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			case "ticket", "추출권" -> Gacha.item(Gacha.Kind.TICKET, 10);
 			case "exp", "경험치" -> Gacha.item(Gacha.Kind.EXP, 10);
 			case "thread", "끈" -> Gacha.item(Gacha.Kind.THREAD, 50);
-			default -> null;
+			default -> Rewards.kind(args[1].toLowerCase(Locale.ROOT)) != null ? Gacha.item(Rewards.kind(args[1].toLowerCase(Locale.ROOT)), 10) : null;
 		};
 		if (item == null) {
 			sender.sendMessage(Messages.get(sender, "command.usage"));
@@ -486,7 +510,9 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		return switch (args.length) {
 			case 1 -> List.of("give", "pack", "laevatein", "sanity", "mang", "renoir", "blackgod", "dummy", "anim", "fx", "skills");
 			case 2 -> switch (args[0].toLowerCase(Locale.ROOT)) {
-				case "give" -> join(List.of("caduceus", "terminal", "laevatein", "hammer", "mimicry", "blackgod", "ticket", "exp", "thread"),
+				case "give" -> join(List.of("caduceus", "terminal", "laevatein", "hammer", "mimicry", "blackgod", "ticket", "deca", "deca3", "train1", "train2",
+						"train3", "train4", "thread", "shard_universal", "crate_random", "crate_nominable", "enk_module", "enk_box", "boost4", "boost5", "boost6",
+						"takeoff_uptie"),
 						Gacha.weapons().stream().map(w -> "weapon:" + w.id()).toList());
 				case "laevatein" -> List.of("0", "1", "2", "3");
 				case "mang" -> List.of("1", "2", "3", "4", "5", "6");
