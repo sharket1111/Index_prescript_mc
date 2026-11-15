@@ -357,7 +357,7 @@ final class SkinPack {
 			// The gifts' pictures.
 			for (Map.Entry<String, byte[]> gift : gifts.entrySet()) {
 				String id = gift.getKey();
-				put(out, "assets/index_prescript/textures/item/gift/" + id + ".png", gift.getValue());
+				put(out, "assets/index_prescript/textures/item/gift/" + id + ".png", GiftBadge.decorate(id, gift.getValue()));
 				JsonObject model = new JsonObject();
 				model.addProperty("parent", "minecraft:item/generated");
 				JsonObject textures = new JsonObject();

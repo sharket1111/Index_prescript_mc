@@ -169,6 +169,15 @@ final class Missions implements Listener {
 			progress(p, "login", 1);
 		}
 		PaidShop.dailySupply(p);
+		// E.G.O kept in the collection while the plugin had no data for them become owned E.G.O once it does.
+		for (String c : Season.getList(id, "cosmetics")) {
+			if (c.startsWith("ego:") && Ego.get(c.substring(4)) != null) {
+				Ego.give(p, Ego.get(c.substring(4)));
+				java.util.List<String> left = Season.getList(id, "cosmetics");
+				left.remove(c);
+				Season.set(id, "cosmetics", left);
+			}
+		}
 	}
 
 	@EventHandler

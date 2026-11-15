@@ -37,11 +37,25 @@ def field(text, name):
     return m.group(1).strip() if m else ""
 
 
+# E.G.O whose skills the wiki splits into tabs and that are taken in (their last tab, the one that strikes).
+TABBED = {"Hollow Faust"}
+CURRENT = [None]
+
+
 def template(text, name):
-    """The body of |name={{Skill ...}} (nested templates kept whole)."""
+    """The body of |name={{Skill ...}} (nested templates kept whole). A skill split into tabs
+    (|name=<tabber>, as Hollow Faust's) gives its last tab: the form that strikes."""
     start = text.find("|" + name + "={{")
     if start < 0:
-        return None
+        if CURRENT[0] not in TABBED:
+            return None
+        m = re.search(r"\|" + name + r"=\s*<tabber>(.*?)</tabber>", text, re.S)
+        if not m:
+            return None
+        tabs = [t.start() for t in re.finditer(r"\{\{Skill\s*\n", m.group(1))]
+        if not tabs:
+            return None
+        return template("|" + name + "=" + m.group(1)[tabs[-1]:], name)
     i = text.index("{{", start)
     depth = 0
     for j in range(i, len(text)):
@@ -157,6 +171,7 @@ def main(raw):
     out = []
     for title, text in pages.items():
         n = namu.get(title, {})
+        CURRENT[0] = title
         awakening = skill(text, "askill")
         if awakening is None:
             continue

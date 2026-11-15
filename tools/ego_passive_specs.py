@@ -112,6 +112,7 @@ SPECS = {
     "blind_obsession_ishmael": "turn_end: buff haste 1; turn_end: buff offense 3",
     "crushbound_past_meursault": "turn_start: buff dmgup 1; turn_start: buff protect 1",
     "hollow_meursault": "kill: resource random 2",
+    "hollow_faust": "kill: sp 5 !turn 1; kill: buff dmgup 1 !turn 1",
     "yearning_mircalla_meursault": "always: lifesteal 10 @has:bleed; hit: inflict bleed 1 0 @has:bleed !turn 2",
     "binds_outis": "stagger: resource pride 1 !turn 3; stagger: resource random 1 !turn 3; kill: resource pride 1 !turn 3",
     "indicant_s_trial_rodion": "kill: inflict burn 0 3 all @kw>=burn:1 !turn 2; kill: sp 8 @has:burn !turn 2",
