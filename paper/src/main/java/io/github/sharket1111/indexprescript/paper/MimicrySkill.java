@@ -89,11 +89,11 @@ final class MimicrySkill {
 				"적중 시 출혈 3. 피해 30 이상: 빛 2 회복 — 모든 스킬 대기 -2초."),
 		ROAR("기합", DamageKind.SLASH, 5, 3, new double[] {10.0, 6.0}, new int[] {6, 20}, 34, 60, "minecraft:goat_horn", false,
 				"사용 시 정신력 +30. 첫 코인은 방어(저항 II). 적중 시 다음 장면 힘 3(위력 +3)."),
-		CHARGE("돌진", DamageKind.SLASH, 14, 12, new double[] {20.0}, new int[] {14}, 30, 160, "minecraft:wind_charge", false,
+		CHARGE("돌진", DamageKind.SLASH, 10, 8, new double[] {20.0}, new int[] {14}, 30, 160, "minecraft:wind_charge", false,
 				"적중 시 흐트러짐 기준의 절반만큼 흐트러짐 피해. 처치하거나 흐트러뜨리면 무작위 적에게 이 스킬을 다시 사용(최대 5번)."),
-		GREAT_VERTICAL("대절단-세로", DamageKind.SLASH, 20, 19, new double[] {29.5}, new int[] {24}, 46, 240, "index_prescript:mimicry", true,
+		GREAT_VERTICAL("대절단-세로", DamageKind.SLASH, 13, 9, new double[] {29.5}, new int[] {24}, 46, 240, "index_prescript:mimicry", true,
 				"적중 시 대상의 전투 책장 하나를 파괴: 1장면 동안 스킬을 쓸 수 없다. E.G.O 발현 중에만."),
-		GREAT_HORIZONTAL("대절단-가로", DamageKind.SLASH, 28, 14, new double[] {35.0}, new int[] {28}, 50, 320, "index_prescript:mimicry", true,
+		GREAT_HORIZONTAL("대절단-가로", DamageKind.SLASH, 14, 8, new double[] {35.0}, new int[] {28}, 50, 320, "index_prescript:mimicry", true,
 				"광역 6블록. 적중 시 출혈 5. E.G.O 발현 중에만.");
 
 		final String name;
@@ -128,10 +128,24 @@ final class MimicrySkill {
 			return this == GREAT_VERTICAL || this == GREAT_HORIZONTAL;
 		}
 
+		/**
+		 * Base power and coin power at the held Mimicry's Uptie: the values above are Uptie 4 (in line with
+		 * the other three-star weapons' best skills); lower Upties take some off, the big skills more.
+		 */
+		int[] power(Player player) {
+			int u = Upgrade.uptie(player.getInventory().getItemInMainHand());
+			boolean heavy = big() || this == CHARGE;
+			int[] baseLoss = heavy ? new int[] {4, 3, 1, 0} : new int[] {2, 1, 0, 0};
+			int[] coinLoss = heavy ? new int[] {2, 1, 1, 0} : new int[] {0, 0, 0, 0};
+			int i = Math.max(1, Math.min(4, u)) - 1;
+			return new int[] {Math.max(1, base - baseLoss[i]), Math.max(1, coinPower - coinLoss[i])};
+		}
+
 		SkillCard card(Player player) {
 			int bonus = MimicryWeapon.bonusPower(player);
+			int[] pw = power(player);
 			String extra = bonus > 0 ? " (위력 +" + bonus + ")" : "";
-			return new SkillCard(name, big() ? GREAT_COLOUR : COLOUR, base + bonus, coinPower, coins.length, ability + extra, length + 10,
+			return new SkillCard(name, big() ? GREAT_COLOUR : COLOUR, pw[0] + bonus, pw[1], coins.length, ability + extra, length + 10,
 					true, "N".repeat(coins.length));
 		}
 	}
@@ -244,7 +258,8 @@ final class MimicrySkill {
 		boolean locked = kind.egoOnly && !MimicryWeapon.ego(player);
 		int bonus = MimicryWeapon.bonusPower(player);
 		List<Component> lore = new ArrayList<>();
-		lore.add(line("위력 " + (kind.base + bonus) + " · 코인 +" + kind.coinPower + " ×" + kind.coins.length
+		int[] pw = kind.power(player);
+		lore.add(line("위력 " + (pw[0] + bonus) + " · 코인 +" + pw[1] + " ×" + kind.coins.length
 				+ (bonus > 0 ? "  (붉은 안개·힘 +" + bonus + ")" : ""), NamedTextColor.GOLD));
 		if (kind == Kind.ROAR) {
 			lore.add(line("수비 스킬 · 방어 8~12 (1턴)", NamedTextColor.AQUA));

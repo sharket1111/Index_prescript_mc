@@ -106,10 +106,10 @@ final class MimicryWeapon implements Listener {
 		return ego == null ? 0 : ego.stacks;
 	}
 
-	/** Power added to Mimicry's skills: Red Mist's +2 and its kill stacks in E.G.O, and Strength (attack level). */
+	/** Power added to Mimicry's skills: Red Mist's +1 and its kill stacks (+1 each, up to 3 count) in E.G.O, and Strength (attack level). */
 	static int bonusPower(Player player) {
 		Ego ego = EGO.get(player.getUniqueId());
-		int bonus = ego == null ? 0 : 2 + ego.stacks;
+		int bonus = ego == null ? 0 : 1 + Math.min(3, ego.stacks);
 		return bonus + CombatState.of(player).attackLevel(CaduceusListener.now());
 	}
 
@@ -461,7 +461,7 @@ final class MimicryWeapon implements Listener {
 		Ego ego = EGO.get(killer.getUniqueId());
 		if (ego != null && ego.stacks < MAX_STACKS) {
 			ego.stacks++;
-			Hud.message(killer, Component.text("[붉은 안개] 처치 — 위력 +" + (2 + ego.stacks) + " (" + ego.stacks + "/" + MAX_STACKS + ")", RED_TEXT));
+			Hud.message(killer, Component.text("[붉은 안개] 처치 — 위력 +" + (1 + Math.min(3, ego.stacks)) + " (" + ego.stacks + "/" + MAX_STACKS + ")", RED_TEXT));
 			killer.getWorld().spawnParticle(Particle.DUST, killer.getLocation().add(0, 1, 0), 30, 0.5, 0.8, 0.5, 0.0,
 					new Particle.DustOptions(RED, 1.8F));
 		}
