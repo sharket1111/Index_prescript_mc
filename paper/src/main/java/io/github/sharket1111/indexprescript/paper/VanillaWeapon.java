@@ -49,7 +49,8 @@ final class VanillaWeapon implements Listener {
 	private static final int[] TIER_RANK = {0, 1, 2, 2, 3, 4, 5};
 
 	static Kind kindOf(ItemStack stack) {
-		if (stack == null || stack.isEmpty()) {
+		// The plugin's own weapons (Laevatein is a netherite sword underneath) have their own skills.
+		if (stack == null || stack.isEmpty() || Items.isAnyWeapon(stack)) {
 			return null;
 		}
 		String n = stack.getType().name();
