@@ -389,9 +389,9 @@ final class Extraction {
 				ball.setTransformation(new Transformation(new Vector3f(), new Quaternionf(new AxisAngle4f(spin, 0.3F, 1, 0.2F)),
 						new Vector3f(0.2F + 1.4F * t), new Quaternionf()));
 				Particle.DustOptions ember = new Particle.DustOptions(Color.fromRGB(0xFF6A10), 1.3F);
-				w.spawnParticle(Particle.DUST, centre, 6, 0.5 + t, 0.5 + t, 0.5 + t, 0, ember);
-				w.spawnParticle(Particle.FLAME, centre, 3, 0.4 + t, 0.4 + t, 0.4 + t, 0.02);
-				w.spawnParticle(Particle.LAVA, centre, tick % 4 == 0 ? 1 : 0, 0.3, 0.3, 0.3, 0);
+				LowSpec.particle(w, Particle.DUST, centre, 6, 0.5 + t, 0.5 + t, 0.5 + t, 0, ember);
+				LowSpec.particle(w, Particle.FLAME, centre, 3, 0.4 + t, 0.4 + t, 0.4 + t, 0.02);
+				LowSpec.particle(w, Particle.LAVA, centre, tick % 4 == 0 ? 1 : 0, 0.3, 0.3, 0.3, 0);
 				if (tick % 10 == 0) {
 					w.playSound(centre, Sound.BLOCK_CHAIN_HIT, SoundCategory.PLAYERS, 1.0F, 0.5F + tick * 0.015F);
 				}
@@ -406,8 +406,8 @@ final class Extraction {
 				Location b = centre.clone().add(side.clone().multiply(2.5)).add(0, -1.5, 0);
 				for (double s = 0; s <= 1; s += 0.04) {
 					Location at = a.clone().add(b.toVector().subtract(a.toVector()).multiply(s));
-					w.spawnParticle(Particle.DUST, at, 2, 0.02, 0.02, 0.02, 0, blue);
-					w.spawnParticle(Particle.END_ROD, at, 1, 0, 0, 0, 0);
+					LowSpec.particle(w, Particle.DUST, at, 2, 0.02, 0.02, 0.02, 0, blue);
+					LowSpec.particle(w, Particle.END_ROD, at, 1, 0, 0, 0, 0);
 				}
 				w.playSound(centre, Sound.ITEM_TRIDENT_RIPTIDE_3, SoundCategory.PLAYERS, 1.0F, 1.4F);
 				w.playSound(centre, Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1.0F, 0.6F);
@@ -467,8 +467,8 @@ final class Extraction {
 			intro.clear();
 			ball.setItemStack(model(high ? "index_prescript:extraction/chain_ball_gold" : "index_prescript:extraction/chain_ball"));
 			ball.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(1.9F), new Quaternionf()));
-			w.spawnParticle(Particle.FLASH, centre, 1, 0, 0, 0, 0, Color.fromRGB(0xFFE0A0));
-			w.spawnParticle(Particle.EXPLOSION, centre, 3, 0.6, 0.6, 0.6, 0);
+			LowSpec.particle(w, Particle.FLASH, centre, 1, 0, 0, 0, 0, Color.fromRGB(0xFFE0A0));
+			LowSpec.particle(w, Particle.EXPLOSION, centre, 3, 0.6, 0.6, 0.6, 0);
 			w.playSound(centre, Sound.BLOCK_CHAIN_BREAK, SoundCategory.PLAYERS, 1.0F, 0.6F);
 			w.playSound(centre, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.PLAYERS, 0.6F, 1.4F);
 			for (int i = 0; i < pulls.size(); i++) {
@@ -517,12 +517,12 @@ final class Extraction {
 				Gacha.Pull pull = pulls.get(i);
 				Location at = nodes[i].getLocation();
 				if (pull.rarity() == 3 || pull.ego()) {
-					w.spawnParticle(Particle.FLAME, at, 3, 0.35, 0.35, 0.35, 0.01);
-					w.spawnParticle(Particle.DUST, at, 3, 0.4, 0.4, 0.4, 0, new Particle.DustOptions(Color.fromRGB(rgb(pull)), 1.4F));
+					LowSpec.particle(w, Particle.FLAME, at, 3, 0.35, 0.35, 0.35, 0.01);
+					LowSpec.particle(w, Particle.DUST, at, 3, 0.4, 0.4, 0.4, 0, new Particle.DustOptions(Color.fromRGB(rgb(pull)), 1.4F));
 				} else if (pull.rarity() == 2) {
-					w.spawnParticle(Particle.DUST, at, 3, 0.4, 0.4, 0.4, 0, new Particle.DustOptions(Color.fromRGB(0xE02818), 1.2F));
+					LowSpec.particle(w, Particle.DUST, at, 3, 0.4, 0.4, 0.4, 0, new Particle.DustOptions(Color.fromRGB(0xE02818), 1.2F));
 				} else {
-					w.spawnParticle(Particle.WHITE_ASH, at, 4, 0.4, 0.4, 0.4, 0);
+					LowSpec.particle(w, Particle.WHITE_ASH, at, 4, 0.4, 0.4, 0.4, 0);
 				}
 			}
 			if (tick % 20 == 0 && finishAt < 0) {
@@ -565,13 +565,13 @@ final class Extraction {
 				}
 			}
 			Particle.DustOptions burst = new Particle.DustOptions(Color.fromRGB(rgb(pull)), pull.rarity() == 3 ? 2.0F : 1.4F);
-			w.spawnParticle(Particle.FLASH, at, 1, 0, 0, 0, 0, Color.fromRGB(rgb(pull)));
-			w.spawnParticle(Particle.DUST, at, pull.rarity() == 3 ? 70 : 30, 0.5, 0.5, 0.5, 0, burst);
-			w.spawnParticle(Particle.FIREWORK, at, pull.rarity() == 3 ? 30 : 8, 0.2, 0.2, 0.2, 0.08);
+			LowSpec.particle(w, Particle.FLASH, at, 1, 0, 0, 0, 0, Color.fromRGB(rgb(pull)));
+			LowSpec.particle(w, Particle.DUST, at, pull.rarity() == 3 ? 70 : 30, 0.5, 0.5, 0.5, 0, burst);
+			LowSpec.particle(w, Particle.FIREWORK, at, pull.rarity() == 3 ? 30 : 8, 0.2, 0.2, 0.2, 0.08);
 			w.playSound(at, Sound.BLOCK_CHAIN_BREAK, SoundCategory.PLAYERS, 1.0F, 1.2F);
 			TextColor colour = Gacha.colour(pull);
 			if (pull.rarity() == 3 || pull.ego()) {
-				w.spawnParticle(Particle.TOTEM_OF_UNDYING, at, 40, 0.3, 0.5, 0.3, 0.4);
+				LowSpec.particle(w, Particle.TOTEM_OF_UNDYING, at, 40, 0.3, 0.5, 0.3, 0.4);
 				w.playSound(at, Sound.UI_TOAST_CHALLENGE_COMPLETE, SoundCategory.PLAYERS, 1.0F, 1.0F);
 				player.showTitle(Title.title(Component.text(pull.ego() ? "E.G.O" : Gacha.stars(3), colour).decorate(TextDecoration.BOLD),
 						Component.text(pull.name(), colour), Title.Times.times(Duration.ofMillis(80), Duration.ofMillis(1400), Duration.ofMillis(300))));
@@ -631,8 +631,8 @@ final class Extraction {
 			if (ballHit != null) {
 				ballHit.remove();
 			}
-			w.spawnParticle(Particle.EXPLOSION_EMITTER, centre, 1);
-			w.spawnParticle(Particle.DUST, centre, 80, 1.5, 1.5, 1.5, 0, new Particle.DustOptions(Color.fromRGB(high ? 0xFFD040 : 0xFF6A10), 1.6F));
+			LowSpec.particle(w, Particle.EXPLOSION_EMITTER, centre, 1);
+			LowSpec.particle(w, Particle.DUST, centre, 80, 1.5, 1.5, 1.5, 0, new Particle.DustOptions(Color.fromRGB(high ? 0xFFD040 : 0xFF6A10), 1.6F));
 			w.playSound(centre, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.PLAYERS, 0.7F, 1.3F);
 		}
 

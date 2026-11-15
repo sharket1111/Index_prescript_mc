@@ -193,14 +193,14 @@ final class MimicryWeapon implements Listener {
 		world.playSound(at, Sound.ENTITY_WARDEN_HEARTBEAT, SoundCategory.PLAYERS, 2.0F, 0.6F);
 		world.playSound(at, Sound.ENTITY_WITHER_SPAWN, SoundCategory.PLAYERS, 0.5F, 1.6F);
 		world.playSound(at, Sound.ITEM_TRIDENT_THUNDER, SoundCategory.PLAYERS, 0.6F, 0.7F);
-		world.spawnParticle(Particle.DUST, at, 120, 0.9, 1.1, 0.9, 0.0, new Particle.DustOptions(RED, 2.0F));
-		world.spawnParticle(Particle.DUST, at, 60, 1.4, 0.6, 1.4, 0.0, new Particle.DustOptions(DARK_RED, 2.4F));
+		LowSpec.particle(world, Particle.DUST, at, 120, 0.9, 1.1, 0.9, 0.0, new Particle.DustOptions(RED, 2.0F));
+		LowSpec.particle(world, Particle.DUST, at, 60, 1.4, 0.6, 1.4, 0.0, new Particle.DustOptions(DARK_RED, 2.4F));
 		for (int i = 0; i < 48; i++) {
 			double angle = Math.PI * 2 * i / 48;
-			world.spawnParticle(Particle.DUST, player.getLocation().add(Math.cos(angle) * 2.2, 0.15, Math.sin(angle) * 2.2), 2, 0.05, 0.05,
+			LowSpec.particle(world, Particle.DUST, player.getLocation().add(Math.cos(angle) * 2.2, 0.15, Math.sin(angle) * 2.2), 2, 0.05, 0.05,
 					0.05, 0.0, new Particle.DustOptions(RED, 1.6F));
 		}
-		world.spawnParticle(Particle.CRIMSON_SPORE, at, 80, 1.2, 1.2, 1.2, 0.02);
+		LowSpec.particle(world, Particle.CRIMSON_SPORE, at, 80, 1.2, 1.2, 1.2, 0.02);
 	}
 
 	/** Ends E.G.O: the blade goes back to its plain look. */
@@ -217,7 +217,7 @@ final class MimicryWeapon implements Listener {
 			Hud.message(player, Component.text("E.G.O 해제 — " + reason, NamedTextColor.RED));
 			World world = player.getWorld();
 			world.playSound(player.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, SoundCategory.PLAYERS, 1.0F, 0.6F);
-			world.spawnParticle(Particle.SMOKE, player.getLocation().add(0, 1, 0), 40, 0.5, 0.8, 0.5, 0.02);
+			LowSpec.particle(world, Particle.SMOKE, player.getLocation().add(0, 1, 0), 40, 0.5, 0.8, 0.5, 0.02);
 		}
 	}
 
@@ -300,8 +300,8 @@ final class MimicryWeapon implements Listener {
 		}
 		World world = player.getWorld();
 		Location at = player.getLocation().add(0, 1.0, 0);
-		world.spawnParticle(Particle.DUST, at, 4, 0.45, 0.8, 0.45, 0.0, new Particle.DustOptions(RED, 1.3F));
-		world.spawnParticle(Particle.DUST, player.getLocation().add(0, 0.2, 0), 3, 0.7, 0.1, 0.7, 0.0, new Particle.DustOptions(DARK_RED, 1.8F));
+		LowSpec.particle(world, Particle.DUST, at, 4, 0.45, 0.8, 0.45, 0.0, new Particle.DustOptions(RED, 1.3F));
+		LowSpec.particle(world, Particle.DUST, player.getLocation().add(0, 0.2, 0), 3, 0.7, 0.1, 0.7, 0.0, new Particle.DustOptions(DARK_RED, 1.8F));
 	}
 
 	static void endAll() {
@@ -444,7 +444,7 @@ final class MimicryWeapon implements Listener {
 			World world = foe.getWorld();
 			MimicrySkill.arc(world, player.getLocation().add(0, 1.1, 0).toVector(), foe.getLocation().toVector()
 					.subtract(player.getLocation().toVector()), 2.0, 20, -70, 140, 1.2F);
-			world.spawnParticle(Particle.SWEEP_ATTACK, mid, 1);
+			LowSpec.particle(world, Particle.SWEEP_ATTACK, mid, 1);
 			world.playSound(mid, Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1.0F, 0.7F);
 			world.playSound(mid, Sound.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS, 0.8F, 0.8F);
 			Damage.deal(foe, dieDamage(roll), player, true);
@@ -462,7 +462,7 @@ final class MimicryWeapon implements Listener {
 		if (ego != null && ego.stacks < MAX_STACKS) {
 			ego.stacks++;
 			Hud.message(killer, Component.text("[붉은 안개] 처치 — 위력 +" + (1 + Math.min(3, ego.stacks)) + " (" + ego.stacks + "/" + MAX_STACKS + ")", RED_TEXT));
-			killer.getWorld().spawnParticle(Particle.DUST, killer.getLocation().add(0, 1, 0), 30, 0.5, 0.8, 0.5, 0.0,
+			LowSpec.particle(killer.getWorld(), Particle.DUST, killer.getLocation().add(0, 1, 0), 30, 0.5, 0.8, 0.5, 0.0,
 					new Particle.DustOptions(RED, 1.8F));
 		}
 	}

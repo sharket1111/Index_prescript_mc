@@ -33,7 +33,7 @@ final class Rupture implements Listener {
 		}
 		CombatState.of(target).addRupture(potency, count, CaduceusListener.now());
 		Location at = target.getLocation().add(0, target.getHeight() * 0.6, 0);
-		target.getWorld().spawnParticle(Particle.DUST, at, 6 + potency, 0.3, 0.35, 0.3, 0.0, new Particle.DustOptions(TEAL, 1.1F));
+		LowSpec.particle(target.getWorld(), Particle.DUST, at, 6 + potency, 0.3, 0.35, 0.3, 0.0, new Particle.DustOptions(TEAL, 1.1F));
 	}
 
 	/** Triggers the target's Rupture: fixed damage by potency, one count used up. Returns the health taken. */
@@ -50,9 +50,9 @@ final class Rupture implements Listener {
 		double taken = before - (target.isDead() ? 0.0 : target.getHealth() + target.getAbsorptionAmount());
 		World world = target.getWorld();
 		Location at = target.getLocation().add(0, target.getHeight() * 0.6, 0);
-		world.spawnParticle(Particle.DUST, at, 10 + Math.min(30, potency * 2), 0.35, 0.45, 0.35, 0.0, new Particle.DustOptions(TEAL, 1.4F));
-		world.spawnParticle(Particle.DUST, at, 6, 0.2, 0.3, 0.2, 0.0, new Particle.DustOptions(PALE, 1.0F));
-		world.spawnParticle(Particle.CRIT, at, 6, 0.2, 0.3, 0.2, 0.2);
+		LowSpec.particle(world, Particle.DUST, at, 10 + Math.min(30, potency * 2), 0.35, 0.45, 0.35, 0.0, new Particle.DustOptions(TEAL, 1.4F));
+		LowSpec.particle(world, Particle.DUST, at, 6, 0.2, 0.3, 0.2, 0.0, new Particle.DustOptions(PALE, 1.0F));
+		LowSpec.particle(world, Particle.CRIT, at, 6, 0.2, 0.3, 0.2, 0.2);
 		world.playSound(at, Sound.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.PLAYERS, 0.8F, 1.3F);
 		return taken;
 	}

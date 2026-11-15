@@ -26,6 +26,7 @@ final class MainMenu extends Menu {
 	private static final int GROUP_SLOT = 24;
 	private static final int STORAGE_SLOT = 13;
 	private static final int ADMIN_SLOT = 26;
+	private static final int IP_MENU_SLOT = 2;
 
 	MainMenu(Player player) {
 		super(player, "거래");
@@ -83,10 +84,20 @@ final class MainMenu extends Menu {
 		inventory.setItem(GROUP_SLOT, TradeItems.button(Material.CYAN_BANNER, "그룹 (" + groups + ")",
 				NamedTextColor.AQUA, "그룹을 만들고, 그룹원·역할·접두사·할인을 관리합니다.",
 				invites > 0 ? "받은 초대: " + invites + "개" : "역할별 권한, 그룹원 공격 차단, 그룹 할인"));
+		if (indexPrescript()) {
+			inventory.setItem(IP_MENU_SLOT, TradeItems.button(Material.NETHER_STAR, "INDEX PRESCRIPT 메뉴", NamedTextColor.LIGHT_PURPLE,
+					"E.G.O·추출·무기·림버스 패스·거울 던전 (/menu)"));
+		}
 		if (player.hasPermission(AdminMenu.PERMISSION)) {
 			inventory.setItem(ADMIN_SLOT, TradeItems.button(Material.COMMAND_BLOCK, "관리자", NamedTextColor.RED,
 					"판매 물품/주문 관리, 기록 조회, 서버 상점 편집"));
 		}
+	}
+
+	/** Whether the IndexPrescript plugin (its /menu) is on this server. */
+	private static boolean indexPrescript() {
+		org.bukkit.plugin.Plugin ip = org.bukkit.Bukkit.getPluginManager().getPlugin("IndexPrescript");
+		return ip != null && ip.isEnabled();
 	}
 
 	/** The web site's choices: a quick login link, setting the password, logging out everywhere. */
@@ -132,6 +143,12 @@ final class MainMenu extends Menu {
 			case ADMIN_SLOT -> player.hasPermission(AdminMenu.PERMISSION) ? new AdminMenu(player) : null;
 			default -> null;
 		};
+		if (slot == IP_MENU_SLOT && indexPrescript()) {
+			clickSound();
+			player.closeInventory();
+			player.performCommand("menu");
+			return;
+		}
 		if (slot == WEB_SLOT) {
 			clickSound();
 			webMenu();

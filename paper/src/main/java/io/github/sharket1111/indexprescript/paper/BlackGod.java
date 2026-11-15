@@ -215,8 +215,8 @@ final class BlackGod implements Listener {
 		giveHotbar(player);
 		inventory.setHeldItemSlot(USE_SLOT);
 		Location at = player.getLocation().add(0, 1, 0);
-		player.getWorld().spawnParticle(Particle.DUST, at, 60, 0.6, 1.0, 0.6, 0.0, new Particle.DustOptions(GOLD, 1.6F));
-		player.getWorld().spawnParticle(Particle.SQUID_INK, at, 30, 0.5, 0.8, 0.5, 0.02);
+		LowSpec.particle(player.getWorld(), Particle.DUST, at, 60, 0.6, 1.0, 0.6, 0.0, new Particle.DustOptions(GOLD, 1.6F));
+		LowSpec.particle(player.getWorld(), Particle.SQUID_INK, at, 30, 0.5, 0.8, 0.5, 0.02);
 		player.getWorld().playSound(at, Sound.BLOCK_BELL_RESONATE, SoundCategory.PLAYERS, 1.2F, 0.5F);
 		player.getWorld().playSound(at, Sound.BLOCK_BEACON_ACTIVATE, SoundCategory.PLAYERS, 1.0F, 0.5F);
 		player.showTitle(Title.title(Component.text(Messages.get(player, "blackgod.title"), TextColor.color(0xE8C860)),
@@ -255,7 +255,7 @@ final class BlackGod implements Listener {
 		data.remove(ACTIVE);
 		keepFigure(player);
 		Location at = player.getLocation().add(0, 1, 0);
-		player.getWorld().spawnParticle(Particle.DUST, at, 30, 0.5, 0.8, 0.5, 0.0, new Particle.DustOptions(GOLD, 1.2F));
+		LowSpec.particle(player.getWorld(), Particle.DUST, at, 30, 0.5, 0.8, 0.5, 0.0, new Particle.DustOptions(GOLD, 1.2F));
 		player.getWorld().playSound(at, Sound.BLOCK_BEACON_DEACTIVATE, SoundCategory.PLAYERS, 1.0F, 0.7F);
 		Hud.message(player, Component.text(Messages.get(player, "blackgod.off"), NamedTextColor.GRAY));
 	}
@@ -433,7 +433,7 @@ final class BlackGod implements Listener {
 				Title.Times.times(java.time.Duration.ofMillis(100), java.time.Duration.ofMillis(1200), java.time.Duration.ofMillis(300))));
 		Location at = player.getLocation().add(0, 1, 0);
 		Color colour = Color.fromRGB(skill.colour().value());
-		player.getWorld().spawnParticle(Particle.DUST, at, 40, 0.6, 0.9, 0.6, 0.0, new Particle.DustOptions(colour, 1.4F));
+		LowSpec.particle(player.getWorld(), Particle.DUST, at, 40, 0.6, 0.9, 0.6, 0.0, new Particle.DustOptions(colour, 1.4F));
 		player.getWorld().playSound(at, Sound.BLOCK_BELL_USE, SoundCategory.PLAYERS, 1.0F, 0.6F);
 	}
 

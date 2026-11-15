@@ -195,8 +195,8 @@ final class RenoirSkill {
 		Hud.message(player, Component.text(line, NamedTextColor.GOLD));
 		World world = actor().getWorld();
 		Location at = actor().getLocation().add(0, 1, 0);
-		world.spawnParticle(Particle.DUST, at, big ? 60 : 25, 0.6, 0.8, 0.6, 0.0, GOLD);
-		world.spawnParticle(Particle.END_ROD, at, big ? 20 : 8, 0.4, 0.6, 0.4, 0.05);
+		LowSpec.particle(world, Particle.DUST, at, big ? 60 : 25, 0.6, 0.8, 0.6, 0.0, GOLD);
+		LowSpec.particle(world, Particle.END_ROD, at, big ? 20 : 8, 0.4, 0.6, 0.4, 0.05);
 		world.playSound(at, Sound.BLOCK_BELL_RESONATE, SoundCategory.PLAYERS, 1.0F, big ? 0.6F : 0.9F);
 		world.playSound(at, Sound.BLOCK_BEACON_ACTIVATE, SoundCategory.PLAYERS, 0.8F, big ? 0.7F : 1.3F);
 	}
@@ -566,8 +566,8 @@ final class RenoirSkill {
 		if (tick > down && tick <= slamAt) {
 			// A golden trail along the hammer head's arc.
 			Location head = hammerHead(angle);
-			head.getWorld().spawnParticle(Particle.DUST, head, 8, 0.25, 0.25, 0.25, 0.0, GOLD);
-			head.getWorld().spawnParticle(Particle.END_ROD, head, 2, 0.2, 0.2, 0.2, 0.01);
+			LowSpec.particle(head.getWorld(), Particle.DUST, head, 8, 0.25, 0.25, 0.25, 0.0, GOLD);
+			LowSpec.particle(head.getWorld(), Particle.END_ROD, head, 2, 0.2, 0.2, 0.2, 0.01);
 		}
 	}
 
@@ -677,7 +677,7 @@ final class RenoirSkill {
 	private void startLeap() {
 		leapFrom = actor().getLocation().toVector();
 		Location at = actor().getLocation();
-		at.getWorld().spawnParticle(Particle.CLOUD, at, 10, 0.4, 0.05, 0.4, 0.02);
+		LowSpec.particle(at.getWorld(), Particle.CLOUD, at, 10, 0.4, 0.05, 0.4, 0.02);
 		at.getWorld().playSound(at, Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 0.8F, 0.6F);
 	}
 
@@ -708,11 +708,11 @@ final class RenoirSkill {
 		// The cut-in: gold swirling behind the wielder.
 		for (int i = 0; i < 4; i++) {
 			double a = frame * 0.5 + i * Math.PI / 2;
-			world.spawnParticle(Particle.DUST, at.clone().add(Math.cos(a) * 1.4, Math.sin(frame * 0.2 + i) * 0.6, Math.sin(a) * 1.4),
+			LowSpec.particle(world, Particle.DUST, at.clone().add(Math.cos(a) * 1.4, Math.sin(frame * 0.2 + i) * 0.6, Math.sin(a) * 1.4),
 					2, 0.05, 0.05, 0.05, 0.0, PALE_GOLD);
 		}
 		if (frame % 6 == 0) {
-			world.spawnParticle(Particle.END_ROD, at, 4, 0.5, 0.6, 0.5, 0.02);
+			LowSpec.particle(world, Particle.END_ROD, at, 4, 0.5, 0.6, 0.5, 0.02);
 			world.playSound(at, Sound.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.PLAYERS, 0.8F, 0.5F + frame * 0.03F);
 		}
 	}
@@ -733,7 +733,7 @@ final class RenoirSkill {
 			actor.swingMainHand();
 		}
 		Location hammer = at.clone().add(0, 1.2, 0).add(at.getDirection().multiply(-1.2));
-		actor.getWorld().spawnParticle(Particle.DUST, hammer, 6, 0.2, 0.2, 0.2, 0.0, GOLD);
+		LowSpec.particle(actor.getWorld(), Particle.DUST, hammer, 6, 0.2, 0.2, 0.2, 0.0, GOLD);
 		actor.getWorld().playSound(at, Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 0.5F, 0.5F + frame * 0.15F);
 	}
 
@@ -743,7 +743,7 @@ final class RenoirSkill {
 		World world = actor.getWorld();
 		for (int i = 0; i < 8; i++) {
 			double a = i * Math.PI / 4;
-			world.spawnParticle(Particle.SWEEP_ATTACK, at.clone().add(Math.cos(a) * 2.0, 0, Math.sin(a) * 2.0), 1, 0, 0, 0, 0.0);
+			LowSpec.particle(world, Particle.SWEEP_ATTACK, at.clone().add(Math.cos(a) * 2.0, 0, Math.sin(a) * 2.0), 1, 0, 0, 0, 0.0);
 		}
 		ringAt(actor.getLocation(), 2.6, PALE_GOLD);
 		world.playSound(at, Sound.ITEM_MACE_SMASH_AIR, SoundCategory.PLAYERS, 1.0F, 0.8F);
@@ -837,10 +837,10 @@ final class RenoirSkill {
 	private static void pillar(Location at) {
 		World world = at.getWorld();
 		for (double y = 0; y < 5; y += 0.25) {
-			world.spawnParticle(Particle.END_ROD, at.clone().add(0, y, 0), 1, 0.06, 0.0, 0.06, 0.0);
-			world.spawnParticle(Particle.DUST, at.clone().add(0, y, 0), 1, 0.2, 0.0, 0.2, 0.0, GOLD);
+			LowSpec.particle(world, Particle.END_ROD, at.clone().add(0, y, 0), 1, 0.06, 0.0, 0.06, 0.0);
+			LowSpec.particle(world, Particle.DUST, at.clone().add(0, y, 0), 1, 0.2, 0.0, 0.2, 0.0, GOLD);
 		}
-		world.spawnParticle(Particle.ELECTRIC_SPARK, at.clone().add(0, 1, 0), 20, 0.4, 0.6, 0.4, 0.2);
+		LowSpec.particle(world, Particle.ELECTRIC_SPARK, at.clone().add(0, 1, 0), 20, 0.4, 0.6, 0.4, 0.2);
 		world.playSound(at, Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 0.8F, 1.6F);
 		world.playSound(at, Sound.ITEM_TRIDENT_HIT, SoundCategory.PLAYERS, 1.0F, 0.7F);
 	}
@@ -865,7 +865,7 @@ final class RenoirSkill {
 			double a = Math.toRadians(startDeg + i * 10);
 			for (double r = 1.4; r <= 2.4; r += 0.5) {
 				Vector p = from.toVector().add(forward.clone().multiply(Math.cos(a) * r)).add(across.clone().multiply(Math.sin(a) * r));
-				world.spawnParticle(Particle.DUST, p.toLocation(world), 1, 0.02, 0.02, 0.02, 0.0, r > 2 ? PALE_GOLD : GOLD);
+				LowSpec.particle(world, Particle.DUST, p.toLocation(world), 1, 0.02, 0.02, 0.02, 0.0, r > 2 ? PALE_GOLD : GOLD);
 			}
 		}
 		world.playSound(from, Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1.0F, 0.6F);
@@ -880,11 +880,11 @@ final class RenoirSkill {
 			double a = random.nextDouble(Math.PI * 2);
 			double b = random.nextDouble(Math.PI / 2);
 			Vector p = new Vector(Math.cos(a) * Math.cos(b), Math.sin(b), Math.sin(a) * Math.cos(b)).multiply(radius);
-			world.spawnParticle(Particle.DUST, at.clone().add(p), 1, 0.05, 0.05, 0.05, 0.0, i % 3 == 0 ? PALE_GOLD : GOLD);
+			LowSpec.particle(world, Particle.DUST, at.clone().add(p), 1, 0.05, 0.05, 0.05, 0.0, i % 3 == 0 ? PALE_GOLD : GOLD);
 		}
-		world.spawnParticle(Particle.END_ROD, at.clone().add(0, 0.5, 0), 30, radius * 0.4, 0.6, radius * 0.4, 0.12);
-		world.spawnParticle(Particle.EXPLOSION, at.clone().add(0, 0.5, 0), 3, 0.5, 0.3, 0.5, 0.0);
-		world.spawnParticle(Particle.BLOCK, at, 40, radius * 0.4, 0.1, radius * 0.4, 0.0, at.clone().add(0, -0.5, 0).getBlock().getBlockData());
+		LowSpec.particle(world, Particle.END_ROD, at.clone().add(0, 0.5, 0), 30, radius * 0.4, 0.6, radius * 0.4, 0.12);
+		LowSpec.particle(world, Particle.EXPLOSION, at.clone().add(0, 0.5, 0), 3, 0.5, 0.3, 0.5, 0.0);
+		LowSpec.particle(world, Particle.BLOCK, at, 40, radius * 0.4, 0.1, radius * 0.4, 0.0, at.clone().add(0, -0.5, 0).getBlock().getBlockData());
 		ringAt(at, radius, GOLD);
 		world.playSound(at, Sound.ITEM_MACE_SMASH_GROUND_HEAVY, SoundCategory.PLAYERS, 1.2F, 0.8F);
 		world.playSound(at, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.PLAYERS, 0.8F, 1.2F);
@@ -892,15 +892,15 @@ final class RenoirSkill {
 
 	/** Golden sparks drifting down after a slam. */
 	private static void settle(Location at, double radius) {
-		at.getWorld().spawnParticle(Particle.DUST, at.clone().add(0, 1.5, 0), 8, radius * 0.5, 1.0, radius * 0.5, 0.0, PALE_GOLD);
-		at.getWorld().spawnParticle(Particle.END_ROD, at.clone().add(0, 2.0, 0), 2, radius * 0.5, 0.8, radius * 0.5, 0.01);
+		LowSpec.particle(at.getWorld(), Particle.DUST, at.clone().add(0, 1.5, 0), 8, radius * 0.5, 1.0, radius * 0.5, 0.0, PALE_GOLD);
+		LowSpec.particle(at.getWorld(), Particle.END_ROD, at.clone().add(0, 2.0, 0), 2, radius * 0.5, 0.8, radius * 0.5, 0.01);
 	}
 
 	/** Strike Again's opening: a flash of light over the field. */
 	private static void flash(Location at) {
 		World world = at.getWorld();
-		world.spawnParticle(Particle.END_ROD, at.clone().add(0, 3, 0), 60, 3.0, 2.0, 3.0, 0.1);
-		world.spawnParticle(Particle.DUST, at.clone().add(0, 2, 0), 80, 4.0, 1.5, 4.0, 0.0, PALE_GOLD);
+		LowSpec.particle(world, Particle.END_ROD, at.clone().add(0, 3, 0), 60, 3.0, 2.0, 3.0, 0.1);
+		LowSpec.particle(world, Particle.DUST, at.clone().add(0, 2, 0), 80, 4.0, 1.5, 4.0, 0.0, PALE_GOLD);
 		world.playSound(at, Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.2F, 0.5F);
 		world.playSound(at, Sound.BLOCK_BELL_USE, SoundCategory.PLAYERS, 1.2F, 0.5F);
 	}
@@ -918,22 +918,22 @@ final class RenoirSkill {
 		int points = (int) (radius * 14);
 		for (int i = 0; i < points; i++) {
 			double a = i * Math.PI * 2 / points;
-			world.spawnParticle(Particle.DUST, at.clone().add(Math.cos(a) * radius, 0.15, Math.sin(a) * radius), 1, 0, 0, 0, 0.0, dust);
+			LowSpec.particle(world, Particle.DUST, at.clone().add(Math.cos(a) * radius, 0.15, Math.sin(a) * radius), 1, 0, 0, 0, 0.0, dust);
 		}
 	}
 
 	/** Strike Again's slam: a white burst over the whole field. */
 	private static void whiteBurst(Location at) {
 		World world = at.getWorld();
-		world.spawnParticle(Particle.EXPLOSION_EMITTER, at.clone().add(0, 0.5, 0), 1);
-		world.spawnParticle(Particle.EXPLOSION, at.clone().add(0, 1, 0), 12, 3.0, 1.0, 3.0, 0.0);
+		LowSpec.particle(world, Particle.EXPLOSION_EMITTER, at.clone().add(0, 0.5, 0), 1);
+		LowSpec.particle(world, Particle.EXPLOSION, at.clone().add(0, 1, 0), 12, 3.0, 1.0, 3.0, 0.0);
 		ThreadLocalRandom random = ThreadLocalRandom.current();
 		for (int i = 0; i < 160; i++) {
 			Vector dir = new Vector(random.nextGaussian(), Math.abs(random.nextGaussian()) * 0.6, random.nextGaussian()).normalize();
-			world.spawnParticle(Particle.DUST, at.clone().add(dir.multiply(random.nextDouble(1.0, AGAIN_RADIUS))), 1, 0.1, 0.1, 0.1, 0.0,
+			LowSpec.particle(world, Particle.DUST, at.clone().add(dir.multiply(random.nextDouble(1.0, AGAIN_RADIUS))), 1, 0.1, 0.1, 0.1, 0.0,
 					i % 4 == 0 ? GOLD : WHITE);
 		}
-		world.spawnParticle(Particle.END_ROD, at.clone().add(0, 1, 0), 80, 2.5, 1.5, 2.5, 0.35);
+		LowSpec.particle(world, Particle.END_ROD, at.clone().add(0, 1, 0), 80, 2.5, 1.5, 2.5, 0.35);
 		for (double r = 1.5; r <= AGAIN_RADIUS; r += 1.5) {
 			ringAt(at, r, WHITE);
 		}
@@ -947,7 +947,7 @@ final class RenoirSkill {
 	/** A smash spent {@code nails} nails in {@code foe}. */
 	static void nailSmash(LivingEntity foe, int nails) {
 		Location at = foe.getLocation();
-		at.getWorld().spawnParticle(Particle.DUST, at.clone().add(0, 0.2, 0), 10 + nails * 4, 0.6, 0.1, 0.6, 0.0, GOLD);
+		LowSpec.particle(at.getWorld(), Particle.DUST, at.clone().add(0, 0.2, 0), 10 + nails * 4, 0.6, 0.1, 0.6, 0.0, GOLD);
 		ringAt(at, 1.2 + nails * 0.1, PALE_GOLD);
 		at.getWorld().playSound(at, Sound.BLOCK_BELL_USE, SoundCategory.PLAYERS, 0.9F, 0.6F + nails * 0.05F);
 	}
@@ -955,14 +955,14 @@ final class RenoirSkill {
 	/** The Black God's Voice reached 50: the strong skill is ready. */
 	static void voiceFull(Player player) {
 		Location at = player.getLocation().add(0, 1, 0);
-		player.getWorld().spawnParticle(Particle.DUST, at, 20, 0.4, 0.6, 0.4, 0.0, GOLD);
+		LowSpec.particle(player.getWorld(), Particle.DUST, at, 20, 0.4, 0.6, 0.4, 0.0, GOLD);
 		player.playSound(at, Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 0.8F, 0.6F);
 	}
 
 	/** Preservation potency rose. */
 	static void potencyUp(LivingEntity holder) {
 		Location at = holder.getLocation().add(0, 1, 0);
-		holder.getWorld().spawnParticle(Particle.END_ROD, at, 10, 0.3, 0.5, 0.3, 0.04);
+		LowSpec.particle(holder.getWorld(), Particle.END_ROD, at, 10, 0.3, 0.5, 0.3, 0.04);
 		holder.getWorld().playSound(at, Sound.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.PLAYERS, 1.0F, 0.8F);
 	}
 }

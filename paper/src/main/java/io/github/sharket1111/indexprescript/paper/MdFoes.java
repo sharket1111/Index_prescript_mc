@@ -280,7 +280,7 @@ final class MdFoes {
 		ai.foe.guardUntil = now + 60;
 		ai.foe.evading = skill.type().equals("evade");
 		LivingEntity mob = ai.mob;
-		mob.getWorld().spawnParticle(ai.foe.evading ? Particle.CLOUD : Particle.ENCHANTED_HIT, mob.getLocation().add(0, 1, 0), 16, 0.4, 0.6, 0.4, 0.05);
+		LowSpec.particle(mob.getWorld(), ai.foe.evading ? Particle.CLOUD : Particle.ENCHANTED_HIT, mob.getLocation().add(0, 1, 0), 16, 0.4, 0.6, 0.4, 0.05);
 		mob.getWorld().playSound(mob.getLocation(), ai.foe.evading ? Sound.ENTITY_BREEZE_JUMP : Sound.ITEM_SHIELD_BLOCK, SoundCategory.HOSTILE, 0.8F, 1.0F);
 		apply(ai, skill.effects(), USE, null, true);
 		label(ai);
@@ -401,8 +401,8 @@ final class MdFoes {
 		if (skill == null || !MdLooks.hit(ai.anchor(), skill.name(), coin, coins, victim, heads)) {
 			// Not a boss with moves of its own: the plain swing and a puff of the theme's colour.
 			MdLooks.swing(ai.anchor(), skill == null ? "slash" : skill.type(), ai.foe.part == null ? null : ai.foe.part.icon());
-			at.getWorld().spawnParticle(Particle.SWEEP_ATTACK, at, 1);
-			at.getWorld().spawnParticle(Particle.DUST, at, 14, 0.4, 0.5, 0.4, 0, new Particle.DustOptions(Color.fromRGB(battle.run.theme.color()), 1.4F));
+			LowSpec.particle(at.getWorld(), Particle.SWEEP_ATTACK, at, 1);
+			LowSpec.particle(at.getWorld(), Particle.DUST, at, 14, 0.4, 0.5, 0.4, 0, new Particle.DustOptions(Color.fromRGB(battle.run.theme.color()), 1.4F));
 		}
 		at.getWorld().playSound(at, heads ? Sound.ENTITY_PLAYER_ATTACK_CRIT : Sound.ENTITY_PLAYER_ATTACK_STRONG, SoundCategory.HOSTILE, 0.9F, 0.8F);
 		if (victim.getLocation().distanceSquared(ai.anchor().getLocation()) > 16 * ai.anchor().getAttribute(Attribute.SCALE).getValue()
@@ -573,7 +573,6 @@ final class MdFoes {
 		ai.acting = false;
 		ai.foe.guardUntil = 0;
 		MdRun run = ai.foe.battle.run;
-		run.broadcast(Component.text(ai.foe.name + " 흐트러짐! (1턴 동안 행동 불가 · 받는 피해 2배)", NamedTextColor.AQUA));
 		MdGifts.trigger(run, "stagger", by, mob);
 		label(ai);
 	}
@@ -639,8 +638,8 @@ final class MdFoes {
 		}
 		run.broadcast(Component.text("[" + p.name() + "] ", NamedTextColor.GOLD).append(Component.text(p.text(), NamedTextColor.GRAY)));
 		MdLooks.roar(mob);
-		mob.getWorld().spawnParticle(Particle.SONIC_BOOM, mob.getLocation().add(0, mob.getHeight() / 2, 0), 1);
-		mob.getWorld().spawnParticle(Particle.DUST, mob.getLocation().add(0, mob.getHeight() / 2, 0), 60, 0.8, 1.0, 0.8, 0,
+		LowSpec.particle(mob.getWorld(), Particle.SONIC_BOOM, mob.getLocation().add(0, mob.getHeight() / 2, 0), 1);
+		LowSpec.particle(mob.getWorld(), Particle.DUST, mob.getLocation().add(0, mob.getHeight() / 2, 0), 60, 0.8, 1.0, 0.8, 0,
 				new Particle.DustOptions(Color.fromRGB(run.theme.color()), 2.0F));
 		Player any = nearest(mob, run.fighters(), 64);
 		for (JsonElement el : p.effects()) {
@@ -712,7 +711,7 @@ final class MdFoes {
 		ai.regrowAt = !sever && part != null && part.regen() > 0 ? CaduceusListener.now() + (long) part.regen() * CombatState.TURN_TICKS + 40 : 0;
 		MdLooks.partShown(ai.mob, false);
 		Location at = ai.mob.getLocation().add(0, ai.mob.getHeight() / 2, 0);
-		at.getWorld().spawnParticle(Particle.BLOCK, at, 40, 0.4, 0.4, 0.4, Material.REDSTONE_BLOCK.createBlockData());
+		LowSpec.particle(at.getWorld(), Particle.BLOCK, at, 40, 0.4, 0.4, 0.4, Material.REDSTONE_BLOCK.createBlockData());
 		at.getWorld().playSound(at, sever ? Sound.ENTITY_PLAYER_ATTACK_SWEEP : Sound.ENTITY_ITEM_BREAK, SoundCategory.HOSTILE, 1.2F, 0.6F);
 		MdRun run = ai.foe.battle.run;
 		run.broadcast(Component.text(ai.foe.name + (sever ? " 절단!" : " 파괴!") + (ai.regrowAt > 0 ? " (" + part.regen() + "턴 뒤 재생)" : ""), NamedTextColor.AQUA));

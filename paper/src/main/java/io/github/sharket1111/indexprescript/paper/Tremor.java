@@ -100,8 +100,8 @@ final class Tremor {
 		world.playSound(body, Sound.BLOCK_BELL_RESONATE, SoundCategory.PLAYERS, 1.4F, 0.7F);
 		world.playSound(body, Sound.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.PLAYERS, 1.2F, 0.5F);
 		world.playSound(body, Sound.ENTITY_WARDEN_SONIC_BOOM, SoundCategory.PLAYERS, 0.35F, 1.9F);
-		world.spawnParticle(Particle.END_ROD, body, 18, 0.2, 0.3, 0.2, 0.18);
-		world.spawnParticle(Particle.DUST, body, 30, 0.25, 0.4, 0.25, 0.0, new Particle.DustOptions(PALE, 1.8F));
+		LowSpec.particle(world, Particle.END_ROD, body, 18, 0.2, 0.3, 0.2, 0.18);
+		LowSpec.particle(world, Particle.DUST, body, 30, 0.25, 0.4, 0.25, 0.0, new Particle.DustOptions(PALE, 1.8F));
 		// The ripples: rings spreading out round the body one after another, then along the ground.
 		new BukkitRunnable() {
 			int tick;
@@ -142,7 +142,7 @@ final class Tremor {
 			double angle = Math.PI * 2 * i / points;
 			Location at = upright ? centre.clone().add(Math.cos(angle) * radius, Math.sin(angle) * radius, 0)
 					: centre.clone().add(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
-			world.spawnParticle(Particle.DUST, at, 1, 0.0, 0.0, 0.0, 0.0, dust);
+			LowSpec.particle(world, Particle.DUST, at, 1, 0.0, 0.0, 0.0, 0.0, dust);
 		}
 	}
 

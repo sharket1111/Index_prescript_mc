@@ -687,10 +687,10 @@ final class Ego {
 				double r = 2.6 * (1 - tick / (double) windUp()) + 0.4;
 				for (int i = 0; i < 16; i++) {
 					double a = Math.PI * 2 * i / 16 + tick * 0.2;
-					world.spawnParticle(Particle.DUST, at.clone().add(Math.cos(a) * r, 0.1 + tick * 0.06, Math.sin(a) * r), 1, 0, 0, 0, 0, i % 3 == 0 ? pale : main);
+					LowSpec.particle(world, Particle.DUST, at.clone().add(Math.cos(a) * r, 0.1 + tick * 0.06, Math.sin(a) * r), 1, 0, 0, 0, 0, i % 3 == 0 ? pale : main);
 				}
 				if (tick % 6 == 0) {
-					world.spawnParticle(Particle.END_ROD, at.clone().add(0, 1.2, 0), 4, 0.3, 0.6, 0.3, 0.02);
+					LowSpec.particle(world, Particle.END_ROD, at.clone().add(0, 1.2, 0), 4, 0.3, 0.6, 0.3, 0.02);
 				}
 			}
 			int coins = Math.max(1, skill.coins());
@@ -857,8 +857,8 @@ final class Ego {
 				case "pierce" -> Effects.slash(actor, target, 0, 3.2);
 				default -> Effects.arc(actor, target, coin % 2 == 0 ? -100 : 100, coin % 2 == 0 ? 200 : -200, -10);
 			}
-			world.spawnParticle(Particle.DUST, mid, last ? 60 : 22, 0.6, 0.6, 0.6, 0.0, main);
-			world.spawnParticle(Particle.DUST, mid, last ? 30 : 10, 0.9, 0.9, 0.9, 0.0, pale);
+			LowSpec.particle(world, Particle.DUST, mid, last ? 60 : 22, 0.6, 0.6, 0.6, 0.0, main);
+			LowSpec.particle(world, Particle.DUST, mid, last ? 30 : 10, 0.9, 0.9, 0.9, 0.0, pale);
 			if (isHeads) {
 				Effects.star(target, last ? 1.8 : 1.1);
 			}
@@ -867,15 +867,15 @@ final class Ego {
 				// The finish: a column and a ring of the sin's colour, a flash.
 				Location base = target.getLocation();
 				for (double y = 0; y < 5; y += 0.25) {
-					world.spawnParticle(Particle.DUST, base.clone().add(0, y, 0), 3, 0.25, 0.05, 0.25, 0, y % 0.75 < 0.4 ? main : pale);
+					LowSpec.particle(world, Particle.DUST, base.clone().add(0, y, 0), 3, 0.25, 0.05, 0.25, 0, y % 0.75 < 0.4 ? main : pale);
 				}
 				for (int i = 0; i < 40; i++) {
 					double a = Math.PI * 2 * i / 40;
-					world.spawnParticle(Particle.DUST, base.clone().add(Math.cos(a) * 3, 0.15, Math.sin(a) * 3), 1, 0, 0, 0, 0, main);
+					LowSpec.particle(world, Particle.DUST, base.clone().add(Math.cos(a) * 3, 0.15, Math.sin(a) * 3), 1, 0, 0, 0, 0, main);
 				}
 				Effects.finalCut(actor, target);
 				Effects.flash(target);
-				world.spawnParticle(Particle.EXPLOSION, mid, 1);
+				LowSpec.particle(world, Particle.EXPLOSION, mid, 1);
 				world.playSound(mid, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.PLAYERS, 0.7F, 1.2F);
 				world.playSound(mid, Sound.BLOCK_BEACON_DEACTIVATE, SoundCategory.PLAYERS, 0.9F, 0.6F);
 			}
@@ -969,6 +969,12 @@ final class Ego {
 					"9번 또는 5초 기다리면 핫바가 돌아와요",
 					"E.G.O는 수감자와 상관없이 등급에 맞으면 낄 수 있어요 (가진 것만)",
 					"자원과 정신력을 써서 E.G.O 각성 스킬을 써요"), (Runnable) null);
+			boolean low = LowSpec.on(player);
+			gui.set(44, MdGui.item(low ? Material.LIME_DYE : Material.GRAY_DYE, "저사양 모드: " + (low ? "켜짐" : "꺼짐"), low ? NamedTextColor.GREEN : NamedTextColor.GRAY,
+					"켜면 스킬·전투 파티클이 1/4로 줄어요", "베드락은 처음부터 켜져 있어요", "클릭해서 바꾸기 (/menu 저사양)"), () -> {
+						LowSpec.set(player, !LowSpec.on(player));
+						open(player);
+					});
 			gui.fill().open(player);
 		}
 

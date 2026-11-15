@@ -402,7 +402,7 @@ final class RienSkill {
 			default -> Effects.arc(actor, target, coin % 2 == 0 ? -100 : 100, coin % 2 == 0 ? 200 : -200, -10);
 		}
 		Effects.star(target, last ? 1.6 : 1.0);
-		world.spawnParticle(Particle.DUST, mid, last ? 40 : 18, 0.5, 0.5, 0.5, 0.0,
+		LowSpec.particle(world, Particle.DUST, mid, last ? 40 : 18, 0.5, 0.5, 0.5, 0.0,
 				new Particle.DustOptions(FAMILY_COLOUR[kind.family], last ? 1.8F : 1.3F));
 		if (last && kind.family == 2) {
 			Effects.finalCut(actor, target);

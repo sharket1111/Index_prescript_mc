@@ -35,11 +35,11 @@ final class LaevateinEffects {
 	}
 
 	private static void dustAt(World world, Particle.DustOptions dust, Vector p, int count, double spread) {
-		world.spawnParticle(Particle.DUST, p.getX(), p.getY(), p.getZ(), count, spread, spread, spread, 0.0, dust);
+		LowSpec.particle(world, Particle.DUST, p.getX(), p.getY(), p.getZ(), count, spread, spread, spread, 0.0, dust);
 	}
 
 	private static void spawn(World world, Particle particle, Vector p, int count, double spread, double speed) {
-		world.spawnParticle(particle, p.getX(), p.getY(), p.getZ(), count, spread, spread, spread, speed);
+		LowSpec.particle(world, particle, p.getX(), p.getY(), p.getZ(), count, spread, spread, spread, speed);
 	}
 
 	private static Vector center(Entity entity) {
@@ -224,7 +224,7 @@ final class LaevateinEffects {
 			Vector p = new Vector(base.getX() + Math.cos(a) * radius, base.getY() + 0.1, base.getZ() + Math.sin(a) * radius);
 			spawn(world, Particle.CLOUD, p, 1, 0.05, 0.02);
 			if (!ground.getMaterial().isAir()) {
-				world.spawnParticle(Particle.BLOCK, p.getX(), p.getY(), p.getZ(), 3, 0.1, 0.05, 0.1, 0.0, ground);
+				LowSpec.particle(world, Particle.BLOCK, p.getX(), p.getY(), p.getZ(), 3, 0.1, 0.05, 0.1, 0.0, ground);
 			}
 		}
 		dustAt(world, GREY, center(target), 12, 0.6);

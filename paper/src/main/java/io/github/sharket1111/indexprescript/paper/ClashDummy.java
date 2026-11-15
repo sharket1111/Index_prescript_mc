@@ -240,8 +240,8 @@ final class ClashDummy implements Listener {
 		Location mid = target.getLocation().add(0, target.getHeight() * 0.6, 0);
 		Vector toward = target.getLocation().toVector().subtract(dummy.getLocation().toVector());
 		World world = target.getWorld();
-		world.spawnParticle(Particle.SWEEP_ATTACK, mid.clone().subtract(toward.clone().normalize().multiply(0.3)), 1);
-		world.spawnParticle(Particle.DUST, mid, 12, 0.3, 0.3, 0.3, 0.0, new Particle.DustOptions(Color.fromRGB(0xD0D0D0), 1.2F));
+		LowSpec.particle(world, Particle.SWEEP_ATTACK, mid.clone().subtract(toward.clone().normalize().multiply(0.3)), 1);
+		LowSpec.particle(world, Particle.DUST, mid, 12, 0.3, 0.3, 0.3, 0.0, new Particle.DustOptions(Color.fromRGB(0xD0D0D0), 1.2F));
 		world.playSound(mid, Sound.ENTITY_PLAYER_ATTACK_STRONG, SoundCategory.PLAYERS, 1.0F, 0.9F);
 		Damage.deal(target, damage, dummy, true);
 	}

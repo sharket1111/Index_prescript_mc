@@ -633,8 +633,8 @@ final class Clash {
 			duel.rounds++;
 			Location mid = midpoint(a, b);
 			showCount(duel, mid.clone().add(0, 1.6, 0));
-			mid.getWorld().spawnParticle(Particle.CRIT, mid, 20, 0.3, 0.3, 0.3, 0.4);
-			mid.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, mid, 12, 0.2, 0.2, 0.2, 0.2);
+			LowSpec.particle(mid.getWorld(), Particle.CRIT, mid, 20, 0.3, 0.3, 0.3, 0.4);
+			LowSpec.particle(mid.getWorld(), Particle.ELECTRIC_SPARK, mid, 12, 0.2, 0.2, 0.2, 0.2);
 			mid.getWorld().playSound(mid, Sound.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS, 1.2F, 0.7F + ThreadLocalRandom.current().nextFloat() * 0.4F);
 			if (a.power != b.power) {
 				Side loser = a.power < b.power ? a : b;
@@ -676,7 +676,7 @@ final class Clash {
 			loser.state[index] = DESTROYED;
 			loser.shattering = index;
 			loser.shatteredAt = CaduceusListener.now();
-			at.getWorld().spawnParticle(Particle.DUST, at, 10, 0.2, 0.2, 0.2, 0.0, new Particle.DustOptions(Color.fromRGB(0xC02020), 1.2F));
+			LowSpec.particle(at.getWorld(), Particle.DUST, at, 10, 0.2, 0.2, 0.2, 0.0, new Particle.DustOptions(Color.fromRGB(0xC02020), 1.2F));
 			at.getWorld().playSound(at, Sound.ENTITY_ITEM_BREAK, SoundCategory.PLAYERS, 1.0F, 1.2F);
 			if (type == SkillCard.COIN_UNBREAKABLE) {
 				tell(loser.player, Component.text("초록 코인에 파괴 불가 코인이 완전히 파괴되었다!", NamedTextColor.RED));
@@ -685,7 +685,7 @@ final class Clash {
 			// Unbreakable: out of the clash, but it will still strike, weaker.
 			loser.state[index] = BROKEN;
 			at.getWorld().playSound(at, Sound.BLOCK_ANVIL_LAND, SoundCategory.PLAYERS, 0.8F, 1.4F);
-			at.getWorld().spawnParticle(Particle.DUST, at, 8, 0.2, 0.2, 0.2, 0.0,
+			LowSpec.particle(at.getWorld(), Particle.DUST, at, 8, 0.2, 0.2, 0.2, 0.0,
 					new Particle.DustOptions(type == SkillCard.COIN_EXECUTION ? Color.fromRGB(0x70D030) : Color.fromRGB(0xD82020), 1.2F));
 		}
 	}
@@ -710,7 +710,7 @@ final class Clash {
 		tell(loser.player, Component.text("합 패배 (" + rounds + "합) 정신력 -" + loss, NamedTextColor.RED));
 		Location at = body(loser.player).getLocation().add(0, 1, 0);
 		at.getWorld().playSound(at, Sound.ITEM_SHIELD_BREAK, SoundCategory.PLAYERS, 1.2F, 0.8F);
-		at.getWorld().spawnParticle(Particle.EXPLOSION, at, 1);
+		LowSpec.particle(at.getWorld(), Particle.EXPLOSION, at, 1);
 		end(duel);
 		endCamera(winner);
 		endCamera(loser);

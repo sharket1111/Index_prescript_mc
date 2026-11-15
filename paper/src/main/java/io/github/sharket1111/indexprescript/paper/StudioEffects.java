@@ -219,16 +219,16 @@ final class StudioEffects {
 		for (Vector local : points) {
 			Location at = origin.clone().add(right.clone().multiply(local.getX())).add(0, local.getY(), 0).add(forward.clone().multiply(local.getZ()));
 			if (dust != null) {
-				world.spawnParticle(Particle.DUST, at, 1, e.spread(), e.spread(), e.spread(), 0, dust, true);
+				LowSpec.particle(world, Particle.DUST, at, 1, e.spread(), e.spread(), e.spread(), 0, dust, true);
 			} else if (e.shape().equals("burst") && e.speed() > 0) {
 				Vector out = at.toVector().subtract(origin.toVector().add(new Vector(0, e.up(), 0)));
 				if (out.lengthSquared() < 1e-6) {
 					out = new Vector(0, 1, 0);
 				}
 				out.normalize();
-				world.spawnParticle(e.particle(), at, 0, out.getX(), out.getY(), out.getZ(), e.speed(), null, true);
+				LowSpec.particle(world, e.particle(), at, 0, out.getX(), out.getY(), out.getZ(), e.speed(), null, true);
 			} else {
-				world.spawnParticle(e.particle(), at, 1, e.spread(), e.spread(), e.spread(), e.speed(), null, true);
+				LowSpec.particle(world, e.particle(), at, 1, e.spread(), e.spread(), e.spread(), e.speed(), null, true);
 			}
 		}
 	}

@@ -362,7 +362,7 @@ final class MdGifts implements Listener {
 		switch (kw) {
 			case "burn" -> {
 				CombatState.of(t).addBurn(potency, count, now);
-				t.getWorld().spawnParticle(Particle.FLAME, t.getLocation().add(0, t.getHeight() * 0.6, 0), 6 + potency, 0.3, 0.4, 0.3, 0.01);
+				LowSpec.particle(t.getWorld(), Particle.FLAME, t.getLocation().add(0, t.getHeight() * 0.6, 0), 6 + potency, 0.3, 0.4, 0.3, 0.01);
 			}
 			case "bleed" -> Bleed.inflict(t, potency, count);
 			case "tremor" -> {
@@ -376,7 +376,7 @@ final class MdGifts implements Listener {
 			case "rupture" -> Rupture.inflict(t, potency, count);
 			case "sinking" -> {
 				CombatState.of(t).addSinking(potency, Math.max(1, count), now);
-				t.getWorld().spawnParticle(Particle.DUST, t.getLocation().add(0, t.getHeight() * 0.6, 0), 6 + potency, 0.3, 0.4, 0.3, 0,
+				LowSpec.particle(t.getWorld(), Particle.DUST, t.getLocation().add(0, t.getHeight() * 0.6, 0), 6 + potency, 0.3, 0.4, 0.3, 0,
 						new Particle.DustOptions(org.bukkit.Color.fromRGB(0x3255C8), 1.1F));
 			}
 			case "poise" -> CombatState.of(t).addPoise(potency, Math.max(1, count), now);
@@ -643,7 +643,7 @@ final class MdGifts implements Listener {
 		// An Evade skill: half the hits miss.
 		if (hitFoe.guardUntil > now && hitFoe.evading && MdRun.rng().nextBoolean()) {
 			event.setCancelled(true);
-			victim.getWorld().spawnParticle(Particle.CLOUD, victim.getLocation().add(0, 1, 0), 6, 0.3, 0.4, 0.3, 0.02);
+			LowSpec.particle(victim.getWorld(), Particle.CLOUD, victim.getLocation().add(0, 1, 0), 6, 0.3, 0.4, 0.3, 0.02);
 			victim.getWorld().playSound(victim.getLocation(), Sound.ENTITY_BREEZE_JUMP, SoundCategory.HOSTILE, 0.6F, 1.4F);
 			return;
 		}
@@ -666,7 +666,7 @@ final class MdGifts implements Listener {
 			damage *= critMultiplier(run);
 			state.consumePoise(now);
 			crit = true;
-			victim.getWorld().spawnParticle(Particle.CRIT, victim.getLocation().add(0, victim.getHeight() * 0.6, 0), 14, 0.3, 0.4, 0.3, 0.3);
+			LowSpec.particle(victim.getWorld(), Particle.CRIT, victim.getLocation().add(0, victim.getHeight() * 0.6, 0), 14, 0.3, 0.4, 0.3, 0.3);
 			victim.getWorld().playSound(victim.getLocation(), Sound.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 0.8F, 1.2F);
 		}
 		event.setDamage(damage);

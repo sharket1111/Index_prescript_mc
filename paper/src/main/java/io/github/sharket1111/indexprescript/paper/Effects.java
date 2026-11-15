@@ -38,11 +38,11 @@ final class Effects {
 	}
 
 	private static void spawn(World world, Particle particle, Vector p, int count, double spread, double speed) {
-		world.spawnParticle(particle, p.getX(), p.getY(), p.getZ(), count, spread, spread, spread, speed);
+		LowSpec.particle(world, particle, p.getX(), p.getY(), p.getZ(), count, spread, spread, spread, speed);
 	}
 
 	private static void dustAt(World world, Particle.DustOptions dust, Vector p, int count, double spread) {
-		world.spawnParticle(Particle.DUST, p.getX(), p.getY(), p.getZ(), count, spread, spread, spread, 0.0, dust);
+		LowSpec.particle(world, Particle.DUST, p.getX(), p.getY(), p.getZ(), count, spread, spread, spread, 0.0, dust);
 	}
 
 	private static Vector center(Entity entity) {
@@ -316,7 +316,7 @@ final class Effects {
 		Vector spiral = new Vector(base.getX() + Math.cos(a) * 0.9, base.getY() + y, base.getZ() + Math.sin(a) * 0.9);
 		dustAt(world, SHIN_BRIGHT, spiral, 1, 0.0);
 		if (tick % 8 == 0) {
-			world.spawnParticle(Particle.END_ROD, spiral.getX(), spiral.getY(), spiral.getZ(), 1, 0.0, 0.03, 0.0, 0.01);
+			LowSpec.particle(world, Particle.END_ROD, spiral.getX(), spiral.getY(), spiral.getZ(), 1, 0.0, 0.03, 0.0, 0.01);
 		}
 		if (tick % 10 == 0) {
 			for (int i = 0; i < 20; i++) {

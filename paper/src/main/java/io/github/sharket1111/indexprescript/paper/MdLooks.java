@@ -291,7 +291,7 @@ final class MdLooks {
 		}
 		if (mob.isDead()) {
 			Location at = mob.getLocation().add(0, mob.getHeight() / 2, 0);
-			at.getWorld().spawnParticle(Particle.SQUID_INK, at, 30, 0.4, 0.6, 0.4, 0.05);
+			LowSpec.particle(at.getWorld(), Particle.SQUID_INK, at, 30, 0.4, 0.6, 0.4, 0.05);
 		}
 		for (ItemDisplay d : body.bones) {
 			if (d != null) {

@@ -288,7 +288,7 @@ final class BlackGodState {
 		nails.lastAt = CaduceusListener.now();
 		label(nails);
 		Location top = foe.getLocation().add(0, foe.getHeight() + 0.3, 0);
-		foe.getWorld().spawnParticle(Particle.DUST, top, 10, 0.25, 0.2, 0.25, 0.0,
+		LowSpec.particle(foe.getWorld(), Particle.DUST, top, 10, 0.25, 0.2, 0.25, 0.0,
 				new Particle.DustOptions(Color.fromRGB(nails.kind.colour.value()), 1.2F));
 		foe.getWorld().playSound(top, Sound.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS, 0.5F, 1.8F);
 	}
@@ -338,7 +338,7 @@ final class BlackGodState {
 				stagger(foe, nails.count * 2.0F);
 			}
 		}
-		foe.getWorld().spawnParticle(Particle.END_ROD, foe.getLocation().add(0, foe.getHeight() * 0.6, 0), 20, 0.3, 0.4, 0.3, 0.15);
+		LowSpec.particle(foe.getWorld(), Particle.END_ROD, foe.getLocation().add(0, foe.getHeight() * 0.6, 0), 20, 0.3, 0.4, 0.3, 0.15);
 		foe.getWorld().playSound(foe.getLocation(), Sound.BLOCK_ANVIL_LAND, SoundCategory.PLAYERS, 1.0F, 0.6F);
 	}
 
@@ -445,7 +445,7 @@ final class BlackGodState {
 				Location top = living.getLocation().add(0, living.getHeight() + 0.4, 0);
 				for (int i = 0; i < 8; i++) {
 					double a = i * Math.PI / 4 + now * 0.1;
-					living.getWorld().spawnParticle(Particle.DUST, top.clone().add(Math.cos(a) * 0.4, 0, Math.sin(a) * 0.4), 1, 0, 0, 0, 0.0, dust);
+					LowSpec.particle(living.getWorld(), Particle.DUST, top.clone().add(Math.cos(a) * 0.4, 0, Math.sin(a) * 0.4), 1, 0, 0, 0, 0.0, dust);
 				}
 			}
 		}
@@ -482,7 +482,7 @@ final class BlackGodState {
 			state.bride = Math.min(MAX_BRIDE, state.bride + 1);
 			god.setHealth(Math.min(maxHealth(god), god.getHealth() + maxHealth(god) * 0.45));
 			Location at = god.getLocation().add(0, 1, 0);
-			god.getWorld().spawnParticle(Particle.END_ROD, at, 40, 0.6, 1.0, 0.6, 0.1);
+			LowSpec.particle(god.getWorld(), Particle.END_ROD, at, 40, 0.6, 1.0, 0.6, 0.1);
 			god.getWorld().playSound(at, Sound.BLOCK_BELL_RESONATE, SoundCategory.PLAYERS, 1.5F, state.authorityForm ? 0.5F : 0.8F);
 			Hud.message(god, Component.text(Messages.get(god, state.authorityForm ? "blackgod.to_authority" : "blackgod.to_voice"),
 					TextColor.color(0xF0D070)));
@@ -617,7 +617,7 @@ final class BlackGodState {
 						god.removePotionEffect(bad);
 					}
 					god.setFireTicks(0);
-					god.getWorld().spawnParticle(Particle.END_ROD, god.getLocation().add(0, 1, 0), 40, 0.5, 1.0, 0.5, 0.1);
+					LowSpec.particle(god.getWorld(), Particle.END_ROD, god.getLocation().add(0, 1, 0), 40, 0.5, 1.0, 0.5, 0.1);
 					god.getWorld().playSound(god.getLocation(), Sound.ITEM_TOTEM_USE, SoundCategory.PLAYERS, 0.8F, 1.4F);
 					Hud.message(god, Component.text(Messages.get(god, "blackgod.bride_steps_in"), TextColor.color(0xF0D070)));
 				});

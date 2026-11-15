@@ -52,13 +52,13 @@ final class MdFx {
 	static void windup(MdModels.Fx fx, LivingEntity mob, LivingEntity victim, String clip, boolean great) {
 		World w = mob.getWorld();
 		Location at = mob.getLocation().add(0, mob.getHeight() * 0.6, 0);
-		w.spawnParticle(Particle.DUST, at, great ? 30 : 8, 0.5, 0.6, 0.5, 0, dust(fx.color2(), 1.0F));
-		w.spawnParticle(particle(fx.particle()), at, great ? 16 : 4, 0.4, 0.5, 0.4, 0.02);
+		LowSpec.particle(w, Particle.DUST, at, great ? 30 : 8, 0.5, 0.6, 0.5, 0, dust(fx.color2(), 1.0F));
+		LowSpec.particle(w, particle(fx.particle()), at, great ? 16 : 4, 0.4, 0.5, 0.4, 0.02);
 		if (great) {
 			double r = 2.6;
 			for (int i = 0; i < 24; i++) {
 				double a = Math.PI * 2 * i / 24;
-				w.spawnParticle(Particle.DUST, mob.getLocation().add(Math.cos(a) * r, 0.15, Math.sin(a) * r), 1, 0, 0, 0, 0, dust(fx.color(), 1.6F));
+				LowSpec.particle(w, Particle.DUST, mob.getLocation().add(Math.cos(a) * r, 0.15, Math.sin(a) * r), 1, 0, 0, 0, 0, dust(fx.color(), 1.6F));
 			}
 			w.playSound(at, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, SoundCategory.HOSTILE, 0.8F, 1.4F);
 		} else if (kind(clip).equals("pillar")) {
@@ -86,10 +86,10 @@ final class MdFx {
 				for (int i = -8; i <= 8; i++) {
 					double f = i / 8.0;
 					Location p = to.clone().add(side.clone().multiply(f * 1.8)).add(0, f * tilt * 1.2, 0).subtract(dir.clone().multiply(0.4 + 0.5 * f * f));
-					w.spawnParticle(Particle.DUST, p, 2, 0.05, 0.05, 0.05, 0, Math.abs(i) < 5 ? main : second);
+					LowSpec.particle(w, Particle.DUST, p, 2, 0.05, 0.05, 0.05, 0, Math.abs(i) < 5 ? main : second);
 				}
-				w.spawnParticle(Particle.SWEEP_ATTACK, to, 1);
-				w.spawnParticle(own, to, 6, 0.3, 0.3, 0.3, 0.05);
+				LowSpec.particle(w, Particle.SWEEP_ATTACK, to, 1);
+				LowSpec.particle(w, own, to, 6, 0.3, 0.3, 0.3, 0.05);
 				w.playSound(to, Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.HOSTILE, 0.9F, pitch);
 			}
 			case "circle" -> {
@@ -97,42 +97,42 @@ final class MdFx {
 				double r = Math.min(4.0, dist + 0.8);
 				for (int i = 0; i < 32; i++) {
 					double a = Math.PI * 2 * i / 32;
-					w.spawnParticle(Particle.DUST, from.clone().add(Math.cos(a) * r, 0, Math.sin(a) * r), 1, 0.03, 0.03, 0.03, 0, i % 4 == 0 ? second : main);
+					LowSpec.particle(w, Particle.DUST, from.clone().add(Math.cos(a) * r, 0, Math.sin(a) * r), 1, 0.03, 0.03, 0.03, 0, i % 4 == 0 ? second : main);
 				}
-				w.spawnParticle(Particle.SWEEP_ATTACK, to, 2, 0.4, 0.2, 0.4, 0);
-				w.spawnParticle(own, to, 8, 0.4, 0.3, 0.4, 0.05);
+				LowSpec.particle(w, Particle.SWEEP_ATTACK, to, 2, 0.4, 0.2, 0.4, 0);
+				LowSpec.particle(w, own, to, 8, 0.4, 0.3, 0.4, 0.05);
 				w.playSound(to, Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.HOSTILE, 1.0F, pitch * 0.8F);
 			}
 			case "line" -> {
 				// A streak through the victim and a little beyond.
 				for (double d = 0.6; d < dist + 1.6; d += 0.25) {
-					w.spawnParticle(Particle.DUST, from.clone().add(dir.clone().multiply(d)), 1, 0.02, 0.02, 0.02, 0, d > dist - 0.6 ? second : main);
+					LowSpec.particle(w, Particle.DUST, from.clone().add(dir.clone().multiply(d)), 1, 0.02, 0.02, 0.02, 0, d > dist - 0.6 ? second : main);
 				}
-				w.spawnParticle(Particle.CRIT, to, 12, 0.2, 0.3, 0.2, 0.4);
-				w.spawnParticle(own, to, 6, 0.2, 0.3, 0.2, 0.08);
+				LowSpec.particle(w, Particle.CRIT, to, 12, 0.2, 0.3, 0.2, 0.4);
+				LowSpec.particle(w, own, to, 6, 0.2, 0.3, 0.2, 0.08);
 				w.playSound(to, Sound.ITEM_TRIDENT_HIT, SoundCategory.HOSTILE, 0.9F, pitch);
 			}
 			case "ground" -> {
 				ring(w, victim.getLocation(), 1.2, 3.0, fx, 3);
-				w.spawnParticle(own, victim.getLocation().add(0, 0.3, 0), 14, 0.6, 0.2, 0.6, 0.08);
-				w.spawnParticle(Particle.DUST, to, 16, 0.5, 0.6, 0.5, 0, main);
+				LowSpec.particle(w, own, victim.getLocation().add(0, 0.3, 0), 14, 0.6, 0.2, 0.6, 0.08);
+				LowSpec.particle(w, Particle.DUST, to, 16, 0.5, 0.6, 0.5, 0, main);
 				w.playSound(to, Sound.ENTITY_ZOMBIE_ATTACK_IRON_DOOR, SoundCategory.HOSTILE, 0.7F, pitch * 0.7F);
 			}
 			case "impact" -> {
-				w.spawnParticle(Particle.DUST, to, 18, 0.25, 0.3, 0.25, 0, main);
-				w.spawnParticle(Particle.DUST, to, 8, 0.5, 0.5, 0.5, 0, second);
-				w.spawnParticle(Particle.CRIT, to, 10, 0.2, 0.2, 0.2, 0.5);
-				w.spawnParticle(own, to, 5, 0.2, 0.2, 0.2, 0.06);
+				LowSpec.particle(w, Particle.DUST, to, 18, 0.25, 0.3, 0.25, 0, main);
+				LowSpec.particle(w, Particle.DUST, to, 8, 0.5, 0.5, 0.5, 0, second);
+				LowSpec.particle(w, Particle.CRIT, to, 10, 0.2, 0.2, 0.2, 0.5);
+				LowSpec.particle(w, own, to, 5, 0.2, 0.2, 0.2, 0.06);
 				w.playSound(to, Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, SoundCategory.HOSTILE, 1.0F, pitch);
 			}
 			case "shot" -> {
 				Location muzzle = from.clone().add(dir.clone().multiply(1.2));
-				w.spawnParticle(Particle.FLASH, muzzle, 1, 0, 0, 0, 0, Color.fromRGB(fx.color2() & 0xFFFFFF));
-				w.spawnParticle(Particle.SMOKE, muzzle, 8, 0.1, 0.1, 0.1, 0.03);
+				LowSpec.particle(w, Particle.FLASH, muzzle, 1, 0, 0, 0, 0, Color.fromRGB(fx.color2() & 0xFFFFFF));
+				LowSpec.particle(w, Particle.SMOKE, muzzle, 8, 0.1, 0.1, 0.1, 0.03);
 				for (double d = 1.2; d < dist + 4; d += 0.3) {
-					w.spawnParticle(Particle.DUST, from.clone().add(dir.clone().multiply(d)), 1, 0, 0, 0, 0, d < dist ? second : main);
+					LowSpec.particle(w, Particle.DUST, from.clone().add(dir.clone().multiply(d)), 1, 0, 0, 0, 0, d < dist ? second : main);
 				}
-				w.spawnParticle(own, to, 10, 0.2, 0.3, 0.2, 0.1);
+				LowSpec.particle(w, own, to, 10, 0.2, 0.3, 0.2, 0.1);
 				w.playSound(muzzle, Sound.ENTITY_FIREWORK_ROCKET_BLAST, SoundCategory.HOSTILE, 1.0F, 0.7F);
 				w.playSound(muzzle, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 0.3F, 1.8F);
 			}
@@ -140,9 +140,9 @@ final class MdFx {
 				// A pillar on the victim and sparks falling into it.
 				Location base = victim.getLocation();
 				for (double y = 0; y < 4.2; y += 0.25) {
-					w.spawnParticle(Particle.DUST, base.clone().add(0, y, 0), 2, 0.18, 0.05, 0.18, 0, y < 2.4 ? main : second);
+					LowSpec.particle(w, Particle.DUST, base.clone().add(0, y, 0), 2, 0.18, 0.05, 0.18, 0, y < 2.4 ? main : second);
 				}
-				w.spawnParticle(own, base.clone().add(0, 3.2, 0), 14, 0.5, 0.8, 0.5, 0.02);
+				LowSpec.particle(w, own, base.clone().add(0, 3.2, 0), 14, 0.5, 0.8, 0.5, 0.02);
 				ring(w, base, 0.8, 1.6, fx, 2);
 				w.playSound(to, Sound.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.HOSTILE, 1.0F, pitch);
 				w.playSound(to, Sound.ENTITY_EVOKER_CAST_SPELL, SoundCategory.HOSTILE, 0.5F, 1.4F);
@@ -153,11 +153,11 @@ final class MdFx {
 			Location base = victim.getLocation();
 			ring(w, base, 1.5, 5.5, fx, 5);
 			for (double y = 0; y < 6; y += 0.2) {
-				w.spawnParticle(Particle.DUST, base.clone().add(0, y, 0), 3, 0.3, 0.05, 0.3, 0, dust(y % 0.8 < 0.4 ? fx.color() : fx.color2(), 2.0F));
+				LowSpec.particle(w, Particle.DUST, base.clone().add(0, y, 0), 3, 0.3, 0.05, 0.3, 0, dust(y % 0.8 < 0.4 ? fx.color() : fx.color2(), 2.0F));
 			}
-			w.spawnParticle(own, to, 60, 0.9, 1.0, 0.9, 0.18);
-			w.spawnParticle(Particle.DUST, to, 50, 1.2, 1.0, 1.2, 0, dust(fx.color(), 2.2F));
-			w.spawnParticle(Particle.EXPLOSION, to, 1);
+			LowSpec.particle(w, own, to, 60, 0.9, 1.0, 0.9, 0.18);
+			LowSpec.particle(w, Particle.DUST, to, 50, 1.2, 1.0, 1.2, 0, dust(fx.color(), 2.2F));
+			LowSpec.particle(w, Particle.EXPLOSION, to, 1);
 			w.playSound(to, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, SoundCategory.HOSTILE, 0.7F, 0.9F);
 			w.playSound(to, Sound.ENTITY_WITHER_BREAK_BLOCK, SoundCategory.HOSTILE, 0.5F, 0.7F);
 		}
@@ -172,7 +172,7 @@ final class MdFx {
 				int n = (int) Math.max(12, r * 10);
 				for (int i = 0; i < n; i++) {
 					double a = Math.PI * 2 * i / n;
-					w.spawnParticle(Particle.DUST, centre.clone().add(Math.cos(a) * r, 0.12, Math.sin(a) * r), 1, 0, 0, 0, 0, dust(step % 2 == 0 ? fx.color() : fx.color2(), 1.5F));
+					LowSpec.particle(w, Particle.DUST, centre.clone().add(Math.cos(a) * r, 0.12, Math.sin(a) * r), 1, 0, 0, 0, 0, dust(step % 2 == 0 ? fx.color() : fx.color2(), 1.5F));
 				}
 			}, s * 2L);
 		}
@@ -182,7 +182,7 @@ final class MdFx {
 	static void arrive(MdModels.Fx fx, LivingEntity mob) {
 		World w = mob.getWorld();
 		ring(w, mob.getLocation(), 1.0, 4.0, fx, 4);
-		w.spawnParticle(particle(fx.particle()), mob.getLocation().add(0, mob.getHeight() * 0.5, 0), 40, 0.6, 0.9, 0.6, 0.1);
+		LowSpec.particle(w, particle(fx.particle()), mob.getLocation().add(0, mob.getHeight() * 0.5, 0), 40, 0.6, 0.9, 0.6, 0.1);
 		w.playSound(mob.getLocation(), Sound.ENTITY_WARDEN_EMERGE, SoundCategory.HOSTILE, 0.6F, 1.4F);
 	}
 }

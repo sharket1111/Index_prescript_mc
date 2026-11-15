@@ -324,7 +324,7 @@ final class RenoirHammer implements Listener {
 				}
 			} else {
 				STREAKS.put(player.getUniqueId(), new Streak(foe.getUniqueId(), hits, now));
-				foe.getWorld().spawnParticle(org.bukkit.Particle.DUST, foe.getLocation().add(0, foe.getHeight() + 0.3, 0),
+				LowSpec.particle(foe.getWorld(), org.bukkit.Particle.DUST, foe.getLocation().add(0, foe.getHeight() + 0.3, 0),
 						3 * hits, 0.2, 0.1, 0.2, 0.0, PromisedNails.GOLD);
 			}
 		}

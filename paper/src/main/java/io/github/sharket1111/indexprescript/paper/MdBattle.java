@@ -310,7 +310,7 @@ final class MdBattle {
 				MdFoes.setup(this, part, pf, kind, mob);
 			}
 		}
-		mob.getWorld().spawnParticle(Particle.REVERSE_PORTAL, mob.getLocation().add(0, 1, 0), 40, 0.4, 0.8, 0.4, 0.05);
+		LowSpec.particle(mob.getWorld(), Particle.REVERSE_PORTAL, mob.getLocation().add(0, 1, 0), 40, 0.4, 0.8, 0.4, 0.05);
 		mobs.add(mob);
 		return mob;
 	}
@@ -417,7 +417,7 @@ final class MdBattle {
 					}
 				}
 				Damage.dealFixed(p, damage / TotalDamage.SCALE, null);
-				p.getWorld().spawnParticle(Particle.FLAME, p.getLocation().add(0, 1, 0), 8, 0.3, 0.5, 0.3, 0.01);
+				LowSpec.particle(p.getWorld(), Particle.FLAME, p.getLocation().add(0, 1, 0), 8, 0.3, 0.5, 0.3, 0.01);
 			}
 			if (mental > 0) {
 				Sanity.lose(p, mental);
@@ -436,7 +436,7 @@ final class MdBattle {
 		int damage = CombatState.of(e).tickBurn(now);
 		if (damage > 0 && e.isValid() && !e.isDead()) {
 			Damage.dealFixed(e, damage * Rupture.DAMAGE_PER_POTENCY, null);
-			e.getWorld().spawnParticle(Particle.FLAME, e.getLocation().add(0, e.getHeight() / 2, 0), 12 + damage, 0.3, 0.5, 0.3, 0.02);
+			LowSpec.particle(e.getWorld(), Particle.FLAME, e.getLocation().add(0, e.getHeight() / 2, 0), 12 + damage, 0.3, 0.5, 0.3, 0.02);
 		}
 	}
 

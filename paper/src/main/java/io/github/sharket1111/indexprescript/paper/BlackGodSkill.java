@@ -608,14 +608,14 @@ final class BlackGodSkill {
 			Vector center = godAt(1.3).add(new Vector(Math.cos(a) * radius, 0, Math.sin(a) * radius));
 			Vector tangent = new Vector(-Math.sin(a), 0, Math.cos(a));
 			for (double u = -0.7; u <= 0.7; u += 0.14) {
-				world.spawnParticle(Particle.DUST, center.clone().add(tangent.clone().multiply(u)).add(new Vector(0, 0.9, 0)).toLocation(world),
+				LowSpec.particle(world, Particle.DUST, center.clone().add(tangent.clone().multiply(u)).add(new Vector(0, 0.9, 0)).toLocation(world),
 						1, 0, 0, 0, 0.0, GOLD);
-				world.spawnParticle(Particle.DUST, center.clone().add(tangent.clone().multiply(u)).add(new Vector(0, -0.9, 0)).toLocation(world),
+				LowSpec.particle(world, Particle.DUST, center.clone().add(tangent.clone().multiply(u)).add(new Vector(0, -0.9, 0)).toLocation(world),
 						1, 0, 0, 0, 0.0, GOLD);
 			}
 			for (double v = -0.9; v <= 0.9; v += 0.15) {
 				for (double u : new double[] {-0.7, 0.7}) {
-					world.spawnParticle(Particle.DUST, center.clone().add(tangent.clone().multiply(u)).add(new Vector(0, v, 0)).toLocation(world),
+					LowSpec.particle(world, Particle.DUST, center.clone().add(tangent.clone().multiply(u)).add(new Vector(0, v, 0)).toLocation(world),
 							1, 0, 0, 0, 0.0, GOLD);
 				}
 			}
@@ -669,8 +669,8 @@ final class BlackGodSkill {
 			overlay(FLASH);
 			pillar(target.getLocation(), 9, true);
 			whiteBurst(target.getLocation(), 2.5);
-			spot.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, target.getLocation().add(2, 1, 0), 1);
-			spot.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, target.getLocation().add(-2, 1, 0), 1);
+			LowSpec.particle(spot.getWorld(), Particle.EXPLOSION_EMITTER, target.getLocation().add(2, 1, 0), 1);
+			LowSpec.particle(spot.getWorld(), Particle.EXPLOSION_EMITTER, target.getLocation().add(-2, 1, 0), 1);
 			fixed(target, maxHealth(target) * 2.0);
 		}
 		if (tick > DELETE_LAST && tick < 318 && tick % 10 == 0) {
@@ -962,7 +962,7 @@ final class BlackGodSkill {
 		Location at = god.getLocation();
 		for (int i = 0; i < 24; i++) {
 			double a = i * Math.PI / 12;
-			at.getWorld().spawnParticle(Particle.DUST, at.clone().add(Math.cos(a) * 1.2, 1.0, Math.sin(a) * 1.2), 2, 0.02, 0.6, 0.02, 0.0, GOLD);
+			LowSpec.particle(at.getWorld(), Particle.DUST, at.clone().add(Math.cos(a) * 1.2, 1.0, Math.sin(a) * 1.2), 2, 0.02, 0.6, 0.02, 0.0, GOLD);
 		}
 		at.getWorld().playSound(at, Sound.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS, 1.2F, 0.6F);
 		at.getWorld().playSound(at, Sound.BLOCK_BELL_RESONATE, SoundCategory.PLAYERS, 1.0F, 1.2F);
@@ -1013,9 +1013,9 @@ final class BlackGodSkill {
 		Vector across = side().multiply(r.nextBoolean() ? 1 : -1).add(new Vector(0, -0.9, 0)).normalize();
 		for (double d = -5; d <= 5; d += 0.2) {
 			Location p = through.clone().add(across.clone().multiply(d));
-			world.spawnParticle(Particle.DUST, p, 3, 0.12, 0.12, 0.12, 0.0, WHITE);
+			LowSpec.particle(world, Particle.DUST, p, 3, 0.12, 0.12, 0.12, 0.0, WHITE);
 			if (Math.abs(d) < 3) {
-				world.spawnParticle(Particle.END_ROD, p, 1, 0.05, 0.05, 0.05, 0.02);
+				LowSpec.particle(world, Particle.END_ROD, p, 1, 0.05, 0.05, 0.05, 0.02);
 			}
 		}
 		world.playSound(through, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, SoundCategory.PLAYERS, 1.2F, 1.2F);
@@ -1031,19 +1031,19 @@ final class BlackGodSkill {
 		Vector v = new Vector(0, 1, 0);
 		for (int i = 0; i < 48; i++) {
 			double a = i * Math.PI * 2 / 48;
-			world.spawnParticle(Particle.DUST, center.clone().add(u.clone().multiply(Math.cos(a) * radius)).add(v.clone().multiply(Math.sin(a) * radius)),
+			LowSpec.particle(world, Particle.DUST, center.clone().add(u.clone().multiply(Math.cos(a) * radius)).add(v.clone().multiply(Math.sin(a) * radius)),
 					1, 0, 0, 0, 0.0, GOLD_WHITE);
 		}
 		for (int h = 0; h < 12; h++) {
 			double a = h * Math.PI / 6;
 			for (double d = radius * 0.8; d <= radius; d += 0.1) {
-				world.spawnParticle(Particle.DUST, center.clone().add(u.clone().multiply(Math.cos(a) * d)).add(v.clone().multiply(Math.sin(a) * d)),
+				LowSpec.particle(world, Particle.DUST, center.clone().add(u.clone().multiply(Math.cos(a) * d)).add(v.clone().multiply(Math.sin(a) * d)),
 						1, 0, 0, 0, 0.0, GOLD);
 			}
 		}
 		double hand = Math.PI / 2 - turn * Math.PI * 2;
 		for (double d = 0; d <= radius * 0.9; d += 0.12) {
-			world.spawnParticle(Particle.DUST, center.clone().add(u.clone().multiply(Math.cos(hand) * d)).add(v.clone().multiply(Math.sin(hand) * d)),
+			LowSpec.particle(world, Particle.DUST, center.clone().add(u.clone().multiply(Math.cos(hand) * d)).add(v.clone().multiply(Math.sin(hand) * d)),
 					1, 0, 0, 0, 0.0, BLUE);
 		}
 		if (((int) (turn * 16)) % 2 == 0) {
@@ -1057,7 +1057,7 @@ final class BlackGodSkill {
 		ThreadLocalRandom r = ThreadLocalRandom.current();
 		for (int i = 0; i < 10; i++) {
 			Location p = at.clone().add(r.nextDouble(-0.7, 0.7), r.nextDouble(0, 4), r.nextDouble(-0.7, 0.7));
-			world.spawnParticle(Particle.DUST, p, 4, 0.12, 0.05, 0.12, 0.0, RED);
+			LowSpec.particle(world, Particle.DUST, p, 4, 0.12, 0.05, 0.12, 0.0, RED);
 		}
 		if (r.nextInt(3) == 0) {
 			world.playSound(at, Sound.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.PLAYERS, 0.8F, 0.5F);
@@ -1068,13 +1068,13 @@ final class BlackGodSkill {
 	private static void goldenNail(Location at) {
 		World world = at.getWorld();
 		for (double y = 0; y < 4.5; y += 0.15) {
-			world.spawnParticle(Particle.DUST, at.clone().add(0, y, 0), 2, 0.06, 0.02, 0.06, 0.0, GOLD);
+			LowSpec.particle(world, Particle.DUST, at.clone().add(0, y, 0), 2, 0.06, 0.02, 0.06, 0.0, GOLD);
 		}
 		for (double x = -0.9; x <= 0.9; x += 0.15) {
-			world.spawnParticle(Particle.DUST, at.clone().add(x, 3.4, 0), 2, 0.02, 0.06, 0.02, 0.0, GOLD);
-			world.spawnParticle(Particle.DUST, at.clone().add(0, 3.4, x), 2, 0.02, 0.06, 0.02, 0.0, GOLD);
+			LowSpec.particle(world, Particle.DUST, at.clone().add(x, 3.4, 0), 2, 0.02, 0.06, 0.02, 0.0, GOLD);
+			LowSpec.particle(world, Particle.DUST, at.clone().add(0, 3.4, x), 2, 0.02, 0.06, 0.02, 0.0, GOLD);
 		}
-		world.spawnParticle(Particle.END_ROD, at.clone().add(0, 1, 0), 30, 0.3, 0.6, 0.3, 0.2);
+		LowSpec.particle(world, Particle.END_ROD, at.clone().add(0, 1, 0), 30, 0.3, 0.6, 0.3, 0.2);
 		world.playSound(at, Sound.BLOCK_ANVIL_LAND, SoundCategory.PLAYERS, 1.0F, 0.6F);
 		world.playSound(at, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, SoundCategory.PLAYERS, 0.8F, 1.5F);
 	}
@@ -1083,9 +1083,9 @@ final class BlackGodSkill {
 	private static void goldPillar(Location at) {
 		World world = at.getWorld();
 		for (double y = 0; y < 8; y += 0.25) {
-			world.spawnParticle(Particle.DUST, at.clone().add(0, y, 0), 3, 0.3, 0.05, 0.3, 0.0, GOLD);
+			LowSpec.particle(world, Particle.DUST, at.clone().add(0, y, 0), 3, 0.3, 0.05, 0.3, 0.0, GOLD);
 		}
-		world.spawnParticle(Particle.END_ROD, at.clone().add(0, 0.5, 0), 20, 0.4, 2.0, 0.4, 0.05);
+		LowSpec.particle(world, Particle.END_ROD, at.clone().add(0, 0.5, 0), 20, 0.4, 2.0, 0.4, 0.05);
 		world.playSound(at, Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.2F, 1.4F);
 	}
 
@@ -1148,7 +1148,7 @@ final class BlackGodSkill {
 			Vector dir = side().multiply(r.nextDouble(-1, 1)).add(new Vector(0, r.nextDouble(0.1, 1), 0))
 					.add(facing().multiply(-0.3)).normalize();
 			for (double d = 0.6; d < 6; d += 0.3) {
-				world.spawnParticle(Particle.DUST, from.clone().add(dir.clone().multiply(d)), 1, 0, 0, 0, 0.0, d > 4 ? PALE : GOLD);
+				LowSpec.particle(world, Particle.DUST, from.clone().add(dir.clone().multiply(d)), 1, 0, 0, 0, 0.0, d > 4 ? PALE : GOLD);
 			}
 		}
 	}
@@ -1163,17 +1163,17 @@ final class BlackGodSkill {
 			for (double r = radius - 0.4; r <= radius + 0.4; r += 0.4) {
 				Vector p = center.toVector().add(s.clone().multiply(Math.sin(a) * r)).add(f.clone().multiply(Math.cos(a) * r * 0.5))
 						.add(new Vector(0, Math.sin(a * 0.5) * 0.4, 0));
-				world.spawnParticle(Particle.DUST, p.toLocation(world), 1, 0.02, 0.02, 0.02, 0.0, dust);
+				LowSpec.particle(world, Particle.DUST, p.toLocation(world), 1, 0.02, 0.02, 0.02, 0.0, dust);
 			}
 		}
-		world.spawnParticle(Particle.SWEEP_ATTACK, center, 6, radius * 0.4, 0.3, radius * 0.4, 0.0);
+		LowSpec.particle(world, Particle.SWEEP_ATTACK, center, 6, radius * 0.4, 0.3, radius * 0.4, 0.0);
 	}
 
 	private static void starburst(Location at) {
 		World world = at.getWorld();
-		world.spawnParticle(Particle.END_ROD, at, 16, 0.2, 0.2, 0.2, 0.18);
-		world.spawnParticle(Particle.DUST, at, 14, 0.4, 0.4, 0.4, 0.0, GOLD);
-		world.spawnParticle(Particle.ELECTRIC_SPARK, at, 10, 0.3, 0.3, 0.3, 0.2);
+		LowSpec.particle(world, Particle.END_ROD, at, 16, 0.2, 0.2, 0.2, 0.18);
+		LowSpec.particle(world, Particle.DUST, at, 14, 0.4, 0.4, 0.4, 0.0, GOLD);
+		LowSpec.particle(world, Particle.ELECTRIC_SPARK, at, 10, 0.3, 0.3, 0.3, 0.2);
 		world.playSound(at, Sound.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.PLAYERS, 1.0F, 0.7F);
 	}
 
@@ -1181,9 +1181,9 @@ final class BlackGodSkill {
 	private static void pillar(Location at, double height, boolean heavy) {
 		World world = at.getWorld();
 		for (double y = 0; y < height; y += 0.25) {
-			world.spawnParticle(Particle.DUST, at.clone().add(0, y, 0), heavy ? 3 : 1, heavy ? 0.35 : 0.15, 0.05, heavy ? 0.35 : 0.15, 0.0, WHITE);
+			LowSpec.particle(world, Particle.DUST, at.clone().add(0, y, 0), heavy ? 3 : 1, heavy ? 0.35 : 0.15, 0.05, heavy ? 0.35 : 0.15, 0.0, WHITE);
 			if (heavy && y % 1.0 < 0.25) {
-				world.spawnParticle(Particle.END_ROD, at.clone().add(0, y, 0), 2, 0.2, 0.1, 0.2, 0.02);
+				LowSpec.particle(world, Particle.END_ROD, at.clone().add(0, y, 0), 2, 0.2, 0.1, 0.2, 0.02);
 			}
 		}
 		world.playSound(at, Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.2F, heavy ? 0.6F : 1.2F);
@@ -1192,20 +1192,20 @@ final class BlackGodSkill {
 
 	private static void whiteBurst(Location at, double size) {
 		World world = at.getWorld();
-		world.spawnParticle(Particle.EXPLOSION, at.clone().add(0, 0.8, 0), (int) (3 * size), size, 0.4, size, 0.0);
-		world.spawnParticle(Particle.END_ROD, at.clone().add(0, 0.8, 0), (int) (50 * size), 0.4, 0.4, 0.4, 0.3 * size);
+		LowSpec.particle(world, Particle.EXPLOSION, at.clone().add(0, 0.8, 0), (int) (3 * size), size, 0.4, size, 0.0);
+		LowSpec.particle(world, Particle.END_ROD, at.clone().add(0, 0.8, 0), (int) (50 * size), 0.4, 0.4, 0.4, 0.3 * size);
 		ThreadLocalRandom r = ThreadLocalRandom.current();
 		for (int i = 0; i < 60 * size; i++) {
 			Vector dir = new Vector(r.nextGaussian(), Math.abs(r.nextGaussian()), r.nextGaussian()).normalize().multiply(r.nextDouble(0.3, 2.5 * size));
-			world.spawnParticle(Particle.DUST, at.clone().add(0, 0.5, 0).add(dir), 1, 0, 0, 0, 0.0, i % 3 == 0 ? GOLD : WHITE);
+			LowSpec.particle(world, Particle.DUST, at.clone().add(0, 0.5, 0).add(dir), 1, 0, 0, 0, 0.0, i % 3 == 0 ? GOLD : WHITE);
 		}
 		world.playSound(at, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.PLAYERS, 1.2F, 0.8F);
 		world.playSound(at, Sound.ITEM_TOTEM_USE, SoundCategory.PLAYERS, 0.6F, 1.6F);
 	}
 
 	private static void sparkle(Location at, double radius) {
-		at.getWorld().spawnParticle(Particle.DUST, at.clone().add(0, 1.0, 0), 8, radius * 0.5, 0.8, radius * 0.5, 0.0, GOLD);
-		at.getWorld().spawnParticle(Particle.END_ROD, at.clone().add(0, 1.5, 0), 3, radius * 0.4, 0.6, radius * 0.4, 0.02);
+		LowSpec.particle(at.getWorld(), Particle.DUST, at.clone().add(0, 1.0, 0), 8, radius * 0.5, 0.8, radius * 0.5, 0.0, GOLD);
+		LowSpec.particle(at.getWorld(), Particle.END_ROD, at.clone().add(0, 1.5, 0), 3, radius * 0.4, 0.6, radius * 0.4, 0.02);
 	}
 
 	/** A great diagonal beam of gold, from the sky across {@code through}. */
@@ -1215,7 +1215,7 @@ final class BlackGodSkill {
 		Vector dir = new Vector(r.nextDouble(-1, 1), -r.nextDouble(0.6, 1.4), r.nextDouble(-1, 1)).normalize();
 		Vector start = through.toVector().subtract(dir.clone().multiply(10));
 		for (double d = 0; d < 14; d += 0.3) {
-			world.spawnParticle(Particle.DUST, start.clone().add(dir.clone().multiply(d)).toLocation(world), 2, 0.08, 0.08, 0.08, 0.0, GOLD);
+			LowSpec.particle(world, Particle.DUST, start.clone().add(dir.clone().multiply(d)).toLocation(world), 2, 0.08, 0.08, 0.08, 0.0, GOLD);
 		}
 		world.playSound(through, Sound.BLOCK_BEACON_AMBIENT, SoundCategory.PLAYERS, 1.0F, 1.6F);
 	}
@@ -1224,7 +1224,7 @@ final class BlackGodSkill {
 		World world = through.getWorld();
 		Vector s = side();
 		for (double d = -6; d <= 6; d += 0.25) {
-			world.spawnParticle(Particle.END_ROD, through.clone().add(s.clone().multiply(d)), 1, 0, 0.02, 0, 0.0);
+			LowSpec.particle(world, Particle.END_ROD, through.clone().add(s.clone().multiply(d)), 1, 0, 0.02, 0, 0.0);
 		}
 		world.playSound(through, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, SoundCategory.PLAYERS, 0.5F, 1.8F);
 	}

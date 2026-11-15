@@ -100,7 +100,12 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		if (menu != null) {
 			menu.setExecutor((sender, cmd, label, args) -> {
 				if (sender instanceof org.bukkit.entity.Player p) {
-					Ego.Menu.open(p);
+					if (args.length >= 1 && (args[0].equals("저사양") || args[0].equalsIgnoreCase("lowspec"))) {
+						LowSpec.set(p, !LowSpec.on(p));
+						p.sendMessage(Component.text("저사양 모드 " + (LowSpec.on(p) ? "켜짐 (파티클 1/4)" : "꺼짐"), NamedTextColor.GREEN));
+					} else {
+						Ego.Menu.open(p);
+					}
 				}
 				return true;
 			});

@@ -274,7 +274,7 @@ final class BlackGodRevive {
 				world.playSound(spot, Sound.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.PLAYERS, 1.0F,
 						0.5F + ThreadLocalRandom.current().nextFloat());
 			}
-			world.spawnParticle(Particle.DUST, spot.clone().add(0, 1.2, 0), 6, 0.7, 0.9, 0.7, 0.0, GOLD);
+			LowSpec.particle(world, Particle.DUST, spot.clone().add(0, 1.2, 0), 6, 0.7, 0.9, 0.7, 0.0, GOLD);
 		} else if (tick == CLOSE_AT) {
 			clearOverlays();
 			world.playSound(spot, Sound.BLOCK_BELL_RESONATE, SoundCategory.PLAYERS, 1.5F, 0.5F);
@@ -303,20 +303,20 @@ final class BlackGodRevive {
 			if (tick % 3 == 0) {
 				double y = (ThreadLocalRandom.current().nextDouble() - 0.5) * 1.6;
 				for (double x = -3.5; x <= 3.5; x += 0.2) {
-					world.spawnParticle(Particle.END_ROD, head.clone().add(side.clone().multiply(x)).add(0, y, 0)
+					LowSpec.particle(world, Particle.END_ROD, head.clone().add(side.clone().multiply(x)).add(0, y, 0)
 							.add(facing.clone().multiply(0.2)), 1, 0, 0, 0, 0.0);
 				}
 				world.playSound(head, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, SoundCategory.PLAYERS, 0.4F, 1.6F);
 			}
-			world.spawnParticle(Particle.ELECTRIC_SPARK, head, 6, 0.7, 0.7, 0.7, 0.2);
+			LowSpec.particle(world, Particle.ELECTRIC_SPARK, head, 6, 0.7, 0.7, 0.7, 0.2);
 			if (tick == HALO_AT) {
 				world.playSound(head, Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.5F, 0.5F);
 			}
 		}
 		if (tick == FLASH_AT) {
 			overlayAll(FLASH);
-			world.spawnParticle(Particle.END_ROD, spot.clone().add(0, 1.5, 0), 120, 1.5, 2.0, 1.5, 0.5);
-			world.spawnParticle(Particle.EXPLOSION_EMITTER, spot.clone().add(0, 1, 0), 1);
+			LowSpec.particle(world, Particle.END_ROD, spot.clone().add(0, 1.5, 0), 120, 1.5, 2.0, 1.5, 0.5);
+			LowSpec.particle(world, Particle.EXPLOSION_EMITTER, spot.clone().add(0, 1, 0), 1);
 			world.playSound(spot, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, SoundCategory.PLAYERS, 1.5F, 0.6F);
 			world.playSound(spot, Sound.ITEM_TOTEM_USE, SoundCategory.PLAYERS, 1.0F, 0.6F);
 		}
@@ -340,7 +340,7 @@ final class BlackGodRevive {
 			skyHalo.setTransformation(new Transformation(new Vector3f(), new Quaternionf().rotateZ(since * 0.004F),
 					new Vector3f(size, size, size), new Quaternionf()));
 			if (since % 6 == 0) {
-				world.spawnParticle(Particle.END_ROD, skyHalo.getLocation(), 12, 3, 1, 3, 0.15);
+				LowSpec.particle(world, Particle.END_ROD, skyHalo.getLocation(), 12, 3, 1, 3, 0.15);
 			}
 		}
 		if (tick >= HEAL_AT && tick < END - 10) {
@@ -348,10 +348,10 @@ final class BlackGodRevive {
 			for (int i = 0; i < 6; i++) {
 				double a = ThreadLocalRandom.current().nextDouble(Math.PI * 2);
 				double r = ThreadLocalRandom.current().nextDouble(0.3, 3.5);
-				world.spawnParticle(Particle.DUST, spot.clone().add(Math.cos(a) * r, 0.2, Math.sin(a) * r), 1, 0.05, 0.4, 0.05, 0.0, GOLD);
+				LowSpec.particle(world, Particle.DUST, spot.clone().add(Math.cos(a) * r, 0.2, Math.sin(a) * r), 1, 0.05, 0.4, 0.05, 0.0, GOLD);
 			}
 			if (tick % 5 == 0) {
-				world.spawnParticle(Particle.END_ROD, spot.clone().add(0, 0.5, 0), 4, 1.2, 0.3, 1.2, 0.08);
+				LowSpec.particle(world, Particle.END_ROD, spot.clone().add(0, 0.5, 0), 4, 1.2, 0.3, 1.2, 0.08);
 			}
 		}
 		if (tick == HEAL_AT) {
@@ -371,7 +371,7 @@ final class BlackGodRevive {
 		for (int i = 0; i < points; i++) {
 			double a = i * Math.PI * 2 / points;
 			Location p = center.clone().add(side.clone().multiply(Math.cos(a) * radius)).add(up.clone().multiply(Math.sin(a) * radius));
-			center.getWorld().spawnParticle(Particle.DUST, p, 1, 0, 0, 0, 0.0, dust);
+			LowSpec.particle(center.getWorld(), Particle.DUST, p, 1, 0, 0, 0, 0.0, dust);
 		}
 	}
 

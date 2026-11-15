@@ -149,7 +149,7 @@ final class IndexMark {
 			}
 			if (now % 10 == 0) {
 				Location top = entity.getLocation().add(0, entity.getHeight() + 0.7, 0);
-				entity.getWorld().spawnParticle(Particle.DUST, top, 3, 0.2, 0.1, 0.2, 0.0, MOTE);
+				LowSpec.particle(entity.getWorld(), Particle.DUST, top, 3, 0.2, 0.1, 0.2, 0.0, MOTE);
 			}
 		}
 	}

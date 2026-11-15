@@ -154,15 +154,15 @@ final class Defense implements Listener {
 		switch (spec.type()) {
 			case GUARD -> {
 				w.playSound(at, Sound.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS, 1.0F, 0.8F);
-				w.spawnParticle(Particle.ENCHANTED_HIT, at, 20, 0.5, 0.6, 0.5, 0.05);
+				LowSpec.particle(w, Particle.ENCHANTED_HIT, at, 20, 0.5, 0.6, 0.5, 0.05);
 			}
 			case EVADE -> {
 				w.playSound(at, Sound.ENTITY_BREEZE_JUMP, SoundCategory.PLAYERS, 0.8F, 1.4F);
-				w.spawnParticle(Particle.CLOUD, at.clone().add(0, -0.8, 0), 12, 0.4, 0.1, 0.4, 0.02);
+				LowSpec.particle(w, Particle.CLOUD, at.clone().add(0, -0.8, 0), 12, 0.4, 0.1, 0.4, 0.02);
 			}
 			case COUNTER -> {
 				w.playSound(at, Sound.ITEM_TRIDENT_RETURN, SoundCategory.PLAYERS, 1.0F, 0.7F);
-				w.spawnParticle(Particle.CRIT, at, 20, 0.5, 0.6, 0.5, 0.2);
+				LowSpec.particle(w, Particle.CRIT, at, 20, 0.5, 0.6, 0.5, 0.2);
 			}
 		}
 		Hud.message(p, Component.text(spec.type().ko + " · " + spec.name() + " (" + spec.min() + "~" + spec.max() + ", 1턴)", colour));
@@ -249,7 +249,7 @@ final class Defense implements Listener {
 				s.shield -= soaked;
 				event.setDamage(event.getDamage() - soaked);
 				w.playSound(at, Sound.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS, 1.0F, 1.0F);
-				w.spawnParticle(Particle.ENCHANTED_HIT, at, 10, 0.4, 0.5, 0.4, 0.1);
+				LowSpec.particle(w, Particle.ENCHANTED_HIT, at, 10, 0.4, 0.5, 0.4, 0.1);
 				apply(p, attacker, s.spec, "struck", s);
 				if (s.shield <= 0.01) {
 					ACTIVE.remove(p.getUniqueId());
@@ -261,7 +261,7 @@ final class Defense implements Listener {
 				if (mine >= theirs) {
 					event.setCancelled(true);
 					w.playSound(at, Sound.ENTITY_BREEZE_WIND_BURST, SoundCategory.PLAYERS, 0.7F, 1.6F);
-					w.spawnParticle(Particle.CLOUD, at, 8, 0.4, 0.4, 0.4, 0.05);
+					LowSpec.particle(w, Particle.CLOUD, at, 8, 0.4, 0.4, 0.4, 0.05);
 					Hud.message(p, Component.text("회피 " + mine + " > " + theirs, NamedTextColor.AQUA));
 					apply(p, attacker, s.spec, "evade", s);
 				} else {
@@ -276,7 +276,7 @@ final class Defense implements Listener {
 				if (mine >= theirs) {
 					event.setCancelled(true);
 					w.playSound(at, Sound.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1.0F, 0.7F);
-					w.spawnParticle(Particle.SWEEP_ATTACK, attacker.getLocation().add(0, attacker.getHeight() * 0.6, 0), 2, 0.2, 0.1, 0.2, 0);
+					LowSpec.particle(w, Particle.SWEEP_ATTACK, attacker.getLocation().add(0, attacker.getHeight() * 0.6, 0), 2, 0.2, 0.1, 0.2, 0);
 					Hud.message(p, Component.text("반격 " + mine + " > " + theirs, NamedTextColor.AQUA));
 					p.swingMainHand();
 					double bonus = apply(p, attacker, s.spec, "hit", s) + (s.spec.bonus() == null ? 0 : s.spec.bonus().damagePct(p, attacker));

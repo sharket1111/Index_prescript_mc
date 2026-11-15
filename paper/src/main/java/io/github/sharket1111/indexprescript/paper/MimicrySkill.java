@@ -490,7 +490,7 @@ final class MimicrySkill {
 		World world = player.getWorld();
 		Location at = player.getLocation().add(0, 1, 0);
 		world.playSound(at, Sound.ENTITY_PLAYER_ATTACK_KNOCKBACK, SoundCategory.PLAYERS, 0.8F, 0.6F);
-		world.spawnParticle(Particle.DUST, at, 20, 0.4, 0.7, 0.4, 0.0, new Particle.DustOptions(MimicryWeapon.RED, 1.5F));
+		LowSpec.particle(world, Particle.DUST, at, 20, 0.4, 0.7, 0.4, 0.0, new Particle.DustOptions(MimicryWeapon.RED, 1.5F));
 		if (chain > 0) {
 			Hud.message(player, Component.text("돌진 재사용 ×" + chain, MimicryWeapon.RED_TEXT));
 		}
@@ -547,7 +547,7 @@ final class MimicrySkill {
 			case CHARGE -> {
 				if (tick < 4) {
 					// Crouch: red mist gathers at the feet.
-					world.spawnParticle(Particle.DUST, actor().getLocation().add(0, 0.2, 0), 6, 0.4, 0.05, 0.4, 0.0,
+					LowSpec.particle(world, Particle.DUST, actor().getLocation().add(0, 0.2, 0), 6, 0.4, 0.05, 0.4, 0.0,
 							new Particle.DustOptions(MimicryWeapon.DARK_RED, 1.6F));
 					if (tick == 0) {
 						world.playSound(actor().getLocation(), Sound.ENTITY_RAVAGER_ROAR, SoundCategory.PLAYERS, 0.6F, 1.4F);
@@ -579,7 +579,7 @@ final class MimicrySkill {
 					// The blade is raised; the mist climbs it.
 					place(front(2.2, 0), (tick - 2) * 0.11);
 					Location head = actor().getLocation().add(0, 2.4, 0);
-					world.spawnParticle(Particle.DUST, head, 8, 0.25, 0.6, 0.25, 0.0, new Particle.DustOptions(MimicryWeapon.RED, 1.6F));
+					LowSpec.particle(world, Particle.DUST, head, 8, 0.25, 0.6, 0.25, 0.0, new Particle.DustOptions(MimicryWeapon.RED, 1.6F));
 					if (tick % 4 == 0) {
 						world.playSound(head, Sound.BLOCK_FIRE_AMBIENT, SoundCategory.PLAYERS, 1.0F, 0.5F);
 					}
@@ -599,7 +599,7 @@ final class MimicrySkill {
 					double radius = 0.8 + tick * 0.18;
 					for (int i = 0; i < 4; i++) {
 						double angle = tick * 0.5 + i * Math.PI / 2;
-						world.spawnParticle(Particle.DUST, at.clone().add(Math.cos(angle) * radius, 0.3 + (tick % 5) * 0.15, Math.sin(angle) * radius),
+						LowSpec.particle(world, Particle.DUST, at.clone().add(Math.cos(angle) * radius, 0.3 + (tick % 5) * 0.15, Math.sin(angle) * radius),
 								2, 0.05, 0.05, 0.05, 0.0, new Particle.DustOptions(i % 2 == 0 ? MimicryWeapon.RED : MimicryWeapon.DARK_RED, 1.8F));
 					}
 					if (tick % 10 == 0) {
@@ -767,7 +767,7 @@ final class MimicrySkill {
 		Damage.deal(attacker, damage, player, true);
 		World world = attacker.getWorld();
 		Location mid = attacker.getLocation().add(0, attacker.getHeight() * 0.6, 0);
-		world.spawnParticle(Particle.SWEEP_ATTACK, mid, 2, 0.3, 0.1, 0.3, 0.0);
+		LowSpec.particle(world, Particle.SWEEP_ATTACK, mid, 2, 0.3, 0.1, 0.3, 0.0);
 		world.playSound(mid, Sound.ENTITY_PLAYER_ATTACK_STRONG, SoundCategory.PLAYERS, 1.0F, 0.8F);
 		if (attacker.isDead() || attacker.getHealth() < before) {
 			CombatState.of(player).raiseAttackLevel(3, CaduceusListener.now(), SCENE + 20);
@@ -782,10 +782,10 @@ final class MimicrySkill {
 		world.playSound(at, Sound.ENTITY_RAVAGER_ROAR, SoundCategory.PLAYERS, 1.0F, 1.2F);
 		for (int i = 0; i < 36; i++) {
 			double angle = Math.PI * 2 * i / 36;
-			world.spawnParticle(Particle.DUST, at.clone().add(Math.cos(angle) * 1.6, -0.6, Math.sin(angle) * 1.6), 1, 0.0, 0.0, 0.0, 0.0,
+			LowSpec.particle(world, Particle.DUST, at.clone().add(Math.cos(angle) * 1.6, -0.6, Math.sin(angle) * 1.6), 1, 0.0, 0.0, 0.0, 0.0,
 					new Particle.DustOptions(MimicryWeapon.RED, 1.5F));
 		}
-		world.spawnParticle(Particle.SONIC_BOOM, at.clone().add(player.getLocation().getDirection().setY(0).normalize().multiply(1.2)), 1);
+		LowSpec.particle(world, Particle.SONIC_BOOM, at.clone().add(player.getLocation().getDirection().setY(0).normalize().multiply(1.2)), 1);
 		Hud.message(player, Component.text("기합 — 정신력 +" + ROAR_SANITY + " · 방어 8~12 (1턴)", MimicryWeapon.RED_TEXT));
 	}
 
@@ -799,10 +799,10 @@ final class MimicrySkill {
 		world.playSound(at, Sound.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS, 1.0F, 0.7F);
 		for (int i = 0; i < 36; i++) {
 			double angle = Math.PI * 2 * i / 36;
-			world.spawnParticle(Particle.DUST, at.clone().add(Math.cos(angle) * 1.6, -0.6, Math.sin(angle) * 1.6), 1, 0.0, 0.0, 0.0, 0.0,
+			LowSpec.particle(world, Particle.DUST, at.clone().add(Math.cos(angle) * 1.6, -0.6, Math.sin(angle) * 1.6), 1, 0.0, 0.0, 0.0, 0.0,
 					new Particle.DustOptions(MimicryWeapon.RED, 1.5F));
 		}
-		world.spawnParticle(Particle.SONIC_BOOM, at.clone().add(toTarget().multiply(1.2)), 1);
+		LowSpec.particle(world, Particle.SONIC_BOOM, at.clone().add(toTarget().multiply(1.2)), 1);
 	}
 
 	/** 대절단-세로: one of the target's combat pages destroyed. */
@@ -818,7 +818,7 @@ final class MimicrySkill {
 		Hud.message(player, Component.text("전투 책장 파괴", MimicryWeapon.RED_TEXT));
 		World world = victim.getWorld();
 		Location at = victim.getLocation().add(0, victim.getHeight() + 0.4, 0);
-		world.spawnParticle(Particle.ITEM, at, 20, 0.2, 0.2, 0.2, 0.08, ItemStack.of(Material.PAPER));
+		LowSpec.particle(world, Particle.ITEM, at, 20, 0.2, 0.2, 0.2, 0.08, ItemStack.of(Material.PAPER));
 		world.playSound(at, Sound.ENTITY_ITEM_BREAK, SoundCategory.PLAYERS, 1.0F, 0.6F);
 	}
 
@@ -835,11 +835,11 @@ final class MimicrySkill {
 			double angle = Math.toRadians(from + sweep * i / points);
 			Vector p = centre.clone().add(f.clone().multiply(Math.cos(angle) * radius)).add(side.clone().multiply(Math.sin(angle) * radius));
 			Location at = p.toLocation(world);
-			world.spawnParticle(Particle.DUST, at, 1, 0.02, 0.02, 0.02, 0.0, new Particle.DustOptions(MimicryWeapon.RED, size));
+			LowSpec.particle(world, Particle.DUST, at, 1, 0.02, 0.02, 0.02, 0.0, new Particle.DustOptions(MimicryWeapon.RED, size));
 			if (i % 2 == 0) {
 				Vector inner = centre.clone().add(f.clone().multiply(Math.cos(angle) * radius * 0.86))
 						.add(side.clone().multiply(Math.sin(angle) * radius * 0.86));
-				world.spawnParticle(Particle.DUST, inner.toLocation(world), 1, 0.02, 0.02, 0.02, 0.0,
+				LowSpec.particle(world, Particle.DUST, inner.toLocation(world), 1, 0.02, 0.02, 0.02, 0.0,
 						new Particle.DustOptions(MimicryWeapon.DARK_RED, size * 1.2F));
 			}
 		}
@@ -854,7 +854,7 @@ final class MimicrySkill {
 		Vector dir = step.multiply(1.0 / length);
 		for (double t = 0; t <= length; t += 0.4) {
 			Vector p = from.clone().add(dir.clone().multiply(t)).add(new Vector(0, 1.0, 0));
-			world.spawnParticle(Particle.DUST, p.toLocation(world), 1, 0.08, 0.15, 0.08, 0.0, new Particle.DustOptions(MimicryWeapon.RED, 1.3F));
+			LowSpec.particle(world, Particle.DUST, p.toLocation(world), 1, 0.08, 0.15, 0.08, 0.0, new Particle.DustOptions(MimicryWeapon.RED, 1.3F));
 		}
 	}
 
@@ -875,15 +875,15 @@ final class MimicrySkill {
 				Vector tip = chest.clone();
 				for (int i = 0; i < 14; i++) {
 					tip.add(forward.clone().multiply(0.22));
-					world.spawnParticle(Particle.DUST, tip.toLocation(world), 2, 0.03, 0.03, 0.03, 0.0,
+					LowSpec.particle(world, Particle.DUST, tip.toLocation(world), 2, 0.03, 0.03, 0.03, 0.0,
 							new Particle.DustOptions(i > 9 ? MimicryWeapon.RED : MimicryWeapon.DARK_RED, 1.3F));
 				}
-				world.spawnParticle(Particle.CRIT, mid, 12, 0.2, 0.2, 0.2, 0.3);
+				LowSpec.particle(world, Particle.CRIT, mid, 12, 0.2, 0.2, 0.2, 0.3);
 				world.playSound(mid, Sound.ITEM_TRIDENT_HIT, SoundCategory.PLAYERS, 1.0F, 0.8F + coin * 0.1F);
 			}
 			case HORIZONTAL -> {
 				arc(world, chest, forward, 2.2, coin == 0 ? 8 : -8, coin == 0 ? -80 : 80, coin == 0 ? 160 : -160, 1.4F);
-				world.spawnParticle(Particle.SWEEP_ATTACK, mid, 2, 0.3, 0.1, 0.3, 0.0);
+				LowSpec.particle(world, Particle.SWEEP_ATTACK, mid, 2, 0.3, 0.1, 0.3, 0.0);
 				world.playSound(mid, Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1.0F, 0.7F);
 			}
 			case ROAR -> {
@@ -892,8 +892,8 @@ final class MimicrySkill {
 			}
 			case CHARGE -> {
 				arc(world, chest, forward, 2.3, 25, -90, 180, 1.6F);
-				world.spawnParticle(Particle.SWEEP_ATTACK, mid, 3, 0.4, 0.2, 0.4, 0.0);
-				world.spawnParticle(Particle.EXPLOSION, mid, 1);
+				LowSpec.particle(world, Particle.SWEEP_ATTACK, mid, 3, 0.4, 0.2, 0.4, 0.0);
+				LowSpec.particle(world, Particle.EXPLOSION, mid, 1);
 				world.playSound(mid, Sound.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1.2F, 0.6F);
 			}
 			case GREAT_VERTICAL -> {
@@ -901,16 +901,16 @@ final class MimicrySkill {
 				arc(world, chest.clone().add(new Vector(0, 0.6, 0)), forward, 3.4, 90, 120, -170, 2.2F);
 				Location ground = target.getLocation();
 				for (double y = 6; y >= 0; y -= 0.25) {
-					world.spawnParticle(Particle.DUST, ground.clone().add(0, y, 0), 2, 0.05, 0.05, 0.05, 0.0,
+					LowSpec.particle(world, Particle.DUST, ground.clone().add(0, y, 0), 2, 0.05, 0.05, 0.05, 0.0,
 							new Particle.DustOptions(MimicryWeapon.RED, 2.0F));
 				}
 				for (double d = -3; d <= 3; d += 0.25) {
 					Vector p = ground.toVector().add(forward.clone().multiply(d));
-					world.spawnParticle(Particle.DUST, p.toLocation(world).add(0, 0.1, 0), 2, 0.1, 0.0, 0.1, 0.0,
+					LowSpec.particle(world, Particle.DUST, p.toLocation(world).add(0, 0.1, 0), 2, 0.1, 0.0, 0.1, 0.0,
 							new Particle.DustOptions(MimicryWeapon.DARK_RED, 2.2F));
 				}
-				world.spawnParticle(Particle.EXPLOSION_EMITTER, ground, 1);
-				world.spawnParticle(Particle.BLOCK, ground, 60, 1.2, 0.2, 1.2, 0.0, Material.REDSTONE_BLOCK.createBlockData());
+				LowSpec.particle(world, Particle.EXPLOSION_EMITTER, ground, 1);
+				LowSpec.particle(world, Particle.BLOCK, ground, 60, 1.2, 0.2, 1.2, 0.0, Material.REDSTONE_BLOCK.createBlockData());
 				world.playSound(ground, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.PLAYERS, 1.0F, 0.7F);
 				world.playSound(ground, Sound.ITEM_MACE_SMASH_GROUND_HEAVY, SoundCategory.PLAYERS, 1.2F, 0.7F);
 			}
@@ -919,16 +919,16 @@ final class MimicrySkill {
 				Vector centre = actor.getLocation().add(0, 1.0, 0).toVector();
 				arc(world, centre, forward, SWEEP_RADIUS, 0, 0, 360, 2.4F);
 				arc(world, centre.clone().add(new Vector(0, 0.4, 0)), forward, SWEEP_RADIUS * 0.7, 6, 0, 360, 2.0F);
-				world.spawnParticle(Particle.SWEEP_ATTACK, actor.getLocation().add(0, 1, 0), 24, SWEEP_RADIUS * 0.5, 0.3, SWEEP_RADIUS * 0.5, 0.0);
-				world.spawnParticle(Particle.EXPLOSION, actor.getLocation().add(0, 1, 0), 4, 2.0, 0.3, 2.0, 0.0);
+				LowSpec.particle(world, Particle.SWEEP_ATTACK, actor.getLocation().add(0, 1, 0), 24, SWEEP_RADIUS * 0.5, 0.3, SWEEP_RADIUS * 0.5, 0.0);
+				LowSpec.particle(world, Particle.EXPLOSION, actor.getLocation().add(0, 1, 0), 4, 2.0, 0.3, 2.0, 0.0);
 				world.playSound(actor.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 2.0F, 0.5F);
 				world.playSound(actor.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.PLAYERS, 1.0F, 0.6F);
 				world.playSound(actor.getLocation(), Sound.ITEM_TRIDENT_THUNDER, SoundCategory.PLAYERS, 0.8F, 0.6F);
 			}
 		}
-		world.spawnParticle(Particle.DUST, mid, last ? 30 : 14, 0.35, 0.45, 0.35, 0.0,
+		LowSpec.particle(world, Particle.DUST, mid, last ? 30 : 14, 0.35, 0.45, 0.35, 0.0,
 				new Particle.DustOptions(Color.fromRGB(0x9A0C10), last ? 1.8F : 1.3F));
-		world.spawnParticle(Particle.DAMAGE_INDICATOR, mid, last ? 6 : 3, 0.3, 0.3, 0.3, 0.1);
+		LowSpec.particle(world, Particle.DAMAGE_INDICATOR, mid, last ? 6 : 3, 0.3, 0.3, 0.3, 0.1);
 	}
 
 	/** A side view square to the line between the two; wider for the great cuts. */

@@ -44,7 +44,7 @@ final class Bleed implements Listener {
 		}
 		CombatState.of(target).addBleed(potency, count, CaduceusListener.now());
 		Location at = target.getLocation().add(0, target.getHeight() * 0.6, 0);
-		target.getWorld().spawnParticle(Particle.DUST, at, 6 + potency, 0.25, 0.35, 0.25, 0.0, new Particle.DustOptions(BLOOD, 1.1F));
+		LowSpec.particle(target.getWorld(), Particle.DUST, at, 6 + potency, 0.25, 0.35, 0.25, 0.0, new Particle.DustOptions(BLOOD, 1.1F));
 	}
 
 	/**
@@ -64,9 +64,9 @@ final class Bleed implements Listener {
 		double taken = before - (target.isDead() ? 0.0 : target.getHealth() + target.getAbsorptionAmount());
 		World world = target.getWorld();
 		Location at = target.getLocation().add(0, target.getHeight() * 0.6, 0);
-		world.spawnParticle(Particle.DUST, at, 14 + Math.min(30, potency * 2), 0.3, 0.45, 0.3, 0.0, new Particle.DustOptions(BLOOD, 1.5F));
-		world.spawnParticle(Particle.DUST, target.getLocation().add(0, 0.1, 0), 8, 0.4, 0.02, 0.4, 0.0, new Particle.DustOptions(DARK, 1.8F));
-		world.spawnParticle(Particle.DAMAGE_INDICATOR, at, 2, 0.2, 0.2, 0.2, 0.05);
+		LowSpec.particle(world, Particle.DUST, at, 14 + Math.min(30, potency * 2), 0.3, 0.45, 0.3, 0.0, new Particle.DustOptions(BLOOD, 1.5F));
+		LowSpec.particle(world, Particle.DUST, target.getLocation().add(0, 0.1, 0), 8, 0.4, 0.02, 0.4, 0.0, new Particle.DustOptions(DARK, 1.8F));
+		LowSpec.particle(world, Particle.DAMAGE_INDICATOR, at, 2, 0.2, 0.2, 0.2, 0.05);
 		world.playSound(at, Sound.ENTITY_PLAYER_HURT_SWEET_BERRY_BUSH, SoundCategory.PLAYERS, 0.8F, 0.7F);
 		return taken;
 	}

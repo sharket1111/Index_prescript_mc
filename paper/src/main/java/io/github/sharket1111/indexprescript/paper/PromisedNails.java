@@ -98,8 +98,8 @@ final class PromisedNails {
 		hide(driven);
 		if (driven.count > 0 && foe.isValid()) {
 			Location top = top(foe);
-			foe.getWorld().spawnParticle(Particle.DUST, top, 24, 0.35, 0.25, 0.35, 0.0, GOLD);
-			foe.getWorld().spawnParticle(Particle.END_ROD, top, 10, 0.2, 0.2, 0.2, 0.08);
+			LowSpec.particle(foe.getWorld(), Particle.DUST, top, 24, 0.35, 0.25, 0.35, 0.0, GOLD);
+			LowSpec.particle(foe.getWorld(), Particle.END_ROD, top, 10, 0.2, 0.2, 0.2, 0.08);
 			foe.getWorld().playSound(top, Sound.BLOCK_AMETHYST_BLOCK_BREAK, SoundCategory.PLAYERS, 1.0F, 0.6F);
 		}
 		return driven.count;
@@ -153,9 +153,9 @@ final class PromisedNails {
 		show(driven);
 		World world = foe.getWorld();
 		Location top = top(foe);
-		world.spawnParticle(Particle.ELECTRIC_SPARK, top, 12, 0.25, 0.25, 0.25, 0.1);
-		world.spawnParticle(Particle.DUST, top, 18, 0.3, 0.3, 0.3, 0.0, GOLD);
-		world.spawnParticle(Particle.END_ROD, top, 8, 0.15, 0.3, 0.15, 0.05);
+		LowSpec.particle(world, Particle.ELECTRIC_SPARK, top, 12, 0.25, 0.25, 0.25, 0.1);
+		LowSpec.particle(world, Particle.DUST, top, 18, 0.3, 0.3, 0.3, 0.0, GOLD);
+		LowSpec.particle(world, Particle.END_ROD, top, 8, 0.15, 0.3, 0.15, 0.05);
 		world.playSound(top, Sound.BLOCK_ANVIL_LAND, SoundCategory.PLAYERS, 0.6F, 1.8F);
 		world.playSound(top, Sound.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.PLAYERS, 1.0F, 1.4F);
 	}
@@ -211,7 +211,7 @@ final class PromisedNails {
 			double left = Math.max(0, FALL_TICKS - nail.age) / (double) FALL_TICKS;
 			Location at = target.clone().add(0, (nail.foe != null ? FALL_HEIGHT : FALL_HEIGHT + 2) * left * left, 0);
 			nail.display.teleport(at);
-			nail.display.getWorld().spawnParticle(Particle.DUST, at.clone().add(0, 0.8, 0), 2, 0.05, 0.3, 0.05, 0.0, PALE);
+			LowSpec.particle(nail.display.getWorld(), Particle.DUST, at.clone().add(0, 0.8, 0), 2, 0.05, 0.3, 0.05, 0.0, PALE);
 			if (nail.age == FALL_TICKS) {
 				if (nail.foe != null) {
 					nail.display.remove();
@@ -245,22 +245,22 @@ final class PromisedNails {
 				}
 			}
 			if (now % 8 == 0) {
-				foe.getWorld().spawnParticle(Particle.DUST, top(foe), 1 + driven.count / 3, 0.25, 0.1, 0.25, 0.0, GOLD);
+				LowSpec.particle(foe.getWorld(), Particle.DUST, top(foe), 1 + driven.count / 3, 0.25, 0.1, 0.25, 0.0, GOLD);
 			}
 		}
 	}
 
 	private static void strikeGround(Location ground) {
 		World world = ground.getWorld();
-		world.spawnParticle(Particle.DUST, ground, 16, 0.4, 0.1, 0.4, 0.0, GOLD);
-		world.spawnParticle(Particle.END_ROD, ground.clone().add(0, 0.3, 0), 6, 0.2, 0.2, 0.2, 0.06);
-		world.spawnParticle(Particle.BLOCK, ground, 10, 0.4, 0.1, 0.4, 0.0, ground.clone().add(0, -0.5, 0).getBlock().getBlockData());
+		LowSpec.particle(world, Particle.DUST, ground, 16, 0.4, 0.1, 0.4, 0.0, GOLD);
+		LowSpec.particle(world, Particle.END_ROD, ground.clone().add(0, 0.3, 0), 6, 0.2, 0.2, 0.2, 0.06);
+		LowSpec.particle(world, Particle.BLOCK, ground, 10, 0.4, 0.1, 0.4, 0.0, ground.clone().add(0, -0.5, 0).getBlock().getBlockData());
 		world.playSound(ground, Sound.BLOCK_ANVIL_PLACE, SoundCategory.PLAYERS, 0.35F, 1.7F);
 	}
 
 	/** Golden motes rising from {@code at}, for the skills. */
 	static void glow(Location at, int count, double spread) {
-		at.getWorld().spawnParticle(Particle.DUST, at, count, spread, spread, spread, 0.0, GOLD);
+		LowSpec.particle(at.getWorld(), Particle.DUST, at, count, spread, spread, spread, 0.0, GOLD);
 	}
 
 	static void clearAll() {

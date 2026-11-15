@@ -204,7 +204,7 @@ final class Stagger implements Listener {
 				state.sign.teleport(body(entity));
 			}
 			if (now % 8 == 0) {
-				entity.getWorld().spawnParticle(Particle.DUST, body(entity), 6, 0.3, 0.35, 0.3, 0.0, SPARK[state.stage - 1]);
+				LowSpec.particle(entity.getWorld(), Particle.DUST, body(entity), 6, 0.3, 0.35, 0.3, 0.0, SPARK[state.stage - 1]);
 			}
 		}
 	}
