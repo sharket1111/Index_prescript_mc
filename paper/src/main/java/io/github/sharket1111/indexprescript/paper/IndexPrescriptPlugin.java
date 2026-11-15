@@ -81,6 +81,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		getServer().getPluginManager().registerEvents(new GachaWeapon(), this);
 		getServer().getPluginManager().registerEvents(new Upgrade(), this);
 		getServer().getPluginManager().registerEvents(new Armory(), this);
+		getServer().getPluginManager().registerEvents(new VanillaWeapon(), this);
 		var menu = getCommand("menu");
 		if (menu != null) {
 			menu.setExecutor((sender, cmd, label, args) -> {
@@ -96,6 +97,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Animations.load(this);
 		Bukkit.getScheduler().runTaskTimer(this, Animations::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Armory::tick, 20L, 20L);
+		Bukkit.getScheduler().runTaskTimer(this, Armory::terminalTick, 2L, 2L);
 		Bukkit.getScheduler().runTaskTimer(this, MdRun::tickAll, 1L, 1L);
 		Bukkit.getScheduler().runTask(this, ClashDummy::scan);
 		Bukkit.getScheduler().runTaskTimer(this, PrescriptTracker::tick, 1L, 1L);

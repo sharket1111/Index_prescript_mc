@@ -311,6 +311,49 @@ final class Armory implements Listener {
 		}
 	}
 
+	/**
+	 * Like Laevatein's icon: while the Caduceus is in hand its terminal sits in the off hand (what was there
+	 * moves into the inventory); when the Caduceus is put away the terminal goes back into the inventory.
+	 */
+	static void terminalTick() {
+		for (Player p : Bukkit.getOnlinePlayers()) {
+			if (BlackGod.active(p) || SkillMenu.choosing(p)) {
+				continue;
+			}
+			PlayerInventory inv = p.getInventory();
+			ItemStack off = inv.getItemInOffHand();
+			if (Items.isCaduceus(inv.getItemInMainHand())) {
+				if (Items.isTerminal(off)) {
+					continue;
+				}
+				for (int i = 0; i < 36; i++) {
+					ItemStack s = inv.getItem(i);
+					if (Items.isTerminal(s)) {
+						inv.setItem(i, off.isEmpty() ? null : off);
+						inv.setItemInOffHand(s);
+						break;
+					}
+				}
+			} else if (Items.isTerminal(off)) {
+				int free = -1;
+				for (int i = 9; i < 36 && free < 0; i++) {
+					if (inv.getItem(i) == null || inv.getItem(i).isEmpty()) {
+						free = i;
+					}
+				}
+				for (int i = 0; i < 9 && free < 0; i++) {
+					if (i != inv.getHeldItemSlot() && (inv.getItem(i) == null || inv.getItem(i).isEmpty())) {
+						free = i;
+					}
+				}
+				if (free >= 0) {
+					inv.setItem(free, off);
+					inv.setItemInOffHand(null);
+				}
+			}
+		}
+	}
+
 	// --- the menu -------------------------------------------------------------------------------------
 
 	static void open(Player p) {

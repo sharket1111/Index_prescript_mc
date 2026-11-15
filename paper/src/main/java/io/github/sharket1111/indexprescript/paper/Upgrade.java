@@ -48,7 +48,7 @@ final class Upgrade implements Listener {
 
 	/** Whether the stack is a weapon that levels: the plugin's own or a gacha weapon. */
 	static boolean levels(ItemStack stack) {
-		return stack != null && !stack.isEmpty() && (Items.isWeapon(stack) || Gacha.weaponOf(stack) != null);
+		return stack != null && !stack.isEmpty() && (Items.isWeapon(stack) || Gacha.weaponOf(stack) != null || VanillaWeapon.is(stack));
 	}
 
 	static int level(ItemStack stack) {
@@ -70,7 +70,7 @@ final class Upgrade implements Listener {
 
 	static int threadsFor(ItemStack stack, int toUptie) {
 		int base = THREADS[Math.max(0, Math.min(4, toUptie))];
-		return Gacha.weaponOf(stack) != null ? base : base * 2;
+		return Gacha.weaponOf(stack) != null || VanillaWeapon.is(stack) ? base : base * 2;
 	}
 
 	/** Adds EXP; returns how many levels it gained. */
@@ -132,6 +132,11 @@ final class Upgrade implements Listener {
 
 	/** The info lines of a gacha weapon's item (the plugin's own keep their own lore; the menu shows theirs). */
 	static void refreshLore(ItemStack stack) {
+		if (VanillaWeapon.is(stack)) {
+			List<Component> vanilla = VanillaWeapon.lore(stack);
+			stack.editMeta(meta -> meta.lore(vanilla));
+			return;
+		}
 		Gacha.Weapon w = Gacha.weaponOf(stack);
 		if (w == null) {
 			return;
@@ -198,12 +203,17 @@ final class Upgrade implements Listener {
 	// --- the menu --------------------------------------------------------------------------------------
 
 	/** The upgrade menu for the weapon in hand: levels with EXP tickets, Uptie with Threads. */
+	/** The weapon the menu works on: a sword, spear or axe in hand, else the carried skill weapon. */
+	private static int targetSlot(Player p) {
+		return VanillaWeapon.is(p.getInventory().getItemInMainHand()) ? p.getInventory().getHeldItemSlot() : Armory.mainSlot(p);
+	}
+
 	static void open(Player p) {
-		int slot = Armory.mainSlot(p);
+		int slot = targetSlot(p);
 		ItemStack held = slot < 0 ? null : p.getInventory().getItem(slot);
 		MdGui gui = new MdGui(3, "무기 강화");
 		if (!levels(held)) {
-			gui.set(13, MdGui.item(Material.BARRIER, "장착한 스킬 무기가 없어요", NamedTextColor.RED, "/메뉴 → 무기 선택에서 고르세요"),
+			gui.set(13, MdGui.item(Material.BARRIER, "강화할 무기가 없어요", NamedTextColor.RED, "/메뉴 → 무기 선택에서 고르거나", "검·창·도끼를 손에 들고 여세요"),
 					(Runnable) null);
 			gui.fill().open(p);
 			return;
@@ -216,7 +226,7 @@ final class Upgrade implements Listener {
 		List<Component> lore = new ArrayList<>();
 		lore.add(line("Lv." + level + (level < MAX_LEVEL ? " (EXP " + exp(held) + "/" + need(level) + ")" : " (최대)"), NamedTextColor.GOLD));
 		lore.add(line("공격 레벨 " + level + " · 방어 레벨 " + level, NamedTextColor.GRAY));
-		lore.add(line("동기화 " + uptie + "/4" + (Gacha.weaponOf(held) == null && uptie > 1 ? " (합 위력 +" + ((uptie >= 3 ? 1 : 0) + (uptie >= 4 ? 1 : 0))
+		lore.add(line("동기화 " + uptie + "/4" + (Items.isWeapon(held) && uptie > 1 ? " (합 위력 +" + ((uptie >= 3 ? 1 : 0) + (uptie >= 4 ? 1 : 0))
 				+ ", 피해 +" + 5 * (uptie - 1) + "%)" : ""), NamedTextColor.AQUA));
 		info.editMeta(meta -> meta.lore(lore));
 		gui.set(4, info, (Runnable) null);
@@ -228,7 +238,7 @@ final class Upgrade implements Listener {
 		if (uptie < 4) {
 			int cost = threadsFor(held, uptie + 1);
 			gui.set(15, MdGui.item(Material.STRING, "동기화 " + (uptie + 1) + " (끈 " + cost + ")", NamedTextColor.GOLD, "가진 끈 " + threads + "개",
-					Gacha.weaponOf(held) != null ? "원작 인격의 동기화 " + (uptie + 1) + " 스킬·패시브가 돼요" : "합 위력과 피해가 올라요"), () -> spin(p));
+					Gacha.weaponOf(held) != null ? "원작 인격의 동기화 " + (uptie + 1) + " 스킬·패시브가 돼요" : VanillaWeapon.is(held) ? "스킬셋이 강해져요 (위력·코인·효과)" : "합 위력과 피해가 올라요"), () -> spin(p));
 		} else {
 			gui.set(15, MdGui.item(Material.NETHER_STAR, "동기화 4 (최대)", NamedTextColor.GOLD), (Runnable) null);
 		}
@@ -237,7 +247,7 @@ final class Upgrade implements Listener {
 	}
 
 	private static void level(Player p, int tickets) {
-		int slot = Armory.mainSlot(p);
+		int slot = targetSlot(p);
 		if (slot < 0) {
 			open(p);
 			return;
@@ -264,7 +274,7 @@ final class Upgrade implements Listener {
 	}
 
 	private static void spin(Player p) {
-		int slot = Armory.mainSlot(p);
+		int slot = targetSlot(p);
 		if (slot < 0) {
 			open(p);
 			return;
