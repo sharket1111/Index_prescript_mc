@@ -73,7 +73,7 @@ final class Gacha {
 
 	/** The plugin's own weapons, as three-star. */
 	enum Three {
-		CADUCEUS("카두케우스 (뤼엔)"), LAEVATEIN("레바테인 (마티아스)"), RENOIR("르누아르의 망치"), MIMICRY("미미크리 (게부라)"), BLACK_GOD("검은 신 모드");
+		CADUCEUS("카두케우스 (뤼엔)"), LAEVATEIN("레바테인 (마티아스)"), RENOIR("르누아르의 망치"), MIMICRY("미미크리 (게부라)");
 
 		final String name;
 
@@ -91,7 +91,6 @@ final class Gacha {
 				case LAEVATEIN -> List.of(Items.laevatein(player));
 				case RENOIR -> List.of(Items.renoirHammer(player));
 				case MIMICRY -> List.of(Items.mimicry(player));
-				case BLACK_GOD -> List.of(BlackGod.toggleItem(player));
 			};
 		}
 	}

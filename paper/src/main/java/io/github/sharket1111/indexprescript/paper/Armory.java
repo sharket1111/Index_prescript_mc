@@ -61,9 +61,6 @@ final class Armory implements Listener {
 		if (Items.isMimicry(stack)) {
 			return Gacha.Three.MIMICRY.id();
 		}
-		if ("toggle".equals(BlackGod.idOf(stack))) {
-			return Gacha.Three.BLACK_GOD.id();
-		}
 		return null;
 	}
 
@@ -246,7 +243,7 @@ final class Armory implements Listener {
 			PlayerInventory inv = p.getInventory();
 			ItemStack[] contents = inv.getContents();
 			String id = equipped(p);
-			if (id != null && !Gacha.owns(p, id)) {
+			if (id != null && (!Gacha.owns(p, id) || three(id) == null && Gacha.weapon(id) == null)) {
 				p.getPersistentDataContainer().remove(EQUIPPED);
 				id = null;
 			}

@@ -230,7 +230,6 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			case "laevatein" -> Gacha.Three.LAEVATEIN.id();
 			case "hammer", "renoir_hammer" -> Gacha.Three.RENOIR.id();
 			case "mimicry", "미미크리" -> Gacha.Three.MIMICRY.id();
-			case "blackgod", "black_god" -> Gacha.Three.BLACK_GOD.id();
 			default -> args[1].startsWith("weapon:") && Gacha.weapon(args[1].substring(7)) != null ? args[1].substring(7) : null;
 		};
 		if (weaponId != null) {
@@ -241,6 +240,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 			return true;
 		}
 		ItemStack item = switch (args[1].toLowerCase(Locale.ROOT)) {
+			case "blackgod", "black_god" -> BlackGod.toggleItem(target);
 			case "ticket", "추출권" -> Gacha.item(Gacha.Kind.TICKET, 10);
 			case "exp", "경험치" -> Gacha.item(Gacha.Kind.EXP, 10);
 			case "thread", "끈" -> Gacha.item(Gacha.Kind.THREAD, 50);
