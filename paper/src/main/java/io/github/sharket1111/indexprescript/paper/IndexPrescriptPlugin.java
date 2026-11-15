@@ -128,6 +128,8 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		Bukkit.getScheduler().runTaskTimer(this, BlackGodSkill::tickAll, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, BlackGodState::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, Clash::tick, 1L, 1L);
+		getServer().getPluginManager().registerEvents(new Freeze(), this);
+		Bukkit.getScheduler().runTaskTimer(this, Freeze::tick, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, RienSkill::tickAll, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, MimicrySkill::tickAll, 1L, 1L);
 		Bukkit.getScheduler().runTaskTimer(this, SkillMenu::tick, 1L, 1L);
@@ -151,6 +153,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 	@Override
 	public void onDisable() {
 		Season.save();
+		Freeze.releaseAll();
 		Animations.stop(null);
 		MdRun.stopAll();
 		MdLooks.removeAll();

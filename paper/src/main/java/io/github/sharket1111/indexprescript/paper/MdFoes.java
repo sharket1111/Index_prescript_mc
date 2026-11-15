@@ -222,7 +222,7 @@ final class MdFoes {
 			}
 			boolean staggered = CombatState.of(mob).staggered(now);
 			if (mob instanceof Mob m && ai.core == null) {
-				m.setAware(!staggered && !ai.acting);
+				m.setAware(!staggered && !ai.acting && !Freeze.frozen(mob));
 			}
 			if (ai.core == null) {
 				if (turnStart && turn > 1) {
@@ -233,7 +233,7 @@ final class MdFoes {
 					turnPhase(ai, turn);
 				}
 			}
-			if (ai.cards.isEmpty() || staggered || ai.acting || now < ai.nextSkill || Clash.busy(mob)) {
+			if (ai.cards.isEmpty() || staggered || ai.acting || now < ai.nextSkill || Clash.busy(mob) || Freeze.frozen(mob)) {
 				continue;
 			}
 			// Now and then a guard or evade skill instead of an attack.
@@ -663,7 +663,7 @@ final class MdFoes {
 			}
 		}
 		Player target = nearest(ai.anchor(), ai.foe.battle.run.fighters(), 64);
-		if (target == null || Clash.busy(ai.mob)) {
+		if (target == null || Clash.busy(ai.mob) || Freeze.frozen(ai.mob)) {
 			return;
 		}
 		SkillCard card = best;

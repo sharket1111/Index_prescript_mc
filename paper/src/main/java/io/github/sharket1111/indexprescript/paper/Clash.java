@@ -328,6 +328,22 @@ final class Clash {
 		return true;
 	}
 
+	/** Everyone in a clash now (both sides, waiting or rolling). */
+	static java.util.Set<UUID> dueling() {
+		return new java.util.HashSet<>(DUELS.keySet());
+	}
+
+	/** Units striking with a skill now, and whom at. */
+	static Map<LivingEntity, LivingEntity> striking() {
+		Map<LivingEntity, LivingEntity> out = new java.util.HashMap<>();
+		for (Side s : RUNS.values()) {
+			if (s.player != null && s.player.isValid()) {
+				out.put(s.player, s.target);
+			}
+		}
+		return out;
+	}
+
 	/** The player clashing or answering one now, or about to. */
 	static boolean busy(org.bukkit.entity.Entity unit) {
 		return DUELS.containsKey(unit.getUniqueId());
