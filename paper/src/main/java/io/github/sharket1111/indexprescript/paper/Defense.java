@@ -60,7 +60,11 @@ final class Defense implements Listener {
 	}
 
 	/** A Defense skill: its kind, numbers, text and effects (the Ego.Skill effect language, coin -1 = the skill). */
-	record Spec(String name, Type type, String sin, int power, int coinPower, int coins, List<String> text, JsonArray effects) {
+	record Spec(String name, Type type, String sin, int power, int coinPower, int coins, List<String> text, JsonArray effects, Bonus bonus) {
+		Spec(String name, Type type, String sin, int power, int coinPower, int coins, List<String> text, JsonArray effects) {
+			this(name, type, sin, power, coinPower, coins, text, effects, null);
+		}
+
 		int min() {
 			return power + Math.min(0, coinPower) * coins;
 		}
@@ -71,6 +75,23 @@ final class Defense implements Listener {
 
 		static Spec of(Ego.Skill s, Type type) {
 			return new Spec(s.name(), type, s.sin(), s.power(), s.coinPower(), s.coins(), s.text(), s.effects());
+		}
+	}
+
+	/** A weapon's own rules on top of the effects: Coin Power and damage by its stacks, and what a use or a counter does. */
+	interface Bonus {
+		default int coinPower(Player p, LivingEntity foe) {
+			return 0;
+		}
+
+		default int damagePct(Player p, LivingEntity foe) {
+			return 0;
+		}
+
+		default void onUse(Player p) {
+		}
+
+		default void onCounter(Player p, LivingEntity foe) {
 		}
 	}
 
@@ -125,6 +146,9 @@ final class Defense implements Listener {
 		ACTIVE.put(p.getUniqueId(), new State(spec, now + CombatState.TURN_TICKS, onFirstBlow));
 		READY.put(p.getUniqueId(), now + WAIT);
 		apply(p, null, spec, "use", null);
+		if (spec.bonus() != null) {
+			spec.bonus().onUse(p);
+		}
 		World w = p.getWorld();
 		Location at = p.getLocation().add(0, 1, 0);
 		switch (spec.type()) {
@@ -166,12 +190,13 @@ final class Defense implements Listener {
 		return new SkillMenu.Entry(SkillMenu.icon(spec.type().icon, 1, SkillMenu.line(name, colour), lore), use);
 	}
 
-	private static int roll(Player p, Spec spec) {
+	private static int roll(Player p, Spec spec, LivingEntity foe) {
 		double chance = Sanity.headsChance(p);
 		int power = spec.power();
+		int coinPower = spec.coinPower() + (spec.bonus() == null ? 0 : spec.bonus().coinPower(p, foe));
 		for (int i = 0; i < spec.coins(); i++) {
 			if (ThreadLocalRandom.current().nextDouble() < chance) {
-				power += spec.coinPower();
+				power += coinPower;
 			}
 		}
 		return Math.max(0, power);
@@ -216,7 +241,7 @@ final class Defense implements Listener {
 		switch (s.spec.type()) {
 			case GUARD -> {
 				if (s.shield < 0) {
-					int power = roll(p, s.spec) + levelBonus(p, attacker);
+					int power = roll(p, s.spec, attacker) + levelBonus(p, attacker);
 					s.shield = power * GUARD_PER_POWER;
 					Hud.message(p, Component.text("방어 위력 " + power, NamedTextColor.AQUA));
 				}
@@ -231,7 +256,7 @@ final class Defense implements Listener {
 				}
 			}
 			case EVADE -> {
-				int mine = roll(p, s.spec) + levelBonus(p, attacker);
+				int mine = roll(p, s.spec, attacker) + levelBonus(p, attacker);
 				int theirs = attackPower(attacker, p);
 				if (mine >= theirs) {
 					event.setCancelled(true);
@@ -246,7 +271,7 @@ final class Defense implements Listener {
 			}
 			case COUNTER -> {
 				ACTIVE.remove(p.getUniqueId());
-				int mine = roll(p, s.spec) + levelBonus(p, attacker);
+				int mine = roll(p, s.spec, attacker) + levelBonus(p, attacker);
 				int theirs = attackPower(attacker, p);
 				if (mine >= theirs) {
 					event.setCancelled(true);
@@ -254,8 +279,11 @@ final class Defense implements Listener {
 					w.spawnParticle(Particle.SWEEP_ATTACK, attacker.getLocation().add(0, attacker.getHeight() * 0.6, 0), 2, 0.2, 0.1, 0.2, 0);
 					Hud.message(p, Component.text("반격 " + mine + " > " + theirs, NamedTextColor.AQUA));
 					p.swingMainHand();
-					double bonus = apply(p, attacker, s.spec, "hit", s);
+					double bonus = apply(p, attacker, s.spec, "hit", s) + (s.spec.bonus() == null ? 0 : s.spec.bonus().damagePct(p, attacker));
 					Damage.deal(attacker, mine * COUNTER_PER_POWER * (1 + bonus / 100.0), p, true);
+					if (s.spec.bonus() != null) {
+						s.spec.bonus().onCounter(p, attacker);
+					}
 				} else {
 					Hud.message(p, Component.text("반격 실패 " + mine + " < " + theirs, NamedTextColor.GRAY));
 				}

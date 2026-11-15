@@ -441,15 +441,39 @@ final class RenoirHammer implements Listener {
 		RenoirSkill.start(player, target, kind);
 	}
 
-	/** The hammer's Defense skill: the head held up as a shield, a Guard; whoever strikes it gets Tremor 2 (3 times a turn). */
-	static final Defense.Spec DEFENSE;
+	/**
+	 * The hammer's Defense skill, from Haute Couture::Le Noir Brand Manager Don Quixote: Witness Ye in Silence,
+	 * a Blunt Counter 5 / +4 x2. The Sanctum of Conservation and the Obsidian God's shield have nothing to act
+	 * on here.
+	 */
+	static final Defense.Spec DEFENSE = new Defense.Spec("침묵 속에 지켜보라", Defense.Type.COUNTER, "sloth", 5, 4, 2,
+			java.util.List.of("[사용시] 정신력 6 회복, 보존 횟수 +4 (원작: 전투 시작시)",
+					"대상의 (진동 위력 + 약속된 못) 6당 코인 위력 +1 (최대 2)", "보존 위력 3 이상이면 코인 위력 +1, 피해량 +20%",
+					"코인 1: [적중시] 약속된 못 1, 진동 횟수 +2 부여", "코인 2: [적중시] 보존 횟수 +4",
+					"보존의 성소·흑요석 신의 축복(보호막) (설명만)"),
+			Defense.fxs(Defense.fx("use", "sp", "", 6, 0), Defense.fx("hit", "inflict", "tremor", 0, 2)), new Defense.Bonus() {
+				@Override
+				public int coinPower(Player p, LivingEntity foe) {
+					int stacks = foe == null ? 0 : CombatState.of(foe).tremorPotency(CaduceusListener.now()) + PromisedNails.count(foe);
+					return Math.min(2, stacks / 6) + (potency(p) >= 3 ? 1 : 0);
+				}
 
-	static {
-		com.google.gson.JsonObject tremor = Defense.fx("struck", "inflict", "tremor", 2, 0);
-		tremor.addProperty("limit", 3);
-		DEFENSE = new Defense.Spec("망치 받치기", Defense.Type.GUARD, "sloth", 10, 4, 1,
-				java.util.List.of("[방어 중 맞으면] 공격한 대상에게 진동 2 부여 (턴당 3회)"), Defense.fxs(tremor));
-	}
+				@Override
+				public int damagePct(Player p, LivingEntity foe) {
+					return potency(p) >= 3 ? 20 : 0;
+				}
+
+				@Override
+				public void onUse(Player p) {
+					addPreservation(p, 4);
+				}
+
+				@Override
+				public void onCounter(Player p, LivingEntity foe) {
+					PromisedNails.drop(foe, 1);
+					addPreservation(p, 4);
+				}
+			});
 
 	private static java.util.List<SkillMenu.Entry> entries(Player player) {
 		java.util.List<SkillMenu.Entry> out = new java.util.ArrayList<>();

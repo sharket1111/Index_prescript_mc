@@ -129,10 +129,26 @@ final class RienSkill {
 		Clash.request(player, target, kind.card(), outcome -> launch(player, outcome.target(), kind));
 	}
 
-	/** The Caduceus's Defense skill: the messenger's light step, an Evade; a dodge gives Poise 2 and Charge 1. */
-	static final Defense.Spec DEFENSE = new Defense.Spec("전령의 걸음", Defense.Type.EVADE, "pride", 6, 5, 1,
-			java.util.List.of("[회피시] 호흡 2, 충전 1 얻음"),
-			Defense.fxs(Defense.fx("evade", "gain", "poise", 2, 0), Defense.fx("evade", "gain", "charge", 0, 1)));
+	/**
+	 * The Caduceus's Defense skill, from The Index Nursefather Yi Sang (The House of Spiders): By Unpredictable
+	 * Whim, Evade 4 / +10. Unlock III reads as full [Hermes] here; the Unlock / Grace of the Prescript turn-end
+	 * effect has nothing to act on here.
+	 */
+	static final Defense.Spec DEFENSE;
+
+	static {
+		com.google.gson.JsonObject dodge = Defense.fx("evade", "gain", "poise", 2, 0);
+		dodge.addProperty("limit", 2);
+		DEFENSE = new Defense.Spec("예측할 수 없는 변덕으로", Defense.Type.EVADE, "gloom", 4, 10, 1,
+				java.util.List.of("[헤르메스] 9일 때 코인 위력 +2 (원작: 해방 III)", "[사용시] 호흡 횟수 +2 얻음 (원작: 전투 시작시, 턴당 1회)",
+						"[회피시] 호흡 2 얻음 (턴당 2회)", "[턴 종료시] 해방 II·지령의 은총·업보 (설명만)"),
+				Defense.fxs(Defense.fx("use", "gain", "poise", 0, 2), dodge), new Defense.Bonus() {
+					@Override
+					public int coinPower(Player p, LivingEntity foe) {
+						return PrescriptTracker.hermes(p) >= Items.MAX_HERMES ? 2 : 0;
+					}
+				});
+	}
 
 	/** The skill menu: the three skills of the tier the [Hermes] stacks allow, and the Defense skill. */
 	private static java.util.List<SkillMenu.Entry> entries(Player player) {
