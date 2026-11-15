@@ -246,7 +246,12 @@ final class MimicrySkill {
 		List<Component> lore = new ArrayList<>();
 		lore.add(line("위력 " + (kind.base + bonus) + " · 코인 +" + kind.coinPower + " ×" + kind.coins.length
 				+ (bonus > 0 ? "  (붉은 안개·힘 +" + bonus + ")" : ""), NamedTextColor.GOLD));
-		lore.add(line(kind.ability, NamedTextColor.GRAY));
+		if (kind == Kind.ROAR) {
+			lore.add(line("수비 스킬 · 방어 8~12 (1턴)", NamedTextColor.AQUA));
+			ROAR_DEFENSE.text().forEach(t -> lore.add(line(t, NamedTextColor.GRAY)));
+		} else {
+			lore.add(line(kind.ability, NamedTextColor.GRAY));
+		}
 		lore.add(line("대기 " + kind.cooldown / 20 + "초", NamedTextColor.DARK_GRAY));
 		String model = kind.icon;
 		TextColor colour = kind.big() ? GREAT_COLOUR : COLOUR;
@@ -325,6 +330,16 @@ final class MimicrySkill {
 		int left = ticksLeft(player, kind);
 		if (left > 0) {
 			Hud.message(player, Component.text(kind.name + " 대기 중 (" + (left + 19) / 20 + "초)", NamedTextColor.GRAY));
+			return;
+		}
+		if (kind == Kind.ROAR) {
+			// 기합 is Mimicry's Defense skill: a Guard of the original's block die, then the slash die back at the first blow.
+			if (Defense.use(player, ROAR_DEFENSE, MimicryWeapon.RED_TEXT, attacker -> roarStrike(player, attacker))) {
+				startCooldown(player, kind);
+				MimicryWeapon.fought(player);
+				Sanity.add(player, ROAR_SANITY);
+				roarVisual(player);
+			}
 			return;
 		}
 		LivingEntity target = Clash.answering(player) != null ? Clash.answering(player)
@@ -719,6 +734,44 @@ final class MimicrySkill {
 			default -> {
 			}
 		}
+	}
+
+	/** 기합 as a Defense skill: Guard 8~12 (the block die); the first blow it meets is answered with the slash die. */
+	static final Defense.Spec ROAR_DEFENSE = new Defense.Spec("기합", Defense.Type.GUARD, "wrath", 8, 4, 1,
+			List.of("[사용시] 정신력 +30", "막기 8~12로 1턴 동안 방어", "처음 막은 공격의 상대에게 참격 5~7로 되받아침, 적중시 힘 3 (다음 장면 위력 +3)"),
+			new com.google.gson.JsonArray());
+
+	/** 기합's answer: the slash die (5~7, average 6) at whoever struck the guard, and Strength 3 on a hit. */
+	private static void roarStrike(Player player, LivingEntity attacker) {
+		if (attacker == null || attacker.isDead() || !attacker.isValid() || !player.isOnline()) {
+			return;
+		}
+		player.swingMainHand();
+		double damage = MimicryWeapon.dieDamage(5 + ThreadLocalRandom.current().nextInt(3) + MimicryWeapon.bonusPower(player));
+		double before = attacker.getHealth();
+		Damage.deal(attacker, damage, player, true);
+		World world = attacker.getWorld();
+		Location mid = attacker.getLocation().add(0, attacker.getHeight() * 0.6, 0);
+		world.spawnParticle(Particle.SWEEP_ATTACK, mid, 2, 0.3, 0.1, 0.3, 0.0);
+		world.playSound(mid, Sound.ENTITY_PLAYER_ATTACK_STRONG, SoundCategory.PLAYERS, 1.0F, 0.8F);
+		if (attacker.isDead() || attacker.getHealth() < before) {
+			CombatState.of(player).raiseAttackLevel(3, CaduceusListener.now(), SCENE + 20);
+			Hud.message(player, Component.text("기합 — 되받아침! 힘 3 (다음 장면 위력 +3)", MimicryWeapon.RED_TEXT));
+		}
+	}
+
+	/** 기합's roar: braced, a red ring and a sonic boom ahead. */
+	private static void roarVisual(Player player) {
+		World world = player.getWorld();
+		Location at = player.getLocation().add(0, 1.2, 0);
+		world.playSound(at, Sound.ENTITY_RAVAGER_ROAR, SoundCategory.PLAYERS, 1.0F, 1.2F);
+		for (int i = 0; i < 36; i++) {
+			double angle = Math.PI * 2 * i / 36;
+			world.spawnParticle(Particle.DUST, at.clone().add(Math.cos(angle) * 1.6, -0.6, Math.sin(angle) * 1.6), 1, 0.0, 0.0, 0.0, 0.0,
+					new Particle.DustOptions(MimicryWeapon.RED, 1.5F));
+		}
+		world.spawnParticle(Particle.SONIC_BOOM, at.clone().add(player.getLocation().getDirection().setY(0).normalize().multiply(1.2)), 1);
+		Hud.message(player, Component.text("기합 — 정신력 +" + ROAR_SANITY + " · 방어 8~12 (1턴)", MimicryWeapon.RED_TEXT));
 	}
 
 	/** 기합's guard coin: braced, the roar pushes the target back a little. */

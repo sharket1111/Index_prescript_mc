@@ -82,6 +82,7 @@ public final class IndexPrescriptPlugin extends JavaPlugin implements TabExecuto
 		getServer().getPluginManager().registerEvents(new Upgrade(), this);
 		getServer().getPluginManager().registerEvents(new Armory(), this);
 		getServer().getPluginManager().registerEvents(new VanillaWeapon(), this);
+		getServer().getPluginManager().registerEvents(new Defense(), this);
 		var menu = getCommand("menu");
 		if (menu != null) {
 			menu.setExecutor((sender, cmd, label, args) -> {

@@ -129,7 +129,12 @@ final class RienSkill {
 		Clash.request(player, target, kind.card(), outcome -> launch(player, outcome.target(), kind));
 	}
 
-	/** The skill menu: the three skills of the tier the [Hermes] stacks allow. */
+	/** The Caduceus's Defense skill: the messenger's light step, an Evade; a dodge gives Poise 2 and Charge 1. */
+	static final Defense.Spec DEFENSE = new Defense.Spec("전령의 걸음", Defense.Type.EVADE, "pride", 6, 5, 1,
+			java.util.List.of("[회피시] 호흡 2, 충전 1 얻음"),
+			Defense.fxs(Defense.fx("evade", "gain", "poise", 2, 0), Defense.fx("evade", "gain", "charge", 0, 1)));
+
+	/** The skill menu: the three skills of the tier the [Hermes] stacks allow, and the Defense skill. */
 	private static java.util.List<SkillMenu.Entry> entries(Player player) {
 		java.util.List<SkillMenu.Entry> out = new java.util.ArrayList<>();
 		int hermes = PrescriptTracker.hermes(player);
@@ -155,6 +160,7 @@ final class RienSkill {
 			out.add(family < 0 ? new SkillMenu.Entry(SkillMenu.locked(name, "대행 [헤르메스]가 없어요", lore), null)
 					: new SkillMenu.Entry(SkillMenu.icon(model, 1, SkillMenu.line(name, card.colour()), lore), () -> use(player, kind)));
 		}
+		out.add(Defense.entry(player, 4, DEFENSE, () -> Defense.use(player, DEFENSE, net.kyori.adventure.text.format.TextColor.color(0xE8C860), null)));
 		return out;
 	}
 
@@ -166,7 +172,7 @@ final class RienSkill {
 			Hud.message(player, Component.text("합이 진행 중입니다.", NamedTextColor.GRAY));
 			return;
 		}
-		SkillMenu.open(player, "weapon", () -> entries(player), Component.text("카두케우스: 1~3 스킬 · 9 취소 ([헤르메스] "
+		SkillMenu.open(player, "weapon", () -> entries(player), Component.text("카두케우스: 1~3 스킬 · 4 수비 · 9 취소 ([헤르메스] "
 				+ PrescriptTracker.hermes(player) + ")", NamedTextColor.GOLD));
 	}
 

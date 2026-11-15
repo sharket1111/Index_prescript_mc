@@ -213,6 +213,31 @@ final class VanillaWeapon implements Listener {
 		return (coin < 0 ? "" : "코인 " + (coin + 1) + ": ") + when + what;
 	}
 
+	/**
+	 * The Defense skill: a sword counters (Bleed on the counter), a spear evades (Poise on a dodge), an axe
+	 * guards (Tremor on whoever strikes the guard, three times a turn). Material and Uptie raise it like the
+	 * other skills.
+	 */
+	static Defense.Spec defense(Kind kind, int rank, int uptie) {
+		int up2 = uptie >= 2 ? 1 : 0;
+		int power = rank / 2 + (uptie >= 4 ? 1 : 0);
+		int coinPower = (rank + 1) / 2 + (uptie >= 3 ? 1 : 0);
+		return switch (kind) {
+			case SWORD -> new Defense.Spec("받아치기", Defense.Type.COUNTER, "wrath", 4 + power, 3 + coinPower, 1,
+					List.of("[적중시] 출혈 " + (1 + rank / 2 + up2) + " 부여"),
+					Defense.fxs(Defense.fx("hit", "inflict", "bleed", 1 + rank / 2 + up2, 0)));
+			case SPEAR -> new Defense.Spec("물러서기", Defense.Type.EVADE, "pride", 4 + power, 4 + coinPower, 1,
+					List.of("[회피시] 호흡 " + (1 + up2) + " 얻음"),
+					Defense.fxs(Defense.fx("evade", "gain", "poise", 1 + up2, 0)));
+			case AXE -> {
+				JsonObject tremor = Defense.fx("struck", "inflict", "tremor", 1 + rank / 2 + up2, 0);
+				tremor.addProperty("limit", 3);
+				yield new Defense.Spec("자루 막기", Defense.Type.GUARD, "gluttony", 6 + power, 3 + coinPower, 1,
+						List.of("[방어 중 맞으면] 공격한 대상에게 진동 " + (1 + rank / 2 + up2) + " 부여 (턴당 3회)"), Defense.fxs(tremor));
+			}
+		};
+	}
+
 	/** The info lines of a sword, spear or axe: material, level, Uptie and the skill set. */
 	static List<Component> lore(ItemStack stack) {
 		Kind kind = kindOf(stack);
@@ -226,6 +251,9 @@ final class VanillaWeapon implements Listener {
 		for (Ego.Skill s : skills(kind, rank(stack), uptie)) {
 			lore.add(SkillMenu.line(n++ + ". " + s.name() + "  위력 " + s.power() + " · 코인 +" + s.coinPower() + " ×" + s.coins(), colour(s)));
 		}
+		Defense.Spec def = defense(kind, rank(stack), uptie);
+		lore.add(SkillMenu.line("4. " + def.name() + " (" + def.type().ko + ")  위력 " + def.power() + " · 코인 +" + def.coinPower() + " ×" + def.coins(),
+				NamedTextColor.AQUA));
 		lore.add(SkillMenu.line("우클릭(허공·적): 스킬" + (kind == Kind.SPEAR ? " · 웅크리고 우클릭: 원래 돌진" : "") + " · 방패를 들면 웅크리고 우클릭", NamedTextColor.YELLOW));
 		return lore;
 	}
@@ -268,6 +296,9 @@ final class VanillaWeapon implements Listener {
 				}
 			}));
 		}
+		Defense.Spec def = defense(kind, rank(held), Upgrade.uptie(held));
+		TextColor defColour = TextColor.color(Ego.SIN_RGB[Math.max(0, Ego.index(def.sin()))]);
+		out.add(Defense.entry(p, 4, def, () -> Defense.use(p, def, defColour, null)));
 		return out;
 	}
 
@@ -282,7 +313,7 @@ final class VanillaWeapon implements Listener {
 			return;
 		}
 		Upgrade.refreshLore(held);
-		SkillMenu.open(p, "vanilla", () -> entries(p), Component.text(tierKo(held) + " " + kind.ko + ": 1~3 스킬 · 9 취소", NamedTextColor.WHITE));
+		SkillMenu.open(p, "vanilla", () -> entries(p), Component.text(tierKo(held) + " " + kind.ko + ": 1~3 스킬 · 4 수비 · 9 취소", NamedTextColor.WHITE));
 	}
 
 	/** A spear charges while sneaking; with a shield in the off hand, right-click blocks and sneak + right-click is the skill. */

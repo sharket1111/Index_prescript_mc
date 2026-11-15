@@ -453,7 +453,7 @@ final class Laevatein implements Listener {
 			Hud.message(player, Component.text("합이 진행 중입니다.", NamedTextColor.GRAY));
 			return;
 		}
-		SkillMenu.open(player, "weapon", () -> entries(player), Component.text("레바테인: 1 스킬 · 2 해방 · 3 반격 태세 · 9 취소", NamedTextColor.GOLD));
+		SkillMenu.open(player, "weapon", () -> entries(player), Component.text("레바테인: 1 스킬 · 2 해방 · 3 반격 태세(수비) · 9 취소", NamedTextColor.GOLD));
 	}
 
 	/** Right-click opens the skill menu (the stage's skill, the release, the counter stance). */

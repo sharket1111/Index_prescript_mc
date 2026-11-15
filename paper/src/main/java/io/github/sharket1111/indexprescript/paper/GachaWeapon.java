@@ -65,6 +65,11 @@ final class GachaWeapon implements Listener {
 				}
 			}));
 		}
+		Defense.Spec def = w.defense(Upgrade.uptie(held));
+		if (def != null) {
+			TextColor colour = TextColor.color(Ego.SIN_RGB[Math.max(0, Ego.index(def.sin()))]);
+			out.add(Defense.entry(p, 4, def, () -> Defense.use(p, def, colour, null)));
+		}
 		return out;
 	}
 
@@ -77,7 +82,7 @@ final class GachaWeapon implements Listener {
 			Hud.message(p, Component.text("합이 진행 중입니다.", NamedTextColor.GRAY));
 			return;
 		}
-		SkillMenu.open(p, "weapon", () -> entries(p), Component.text(w.name() + ": 1~3 스킬 · 9 취소", Gacha.TWO_COLOUR));
+		SkillMenu.open(p, "weapon", () -> entries(p), Component.text(w.name() + ": 1~3 스킬 · 4 수비 · 9 취소", Gacha.TWO_COLOUR));
 	}
 
 	@EventHandler(priority = EventPriority.LOW)

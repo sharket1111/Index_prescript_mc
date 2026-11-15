@@ -65,9 +65,14 @@ final class Gacha {
 
 	/** A two-star weapon: an original two-star Identity's three skills at each Uptie, and its passive. */
 	record Weapon(String id, String name, String identity, String sinner, String model, List<List<Ego.Skill>> upties, String passiveName,
-			List<JsonArray> passiveEffects, List<List<String>> passiveKo, String passiveText) {
+			List<JsonArray> passiveEffects, List<List<String>> passiveKo, String passiveText, List<Defense.Spec> defense) {
 		List<Ego.Skill> skills(int uptie) {
 			return upties.get(Math.max(0, Math.min(upties.size() - 1, uptie - 1)));
+		}
+
+		/** The original Identity's Defense skill at this Uptie (null if it has none). */
+		Defense.Spec defense(int uptie) {
+			return defense.isEmpty() ? null : defense.get(Math.max(0, Math.min(defense.size() - 1, uptie - 1)));
 		}
 	}
 
@@ -127,9 +132,16 @@ final class Gacha {
 					x.getAsJsonArray().forEach(l -> lines.add(l.getAsString()));
 					ko.add(lines);
 				});
+				List<Defense.Spec> defense = new ArrayList<>();
+				if (o.has("defense")) {
+					for (JsonElement d : o.getAsJsonArray("defense")) {
+						JsonObject dj = d.getAsJsonObject();
+						defense.add(Defense.Spec.of(Ego.skillOf(dj), Defense.Type.of(dj.get("kind").getAsString())));
+					}
+				}
 				Weapon w = new Weapon(o.get("id").getAsString(), o.get("name").getAsString(), o.get("identity").getAsString(), o.get("sinner").getAsString(),
 						o.get("model").getAsString(), upties, o.get("passive_name").getAsString(), effects, ko,
-						o.getAsJsonObject("passive").get("text").getAsString());
+						o.getAsJsonObject("passive").get("text").getAsString(), defense);
 				WEAPONS.put(w.id(), w);
 			}
 			plugin.getLogger().info("Extraction: " + WEAPONS.size() + " two-star weapons");

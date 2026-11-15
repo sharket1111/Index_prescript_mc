@@ -441,6 +441,16 @@ final class RenoirHammer implements Listener {
 		RenoirSkill.start(player, target, kind);
 	}
 
+	/** The hammer's Defense skill: the head held up as a shield, a Guard; whoever strikes it gets Tremor 2 (3 times a turn). */
+	static final Defense.Spec DEFENSE;
+
+	static {
+		com.google.gson.JsonObject tremor = Defense.fx("struck", "inflict", "tremor", 2, 0);
+		tremor.addProperty("limit", 3);
+		DEFENSE = new Defense.Spec("망치 받치기", Defense.Type.GUARD, "sloth", 10, 4, 1,
+				java.util.List.of("[방어 중 맞으면] 공격한 대상에게 진동 2 부여 (턴당 3회)"), Defense.fxs(tremor));
+	}
+
 	private static java.util.List<SkillMenu.Entry> entries(Player player) {
 		java.util.List<SkillMenu.Entry> out = new java.util.ArrayList<>();
 		int voice = voice(player);
@@ -467,6 +477,7 @@ final class RenoirHammer implements Listener {
 				out.add(new SkillMenu.Entry(SkillMenu.icon("minecraft:iron_nugget", 1, SkillMenu.line(name, card.colour()), lore), () -> act(player, kind)));
 			}
 		}
+		out.add(Defense.entry(player, n, DEFENSE, () -> Defense.use(player, DEFENSE, net.kyori.adventure.text.format.TextColor.color(0xC9A227), null)));
 		return out;
 	}
 
@@ -478,7 +489,7 @@ final class RenoirHammer implements Listener {
 			Hud.message(player, Component.text("합이 진행 중입니다.", NamedTextColor.GRAY));
 			return;
 		}
-		SkillMenu.open(player, "weapon", () -> entries(player), Component.text("르누아르: 1~4 스킬 · 9 취소 (목소리 " + voice(player) + ")",
+		SkillMenu.open(player, "weapon", () -> entries(player), Component.text("르누아르: 1~4 스킬 · 5 수비 · 9 취소 (목소리 " + voice(player) + ")",
 				NamedTextColor.GOLD));
 	}
 
