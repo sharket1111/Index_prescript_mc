@@ -31,12 +31,12 @@ final class MdWorld {
 	private static final int PLOT = 1024;
 	private static final int Y = 100;
 	/** The room's half width (blocks) and wall height; the cleared box is a bit larger. */
-	private static final int HALF = 31;
+	private static final int HALF = 40;
 	private static final int CLEAR_UP = 20;
 	private static World world;
 
 	enum Room {
-		BATTLE(13), BOSS(16), EVENT(8), SHOP(8), START(8);
+		BATTLE(19), BOSS(22), EVENT(8), SHOP(8), START(8);
 
 		final int half;
 
