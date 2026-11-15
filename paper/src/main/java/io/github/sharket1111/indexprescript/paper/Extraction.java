@@ -342,7 +342,7 @@ final class Extraction {
 			}
 			Component card = Component.text(pull.ego() ? "E.G.O" : Gacha.stars(pull.rarity()), colour).decorate(TextDecoration.BOLD)
 					.append(Component.newline()).append(Component.text(pull.name(), NamedTextColor.WHITE))
-					.append(pull.duplicate() ? Component.newline().append(Component.text("→ 끈", NamedTextColor.GRAY)) : Component.empty());
+					.append(pull.duplicate() ? Component.newline().append(Component.text("→ 에고 조각", NamedTextColor.GRAY)) : Component.empty());
 			TextDisplay display = w.spawn(at, TextDisplay.class, d -> {
 				d.text(card);
 				d.setPersistent(false);
@@ -364,8 +364,12 @@ final class Extraction {
 				Material m = pull.ego() ? Material.RED_DYE : pull.rarity() == 3 ? Material.NETHER_STAR : pull.rarity() == 2 ? Material.GOLD_INGOT
 						: Material.EXPERIENCE_BOTTLE;
 				ItemStack icon = MdGui.item(m, Component.text((pull.ego() ? "E.G.O " : Gacha.stars(pull.rarity()) + " ") + pull.name(), Gacha.colour(pull))
-						.decoration(TextDecoration.ITALIC, false), List.of(Component.text(pull.duplicate() ? "이미 가져서 끈으로 바뀌었어요"
-								: pull.ego() ? "/메뉴 → E.G.O 장착에서 낄 수 있어요" : "인벤토리에 들어갔어요", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)));
+						.decoration(TextDecoration.ITALIC, false), List.of(Component.text(pull.duplicate() ? "이미 가져서 에고 조각으로 바뀌었어요"
+								: pull.ego() ? "/메뉴 → E.G.O 장착에서 낄 수 있어요" : pull.rarity() == 1 ? "인벤토리에 들어갔어요"
+								: "/메뉴 → 무기 선택에서 들 수 있어요", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)));
+				if (pull.rarity() == 1 && !pull.ego()) {
+					Rewards.dress(icon, "train3");
+				}
 				if (pull.rarity() == 3) {
 					MdGui.glow(icon);
 				}
