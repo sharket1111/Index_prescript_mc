@@ -269,6 +269,7 @@ final class Extraction {
 		Entity ballHit;
 		ItemDisplay ball;
 		TextDisplay focus;
+		ItemDisplay focusPicture;
 		int focusUntil;
 		int tick;
 		int lastClick;
@@ -291,6 +292,25 @@ final class Extraction {
 			links = new Entity[pulls.size()];
 			hits = new Entity[pulls.size()];
 			done = new boolean[pulls.size()];
+		}
+
+		/** A display item with one of the pack's models (or an item_icons picture). */
+		private static ItemStack model(String key) {
+			ItemStack stack = ItemStack.of(Material.PAPER);
+			stack.editMeta(meta -> meta.setItemModel(org.bukkit.NamespacedKey.fromString(key)));
+			return stack;
+		}
+
+		private static String shardModel(Gacha.Pull pull) {
+			return "index_prescript:extraction/shard_" + (pull.ego() ? "ego" : pull.rarity() == 3 ? "three" : pull.rarity() == 2 ? "two" : "one");
+		}
+
+		/** The result's original picture from item_icons (weapon_<id>, ego_<id>), or null. */
+		static org.bukkit.NamespacedKey picture(Gacha.Pull pull) {
+			if (pull.rarity() == 1 && !pull.ego()) {
+				return SkinPack.iconModel("train3");
+			}
+			return SkinPack.iconModel((pull.ego() ? "ego_" : "weapon_") + pull.id());
 		}
 
 		private static int rgb(Gacha.Pull pull) {
@@ -337,7 +357,7 @@ final class Extraction {
 			}
 			World w = centre.getWorld();
 			ball = w.spawn(centre, ItemDisplay.class, d -> {
-				d.setItemStack(ItemStack.of(Material.MAGMA_BLOCK));
+				d.setItemStack(model("index_prescript:extraction/chain_ball"));
 				d.setPersistent(false);
 				d.setBrightness(new Display.Brightness(15, 15));
 				d.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(0.2F), new Quaternionf()));
@@ -407,6 +427,10 @@ final class Extraction {
 				if (focus != null && tick >= focusUntil) {
 					focus.remove();
 					focus = null;
+					if (focusPicture != null) {
+						focusPicture.remove();
+						focusPicture = null;
+					}
 				}
 				if (finishAt < 0 && nextLeft() < 0) {
 					finishAt = tick + 40;
@@ -441,7 +465,7 @@ final class Extraction {
 				c.remove();
 			}
 			intro.clear();
-			ball.setItemStack(ItemStack.of(high ? Material.RAW_GOLD_BLOCK : Material.MAGMA_BLOCK));
+			ball.setItemStack(model(high ? "index_prescript:extraction/chain_ball_gold" : "index_prescript:extraction/chain_ball"));
 			ball.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(1.9F), new Quaternionf()));
 			w.spawnParticle(Particle.FLASH, centre, 1, 0, 0, 0, 0, Color.fromRGB(0xFFE0A0));
 			w.spawnParticle(Particle.EXPLOSION, centre, 3, 0.6, 0.6, 0.6, 0);
@@ -454,9 +478,8 @@ final class Extraction {
 				links[i] = chain(centre, at, pull.rarity() >= 2 || pull.ego() ? colour : -1);
 				shown.add(links[i]);
 				nodes[i] = w.spawn(at, ItemDisplay.class, d -> {
-					d.setItemStack(ItemStack.of(Material.FIRE_CHARGE));
+					d.setItemStack(model(shardModel(pull)));
 					d.setPersistent(false);
-					d.setBillboard(Display.Billboard.CENTER);
 					d.setBrightness(new Display.Brightness(15, 15));
 					d.setGlowing(true);
 					d.setGlowColorOverride(Color.fromRGB(colour));
@@ -564,10 +587,27 @@ final class Extraction {
 				if (focus != null) {
 					focus.remove();
 				}
+				if (focusPicture != null) {
+					focusPicture.remove();
+					focusPicture = null;
+				}
 				Location near = player.getEyeLocation().add(player.getEyeLocation().getDirection().multiply(2.6)).add(0, -0.3, 0);
 				focus = w.spawn(near, TextDisplay.class, d -> styleCard(d, card, 0.9F));
 				shown.add(focus);
 				focusUntil = tick + 45;
+				// The original's picture of it above the card, if the server has it.
+				org.bukkit.NamespacedKey pic = picture(pull);
+				if (pic != null) {
+					ItemDisplay image = w.spawn(near.clone().add(0, 0.75, 0), ItemDisplay.class, d -> {
+						d.setItemStack(model(pic.toString()));
+						d.setPersistent(false);
+						d.setBillboard(Display.Billboard.CENTER);
+						d.setBrightness(new Display.Brightness(15, 15));
+						d.setTransformation(new Transformation(new Vector3f(), new Quaternionf(), new Vector3f(0.9F), new Quaternionf()));
+					});
+					shown.add(image);
+					focusPicture = image;
+				}
 			}
 		}
 
@@ -606,8 +646,9 @@ final class Extraction {
 						.decoration(TextDecoration.ITALIC, false), List.of(Component.text(pull.duplicate() ? "이미 가져서 에고 조각으로 바뀌었어요"
 								: pull.ego() ? "/메뉴 → E.G.O 장착에서 낄 수 있어요" : pull.rarity() == 1 ? "인벤토리에 들어갔어요"
 								: "/메뉴 → 무기 선택에서 들 수 있어요", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)));
-				if (pull.rarity() == 1 && !pull.ego()) {
-					Rewards.dress(icon, "train3");
+				org.bukkit.NamespacedKey pic = picture(pull);
+				if (pic != null) {
+					icon.editMeta(meta -> meta.setItemModel(pic));
 				}
 				if (pull.rarity() == 3) {
 					MdGui.glow(icon);

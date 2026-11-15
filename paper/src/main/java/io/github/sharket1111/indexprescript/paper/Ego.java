@@ -433,6 +433,10 @@ final class Ego {
 	}
 
 	static String model(Def def) {
+		org.bukkit.NamespacedKey own = SkinPack.iconModel("ego_" + def.id());
+		if (own != null) {
+			return own.toString();
+		}
 		return switch (def.skill().type()) {
 			case "pierce" -> "minecraft:trident";
 			case "blunt" -> "minecraft:mace";
