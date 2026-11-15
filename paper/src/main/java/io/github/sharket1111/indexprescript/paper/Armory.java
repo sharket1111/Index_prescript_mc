@@ -268,6 +268,8 @@ final class Armory implements Listener {
 				String kind = found + ":" + contents[i].getType() + ":" + (Items.isTerminal(contents[i]) ? "t" : "w");
 				if (!found.equals(id) || !seen.add(kind)) {
 					if (!found.equals(id)) {
+						// A weapon carried from before stays owned; it is picked again from the menu.
+						Gacha.own(p, found);
 						save(p, found, contents[i]);
 					}
 					contents[i] = null;
