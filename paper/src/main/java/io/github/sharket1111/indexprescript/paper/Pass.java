@@ -132,8 +132,56 @@ final class Pass {
 			addXp(p, data.get("package_levels").getAsInt() * xpPerLevel);
 			Rewards.grant(p, data.getAsJsonArray("package"), "림버스 패스 패키지");
 		}
-		p.sendMessage(Component.text(pack ? "림버스 패스 패키지를 샀어요" : "림버스 패스를 샀어요", NamedTextColor.GOLD));
+		int ready = 0;
+		for (int lv = 1; lv <= level(id); lv++) {
+			ready += claimed(id, "paid", lv) ? 0 : 1;
+		}
+		p.sendMessage(Component.text((pack ? "림버스 패스 패키지를 샀어요" : "림버스 패스로 업그레이드했어요") + " · 지금 받을 수 있는 림버스 패스 보상 " + ready + "레벨치",
+				NamedTextColor.GOLD));
 		p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 0.8F, 1.0F);
+	}
+
+	/** The upgrade's confirmation: the price, what opens now and later, and where Paid Lunacy comes from. */
+	static void confirmUpgrade(Player p) {
+		UUID id = p.getUniqueId();
+		if (premium(id)) {
+			open(p);
+			return;
+		}
+		int price = data.get("pass_price").getAsInt();
+		int now = 0;
+		java.util.List<String> highlights = new java.util.ArrayList<>();
+		for (int lv = 1; lv <= maxLevel(); lv++) {
+			JsonArray r = rewards(lv, "paid");
+			if (lv <= level(id)) {
+				now += r.size();
+			}
+			for (var e : r) {
+				String rid = e.getAsJsonArray().get(0).getAsString();
+				if (rid.startsWith("ego:") || rid.startsWith("announcer:") || rid.startsWith("boost") || rid.startsWith("banner:")) {
+					highlights.add("레벨 " + lv + ": " + Rewards.name(rid));
+				}
+			}
+		}
+		MdGui gui = new MdGui(3, "림버스 패스 업그레이드");
+		java.util.List<String> lore = new java.util.ArrayList<>();
+		lore.add("유료 광기 " + price + " (가진 유료 광기 " + Gacha.paidLunacy(p) + ")");
+		lore.add("지금 레벨 " + level(id) + "까지의 림버스 패스 보상 " + now + "개를 바로 받을 수 있어요");
+		lore.add("EX 레벨마다 지정 에고 조각 상자 2개 더");
+		lore.addAll(highlights);
+		gui.set(4, MdGui.item(Material.GOLDEN_HELMET, "림버스 패스 · " + data.get("season").getAsString(), NamedTextColor.GOLD, lore.toArray(String[]::new)),
+				(Runnable) null);
+		boolean enough = Gacha.paidLunacy(p) >= price;
+		gui.set(11, MdGui.item(enough ? Material.LIME_CONCRETE : Material.GRAY_CONCRETE, enough ? "업그레이드 (유료 광기 " + price + ")" : "유료 광기가 모자라요",
+				enough ? NamedTextColor.GREEN : NamedTextColor.GRAY, enough ? "클릭하면 바로 업그레이드돼요" : "상점 → 광기 또는 시즌 시작 광기 팩(유료 광기 1300)"), () -> {
+					if (Gacha.paidLunacy(p) >= price) {
+						buy(p, false);
+					}
+					open(p);
+				});
+		gui.set(13, MdGui.item(Material.EMERALD, "상점 · 광기", NamedTextColor.GREEN, "유료 광기를 사요"), () -> PaidShop.open(p, 2));
+		gui.set(15, MdGui.item(Material.RED_CONCRETE, "취소", NamedTextColor.RED), () -> open(p));
+		gui.fill().open(p);
 	}
 
 	static void open(Player p) {
@@ -150,11 +198,10 @@ final class Pass {
 				"XP " + xp(id) % xpPerLevel + "/" + xpPerLevel + " (총 " + xp(id) + ")", premium(id) ? "림버스 패스 보유" : "무료 패스",
 				"패스 XP: 미션과 거울 던전 보상"), (Runnable) null);
 		if (!premium(id)) {
-			gui.set(6, MdGui.item(Material.GOLD_INGOT, "림버스 패스 구매", NamedTextColor.GOLD, "유료 광기 " + data.get("pass_price").getAsInt(),
-					"가진 유료 광기 " + Gacha.paidLunacy(p)), () -> {
-						buy(p, false);
-						open(p);
-					});
+			var up = MdGui.item(Material.GOLD_INGOT, "림버스 패스 업그레이드", NamedTextColor.GOLD, "유료 광기 " + data.get("pass_price").getAsInt()
+					+ " (가진 유료 광기 " + Gacha.paidLunacy(p) + ")", "림버스 패스 줄의 보상 " + maxLevel() + "레벨치가 열려요",
+					"이미 오른 레벨의 보상도 바로 받을 수 있어요", "클릭해서 확인");
+			gui.set(6, MdGui.glow(up), () -> confirmUpgrade(p));
 		}
 		if (!Season.getBool(id, key("package"))) {
 			gui.set(7, MdGui.item(Material.GOLD_BLOCK, "림버스 패스 패키지 구매", NamedTextColor.GOLD,

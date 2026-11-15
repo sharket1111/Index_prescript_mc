@@ -62,6 +62,9 @@ final class PaidShop {
 	}
 
 	private static boolean soldOut(UUID id, JsonObject pr) {
+		if (pr.get("id").getAsString().equals("pass") && Pass.premium(id)) {
+			return true;
+		}
 		String period = period(pr.get("reset").getAsString());
 		return period != null && Season.periodic(id, "shop_" + pr.get("id").getAsString(), period) > 0;
 	}
@@ -142,8 +145,12 @@ final class PaidShop {
 			Hud.message(p, Component.text("이미 샀어요", NamedTextColor.GRAY));
 			return;
 		}
-		if (pid.equals("pass") || pid.equals("pass_package")) {
-			Pass.buy(p, pid.equals("pass_package"));
+		if (pid.equals("pass")) {
+			Pass.confirmUpgrade(p);
+			return;
+		}
+		if (pid.equals("pass_package")) {
+			Pass.buy(p, true);
 			return;
 		}
 		if (pr.get("won").isJsonNull()) {

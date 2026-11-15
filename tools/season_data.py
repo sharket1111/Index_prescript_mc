@@ -248,7 +248,7 @@ def shop():
         P("lunacy_8336", "광기 보물", "광기", "none", won=120000, items=[("lunacy_paid", 8336)], note="first:8336"),
         P("monthly_batch", "월간 광기 묶음", "광기", "none", won=4500, items=[("lunacy_paid", 130)], note="daily:65"),
         P("monthly_supply", "월간 광기 보급", "광기", "none", won=10500, items=[("lunacy_paid", 650)], note="daily:39"),
-        P("pass", "림버스 패스", "패스", "season", paid=1300, items=[("pass", 1)]),
+        P("pass", "림버스 패스 업그레이드", "패스", "season", paid=1300, items=[("pass", 1)]),
         P("pass_package", "림버스 패스 패키지", "패스", "season", paid=2700, items=[("pass", 1), ("pass_levels", 10), ("boost6", 1),
                                                                               ("banner:Season 8 Special Package Banner", 1)],
           note="owned:1700"),
