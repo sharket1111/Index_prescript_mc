@@ -234,7 +234,10 @@ final class Armory implements Listener {
 		give(p, id);
 	}
 
-	/** Every second: a skill weapon other than the carried one (or a second copy) is put away. */
+	/**
+	 * Every second: a skill weapon the player does not own is removed; an owned one other than the carried one
+	 * (or a second copy) is put away.
+	 */
 	static void tick() {
 		for (Player p : Bukkit.getOnlinePlayers()) {
 			if (BlackGod.active(p) || SkillMenu.choosing(p)) {
@@ -243,43 +246,68 @@ final class Armory implements Listener {
 			PlayerInventory inv = p.getInventory();
 			ItemStack[] contents = inv.getContents();
 			String id = equipped(p);
+			if (id != null && !Gacha.owns(p, id)) {
+				p.getPersistentDataContainer().remove(EQUIPPED);
+				id = null;
+			}
 			if (id == null) {
-				// Weapons from before the menu existed: the first one found becomes the carried one.
+				// An owned weapon in the inventory with none carried becomes the carried one.
 				for (ItemStack s : contents) {
 					String found = idOf(s);
-					if (found != null) {
-						Gacha.own(p, found);
+					if (found != null && Gacha.owns(p, found)) {
 						id = found;
 						p.getPersistentDataContainer().set(EQUIPPED, PersistentDataType.STRING, id);
 						break;
 					}
 				}
-				if (id == null) {
-					continue;
-				}
 			}
 			Set<String> seen = new HashSet<>();
-			boolean changed = false;
+			boolean removed = false;
+			boolean putAway = false;
 			for (int i = 0; i < contents.length; i++) {
 				String found = idOf(contents[i]);
 				if (found == null) {
 					continue;
 				}
+				if (!Gacha.owns(p, found)) {
+					contents[i] = null;
+					removed = true;
+					continue;
+				}
 				String kind = found + ":" + contents[i].getType() + ":" + (Items.isTerminal(contents[i]) ? "t" : "w");
 				if (!found.equals(id) || !seen.add(kind)) {
 					if (!found.equals(id)) {
-						// A weapon carried from before stays owned; it is picked again from the menu.
-						Gacha.own(p, found);
 						save(p, found, contents[i]);
 					}
 					contents[i] = null;
-					changed = true;
+					putAway = true;
 				}
 			}
-			if (changed) {
-				inv.setContents(contents);
-				Hud.message(p, Component.text("스킬 무기는 하나만 들 수 있어요 (/메뉴 → 무기 선택)", NamedTextColor.GRAY));
+			ItemStack cursor = p.getItemOnCursor();
+			String cid = idOf(cursor);
+			if (cid != null && !Gacha.owns(p, cid)) {
+				p.setItemOnCursor(null);
+				removed = true;
 			}
+			if (removed || putAway) {
+				inv.setContents(contents);
+				Hud.message(p, Component.text(removed ? "가지지 않은 스킬 무기는 사라져요 (추출로 얻어요)"
+						: "스킬 무기는 하나만 들 수 있어요 (/메뉴 → 무기 선택)", NamedTextColor.GRAY));
+			}
+		}
+	}
+
+	/** A skill weapon the player does not own cannot be picked up; it vanishes. */
+	@EventHandler(ignoreCancelled = true)
+	public void onPickup(org.bukkit.event.entity.EntityPickupItemEvent event) {
+		if (!(event.getEntity() instanceof Player p)) {
+			return;
+		}
+		String id = idOf(event.getItem().getItemStack());
+		if (id != null && !Gacha.owns(p, id)) {
+			event.setCancelled(true);
+			event.getItem().remove();
+			Hud.message(p, Component.text("가지지 않은 스킬 무기는 사라져요 (추출로 얻어요)", NamedTextColor.GRAY));
 		}
 	}
 
