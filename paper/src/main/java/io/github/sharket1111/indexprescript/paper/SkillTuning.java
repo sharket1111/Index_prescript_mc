@@ -27,6 +27,9 @@ final class SkillTuning {
 	/** The built-in cards, by key ("STOMP", "RIEN-3"), taken before any change. */
 	private static final Map<String, SkillCard> DEFAULT_CARDS = new LinkedHashMap<>();
 	private static final Map<MimicrySkill.Kind, Object[]> DEFAULT_MIMICRY = new LinkedHashMap<>();
+	/** Mimicry's base and coin power before its rebalance (files that still hold them get the new values). */
+	private static final Map<MimicrySkill.Kind, int[]> RETIRED_MIMICRY = Map.of(MimicrySkill.Kind.CHARGE, new int[] {14, 12},
+			MimicrySkill.Kind.GREAT_VERTICAL, new int[] {20, 19}, MimicrySkill.Kind.GREAT_HORIZONTAL, new int[] {28, 14});
 
 	private SkillTuning() {
 	}
@@ -59,6 +62,7 @@ final class SkillTuning {
 			kind.ability = (String) v[4];
 		});
 		YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file());
+		boolean rewrite = false;
 		int changed = 0;
 		List<String> problems = new ArrayList<>();
 		ConfigurationSection cards = yaml.getConfigurationSection("cards");
@@ -94,6 +98,13 @@ final class SkillTuning {
 				}
 				ConfigurationSection s = mimicry.getConfigurationSection(key);
 				Object[] before = {kind.base, kind.coinPower, kind.dice.clone(), kind.cooldown, kind.ability};
+				// A file written before Mimicry's rebalance still holds the old defaults: those become the new ones.
+				int[] old = RETIRED_MIMICRY.get(kind);
+				if (old != null && s.getInt("base", -1) == old[0] && s.getInt("coin-power", -1) == old[1]) {
+					s.set("base", kind.base);
+					s.set("coin-power", kind.coinPower);
+					rewrite = true;
+				}
 				kind.base = s.getInt("base", kind.base);
 				kind.coinPower = s.getInt("coin-power", kind.coinPower);
 				kind.cooldown = Math.max(0, s.getInt("cooldown", kind.cooldown));
@@ -110,6 +121,13 @@ final class SkillTuning {
 						|| !kind.ability.equals(before[4]) || !java.util.Arrays.equals(kind.dice, (double[]) before[2])) {
 					changed++;
 				}
+			}
+		}
+		if (rewrite) {
+			try {
+				yaml.save(file());
+			} catch (java.io.IOException e) {
+				owner.getLogger().warning("Could not update " + file().getName() + ": " + e.getMessage());
 			}
 		}
 		String report = file().getName() + ": 스킬 카드 " + DEFAULT_CARDS.size() + "개, 미미크리 " + DEFAULT_MIMICRY.size() + "개를 읽었어요 (바뀐 것 " + changed + "개)";
